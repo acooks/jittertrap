@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="text/javascript" src="jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="jquery.canvasjs.min.js"></script>
+    <link href="bootstrap.min.css" rel="stylesheet">
+    <script type=text/javascript>
+
+    $(document).ready(function() {
+        var chartData = {};
+        chartData["tx-delta"] = [];
+        chartData["rx-delta"] = [];
+        chartData["rx-bytes"] = [];
+        chartData["tx-bytes"] = [];
+
+        var xVal = 0;
+        var yVal = 0;
+        var dataLength = 2000; // number of dataPoints visible at any point
+        var updatePeriod = 100;
+        var dps = chartData["tx-delta"];
+
+        var chart = new CanvasJS.Chart("chartContainer", {
+                axisY:{
+                  includeZero: "false", 
+                },
+                zoomEnabled: "true",
+                panEnabled: "true",
+                title :{ },
+                data: [{
+                        name: "tx-delta",
+                        type: "line",
+                        dataPoints: dps
+                }]
+        });
+
+        var fasterUpdates = function() {
+          var r = millisecondsToRate(updatePeriod);
+          if (r < 10) {
+            updatePeriod = rateToMilliseconds(r+1);
+            setUpdatePeriod();
+          }
+        };
+
+        var slowerUpdates = function() {
+          var r = millisecondsToRate(updatePeriod);
+          if (r > 1) {
+            updatePeriod = rateToMilliseconds(r-1);
+            setUpdatePeriod();
+          }
+        };
+
+        var old_updatePeriod = updatePeriod;
+        var toggleStopStartGraph = function() {
+          var maxUpdatePeriod = 9999999999;
+          if (updatePeriod  != maxUpdatePeriod) {
+            old_updatePeriod = updatePeriod;
+            updatePeriod = maxUpdatePeriod;
+          } else {
+            updatePeriod = old_updatePeriod;
+          }
+          setUpdatePeriod();
+        };        
+
+        // interval in milliseconds
+        var millisecondsToRate = function(ms) {
+          if (ms > 0) {
+            return Math.ceil(1.0 / ms * 1000.0);
+          }
+        };
+
+        var rateToMilliseconds = function(r) {
+          if (r > 0) {
+            return Math.ceil(1.0 / r * 1000.0);
+          }
+        }
+
+        var setUpdatePeriod = function() {
+          $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
+          clearInterval(drawInterval);
+          drawInterval = setInterval(function() { chart.render(); },
+                                     updatePeriod);
+        };
+
+        $('#chopts_stop_start').bind('click', toggleStopStartGraph);
+        $('#chopts_refresh_faster').bind('click', fasterUpdates);
+        $('#chopts_refresh_slower').bind('click', slowerUpdates);
+        $('#chopts_refresh').bind('change',
+           function() {
+             updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
+             setUpdatePeriod();
+           }
+        );
+        $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
+        
+        $("#chopts_dataLen").bind('change',
+           function() {
+             dataLength = $("#chopts_dataLen").val();
+           });
+        $("#chopts_dataLen").val(dataLength);
+
+        var resetChart = function() {
+          var s = $("#chopts_series option:selected").val();
+          chart = new CanvasJS.Chart("chartContainer", {
+            axisY:{
+              includeZero: "false",
+            },
+            zoomEnabled: "true",
+            panEnabled: "true",
+            title: { },
+            data: [{
+              name: s,
+              type: "line",
+              dataPoints: chartData[s]
+            }]
+          });
+          chart.render();
+        };
+
+        $("#chopts_series").bind('change', resetChart);
+
+        var clearChart = function() {
+          chartData["tx-delta"] = [];
+          chartData["rx-delta"] = [];
+          chartData["rx-bytes"] = [];
+          chartData["tx-bytes"] = [];
+          resetChart();
+        };
+
+        $("#dev_select").bind('change', clearChart);
+
+        var drawInterval = setInterval(function() { chart.render(); },
+                                       updatePeriod);
+
+        var wsUri = "ws://" + document.domain + ":" + location.port;
+        websocket = new WebSocket(wsUri);
+        websocket.onopen = function(evt) { 
+          websocket.send("open!");
+          list_ifaces();
+        };
+//        websocket.onclose = function(evt) { onClose(evt) };
+        websocket.onerror = function(evt) { onError(evt) };
+        websocket.onmessage = function(evt) {
+          var msg = JSON.parse(evt.data);
+          if (msg["stats"]) {
+            updateSeries(chartData["tx-delta"], msg["stats"]["tx-delta"]);
+            updateSeries(chartData["rx-delta"], msg["stats"]["rx-delta"]);
+            updateSeries(chartData["rx-bytes"], msg["stats"]["rx-bytes"]);
+            updateSeries(chartData["tx-bytes"], msg["stats"]["tx-bytes"]);
+            xVal++;
+          } else if (msg["ifaces"]) {
+            $('#dev_select').empty();
+            $.each(msg.ifaces,
+              function (ix, val) {
+                var option = $('<option>').text(val).val(val);
+                $('#dev_select').append(option);
+              }
+            );
+            dev_select();
+          } else if (msg["netem_params"]) {
+            $("#delay").val(msg.netem_params.delay + "ms");
+            $("#jitter").val(msg.netem_params.jitter + "ms");
+            $("#loss").val(msg.netem_params.loss + "%");
+          }
+        };
+
+        var list_ifaces = function() {
+          var msg = JSON.stringify({'msg':'list_ifaces'});
+          websocket.send(msg);
+        };
+
+        var dev_select = function() {
+          var msg = JSON.stringify({'msg':'dev_select',
+                                    'dev': $("#dev_select").val()});
+          websocket.send(msg);
+          get_netem();
+        };
+
+        var get_netem = function() {
+          var msg = JSON.stringify(
+            {'msg': 'get_netem', 
+             'dev': $("#dev_select").val()
+            });
+          websocket.send(msg);
+        };
+
+        var set_netem = function() {
+          var msg = JSON.stringify(
+            {'msg': 'set_netem',
+             'dev': $("#dev_select").val(),
+             'delay': $("#delay").val(),
+             'jitter': $("#jitter").val(),
+             'loss': $("#loss").val()
+            });
+          websocket.send(msg);
+        };
+        $('#set_netem_button').bind('click', set_netem);
+
+        $('#dev_select').bind('change', dev_select);
+
+        var updateSeries = function (series, yVal) {
+          series.push({ x: xVal, y: yVal });
+          while (series.length > dataLength) {
+            series.shift();
+          }
+        };
+
+});
+  </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h3 class="text-muted">JitterTrap</h3>
+      </div>
+      <hr/>
+      <div>
+        <em>Netem Parameters:</em>
+        <p>
+        Interface: <select id="dev_select"></select> &nbsp;
+        Delay: <input type="text" size="6" id="delay"/> &nbsp;
+        Delay variation: <input type="text" size="6" id="jitter"/> &nbsp;
+        Loss: <input type="text" size="6" id="loss"/>
+        <p>
+        <button id="set_netem_button">Update</button>
+      </div>
+      <hr/>
+      <div id="chartOpts">
+        <em>Chart Parameters:</em>
+        <p>        
+        <button id="chopts_stop_start"> Stop/Start</button> &nbsp;
+        Chart Refresh Rate (1-20 fps):
+        <input type="text" size="4" id="chopts_refresh"/>
+        <button id="chopts_refresh_faster">Faster</button>
+        <button id="chopts_refresh_slower">Slower</button>
+        Chart Data Points:
+        <input type="test" size="4" id="chopts_dataLen"/> &nbsp;
+        Chart Series:
+        <select id="chopts_series">
+          <option value="tx-delta">Tx Bytes Delta</option>
+          <option value="rx-delta">Rx Bytes Delta</option>
+          <option value="tx-bytes">Tx Bytes Total</option>
+          <option value="rx-bytes">Rx Bytes Total</option>
+        </select>
+      </div>
+      <div id="chartContainer" style="height: 300px; width:100%;"></div>
+      <div>
+        <h3>Help</h3>
+          <p>
+ Delay, Delay Variation (Jitter) and Loss are applied to all packets Transmitted by the selected interface.
+
+          <p>
+          <h4>Delay:</h4> a basic time delay, typically specified in milliseconds.
+          <h5>Example:</h5>42ms
+          <p>
+          <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.
+          <p> Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.
+          <p> Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.
+          <h5>Example:</h5>22ms
+          <p>
+          <h4>Loss:</h4> a percentage of random packet loss. Each packet has X percent chance of being dropped.
+          <h5>Example:</h5>7%
+    </div>
+  </body>
+</html>
+
