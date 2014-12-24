@@ -112,11 +112,13 @@ int netem_get_params(char *iface, struct netem_params *params)
     fprintf(stderr, "could't find qdisc for iface: %s\n", iface);
     return -1;
   }
+  rtnl_qdisc_put(filter_qdisc);
 
   params->iface = iface;
   params->delay = rtnl_netem_get_delay(found_qdisc) / 1000;
   params->jitter = rtnl_netem_get_jitter(found_qdisc) / 1000;
   params->loss = rtnl_netem_get_loss(found_qdisc) / (UINT_MAX / 100);
+  rtnl_qdisc_put(found_qdisc);
   return 0;
 }
 

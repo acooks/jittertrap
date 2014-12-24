@@ -96,6 +96,7 @@ list_ifaces()
     free(*i);
     i++;
   } while (*i);
+  free(ifaces);
 
   char *head = "{\"ifaces\":";
   char *tail = "}";
@@ -137,6 +138,7 @@ handle_websocket_get_netem(struct ns_connection *nc, struct json_token *tok)
   iface[tok->len] = 0;
   if (0 != netem_get_params(iface, &p)) {
     fprintf(stderr, "couldn't get netem parameters.\n");
+    free(iface);
     return;
   }
 
@@ -147,6 +149,7 @@ handle_websocket_get_netem(struct ns_connection *nc, struct json_token *tok)
   sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
   printf("%s\n",msg);
   ns_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+  free(iface);
 }
 
 static bool
@@ -203,6 +206,7 @@ handle_websocket_set_netem(struct ns_connection *nc,
   json_token_to_string(t_delay, &s);
   if (!parse_int(s, &delay)) {
     fprintf(stderr, "couldn't parse delay\n");
+    free(s);
     return;
   }
   printf("delay: %ld, ", delay);
@@ -210,6 +214,7 @@ handle_websocket_set_netem(struct ns_connection *nc,
   json_token_to_string(t_jitter, &s);
   if (!parse_int(s, &jitter)) {
     fprintf(stderr, "couldn't parse jitter\n");
+    free(s);
     return;
   }
   printf("jitter: %ld, ", jitter);
@@ -217,6 +222,7 @@ handle_websocket_set_netem(struct ns_connection *nc,
   json_token_to_string(t_loss, &s);
   if (!parse_int(s, &loss)) {
     fprintf(stderr, "couldn't parse loss\n");
+    free(s);
     return;
   }
   printf("loss: %ld\n", loss);
@@ -224,6 +230,8 @@ handle_websocket_set_netem(struct ns_connection *nc,
 
   netem_update(dev, delay, jitter, loss);
   handle_websocket_get_netem(nc, t_dev);
+  free(s);
+  free(dev);
 }
 
 
