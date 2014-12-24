@@ -81,12 +81,12 @@ int netem_get_params(char *iface, struct netem_params *params)
   struct rtnl_qdisc *found_qdisc = NULL;
   int err;
 
-  if ((err = nl_cache_resync(sock, link_cache, NULL, NULL)) < 0) {
+  if ((err = nl_cache_refill(sock, link_cache)) < 0) {
     fprintf(stderr, "Unable to resync link cache: %s\n", nl_geterror(err));
     return -1;
   }
 
-  if ((err = nl_cache_resync(sock, qdisc_cache, NULL, NULL)) < 0) {
+  if ((err = nl_cache_refill(sock, qdisc_cache)) < 0) {
     fprintf(stderr, "Unable to resync link cache: %s\n", nl_geterror(err));
     return -1;
   }
@@ -159,7 +159,7 @@ int netem_update(const char *iface, int delay, int jitter, int loss)
     return err;
   }
 
-  if ((err = nl_cache_resync(sock, link_cache, NULL, NULL)) < 0) {
+  if ((err = nl_cache_refill(sock, link_cache)) < 0) {
     fprintf(stderr, "Unable to resync link cache: %s\n", nl_geterror(err));
     return -1;
   }

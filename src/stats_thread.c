@@ -89,7 +89,7 @@ static int read_counters(const char *iface)
   assert(nl_sock);
   assert(nl_link_cache);
 
-  if ((err = nl_cache_resync(nl_sock, nl_link_cache, NULL, NULL)) < 0) {
+  if ((err = nl_cache_refill(nl_sock, nl_link_cache)) < 0) {
     fprintf(stderr, "Unable to resync link cache: %s\n", nl_geterror(err));
     return -1;
   }
