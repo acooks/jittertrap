@@ -122,12 +122,6 @@ int netem_get_params(char *iface, struct netem_params *params)
   return 0;
 }
 
-int netem_update2(struct netem_params p)
-{
-  printf("netem update: iface: %s, delay: %dms, jitter: %dms, loss: %d\n",
-         p.iface, p.delay, p.jitter, p.loss);
-}
-
 int netem_update(const char *iface, int delay, int jitter, int loss)
 {
   struct rtnl_link *link;
