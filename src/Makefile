@@ -1,6 +1,14 @@
+ifndef SAMPLE_PERIOD_MS
 SAMPLE_PERIOD_MS = 10
-WEB_SERVER_PORT = \"8000\"
-WEB_SERVER_DOCUMENT_ROOT = \"/var/lib/jittertrap\"
+endif
+
+ifndef WEB_SERVER_PORT
+WEB_SERVER_PORT = 8000
+endif
+
+ifndef WEB_SERVER_DOCUMENT_ROOT
+WEB_SERVER_DOCUMENT_ROOT = /var/lib/jittertrap
+endif
 
 PROG = jittertrap
 SOURCES = \
