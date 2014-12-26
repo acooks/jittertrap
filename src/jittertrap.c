@@ -9,8 +9,9 @@
 #include "netem.h"
 
 static char *g_iface;
-static const char *s_http_port = "8000";
-static struct ns_serve_http_opts s_http_server_opts = { "static_content/" };
+static const char *s_http_port = WEB_SERVER_PORT;
+static struct ns_serve_http_opts s_http_server_opts =
+  { .document_root = WEB_SERVER_DOCUMENT_ROOT };
 
 struct ns_connection *nc;
 

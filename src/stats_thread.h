@@ -1,8 +1,9 @@
 #ifndef STATS_THREAD_H
 #define STATS_THREAD_H
 
-/* Sleep time in milliseconds */
-#define SAMPLE_PERIOD_MS 10
+#ifndef SAMPLE_PERIOD_MS
+#define SAMPLE_PERIOD_MS 100
+#endif
 
 struct byte_counts {
   long long timestamp;
