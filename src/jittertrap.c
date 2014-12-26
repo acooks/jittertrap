@@ -8,10 +8,13 @@
 #include "stats_thread.h"
 #include "netem.h"
 
+#define QUOTE(str) #str
+#define EXPAND_AND_QUOTE(str) QUOTE(str)
+
 static char *g_iface;
-static const char *s_http_port = "#WEB_SERVER_PORT";
+static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
 static struct ns_serve_http_opts s_http_server_opts =
-  { .document_root = "#WEB_SERVER_DOCUMENT_ROOT" };
+  { .document_root = EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT) };
 
 struct ns_connection *nc;
 
@@ -368,6 +371,7 @@ int main(int argc, char *argv[])
   struct ns_bind_opts opts = { .flags = TCP_NODELAY };
 
   ns_mgr_init(&mgr, NULL);
+  printf("Binding to port:%s\n", s_http_port);
   nc = ns_bind_opt(&mgr, s_http_port, ev_handler, opts);
   ns_set_protocol_http_websocket(nc);
   mgr.hexdump_file = argc > 1 ? argv[1] : NULL;  /* Allow hexdump debug */
@@ -380,7 +384,6 @@ int main(int argc, char *argv[])
   stats_monitor_iface("lo");
   stats_thread_init(stats_event_handler);
 
-  printf("Starting server on port %s\n", s_http_port);
   for (;;) {
     ns_mgr_poll(&mgr, 1000);
   }
