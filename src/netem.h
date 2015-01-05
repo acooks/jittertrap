@@ -2,10 +2,10 @@
 #define NETEM_H
 
 struct netem_params {
-  char* iface;
-  int delay;
-  int jitter;
-  int loss;
+	char *iface;
+	int delay;
+	int jitter;
+	int loss;
 };
 
 int netem_init();
