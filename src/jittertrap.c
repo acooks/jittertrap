@@ -109,7 +109,7 @@ static char *list_ifaces()
 	return msg;
 }
 
-static void handle_websocket_list_ifaces(struct ns_connection *nc)
+static void handle_ws_list_ifaces(struct ns_connection *nc)
 {
 	char *buf = list_ifaces();
 	printf("matched list_ifaces. ifaces:[%s]\n", buf);
@@ -117,7 +117,7 @@ static void handle_websocket_list_ifaces(struct ns_connection *nc)
 	free(buf);
 }
 
-static void handle_websocket_dev_select(struct json_token *tok)
+static void handle_ws_dev_select(struct json_token *tok)
 {
 	printf("switching to iface: %.*s\n", tok->len, tok->ptr);
 	g_iface = malloc(tok->len + 1);
@@ -126,8 +126,8 @@ static void handle_websocket_dev_select(struct json_token *tok)
 	stats_monitor_iface(g_iface);
 }
 
-static void
-handle_websocket_get_netem(struct ns_connection *nc, struct json_token *tok)
+static void handle_ws_get_netem(struct ns_connection *nc,
+				struct json_token *tok)
 {
 	struct netem_params p;
 	char *iface = malloc(tok->len + 1);
@@ -185,12 +185,11 @@ static void json_token_to_string(struct json_token *tok, char **str)
 	(*str)[tok->len] = 0;
 }
 
-static void
-handle_websocket_set_netem(struct ns_connection *nc,
-			   struct json_token *t_dev,
-			   struct json_token *t_delay,
-			   struct json_token *t_jitter,
-			   struct json_token *t_loss)
+static void handle_ws_set_netem(struct ns_connection *nc,
+				struct json_token *t_dev,
+				struct json_token *t_delay,
+				struct json_token *t_jitter,
+				struct json_token *t_loss)
 {
 	char *s = NULL;
 	char *dev = NULL;
@@ -225,14 +224,13 @@ handle_websocket_set_netem(struct ns_connection *nc,
 	printf("\n\n");
 
 	netem_update(dev, delay, jitter, loss);
-	handle_websocket_get_netem(nc, t_dev);
+	handle_ws_get_netem(nc, t_dev);
 	free(s);
 	free(dev);
 }
 
-static void
-handle_websocket_message(struct ns_connection *nc,
-			 const struct websocket_message *m)
+static void handle_ws_message(struct ns_connection *nc,
+			      const struct websocket_message *m)
 {
 	print_websocket_message(m);
 	struct json_token *arr, *tok;
@@ -252,22 +250,19 @@ handle_websocket_message(struct ns_connection *nc,
 	tok = find_json_token(arr, key);
 	if (tok) {
 		if (match_msg_type(tok, "list_ifaces")) {
-			handle_websocket_list_ifaces(nc);
+			handle_ws_list_ifaces(nc);
 		} else if (match_msg_type(tok, "dev_select")) {
 			tok = find_json_token(arr, "dev");
-			handle_websocket_dev_select(tok);
+			handle_ws_dev_select(tok);
 		} else if (match_msg_type(tok, "get_netem")) {
 			tok = find_json_token(arr, "dev");
-			handle_websocket_get_netem(nc, tok);
+			handle_ws_get_netem(nc, tok);
 		} else if (match_msg_type(tok, "set_netem")) {
-			handle_websocket_set_netem(nc,
-						   find_json_token(arr, "dev"),
-						   find_json_token(arr,
-								   "delay"),
-						   find_json_token(arr,
-								   "jitter"),
-						   find_json_token(arr,
-								   "loss"));
+			handle_ws_set_netem(nc,
+					    find_json_token(arr, "dev"),
+					    find_json_token(arr, "delay"),
+					    find_json_token(arr, "jitter"),
+					    find_json_token(arr, "loss"));
 		}
 	}
 
@@ -314,7 +309,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 		print_peer_name(nc);
 		break;
 	case NS_WEBSOCKET_FRAME:
-		handle_websocket_message(nc, wm);
+		handle_ws_message(nc, wm);
 		break;
 	case NS_CLOSE:
 		if (is_websocket(nc)) {
