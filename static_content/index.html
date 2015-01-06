@@ -157,9 +157,19 @@
             );
             dev_select();
           } else if (msg["netem_params"]) {
-            $("#delay").val(msg.netem_params.delay + "ms");
-            $("#jitter").val(msg.netem_params.jitter + "ms");
-            $("#loss").val(msg.netem_params.loss + "%");
+            if (msg.netem_params.delay == -1
+                && msg.netem_params.jitter == -1
+                && msg.netem_params.loss == -1) {
+              $("#netem_status").html("Netem not active on device. Set parameters to activate.");
+              $("#delay").val("None");
+              $("#jitter").val("None");
+              $("#loss").val("None");
+            } else {
+              $("#netem_status").html("Ready");
+              $("#delay").val(msg.netem_params.delay + "ms");
+              $("#jitter").val(msg.netem_params.jitter + "ms");
+              $("#loss").val(msg.netem_params.loss + "%");
+            }
           }
         };
 
@@ -220,7 +230,9 @@
         Delay: <input type="text" size="6" id="delay"/> &nbsp;
         Delay variation: <input type="text" size="6" id="jitter"/> &nbsp;
         Loss: <input type="text" size="6" id="loss"/>
-        <p>
+	<br/>
+        Status: <span id="netem_status"></span>
+        <br/>
         <button id="set_netem_button">Update</button>
       </div>
       <hr/>
