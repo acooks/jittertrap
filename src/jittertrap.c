@@ -286,7 +286,7 @@ static void print_peer_name(struct ns_connection *c)
 	if (addr.ss_family == AF_INET) {
 		struct sockaddr_in *s = (struct sockaddr_in *)&addr;
 		inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
-	} else {		/* AF_INET6 */
+	} else {
 		struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
 		inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 	}
@@ -329,10 +329,12 @@ void stats_event_handler(struct byte_counts *counts)
 
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		if (is_websocket(c)) {
-			/*
-			   printf("stats event. timestamp:[%lld] tx-bytes:[%lld] tx-delta:[%d]\n",
-			   counts->timestamp, counts->tx_bytes, counts->tx_bytes_delta );
-			 */
+#if 0
+			printf
+			    ("stats event. timestamp:[%lld] tx-bytes:[%lld] tx-delta:[%d]\n",
+			     counts->timestamp, counts->tx_bytes,
+			     counts->tx_bytes_delta);
+#endif
 			ns_printf_websocket_frame(c,
 						  WEBSOCKET_OP_TEXT,
 						  "{\"stats\": {"
@@ -351,7 +353,7 @@ void stats_event_handler(struct byte_counts *counts)
 	}
 }
 
-int main(int argc, char *argv[])
+int main()
 {
 	struct ns_mgr mgr;
 	struct ns_bind_opts opts = {.flags = TCP_NODELAY };
@@ -360,7 +362,6 @@ int main(int argc, char *argv[])
 	printf("Binding to port:%s\n", s_http_port);
 	nc = ns_bind_opt(&mgr, s_http_port, ev_handler, opts);
 	ns_set_protocol_http_websocket(nc);
-	mgr.hexdump_file = argc > 1 ? argv[1] : NULL;	/* Allow hexdump debug */
 
 	if (netem_init() < 0) {
 		fprintf(stderr,
