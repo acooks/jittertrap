@@ -8,16 +8,47 @@
 
     $(document).ready(function() {
         var chartData = {};
-        chartData["tx-delta"] = [];
-        chartData["rx-delta"] = [];
-        chartData["rx-bytes"] = [];
-        chartData["tx-bytes"] = [];
+        chartData.txDelta = {
+          data:[],
+          title:"Tx Bytes per 10ms sample period",
+          ylabel:"Tx Bytes, delta",
+          xlabel:"Time: 10ms"
+        };
+        chartData.rxDelta = {
+          data:[],
+          title:"Rx Bytes per 10ms sample period",
+          ylabel:"Rx Bytes, delta",
+          xlabel:"Time: 10ms"
+        };
+        chartData.rxBytes = {
+          data:[],
+          title: "Rx Bytes since boot",
+          ylabel:"Rx Bytes, cumulative",
+          xlabel:"Time: 10ms"
+        };
+        chartData.txBytes = {
+          data:[],
+          title: "Tx Bytes since boot",
+          ylabel:"Tx Bytes, cumulative",
+          xlabel:"Time: 10ms"
+        };
+	chartData.rxRate = {
+          data:[],
+          title: "Ingress throughput in kpbs, measured over 10ms samples",
+          ylabel:"kbps, 10ms mean",
+          xlabel:"sample number",
+        };
+        chartData.txRate = {
+          data:[],
+          title: "Egress throughput in kbps, measured over 10ms samples",
+          ylabel:"kbps, 10ms mean",
+          xlabel:"sample number",
+        };
 
         var xVal = 0;
         var yVal = 0;
         var dataLength = 2000; // number of dataPoints visible at any point
         var updatePeriod = 100;
-        var dps = chartData["tx-delta"];
 
         var chart = new CanvasJS.Chart("chartContainer", {
                 axisY:{
@@ -25,11 +56,13 @@
                 },
                 zoomEnabled: "true",
                 panEnabled: "true",
-                title :{ },
+                title : { text: chartData.rxRate.title },
+                axisY: { title: chartData.rxRate.ylabel },
+                axisX: { title: chartData.rxRate.xlabel },
                 data: [{
-                        name: "tx-delta",
+                        name: "rxRate",
                         type: "line",
-                        dataPoints: dps
+                        dataPoints: chartData.rxRate.data
                 }]
         });
 
@@ -106,11 +139,13 @@
             },
             zoomEnabled: "true",
             panEnabled: "true",
-            title: { },
+            title: { text: chartData[s].title },
+            axisY: { title: chartData[s].ylabel },
+            axisX: { title: chartData[s].xlabel },
             data: [{
               name: s,
               type: "line",
-              dataPoints: chartData[s]
+              dataPoints: chartData[s].data
             }]
           });
           chart.render();
@@ -119,11 +154,19 @@
         $("#chopts_series").bind('change', resetChart);
 
         var clearChart = function() {
-          chartData["tx-delta"] = [];
-          chartData["rx-delta"] = [];
-          chartData["rx-bytes"] = [];
-          chartData["tx-bytes"] = [];
+          chartData.txDelta.data = [];
+          chartData.rxDelta.data = [];
+          chartData.rxBytes.data = [];
+          chartData.txBytes.data = [];
+          chartData.rxRate.data = [];
+          chartData.txRate.data = [];
           resetChart();
+        };
+
+        /* count must be bytes, duration must be milliseconds */
+        var byteCountToKbpsRate = function(count, duration) {
+          var rate = count * (1000.0 / duration) * 8.0 / 1000.0;
+          return rate;
         };
 
         $("#dev_select").bind('change', clearChart);
@@ -142,10 +185,16 @@
         websocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
           if (msg["stats"]) {
-            updateSeries(chartData["tx-delta"], msg["stats"]["tx-delta"]);
-            updateSeries(chartData["rx-delta"], msg["stats"]["rx-delta"]);
-            updateSeries(chartData["rx-bytes"], msg["stats"]["rx-bytes"]);
-            updateSeries(chartData["tx-bytes"], msg["stats"]["tx-bytes"]);
+            updateSeries(chartData.txDelta.data, msg.stats["tx-delta"]);
+            updateSeries(chartData.rxDelta.data, msg.stats["rx-delta"]);
+            updateSeries(chartData.rxBytes.data, msg.stats["rx-bytes"]);
+            updateSeries(chartData.txBytes.data, msg.stats["tx-bytes"]);
+            updateSeries(chartData.txRate.data,
+                         byteCountToKbpsRate(msg.stats["tx-delta"],
+                                             10));
+            updateSeries(chartData.rxRate.data,
+                         byteCountToKbpsRate(msg.stats["rx-delta"],
+                                             10));
             xVal++;
           } else if (msg["ifaces"]) {
             $('#dev_select').empty();
@@ -248,10 +297,12 @@
         <input type="test" size="4" id="chopts_dataLen"/> &nbsp;
         Chart Series:
         <select id="chopts_series">
-          <option value="tx-delta">Tx Bytes Delta</option>
-          <option value="rx-delta">Rx Bytes Delta</option>
-          <option value="tx-bytes">Tx Bytes Total</option>
-          <option value="rx-bytes">Rx Bytes Total</option>
+          <option value="txDelta">Tx Bytes Delta</option>
+          <option value="rxDelta">Rx Bytes Delta</option>
+          <option value="txBytes">Tx Bytes Total</option>
+          <option value="rxBytes">Rx Bytes Total</option>
+          <option value="rxRate" selected>Rx Bitrate</option>
+          <option value="txRate">Tx Bitrate</option>
         </select>
       </div>
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
