@@ -171,7 +171,7 @@
 
         websocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
-          if (msg["stats"]) {
+          if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
             updateSeries(chartData.txDelta.data, msg.stats["tx-delta"]);
             updateSeries(chartData.rxDelta.data, msg.stats["rx-delta"]);
             updateSeries(chartData.txRate.data,
