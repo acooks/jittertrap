@@ -142,6 +142,7 @@
           chartData.rxRate.data = [];
           chartData.txRate.data = [];
           resetChart();
+          xVal = 0;
         };
 
         /* count must be bytes, duration must be milliseconds */
@@ -171,12 +172,19 @@
 
         websocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
+          var samplePeriod = parseInt($("#sample_period").val());
           if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
-            updateSeries(chartData.txDelta.data, msg.stats["tx-delta"]);
-            updateSeries(chartData.rxDelta.data, msg.stats["rx-delta"]);
+            updateSeries(chartData.txDelta.data,
+                         xVal * samplePeriod,
+                         msg.stats["tx-delta"]);
+            updateSeries(chartData.rxDelta.data,
+                         xVal * samplePeriod,
+                         msg.stats["rx-delta"]);
             updateSeries(chartData.txRate.data,
+                         xVal,
                          byteCountToKbpsRate(msg.stats["tx-delta"]));
             updateSeries(chartData.rxRate.data,
+                         xVal,
                          byteCountToKbpsRate(msg.stats["rx-delta"]));
             xVal++;
           } else if (msg["ifaces"]) {
@@ -259,7 +267,7 @@
 
         $('#dev_select').bind('change', dev_select);
 
-        var updateSeries = function (series, yVal) {
+        var updateSeries = function (series, xVal, yVal) {
           series.push({ x: xVal, y: yVal });
           while (series.length > dataLength) {
             series.shift();
