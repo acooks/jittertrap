@@ -54,23 +54,8 @@
                 }]
         });
 
-        var fasterUpdates = function() {
-          var r = millisecondsToRate(updatePeriod);
-          if (r < 10) {
-            updatePeriod = rateToMilliseconds(r+1);
-            setUpdatePeriod();
-          }
-        };
-
-        var slowerUpdates = function() {
-          var r = millisecondsToRate(updatePeriod);
-          if (r > 1) {
-            updatePeriod = rateToMilliseconds(r-1);
-            setUpdatePeriod();
-          }
-        };
-
         var old_updatePeriod = updatePeriod;
+
         var toggleStopStartGraph = function() {
           var maxUpdatePeriod = 9999999999;
           if (updatePeriod  != maxUpdatePeriod) {
@@ -103,8 +88,6 @@
         };
 
         $('#chopts_stop_start').bind('click', toggleStopStartGraph);
-        $('#chopts_refresh_faster').bind('click', fasterUpdates);
-        $('#chopts_refresh_slower').bind('click', slowerUpdates);
         $('#chopts_refresh').bind('change',
            function() {
              updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
@@ -296,8 +279,6 @@
         <button id="chopts_stop_start"> Stop/Start</button> &nbsp;
         Chart Refresh Rate (1-20 fps):
         <input type="text" size="4" id="chopts_refresh"/>
-        <button id="chopts_refresh_faster">Faster</button>
-        <button id="chopts_refresh_slower">Slower</button>
         Chart Data Points:
         <input type="test" size="4" id="chopts_dataLen"/> &nbsp;
         Chart Series:
