@@ -147,7 +147,7 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 
 	char *template =
 	    "{\"netem_params\":"
-	    "{\"iface\":\"%.10s\", \"delay\":%3.0d, \"jitter\":%3.0d, \"loss\":%3.1d}}";
+	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
 	char msg[200] = { 0 };
 	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
 	printf("%s\n", msg);
