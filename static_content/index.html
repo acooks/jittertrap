@@ -81,10 +81,22 @@
         }
 
         var setUpdatePeriod = function() {
-          $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
+          var sampleRate = millisecondsToRate(parseInt($("#sample_period").val()));
+          var updateRate = millisecondsToRate(updatePeriod);
+          if (sampleRate < updateRate) {
+            updatePeriod = rateToMilliseconds(sampleRate);
+            $("#chopts_refresh").val(sampleRate);
+          } else if (updateRate > 30) {
+            updatePeriod = rateToMilliseconds(30);
+            $("#chopts_refresh").val(30);
+          } else {
+            $("#chopts_refresh").val(updateRate);
+          }
           clearInterval(drawInterval);
           drawInterval = setInterval(function() { chart.render(); },
                                      updatePeriod);
+          console.log("updateRate: " + updateRate
+                      + " sampleRate: " + sampleRate);
         };
 
         $('#chopts_stop_start').bind('click', toggleStopStartGraph);
@@ -190,6 +202,7 @@
             var foo = $("#sample_period").val();
             $("#sample_period").val(msg.sample_period + "ms");
             console.log("sample_period: " + msg.sample_period);
+            setUpdatePeriod();
             clearChart();
           }
         };
