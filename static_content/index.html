@@ -10,38 +10,38 @@
         var chartData = {};
         chartData.txDelta = {
           data:[],
-          title:"Tx Bytes per 10ms sample period",
+          title:"Tx Bytes per sample period",
           ylabel:"Tx Bytes, delta",
-          xlabel:"Time: 10ms"
+          xlabel:"Time"
         };
         chartData.rxDelta = {
           data:[],
-          title:"Rx Bytes per 10ms sample period",
+          title:"Rx Bytes per sample period",
           ylabel:"Rx Bytes, delta",
-          xlabel:"Time: 10ms"
+          xlabel:"Time"
         };
         chartData.rxBytes = {
           data:[],
           title: "Rx Bytes since boot",
           ylabel:"Rx Bytes, cumulative",
-          xlabel:"Time: 10ms"
+          xlabel:"Time"
         };
         chartData.txBytes = {
           data:[],
           title: "Tx Bytes since boot",
           ylabel:"Tx Bytes, cumulative",
-          xlabel:"Time: 10ms"
+          xlabel:"Time"
         };
 	chartData.rxRate = {
           data:[],
-          title: "Ingress throughput in kpbs, measured over 10ms samples",
-          ylabel:"kbps, 10ms mean",
+          title: "Ingress throughput in kpbs",
+          ylabel:"kbps, mean",
           xlabel:"sample number",
         };
         chartData.txRate = {
           data:[],
-          title: "Egress throughput in kbps, measured over 10ms samples",
-          ylabel:"kbps, 10ms mean",
+          title: "Egress throughput in kbps",
+          ylabel:"kbps, mean",
           xlabel:"sample number",
         };
 
@@ -164,8 +164,9 @@
         };
 
         /* count must be bytes, duration must be milliseconds */
-        var byteCountToKbpsRate = function(count, duration) {
-          var rate = count * (1000.0 / duration) * 8.0 / 1000.0;
+        var byteCountToKbpsRate = function(count) {
+          var period = parseInt($("#sample_period").val());
+          var rate = count * (1000.0 / period) * 8.0 / 1000.0;
           return rate;
         };
 
@@ -179,6 +180,7 @@
         websocket.onopen = function(evt) { 
           websocket.send("open!");
           list_ifaces();
+          get_sample_period();
         };
 //        websocket.onclose = function(evt) { onClose(evt) };
         websocket.onerror = function(evt) { onError(evt) };
@@ -190,11 +192,9 @@
             updateSeries(chartData.rxBytes.data, msg.stats["rx-bytes"]);
             updateSeries(chartData.txBytes.data, msg.stats["tx-bytes"]);
             updateSeries(chartData.txRate.data,
-                         byteCountToKbpsRate(msg.stats["tx-delta"],
-                                             10));
+                         byteCountToKbpsRate(msg.stats["tx-delta"]));
             updateSeries(chartData.rxRate.data,
-                         byteCountToKbpsRate(msg.stats["rx-delta"],
-                                             10));
+                         byteCountToKbpsRate(msg.stats["rx-delta"]));
             xVal++;
           } else if (msg["ifaces"]) {
             $('#dev_select').empty();
@@ -219,6 +219,11 @@
               $("#jitter").val(msg.netem_params.jitter + "ms");
               $("#loss").val(msg.netem_params.loss + "%");
             }
+          } else if (msg["sample_period"]) {
+            var foo = $("#sample_period").val();
+            $("#sample_period").val(msg.sample_period + "ms");
+            console.log("sample_period: " + msg.sample_period);
+            clearChart();
           }
         };
 
@@ -254,6 +259,20 @@
         };
         $('#set_netem_button').bind('click', set_netem);
 
+	var get_sample_period = function() {
+          var msg = JSON.stringify({'msg': 'get_sample_period'});
+          websocket.send(msg);
+        };
+
+        var set_sample_period = function() {
+          var msg = JSON.stringify(
+            {'msg': 'set_sample_period',
+             'period': $("#sample_period").val()
+            });
+          websocket.send(msg);
+        };
+        $('#sample_period').bind('change', set_sample_period);
+
         $('#dev_select').bind('change', dev_select);
 
         var updateSeries = function (series, yVal) {
@@ -287,7 +306,9 @@
       <hr/>
       <div id="chartOpts">
         <em>Chart Parameters:</em>
-        <p>        
+        <p>
+	Sampling period:
+	<input type="text" size="4" id="sample_period"/>
         <button id="chopts_stop_start"> Stop/Start</button> &nbsp;
         Chart Refresh Rate (1-20 fps):
         <input type="text" size="4" id="chopts_refresh"/>

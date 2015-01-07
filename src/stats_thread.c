@@ -28,11 +28,17 @@ struct nl_cache *nl_link_cache;
 char *g_iface;
 struct byte_counts stats_o;
 struct byte_counts stats_c;
+int sample_period_ms;
 
 void (*stats_handler) (struct byte_counts * counts);
 
 /* local prototypes */
 static void *run(void *data);
+
+int get_sample_period()
+{
+	return sample_period_ms;
+}
 
 int stats_thread_init(void (*_stats_handler) (struct byte_counts * counts))
 {
@@ -140,7 +146,7 @@ static int init_realtime(void)
 	return sched_setscheduler(0, SCHED_FIFO, &schedparm);
 }
 
-static void init_timer(void)
+void set_timer(int period)
 {
 	struct itimerval timer;
 
@@ -149,19 +155,20 @@ static void init_timer(void)
 	sigaction(SIGALRM, &sa, NULL);
 
 	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 1000 * SAMPLE_PERIOD_MS;
+	timer.it_value.tv_usec = 1000 * period;
 
 	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 1000 * SAMPLE_PERIOD_MS;
+	timer.it_interval.tv_usec = 1000 * period;
 
 	setitimer(ITIMER_REAL, &timer, NULL);
+	sample_period_ms = period;
 }
 
 static void *run(void *data)
 {
 	init_nl();
 	init_realtime();
-	init_timer();
+	set_timer(SAMPLE_PERIOD_MS);
 
 	for (;;) {
 		pause();
