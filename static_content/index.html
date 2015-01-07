@@ -20,18 +20,6 @@
           ylabel:"Rx Bytes, delta",
           xlabel:"Time"
         };
-        chartData.rxBytes = {
-          data:[],
-          title: "Rx Bytes since boot",
-          ylabel:"Rx Bytes, cumulative",
-          xlabel:"Time"
-        };
-        chartData.txBytes = {
-          data:[],
-          title: "Tx Bytes since boot",
-          ylabel:"Tx Bytes, cumulative",
-          xlabel:"Time"
-        };
 	chartData.rxRate = {
           data:[],
           title: "Ingress throughput in kpbs",
@@ -156,8 +144,6 @@
         var clearChart = function() {
           chartData.txDelta.data = [];
           chartData.rxDelta.data = [];
-          chartData.rxBytes.data = [];
-          chartData.txBytes.data = [];
           chartData.rxRate.data = [];
           chartData.txRate.data = [];
           resetChart();
@@ -189,8 +175,6 @@
           if (msg["stats"]) {
             updateSeries(chartData.txDelta.data, msg.stats["tx-delta"]);
             updateSeries(chartData.rxDelta.data, msg.stats["rx-delta"]);
-            updateSeries(chartData.rxBytes.data, msg.stats["rx-bytes"]);
-            updateSeries(chartData.txBytes.data, msg.stats["tx-bytes"]);
             updateSeries(chartData.txRate.data,
                          byteCountToKbpsRate(msg.stats["tx-delta"]));
             updateSeries(chartData.rxRate.data,
@@ -320,8 +304,6 @@
         <select id="chopts_series">
           <option value="txDelta">Tx Bytes Delta</option>
           <option value="rxDelta">Rx Bytes Delta</option>
-          <option value="txBytes">Tx Bytes Total</option>
-          <option value="rxBytes">Rx Bytes Total</option>
           <option value="rxRate" selected>Rx Bitrate</option>
           <option value="txRate">Tx Bitrate</option>
         </select>
