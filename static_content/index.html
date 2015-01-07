@@ -158,13 +158,17 @@
 
         var wsUri = "ws://" + document.domain + ":" + location.port;
         websocket = new WebSocket(wsUri);
+
         websocket.onopen = function(evt) { 
           websocket.send("open!");
           list_ifaces();
           get_sample_period();
         };
+
 //        websocket.onclose = function(evt) { onClose(evt) };
+
         websocket.onerror = function(evt) { onError(evt) };
+
         websocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
           if (msg["stats"]) {
