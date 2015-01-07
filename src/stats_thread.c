@@ -120,10 +120,8 @@ static void calc_deltas()
 		stats_o.tx_bytes = stats_c.tx_bytes;
 	}
 
-	stats_c.rx_bytes_delta = stats_c.rx_bytes -
-	    ((stats_o.rx_bytes + stats_c.rx_bytes) / 2);
-	stats_c.tx_bytes_delta = stats_c.tx_bytes -
-	    ((stats_o.tx_bytes + stats_c.tx_bytes) / 2);
+	stats_c.rx_bytes_delta = stats_c.rx_bytes - stats_o.rx_bytes;
+	stats_c.tx_bytes_delta = stats_c.tx_bytes - stats_o.tx_bytes;
 }
 
 static void timer_handler(int signum)
