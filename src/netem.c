@@ -82,29 +82,30 @@ int netem_get_params(char *iface, struct netem_params *params)
 	struct rtnl_qdisc *filter_qdisc;
 	struct rtnl_qdisc *found_qdisc = NULL;
 	int err;
+	int delay, jitter, loss;
 
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
 			nl_geterror(err));
-		return -1;
+		goto cleanup;
 	}
 
 	if ((err = nl_cache_refill(sock, qdisc_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
 			nl_geterror(err));
-		return -1;
+		goto cleanup;
 	}
 
 	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(link_cache, iface)) == NULL) {
 		fprintf(stderr, "unknown interface/link name.\n");
-		return -1;
+		goto cleanup;
 	}
 
 	if (!(filter_qdisc = rtnl_qdisc_alloc())) {
 		/* OOM error */
 		fprintf(stderr, "couldn't alloc qdisc\n");
-		return -1;
+		goto cleanup_link;
 	}
 
 	rtnl_tc_set_link(TC_CAST(filter_qdisc), link);
@@ -114,16 +115,41 @@ int netem_get_params(char *iface, struct netem_params *params)
 	found_qdisc = nl_cache_find(qdisc_cache, OBJ_CAST(filter_qdisc));
 	if (!found_qdisc) {
 		fprintf(stderr, "could't find qdisc for iface: %s\n", iface);
-		return -1;
+		goto cleanup_filter_qdisc;
 	}
-	rtnl_qdisc_put(filter_qdisc);
 
 	params->iface = iface;
-	params->delay = rtnl_netem_get_delay(found_qdisc) / 1000;
-	params->jitter = rtnl_netem_get_jitter(found_qdisc) / 1000;
-	params->loss = rtnl_netem_get_loss(found_qdisc) / (UINT_MAX / 100);
+	if (0 > (delay = rtnl_netem_get_delay(found_qdisc))) {
+		fprintf(stderr, "couldn't get delay for iface: %s\n", iface);
+		goto cleanup_qdisc;
+	}
+	params->delay = (double)delay / 1000;
+
+	if (0 > (jitter = rtnl_netem_get_jitter(found_qdisc))) {
+		fprintf(stderr, "couldn't get jitter for iface: %s\n", iface);
+		goto cleanup_qdisc;
+	}
+	params->jitter = (double)jitter / 1000;
+
+	if (0 > (loss = rtnl_netem_get_loss(found_qdisc))) {
+		fprintf(stderr, "couldn't get loss for iface: %s\n", iface);
+		goto cleanup_qdisc;
+	}
+	params->loss = (double)loss / (UINT_MAX / 100);
+
 	rtnl_qdisc_put(found_qdisc);
+	rtnl_qdisc_put(filter_qdisc);
+	rtnl_link_put(link);
 	return 0;
+
+cleanup_qdisc:
+        rtnl_qdisc_put(found_qdisc);
+cleanup_filter_qdisc:
+	rtnl_qdisc_put(filter_qdisc);
+cleanup_link:
+	rtnl_link_put(link);
+cleanup:
+	return -1;
 }
 
 int netem_update(const char *iface, int delay, int jitter, int loss)
