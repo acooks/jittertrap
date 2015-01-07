@@ -275,19 +275,20 @@
         <em>Chart Parameters:</em>
         <p>
 	Sampling period:
-	<input type="text" size="4" id="sample_period"/>
-        <button id="chopts_stop_start"> Stop/Start</button> &nbsp;
-        Chart Refresh Rate (1-20 fps):
-        <input type="text" size="4" id="chopts_refresh"/>
-        Chart Data Points:
-        <input type="test" size="4" id="chopts_dataLen"/> &nbsp;
+	<input type="text" size="4" id="sample_period"/> &nbsp;
         Chart Series:
         <select id="chopts_series">
-          <option value="txDelta">Tx Bytes Delta</option>
-          <option value="rxDelta">Rx Bytes Delta</option>
           <option value="rxRate" selected>Rx Bitrate</option>
           <option value="txRate">Tx Bitrate</option>
+          <option value="txDelta">Tx Bytes Delta</option>
+          <option value="rxDelta">Rx Bytes Delta</option>
         </select>
+        <button id="chopts_stop_start"> Stop/Start</button> <br/>
+        <br/>
+        Chart Refresh Rate:
+        <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
+        Chart Series Length:
+        <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
       </div>
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
       <div>
