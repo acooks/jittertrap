@@ -22,7 +22,7 @@
         };
 	chartData.rxRate = {
           data:[],
-          title: "Ingress throughput in kpbs",
+          title: "Ingress throughput in kbps",
           ylabel:"kbps, mean",
           xlabel:"sample number",
         };
@@ -34,7 +34,6 @@
         };
 
         var xVal = 0;
-        var yVal = 0;
         var dataLength = 2000; // number of dataPoints visible at any point
         var updatePeriod = 100;
 
@@ -284,20 +283,19 @@
       </div>
       <hr/>
       <div>
-        <em>Netem Parameters:</em>
+        <em>Impairment Parameters:</em>
         <p>
         Interface: <select id="dev_select"></select> &nbsp;
         Delay: <input type="text" size="6" id="delay"/> &nbsp;
         Delay variation: <input type="text" size="6" id="jitter"/> &nbsp;
         Loss: <input type="text" size="6" id="loss"/>
-	<br/>
+        <br/><br/>
+        <button id="set_netem_button">Update</button> &nbsp;
         Status: <span id="netem_status"></span>
-        <br/>
-        <button id="set_netem_button">Update</button>
       </div>
       <hr/>
       <div id="chartOpts">
-        <em>Chart Parameters:</em>
+        <em>Measurement Parameters:</em>
         <p>
 	Sampling period:
 	<input type="text" size="4" id="sample_period"/> &nbsp;
@@ -317,12 +315,12 @@
       </div>
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
       <div>
-        <h3>Help</h3>
+        <h3>Impairment Help</h3>
           <p>
- Delay, Delay Variation (Jitter) and Loss are applied to all packets Transmitted by the selected interface.
+ Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.
 
           <p>
-          <h4>Delay:</h4> a basic time delay, typically specified in milliseconds.
+          <h4>Delay:</h4> a basic time delay, specified in milliseconds.
           <h5>Example:</h5>42ms
           <p>
           <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.
