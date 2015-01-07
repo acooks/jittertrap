@@ -111,9 +111,12 @@ static char *list_ifaces()
 
 static void handle_ws_list_ifaces(struct ns_connection *nc)
 {
+	struct ns_connection *c;
 	char *buf = list_ifaces();
 	printf("matched list_ifaces. ifaces:[%s]\n", buf);
-	ns_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, buf, strlen(buf));
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, buf, strlen(buf));
+	}
 	free(buf);
 }
 
@@ -129,6 +132,7 @@ static void handle_ws_dev_select(struct json_token *tok)
 static void handle_ws_get_netem(struct ns_connection *nc,
 				struct json_token *tok)
 {
+	struct ns_connection *c;
 	struct netem_params p;
 	char *iface = malloc(tok->len + 1);
 	snprintf(iface, tok->len+1, "%s", tok->ptr);
@@ -147,7 +151,9 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 	char msg[200] = { 0 };
 	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
 	printf("%s\n", msg);
-	ns_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
 	free(iface);
 }
 
