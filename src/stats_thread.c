@@ -110,6 +110,7 @@ static int read_counters(const char *iface)
 	/* read and return counter */
 	stats_c.rx_bytes = rtnl_link_get_stat(link, RTNL_LINK_RX_BYTES);
 	stats_c.tx_bytes = rtnl_link_get_stat(link, RTNL_LINK_TX_BYTES);
+	rtnl_link_put(link);
 	return 0;
 }
 
