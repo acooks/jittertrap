@@ -124,7 +124,7 @@ static void calc_deltas()
 	stats_c.tx_bytes_delta = stats_c.tx_bytes - stats_o.tx_bytes;
 }
 
-static void timer_handler(int signum)
+static void update_stats()
 {
 	struct timeval t;
 	gettimeofday(&t, NULL);
@@ -144,32 +144,44 @@ static int init_realtime(void)
 	return sched_setscheduler(0, SCHED_FIFO, &schedparm);
 }
 
-void set_timer(int period)
+void set_sample_period(int period)
 {
-	struct itimerval timer;
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = &timer_handler;
-	sigaction(SIGALRM, &sa, NULL);
-
-	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 1000 * period;
-
-	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 1000 * period;
-
-	setitimer(ITIMER_REAL, &timer, NULL);
+	if (period < 1)
+		period = 1;
 	sample_period_ms = period;
 }
 
 static void *run(void *data)
 {
 	init_nl();
+	read_counters("lo"); /* warm up the link cache */
 	init_realtime();
-	set_timer(SAMPLE_PERIOD_MS);
+	set_sample_period(SAMPLE_PERIOD_MS);
+
+	struct timespec deadline;
+	struct timespec whoosh; /* the sound of a missed deadline. */
+	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
 	for (;;) {
-		pause();
+		clock_gettime(CLOCK_MONOTONIC, &whoosh);
+#if 0
+		printf("%ld.%09ld : %ld.%09ld\n",
+			deadline.tv_sec,
+			deadline.tv_nsec,
+			whoosh.tv_sec - deadline.tv_sec,
+			whoosh.tv_nsec - deadline.tv_nsec);
+#endif
+		deadline.tv_nsec += 1000 * 1000 * sample_period_ms;
+
+		/* Normalize the time to account for the second boundary */
+		if(deadline.tv_nsec >= 1000000000) {
+			deadline.tv_nsec -= 1000000000;
+			deadline.tv_sec++;
+		}
+
+		update_stats();
+	        clock_nanosleep(CLOCK_MONOTONIC,
+				TIMER_ABSTIME, &deadline, NULL);
 	}
 
 	return NULL;

@@ -260,7 +260,7 @@ static void handle_ws_set_period(struct ns_connection *nc,
                 return;
         }
         printf("setting sample period: %ld, ", period);
-	set_timer(period);
+	set_sample_period(period);
 	handle_ws_get_period(nc);
 	free(s);
 }
@@ -414,7 +414,7 @@ int main()
 	stats_thread_init(stats_event_handler);
 
 	for (;;) {
-		ns_mgr_poll(&mgr, 1000);
+		ns_mgr_poll(&mgr, 10);
 	}
 	ns_mgr_free(&mgr);
 

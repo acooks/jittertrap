@@ -11,7 +11,7 @@ struct byte_counts {
 
 int stats_thread_init(void (*stats_handler) (struct byte_counts * counts));
 void stats_monitor_iface(const char *_iface);
-void set_timer(int sample_period_ms);
+void set_sample_period(int sample_period_ms);
 int get_sample_period();
 
 #endif
