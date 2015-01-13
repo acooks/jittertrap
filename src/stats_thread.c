@@ -26,11 +26,11 @@ struct nl_sock *nl_sock;
 struct nl_cache *nl_link_cache;
 
 char *g_iface;
-struct byte_counts stats_o;
-struct byte_counts stats_c;
+struct iface_stats stats_o;
+struct iface_stats stats_c;
 int sample_period_ms;
 
-void (*stats_handler) (struct byte_counts * counts);
+void (*stats_handler) (struct iface_stats * counts);
 
 /* local prototypes */
 static void *run(void *data);
@@ -40,7 +40,7 @@ int get_sample_period()
 	return sample_period_ms;
 }
 
-int stats_thread_init(void (*_stats_handler) (struct byte_counts * counts))
+int stats_thread_init(void (*_stats_handler) (struct iface_stats * counts))
 {
 	if (!g_iface || !_stats_handler) {
 		return -1;
@@ -61,6 +61,8 @@ void stats_monitor_iface(const char *_iface)
 	g_iface = strdup(_iface);
 	stats_o.rx_bytes = 0;
 	stats_o.tx_bytes = 0;
+	stats_o.rx_packets = 0;
+	stats_o.tx_packets = 0;
 }
 
 static int init_nl(void)
@@ -110,6 +112,10 @@ static int read_counters(const char *iface)
 	/* read and return counter */
 	stats_c.rx_bytes = rtnl_link_get_stat(link, RTNL_LINK_RX_BYTES);
 	stats_c.tx_bytes = rtnl_link_get_stat(link, RTNL_LINK_TX_BYTES);
+	stats_c.rx_packets = rtnl_link_get_stat(link, RTNL_LINK_RX_PACKETS);
+	stats_c.rx_packets += rtnl_link_get_stat(link, RTNL_LINK_RX_COMPRESSED);
+	stats_c.tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
+	stats_c.tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
 	rtnl_link_put(link);
 	return 0;
 }
@@ -119,10 +125,14 @@ static void calc_deltas()
 	if (0 == stats_o.rx_bytes) {
 		stats_o.rx_bytes = stats_c.rx_bytes;
 		stats_o.tx_bytes = stats_c.tx_bytes;
+		stats_o.rx_packets = stats_c.rx_packets;
+		stats_o.tx_packets = stats_c.tx_packets;
 	}
 
 	stats_c.rx_bytes_delta = stats_c.rx_bytes - stats_o.rx_bytes;
 	stats_c.tx_bytes_delta = stats_c.tx_bytes - stats_o.tx_bytes;
+	stats_c.rx_packets_delta = stats_c.rx_packets - stats_o.rx_packets;
+	stats_c.tx_packets_delta = stats_c.tx_packets - stats_o.tx_packets;
 }
 
 static void update_stats()
@@ -134,7 +144,7 @@ static void update_stats()
 		calc_deltas();
 		stats_handler(&stats_c);
 	}
-	memcpy(&stats_o, &stats_c, sizeof(struct byte_counts));
+	memcpy(&stats_o, &stats_c, sizeof(struct iface_stats));
 }
 
 static int init_realtime(void)

@@ -32,6 +32,31 @@
           ylabel:"kbps, mean",
           xlabel:"sample number",
         };
+	chartData.txPacketRate = {
+          data:[],
+          title: "Egress packet rate",
+          ylabel:"pkts per sec, mean",
+          xlabel:"time",
+	};
+	chartData.rxPacketRate = {
+          data:[],
+          title: "Ingress packet rate",
+          ylabel:"pkts per sec, mean",
+          xlabel:"time",
+	};
+	chartData.txPacketDelta = {
+          data:[],
+          title: "Egress packet Delta",
+          ylabel:"packets sent",
+          xlabel:"sample number",
+	};
+	chartData.rxPacketDelta = {
+          data:[],
+          title: "Ingress packet Delta",
+          ylabel:"packets received",
+          xlabel:"sample number",
+	};
+
 
         var xVal = 0;
         var dataLength = 2000; // number of dataPoints visible at any point
@@ -140,6 +165,10 @@
           chartData.rxDelta.data = [];
           chartData.rxRate.data = [];
           chartData.txRate.data = [];
+          chartData.txPacketRate.data = [];
+          chartData.rxPacketRate.data = [];
+          chartData.rxPacketDelta.data = [];
+          chartData.txPacketDelta.data = [];
           resetChart();
           xVal = 0;
         };
@@ -149,6 +178,11 @@
           var period = parseInt($("#sample_period").val());
           var rate = count * (1000.0 / period) * 8.0 / 1000.0;
           return rate;
+        };
+
+        var packetDeltaToRate = function(count) {
+          var period = parseInt($("#sample_period").val());
+          return count * (1000.0 / period);
         };
 
         $("#dev_select").bind('change', clearChart);
@@ -185,6 +219,18 @@
             updateSeries(chartData.rxRate.data,
                          xVal,
                          byteCountToKbpsRate(msg.stats["rx-delta"]));
+            updateSeries(chartData.txPacketRate.data,
+                         xVal,
+                         packetDeltaToRate(msg.stats["tx-pkt-delta"]));
+            updateSeries(chartData.rxPacketRate.data,
+                         xVal,
+                         packetDeltaToRate(msg.stats["rx-pkt-delta"]));
+            updateSeries(chartData.txPacketDelta.data,
+                         xVal,
+                         msg.stats["tx-pkt-delta"]);
+            updateSeries(chartData.rxPacketDelta.data,
+                         xVal,
+                         msg.stats["rx-pkt-delta"]);
             xVal++;
           } else if (msg["ifaces"]) {
             $('#dev_select').empty();
@@ -305,6 +351,10 @@
           <option value="txRate">Tx Bitrate</option>
           <option value="txDelta">Tx Bytes Delta</option>
           <option value="rxDelta">Rx Bytes Delta</option>
+          <option value="rxPacketRate">Rx Packet Rate</option>
+          <option value="txPacketRate">Tx Packet Rate</option>
+          <option value="rxPacketDelta">Rx Packet Delta</option>
+          <option value="txPacketDelta">Tx Packet Delta</option>
         </select>
         <button id="chopts_stop_start"> Stop/Start</button> <br/>
         <br/>

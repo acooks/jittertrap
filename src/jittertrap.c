@@ -364,7 +364,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 }
 
 /* callback for the real-time stats thread. */
-void stats_event_handler(struct byte_counts *counts)
+void stats_event_handler(struct iface_stats *counts)
 {
 	struct ns_connection *c;
 
@@ -372,9 +372,13 @@ void stats_event_handler(struct byte_counts *counts)
 		if (is_websocket(c)) {
 #if 0
 			printf
-			    ("stats event. timestamp:[%lld] tx-bytes:[%lld] tx-delta:[%d]\n",
-			     counts->timestamp, counts->tx_bytes,
-			     counts->tx_bytes_delta);
+			    ("stats event. timestamp:[%lld] tx-bytes:[%lld] tx-delta:[%d] rx-pkts-d:[%d] tx-pkts-d:[%d] rx-pkts:[%d]\n",
+			     counts->timestamp,
+			     counts->tx_bytes,
+			     counts->tx_bytes_delta,
+			     counts->rx_packets_delta,
+			     counts->tx_packets_delta,
+			     counts->rx_packets);
 #endif
 			ns_printf_websocket_frame(c,
 						  WEBSOCKET_OP_TEXT,
@@ -383,13 +387,17 @@ void stats_event_handler(struct byte_counts *counts)
 						  "\"rx-bytes\":%lld,"
 						  "\"tx-bytes\":%lld,"
 						  "\"rx-delta\":%d,"
-						  "\"tx-delta\":%d"
+						  "\"tx-delta\":%d,"
+						  "\"rx-pkt-delta\":%d,"
+						  "\"tx-pkt-delta\":%d"
 						  "}}",
 						  g_iface,
 						  counts->rx_bytes,
 						  counts->tx_bytes,
 						  counts->rx_bytes_delta,
-						  counts->tx_bytes_delta);
+						  counts->tx_bytes_delta,
+						  counts->rx_packets_delta,
+						  counts->tx_packets_delta);
 		}
 	}
 }
