@@ -57,6 +57,18 @@
           xlabel:"sample number",
 	};
 
+	var triggers = {
+          maxRxThroughputEnabled: false,
+          maxTxThroughputEnabled: false,
+          minRxThroughputEnabled: false,
+          minTxThroughputEnabled: false,
+          maxTxSilenceEnabled:    false,
+          maxRxSilenceEnabled:    false,
+          maxRxThroughputTriggerVal: 0,
+          maxTxThroughputTriggerVal: 0,
+          minRxThroughputTriggerVal: 0,
+          minTxThroughputTriggerVal: 0,
+        };
 
         var xVal = 0;
         var dataLength = 2000; // number of dataPoints visible at any point
@@ -185,6 +197,10 @@
           return count * (1000.0 / period);
         };
 
+        var checkTriggers = function() {
+          ;
+        };
+
         $("#dev_select").bind('change', clearChart);
 
         var drawInterval = setInterval(function() { chart.render(); },
@@ -232,6 +248,7 @@
                          xVal,
                          msg.stats["rx-pkt-delta"]);
             xVal++;
+            checkTriggers();
           } else if (msg["ifaces"]) {
             $('#dev_select').empty();
             $.each(msg.ifaces,
@@ -319,6 +336,18 @@
           }
         };
 
+        $('#more_chopts_toggle').click(function() {
+          $('#more_chopts').toggle("fast");
+        });
+
+        $('#trigger_toggle').click(function() {
+          $('#trigger_chopts').toggle("fast");
+        });
+
+        $('#help_toggle').click(function() {
+          $('#help').toggle("fast");
+        });
+
 });
   </script>
   </head>
@@ -356,15 +385,38 @@
           <option value="rxPacketDelta">Rx Packet Delta</option>
           <option value="txPacketDelta">Tx Packet Delta</option>
         </select>
-        <button id="chopts_stop_start"> Stop/Start</button> <br/>
+        <button id="chopts_stop_start"> Stop/Start</button>
+        <button id="trigger_toggle">Triggers</button>
+        <button id="more_chopts_toggle">More chart options</button>
         <br/>
-        Chart Refresh Rate:
-        <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
-        Chart Series Length:
-        <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
+        <br/>
+        <span id="trigger_chopts" style="display:none">
+          Trigger Stop when:<br/>
+          <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">Exceeds Max RX Throughput: &nbsp;
+          <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
+          <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Exceeds Max TX Throughput: &nbsp;
+          <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
+          <input type="checkbox" value="min_rx_throughput" id="trigger_enable_min_rx_throughput">Below Min RX Throughput: &nbsp;
+          <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
+          <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Below Min TX Throughput: &nbsp;
+          <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
+          <input type="checkbox" value="silence" id="trigger_enable_rx_silence">RX Silence Duration Exceeds &nbsp;
+          <input type="text" id="trigger_val_rx_silence"/> ms<br/>
+          <input type="checkbox" value="silence" id="trigger_enable_tx_silence">TX Silence Duration Exceeds &nbsp;
+          <input type="text" id="trigger_val_tx_silence"/> ms<br/>
+        </span>
+        <br/>
+        <span id="more_chopts" style="display:none">
+          Chart Refresh Rate:
+          <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
+          Chart Series Length:
+          <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
+        </span>
+        <br/>
       </div>
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
-      <div>
+      <button id="help_toggle">Help!</button>
+      <div id="help" style="display:none">
         <h3>Impairment Help</h3>
           <p>
  Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.
