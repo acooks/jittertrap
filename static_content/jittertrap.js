@@ -1,54 +1,63 @@
 $(document).ready(function() {
         var chartData = {};
+
         chartData.txDelta = {
           data:[],
           title:"Tx Bytes per sample period",
           ylabel:"Tx Bytes, delta",
           xlabel:"Time"
         };
+
         chartData.rxDelta = {
           data:[],
           title:"Rx Bytes per sample period",
           ylabel:"Rx Bytes, delta",
           xlabel:"Time"
         };
+
         chartData.rxRate = {
           data:[],
           title: "Ingress throughput in kbps",
           ylabel:"kbps, mean",
           xlabel:"sample number",
         };
+
         chartData.txRate = {
           data:[],
           title: "Egress throughput in kbps",
           ylabel:"kbps, mean",
           xlabel:"sample number",
         };
+
         chartData.txPacketRate = {
           data:[],
           title: "Egress packet rate",
           ylabel:"pkts per sec, mean",
           xlabel:"time",
         };
+
         chartData.rxPacketRate = {
           data:[],
           title: "Ingress packet rate",
           ylabel:"pkts per sec, mean",
           xlabel:"time",
         };
+
         chartData.txPacketDelta = {
           data:[],
           title: "Egress packet Delta",
           ylabel:"packets sent",
           xlabel:"sample number",
         };
+
         chartData.rxPacketDelta = {
           data:[],
           title: "Ingress packet Delta",
           ylabel:"packets received",
           xlabel:"sample number",
         };
-       var triggers = {
+
+        var triggers = {
           maxRxThroughputEnabled: false,
           maxTxThroughputEnabled: false,
           minRxThroughputEnabled: false,
@@ -65,7 +74,7 @@ $(document).ready(function() {
         var dataLength = 2000; // number of dataPoints visible at any point
         var updatePeriod = 100;
 
-       var chart = new CanvasJS.Chart("chartContainer", {
+        var chart = new CanvasJS.Chart("chartContainer", {
                 axisY:{
                   includeZero: "false", 
                 },
@@ -83,63 +92,7 @@ $(document).ready(function() {
 
         var old_updatePeriod = updatePeriod;
 
-        var toggleStopStartGraph = function() {
-          var maxUpdatePeriod = 9999999999;
-          if (updatePeriod  != maxUpdatePeriod) {
-            old_updatePeriod = updatePeriod;
-            updatePeriod = maxUpdatePeriod;
-          } else {
-            updatePeriod = old_updatePeriod;
-          }
-          setUpdatePeriod();
-        };        
-
-        // interval in milliseconds
-        var millisecondsToRate = function(ms) {
-          if (ms > 0) {
-            return Math.ceil(1.0 / ms * 1000.0);
-          }
-        };
-
-       var rateToMilliseconds = function(r) {
-          if (r > 0) {
-            return Math.ceil(1.0 / r * 1000.0);
-          }
-        }
-        var setUpdatePeriod = function() {
-          var sampleRate = millisecondsToRate(parseInt($("#sample_period").val()));
-          var updateRate = millisecondsToRate(updatePeriod);
-          if (sampleRate < updateRate) {
-            updatePeriod = rateToMilliseconds(sampleRate);
-            $("#chopts_refresh").val(sampleRate);
-          } else if (updateRate > 30) {
-            updatePeriod = rateToMilliseconds(30);
-            $("#chopts_refresh").val(30);
-          } else {
-            $("#chopts_refresh").val(updateRate);
-          }
-          clearInterval(drawInterval);
-          drawInterval = setInterval(function() { chart.render(); },
-                                     updatePeriod);
-          console.log("updateRate: " + updateRate
-                      + " sampleRate: " + sampleRate);
-        };
-        $('#chopts_stop_start').bind('click', toggleStopStartGraph);
-        $('#chopts_refresh').bind('change',
-           function() {
-             updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
-             setUpdatePeriod();
-           }
-        );
-        $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
-        
-        $("#chopts_dataLen").bind('change',
-           function() {
-             dataLength = $("#chopts_dataLen").val();
-           });
-        $("#chopts_dataLen").val(dataLength);
-
-       var resetChart = function() {
+        var resetChart = function() {
           var s = $("#chopts_series option:selected").val();
           chart = new CanvasJS.Chart("chartContainer", {
             axisY:{
@@ -159,8 +112,7 @@ $(document).ready(function() {
           chart.render();
         };
 
-        $("#chopts_series").bind('change', resetChart);
-       var clearChart = function() {
+        var clearChart = function() {
           chartData.txDelta.data = [];
           chartData.rxDelta.data = [];
           chartData.rxRate.data = [];
@@ -173,22 +125,68 @@ $(document).ready(function() {
           xVal = 0;
         };
 
+        var toggleStopStartGraph = function() {
+          var maxUpdatePeriod = 9999999999;
+          if (updatePeriod  != maxUpdatePeriod) {
+            old_updatePeriod = updatePeriod;
+            updatePeriod = maxUpdatePeriod;
+          } else {
+            updatePeriod = old_updatePeriod;
+          }
+          setUpdatePeriod();
+        };        
+
+        // interval in milliseconds
+        var millisecondsToRate = function(ms) {
+          if (ms > 0) {
+            return Math.ceil(1.0 / ms * 1000.0);
+          }
+        };
+
+        var rateToMilliseconds = function(r) {
+          if (r > 0) {
+            return Math.ceil(1.0 / r * 1000.0);
+          }
+        };
+
         /* count must be bytes, duration must be milliseconds */
         var byteCountToKbpsRate = function(count) {
           var period = parseInt($("#sample_period").val());
           var rate = count * (1000.0 / period) * 8.0 / 1000.0;
           return rate;
         };
-       var packetDeltaToRate = function(count) {
+
+        var packetDeltaToRate = function(count) {
           var period = parseInt($("#sample_period").val());
           return count * (1000.0 / period);
         };
 
+        var setUpdatePeriod = function() {
+          var sampleRate = millisecondsToRate(parseInt($("#sample_period").val()));
+          var updateRate = millisecondsToRate(updatePeriod);
+          if (sampleRate < updateRate) {
+            updatePeriod = rateToMilliseconds(sampleRate);
+            $("#chopts_refresh").val(sampleRate);
+          } else if (updateRate > 30) {
+            updatePeriod = rateToMilliseconds(30);
+            $("#chopts_refresh").val(30);
+          } else {
+            $("#chopts_refresh").val(updateRate);
+          }
+          clearInterval(drawInterval);
+          drawInterval = setInterval(function() { chart.render(); },
+                                     updatePeriod);
+          console.log("updateRate: " + updateRate
+                      + " sampleRate: " + sampleRate);
+        };
+
+        $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
+        
+        $("#chopts_dataLen").val(dataLength);
+
         var checkTriggers = function() {
           ;
         };
-
-        $("#dev_select").bind('change', clearChart);
 
         var drawInterval = setInterval(function() { chart.render(); },
                                        updatePeriod);
@@ -214,61 +212,13 @@ $(document).ready(function() {
           var msg = JSON.parse(evt.data);
           var samplePeriod = parseInt($("#sample_period").val());
           if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
-            updateSeries(chartData.txDelta.data,
-                         xVal * samplePeriod,
-                         msg.stats["tx-delta"]);
-            updateSeries(chartData.rxDelta.data,
-                         xVal * samplePeriod,
-                         msg.stats["rx-delta"]);
-            updateSeries(chartData.txRate.data,
-                         xVal,
-                         byteCountToKbpsRate(msg.stats["tx-delta"]));
-            updateSeries(chartData.rxRate.data,
-                         xVal,
-                         byteCountToKbpsRate(msg.stats["rx-delta"]));
-            updateSeries(chartData.txPacketRate.data,
-                         xVal,
-                         packetDeltaToRate(msg.stats["tx-pkt-delta"]));
-            updateSeries(chartData.rxPacketRate.data,
-                         xVal,
-                         packetDeltaToRate(msg.stats["rx-pkt-delta"]));
-            updateSeries(chartData.txPacketDelta.data,
-                         xVal,
-                         msg.stats["tx-pkt-delta"]);
-            updateSeries(chartData.rxPacketDelta.data,
-                         xVal,
-                         msg.stats["rx-pkt-delta"]);
-            xVal++;
-            checkTriggers();
+            handleMsgUpdateStats(samplePeriod, msg.stats);
           } else if (msg["ifaces"]) {
-            $('#dev_select').empty();
-            $.each(msg.ifaces,
-              function (ix, val) {
-                var option = $('<option>').text(val).val(val);
-                $('#dev_select').append(option);
-              }
-            );
-            dev_select();
+            handleMsgIfaces(msg["ifaces"]);
           } else if (msg["netem_params"]) {
-            if (msg.netem_params.delay == -1
-                && msg.netem_params.jitter == -1
-                && msg.netem_params.loss == -1) {
-              $("#netem_status").html("Netem not active on device. Set parameters to activate.");
-              $("#delay").val("None");
-              $("#jitter").val("None");
-              $("#loss").val("None");
-            } else {
-              $("#netem_status").html("Ready");
-              $("#delay").val(msg.netem_params.delay + "ms");
-              $("#jitter").val(msg.netem_params.jitter + "ms");
-              $("#loss").val(msg.netem_params.loss + "%");
-            }
+            handleMsgNetemParams(msg["netem_params"]);
           } else if (msg["sample_period"]) {
-            var foo = $("#sample_period").val();
-            $("#sample_period").val(msg.sample_period + "ms");
-            console.log("sample_period: " + msg.sample_period);
-            setUpdatePeriod();
-            clearChart();
+            handleMsgSamplePeriod(msg["sample_period"]);
           }
         };
 
@@ -291,6 +241,7 @@ $(document).ready(function() {
             });
           websocket.send(msg);
         };
+
         var set_netem = function() {
           var msg = JSON.stringify(
             {'msg': 'set_netem',
@@ -301,7 +252,6 @@ $(document).ready(function() {
             });
           websocket.send(msg);
         };
-        $('#set_netem_button').bind('click', set_netem);
 
         var get_sample_period = function() {
           var msg = JSON.stringify({'msg': 'get_sample_period'});
@@ -315,9 +265,6 @@ $(document).ready(function() {
             });
           websocket.send(msg);
         };
-        $('#sample_period').bind('change', set_sample_period);
-
-        $('#dev_select').bind('change', dev_select);
 
         var updateSeries = function (series, xVal, yVal) {
           series.push({ x: xVal, y: yVal });
@@ -325,6 +272,94 @@ $(document).ready(function() {
             series.shift();
           }
         };
+
+        var handleMsgUpdateStats = function (samplePeriod, stats) {
+
+          updateSeries(chartData.txDelta.data,
+                       xVal * samplePeriod,
+                       stats["tx-delta"]);
+
+          updateSeries(chartData.rxDelta.data,
+                       xVal * samplePeriod,
+                       stats["rx-delta"]);
+
+          updateSeries(chartData.txRate.data,
+                       xVal,
+                       byteCountToKbpsRate(stats["tx-delta"]));
+
+          updateSeries(chartData.rxRate.data,
+                       xVal,
+                       byteCountToKbpsRate(stats["rx-delta"]));
+
+          updateSeries(chartData.txPacketRate.data,
+                       xVal,
+                       packetDeltaToRate(stats["tx-pkt-delta"]));
+
+          updateSeries(chartData.rxPacketRate.data,
+                       xVal,
+                       packetDeltaToRate(stats["rx-pkt-delta"]));
+
+          updateSeries(chartData.txPacketDelta.data,
+                       xVal,
+                       stats["tx-pkt-delta"]);
+
+          updateSeries(chartData.rxPacketDelta.data,
+                       xVal,
+                       stats["rx-pkt-delta"]);
+          xVal++;
+          checkTriggers();
+        };
+
+        var handleMsgIfaces = function(ifaces) {
+          $('#dev_select').empty();
+          $.each(ifaces,
+            function (ix, val) {
+              var option = $('<option>').text(val).val(val);
+              $('#dev_select').append(option);
+            }
+          );
+          dev_select();
+        };
+
+        var handleMsgNetemParams = function(params) {
+          if (params.delay == -1 && params.jitter == -1 && params.loss == -1) {
+            $("#netem_status").html("Netem not active on device. Set parameters to activate.");
+            $("#delay").val("None");
+            $("#jitter").val("None");
+            $("#loss").val("None");
+          } else {
+            $("#netem_status").html("Ready");
+            $("#delay").val(msg.netem_params.delay + "ms");
+            $("#jitter").val(msg.netem_params.jitter + "ms");
+            $("#loss").val(msg.netem_params.loss + "%");
+          }
+        };
+
+        var handleMsgSamplePeriod = function(period) {
+          var foo = $("#sample_period").val();
+          $("#sample_period").val(period + "ms");
+          console.log("sample_period: " + period);
+          setUpdatePeriod();
+          clearChart();
+        };
+
+        $("#chopts_series").bind('change', resetChart);
+        $("#dev_select").bind('change', clearChart);
+        $('#set_netem_button').bind('click', set_netem);
+        $('#sample_period').bind('change', set_sample_period);
+        $('#dev_select').bind('change', dev_select);
+        $('#chopts_stop_start').bind('click', toggleStopStartGraph);
+        $('#chopts_refresh').bind('change',
+           function() {
+             updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
+             setUpdatePeriod();
+           }
+        );
+
+        $("#chopts_dataLen").bind('change',
+           function() {
+             dataLength = $("#chopts_dataLen").val();
+           });
 
         $('#more_chopts_toggle').click(function() {
           $('#more_chopts').toggle("fast");
