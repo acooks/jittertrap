@@ -137,10 +137,8 @@ static void calc_deltas()
 
 static void update_stats()
 {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	stats_c.timestamp = (t.tv_sec * 1000 * 1000 + t.tv_usec);
 	if (0 == read_counters(g_iface)) {
+		clock_gettime(CLOCK_MONOTONIC, &stats_c.timestamp);
 		calc_deltas();
 		stats_handler(&stats_c);
 	}

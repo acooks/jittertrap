@@ -368,6 +368,12 @@ void stats_event_handler(struct iface_stats *counts)
 {
 	struct ns_connection *c;
 
+#if 0
+	printf("%ld.%09ld\n",
+               counts->timestamp.tv_sec,
+               counts->timestamp.tv_nsec);
+#endif
+
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		if (is_websocket(c)) {
 #if 0

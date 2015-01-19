@@ -3,7 +3,7 @@
 
 struct iface_stats {
 	uint32_t sample_period_us;
-	uint64_t timestamp;
+	struct timespec timestamp;
 	uint64_t rx_bytes;
 	uint64_t tx_bytes;
 	uint32_t rx_bytes_delta;
