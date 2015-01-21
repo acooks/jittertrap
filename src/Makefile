@@ -17,6 +17,11 @@ SOURCES = \
  netem.c \
  ../deps/fossa/fossa.c \
 
+HEADERS = \
+ jittertrap.h \
+ netem.h \
+ stats_thread.h
+
 INCLUDES = \
  -I ../deps/fossa/ \
  -I ../deps/fossa/deps/frozen
@@ -34,7 +39,7 @@ DEFINES = \
 
 all: $(PROG)
 
-$(PROG): $(SOURCES)
+$(PROG): $(SOURCES) $(HEADERS)
 	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES)
 
 clean:
