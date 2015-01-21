@@ -114,7 +114,8 @@ int netem_get_params(char *iface, struct netem_params *params)
 
 	found_qdisc = nl_cache_find(qdisc_cache, OBJ_CAST(filter_qdisc));
 	if (!found_qdisc) {
-		fprintf(stderr, "could't find qdisc for iface: %s\n", iface);
+		fprintf(stderr, "could't find netem qdisc for iface: %s\n",
+			iface);
 		goto cleanup_filter_qdisc;
 	}
 
@@ -152,7 +153,7 @@ cleanup:
 	return -1;
 }
 
-int netem_update(const char *iface, int delay, int jitter, int loss)
+int netem_set_params(const char *iface, struct netem_params *params)
 {
 	struct rtnl_link *link;
 	struct rtnl_qdisc *qdisc;
@@ -174,9 +175,9 @@ int netem_update(const char *iface, int delay, int jitter, int loss)
 	rtnl_tc_set_parent(TC_CAST(qdisc), TC_H_ROOT);
 	rtnl_tc_set_kind(TC_CAST(qdisc), "netem");
 
-	rtnl_netem_set_delay(qdisc, delay * 1000);	/* expects microseconds */
-	rtnl_netem_set_jitter(qdisc, jitter * 1000);
-	rtnl_netem_set_loss(qdisc, (loss * (UINT_MAX / 100)));
+	rtnl_netem_set_delay(qdisc, params->delay * 1000); /* expects microseconds */
+	rtnl_netem_set_jitter(qdisc, params->jitter * 1000);
+	rtnl_netem_set_loss(qdisc, (params->loss * (UINT_MAX / 100)));
 
 	/* Submit request to kernel and wait for response */
 	err = rtnl_qdisc_add(sock, qdisc, NLM_F_CREATE | NLM_F_REPLACE);

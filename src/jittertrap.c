@@ -201,8 +201,10 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 	char *s = NULL;
 	char *dev = NULL;
 	long delay, jitter, loss;
+	struct netem_params p = { 0 };
 
 	json_token_to_string(t_dev, &dev);
+	p.iface = dev;
 	printf("set_netem: dev: %s, ", dev);
 
 	json_token_to_string(t_delay, &s);
@@ -211,6 +213,7 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 		free(s);
 		return;
 	}
+	p.delay = delay;
 	printf("delay: %ld, ", delay);
 
 	json_token_to_string(t_jitter, &s);
@@ -219,6 +222,7 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 		free(s);
 		return;
 	}
+	p.jitter = jitter;
 	printf("jitter: %ld, ", jitter);
 
 	json_token_to_string(t_loss, &s);
@@ -227,10 +231,11 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 		free(s);
 		return;
 	}
+	p.loss = loss;
 	printf("loss: %ld\n", loss);
 	printf("\n\n");
 
-	netem_update(dev, delay, jitter, loss);
+	netem_set_params(dev, &p);
 	handle_ws_get_netem(nc, t_dev);
 	free(s);
 	free(dev);
