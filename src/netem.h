@@ -3,9 +3,9 @@
 
 struct netem_params {
 	char *iface;
-	int delay;
-	int jitter;
-	int loss;
+	uint32_t delay;		/* milliseconds */
+	uint32_t jitter;	/* milliseconds */
+	uint32_t loss;		/* percentage, [0-100] */
 };
 
 int netem_init();
