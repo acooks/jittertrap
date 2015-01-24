@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 #include "fossa.h"
 #include "frozen.h"
 #include "stats_thread.h"
@@ -10,6 +11,8 @@
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
+
+static pthread_mutex_t fossa_mutex;
 
 static char *g_iface;
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
@@ -343,7 +346,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 {
 	struct http_message *hm = (struct http_message *)ev_data;
 	struct websocket_message *wm = (struct websocket_message *)ev_data;
-
+	pthread_mutex_lock(&fossa_mutex);
 	switch (ev) {
 	case NS_HTTP_REQUEST:
 		/* keep this simple. no REST. serve only index.html.
@@ -366,13 +369,14 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 	default:
 		break;
 	}
+	pthread_mutex_unlock(&fossa_mutex);
 }
 
 /* callback for the real-time stats thread. */
 void stats_event_handler(struct iface_stats *counts)
 {
 	struct ns_connection *c;
-
+	pthread_mutex_lock(&fossa_mutex);
 #if 0
 	printf("%ld.%09ld\n",
                counts->timestamp.tv_sec,
@@ -411,6 +415,7 @@ void stats_event_handler(struct iface_stats *counts)
 						  counts->tx_packets_delta);
 		}
 	}
+	pthread_mutex_unlock(&fossa_mutex);
 }
 
 int main()
