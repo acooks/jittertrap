@@ -1,2 +1,6 @@
 script: make
+
+before_install:
+ - sudo apt-get install -qq libnl-3-dev libnl-3-route
+
 install: true
