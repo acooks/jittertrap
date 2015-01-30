@@ -18,7 +18,6 @@ SOURCES = \
  ../deps/fossa/fossa.c \
 
 HEADERS = \
- jittertrap.h \
  netem.h \
  stats_thread.h
 
