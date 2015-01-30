@@ -4,14 +4,14 @@ $(document).ready(function() {
         chartData.txDelta = {
           data:[],
           title:"Tx Bytes per sample period",
-          ylabel:"Tx Bytes, delta",
+          ylabel:"Tx Bytes per sample",
           xlabel:"Time"
         };
 
         chartData.rxDelta = {
           data:[],
           title:"Rx Bytes per sample period",
-          ylabel:"Rx Bytes, delta",
+          ylabel:"Rx Bytes per sample",
           xlabel:"Time"
         };
 
@@ -45,14 +45,14 @@ $(document).ready(function() {
 
         chartData.txPacketDelta = {
           data:[],
-          title: "Egress packet Delta",
+          title: "Egress packets per sample",
           ylabel:"packets sent",
           xlabel:"sample number",
         };
 
         chartData.rxPacketDelta = {
           data:[],
-          title: "Ingress packet Delta",
+          title: "Ingress packets per sample",
           ylabel:"packets received",
           xlabel:"sample number",
         };
@@ -323,7 +323,7 @@ $(document).ready(function() {
 
         var handleMsgNetemParams = function(params) {
           if (params.delay == -1 && params.jitter == -1 && params.loss == -1) {
-            $("#netem_status").html("Netem not active on device. Set parameters to activate.");
+            $("#netem_status").html("No active impairment on device. Set parameters to activate.");
             $("#delay").val("None");
             $("#jitter").val("None");
             $("#loss").val("None");
