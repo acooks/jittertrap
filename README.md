@@ -10,4 +10,13 @@ It has two broad areas of use:
 How to use it:
 ----------------
 The user interface is implemented as a web application.
+
 ![JitterTrap UI](/docs/screenshots/jittertrap1.png?raw=true "JitterTrap Interface")
+
+Hipster Badges:
+---------------
+<a href="https://scan.coverity.com/projects/4088">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/4088/badge.svg"/>
+</a>
+[![Build Status](https://travis-ci.org/acooks/jittertrap.svg)](https://travis-ci.org/acooks/jittertrap)
