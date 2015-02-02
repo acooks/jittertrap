@@ -18,7 +18,7 @@
 #ifndef NS_COMMON_HEADER_INCLUDED
 #define NS_COMMON_HEADER_INCLUDED
 
-#define NS_FOSSA_VERSION "2.2.0"
+#define NS_FOSSA_VERSION "2.0.0"
 
 #undef UNICODE                  /* Use ANSI WinAPI functions */
 #undef _UNICODE                 /* Use multibyte encoding on Windows */
@@ -99,6 +99,7 @@ typedef struct _stati64 ns_stat_t;
 #ifndef S_ISDIR
 #define S_ISDIR(x) ((x) & _S_IFDIR)
 #endif
+#define DIRSEP '\\'
 #else /* not _WIN32 */
 #include <errno.h>
 #include <fcntl.h>
@@ -119,6 +120,7 @@ int64_t strtoll(const char * str, char ** endptr, int base);
 #define to64(x) strtoll(x, NULL, 10)
 typedef int sock_t;
 typedef struct stat ns_stat_t;
+#define DIRSEP '/'
 #endif /* _WIN32 */
 
 #ifdef NS_ENABLE_DEBUG
