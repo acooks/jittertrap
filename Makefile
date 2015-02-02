@@ -10,6 +10,7 @@ $(SUBDIRS): %:
 	@$(MAKE) -C $@
 
 update-fossa:
+	git subtree split --prefix deps/fossa --annotate='split ' --rejoin
 	git subtree pull --prefix deps/fossa https://github.com/cesanta/fossa master --squash
 
 # Remember to add the coverity bin directory to your PATH
