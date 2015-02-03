@@ -36,10 +36,6 @@ If you installed packages from 'l' series then libnl is already installed.
 Check version with:  
 `# slackpkg search libnl`
 
-#### Slackware  
-If you installed packages from 'l' series then libnl is already
-installed.Check version with:
-`# slackpkg search libnl`  
 ### Compiling JitterTrap
 
 Fetch:  
