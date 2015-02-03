@@ -37,6 +37,11 @@ DEFINES = \
  -DWEB_SERVER_DOCUMENT_ROOT=$(WEB_SERVER_DOCUMENT_ROOT)
 
 all: $(PROG)
+	@echo -----------------------------------
+	@echo Sample period: $(SAMPLE_PERIOD_MS)ms
+	@echo Web server port: $(WEB_SERVER_PORT)
+	@echo Web server document root: $(WEB_SERVER_DOCUMENT_ROOT)
+	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS)
 	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES)

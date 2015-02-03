@@ -4,10 +4,11 @@ CLEANDIRS = $(SUBDIRS:%=clean-%)
 .PHONY: all $(SUBDIRS)
 
 all: $(SUBDIRS)
+	@echo "Done."
 
 $(SUBDIRS): %:
 	@echo "Making $@"
-	@$(MAKE) -C $@
+	@$(MAKE) --silent -C $@
 
 update-fossa:
 	git subtree split --prefix deps/fossa --annotate='split ' --rejoin
@@ -22,4 +23,4 @@ coverity-build: $(CLEANDIRS)
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
 	@echo "Cleaning $@"
-	$(MAKE) -C $(@:clean-%=%) clean
+	@$(MAKE) --silent -C $(@:clean-%=%) clean
