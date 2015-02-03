@@ -426,6 +426,10 @@ int main()
 	ns_mgr_init(&mgr, NULL);
 	printf("Binding to port:%s\n", s_http_port);
 	nc = ns_bind_opt(&mgr, s_http_port, ev_handler, opts);
+	if (nc == NULL) {
+		fprintf(stderr, "Couldn't bind to port:%s\n", s_http_port);
+		return -1;
+	}
 	ns_set_protocol_http_websocket(nc);
 
 	if (netem_init() < 0) {
