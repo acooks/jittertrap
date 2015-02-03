@@ -31,6 +31,10 @@ Build dependencies:
 Run-time dependencies:  
 `$ sudo apt-get install libnl-3 libnl-route-3 libnl-genl-3`
 
+### Slackware
+libnl should be installed if you installed the 'l' series, otherwise:
+`$ slackpkg search libnl`
+
 ### Compiling JitterTrap
 
 Fetch:  
@@ -41,4 +45,5 @@ Build:
 `$ make WEB_SERVER_DOCUMENT_ROOT=$(pwd)/static_content`
 
 Run:  
-`$ sudo src/jittertrap`
+`$ sudo src/jittertrap
+`
