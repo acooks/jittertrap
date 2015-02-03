@@ -31,9 +31,10 @@ Build dependencies:
 Run-time dependencies:  
 `$ sudo apt-get install libnl-3 libnl-route-3 libnl-genl-3`
 
-### Slackware
-libnl should be installed if you installed the 'l' series, otherwise:
-`$ slackpkg search libnl`
+#### Slackware  
+If you install 'l' series then libnl is already installed. Check
+version with:  
+`# slackpkg search libnl`  
 
 ### Compiling JitterTrap
 
