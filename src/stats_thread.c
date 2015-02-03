@@ -162,6 +162,7 @@ void set_sample_period(int period)
 
 static void *run(void *data)
 {
+	(void)data; /* unused parameter. silence warning. */
 	init_nl();
 	read_counters("lo"); /* warm up the link cache */
 	init_realtime();
