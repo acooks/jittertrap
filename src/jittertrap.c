@@ -51,8 +51,12 @@ static bool match_msg_type(const struct json_token *tok, const char *r)
 static char *quote_string(const char *const s)
 {
 	char *outs;
-	outs = malloc(strlen(s) + 3);
-	sprintf(outs, "\"%s\"", s);
+	int len;	
+
+	len = strlen(s) + 2;	/* +2 for quotes  */
+	outs = strlen(len+1);	/* +1 for null */
+	snprintf(outs, "\"%s\"", s);
+	outs[len] = '\0';
 	return outs;
 }
 
