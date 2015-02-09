@@ -17,7 +17,7 @@ The user interface is implemented as a web application.
 
 ## Building JitterTrap
 ### Dependencies
-* libnl3
+* libnl >= 3.2.24
 
 #### Fedora  
 Build dependencies  
@@ -46,5 +46,4 @@ Build:
 `$ make WEB_SERVER_DOCUMENT_ROOT=$(pwd)/static_content`
 
 Run:  
-`$ sudo src/jittertrap
-`
+`$ sudo src/jittertrap`
