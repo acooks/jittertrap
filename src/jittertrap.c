@@ -328,8 +328,11 @@ static void print_peer_name(struct ns_connection *c)
 	struct sockaddr_storage addr;
 	char ipstr[INET6_ADDRSTRLEN];
 	socklen_t len = sizeof addr;
-
-	getpeername(c->sock, (struct sockaddr *)&addr, &len);
+	
+	if (getpeername(c->sock, (struct sockaddr *)&addr, &len) < 0) {
+	    fprintf(stderr, "Error: print_peer_name: cannot get address\n");
+	    return;
+	}
 
 	/* deal with both IPv4 and IPv6: */
 	if (addr.ss_family == AF_INET) {
