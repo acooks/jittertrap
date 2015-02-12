@@ -29,7 +29,7 @@ Run-time dependencies:
 Build dependencies:  
 `$ sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev`  
 Run-time dependencies:  
-`$ sudo apt-get install libnl-3 libnl-route-3 libnl-genl-3`
+`$ sudo apt-get install libnl-3-200 libnl-route-3-200 libnl-genl-3-200`
 
 #### Slackware  
 If you installed packages from 'l' series then libnl is already installed.  
