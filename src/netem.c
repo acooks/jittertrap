@@ -76,6 +76,53 @@ char **netem_list_ifaces()
 	return ifaces;
 }
 
+#if 1
+/* The nl_cache_find function is missing from the version of libnl that shipped
+ * with Ubuntu 12.04 (LTS), which is still in common use as of 2015-02-13.
+ *
+ * The nl_cache_find defined below is a poor substitute for the one in new
+ * versions of libnl, but enables these older distributions. It is marked as
+ * weak so that the libnl version will be used if it exists at link time.
+ */
+
+/* Callback used by nl_cache_foreach_filter in nl_cache_find.
+ * Sets parameter p to point to parameter found
+ */
+void cb_found_cache_obj(struct nl_object *found, void *p) {
+	struct nl_object **out = (struct nl_object**)p;
+	nl_object_get(found);
+	*out = found;
+}
+
+/**
+ * Find object in cache
+ * @arg cache           Cache
+ * @arg filter          object acting as a filter
+ *
+ * Searches the cache for an object which matches the object filter.
+ * nl_object_match_filter() is used to determine if the objects match.
+ * If a matching object is found, the reference counter is incremented and the
+ * object is returned.
+ *
+ * Therefore, if an object is returned, the reference to the object
+ * must be returned by calling nl_object_put() after usage.
+ *
+ * @return Reference to object or NULL if not found.
+ */
+__attribute__((weak))struct nl_object *nl_cache_find(struct nl_cache *cache,
+						     struct nl_object *filter)
+{
+	struct nl_object *obj;
+
+	/* obj will be set to point to the matched object, so if there are
+	 * multiple matches, obj will be set to point to the last match.
+	 */
+	nl_cache_foreach_filter(cache, filter, cb_found_cache_obj, &obj);
+	return obj;
+}
+
+#endif
+
 int netem_get_params(char *iface, struct netem_params *params)
 {
 	struct rtnl_link *link;
