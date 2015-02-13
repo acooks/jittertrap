@@ -4,89 +4,239 @@
     <script type="text/javascript" src="jquery-2.1.3.min.js"></script>
     <script type="text/javascript" src="jquery.canvasjs.min.js"></script>
     <script type="text/javascript" src="jittertrap.js"></script>
-    <link href="bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap CDN -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
   </head>
   <body>
     <div class="container">
-      <div class="header">
-        <h3 class="text-muted">JitterTrap</h3>
+      <div class="page-header">
+        <h2 class="text-muted">JitterTrap</h2>
       </div>
-      <hr/>
-      <div>
-        <em>Impairment Parameters:</em>
-        <p>
-        Interface: <select id="dev_select"></select> &nbsp;
-        Delay: <input type="text" size="6" id="delay"/> &nbsp;
-        Delay variation: <input type="text" size="6" id="jitter"/> &nbsp;
-        Loss: <input type="text" size="6" id="loss"/>
-        <br/><br/>
-        <button id="set_netem_button">Update</button> &nbsp;
-        Status: <span id="netem_status"></span>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Impairment Parameters</h3>
+        </div>
+        <div class="panel-body">
+          <form class="form-inline">
+            <div class="form-group">
+              <label for="dev_select">Interface</label>
+              <select id="dev_select" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label for="delay">Delay</label>
+              <input id="delay" class="form-control" type="text" size="6" />
+            </div>
+            <div class="form-group">
+              <label for="jitter">Delay variation</label>
+              <input id="jitter" class="form-control" type="text" size="6" />
+            </div>
+            <div class="form-group">
+              <label for="loss">Loss</label>
+              <input id="loss" class="form-control" type="text" size="6" />
+            </div>
+            <div class="form-group">
+              <button id="set_netem_button" class="btn btn-primary"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update</button>
+            </div>
+            <br/>
+          </form>
+        </div>
+        <div class="panel-footer"><em>Status:</em> <span id="netem_status"></span></div>
       </div>
-      <hr/>
+
+      <!-- Measurement Parameters -->
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Measurement Parameters</h3>
+        </div>
+        <div class="panel-body">
+          <form class="form-inline">
+            <div class="form-group">
+              <label for="sample_period">Sample Period</label>
+              <input id="sample_period" class="form-control" type="text" size="4" />
+            </div>
+
+            <div class="form-group">
+              <label for="chopts_series">Chart Series</label>
+              <select id="chopts_series" class="form-control">
+                <option value="rxRate" selected="selected">Rx Bitrate</option>
+                <option value="txRate">Tx Bitrate</option>
+                <option value="txDelta">Tx Bytes per Sample</option>
+                <option value="rxDelta">Rx Bytes per Sample</option>
+                <option value="rxPacketRate">Rx Packet Rate</option>
+                <option value="txPacketRate">Tx Packet Rate</option>
+                <option value="rxPacketDelta">Rx Packets per Sample</option>
+                <option value="txPacketDelta">Tx Packets per Sample</option>
+              </select>
+            </div>
+            <button id="chopts_stop_start" class="btn btn-primary"> Stop/Start</button>
+            <button id="trigger_toggle" class="btn btn-default">Traps</button>
+            <button id="more_chopts_toggle" class="btn btn-default"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> More chart options</button>
+
+            <!-- Traps -->
+            <div id="trigger_chopts" style="display:none">
+              Trap when: <br/>
+              
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">
+                  Exceeds Max RX Throughput
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_max_rx_throughput" class="form-control" type="text" />
+                <span class="input-group-addon">Mbps</span>
+              </div>
+
+              <br/>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">
+                  Exceeds Max TX Throughput
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_max_tx_throughput" class="form-control" type="text" />
+                <span class="input-group-addon">Mbps</span>
+              </div>
+
+              <br/>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="min_rx_throughput" id="trigger_enable_min_rx_throughput">
+                  Below Min RX Throughput
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_max_rx_throughput" class="form-control" type="text" />
+                <span class="input-group-addon">Mbps</span>
+              </div>
+
+              <br/>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">
+                  Below Min TX Throughput
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_max_tx_throughput" class="form-control" type="text" />
+                <span class="input-group-addon">Mbps</span>
+              </div>
+
+              <br/>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="silence" id="trigger_enable_rx_silence">
+                  RX Silence Duration Exceeds
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_rx_silence" class="form-control" type="text" />
+                <span class="input-group-addon">ms</span>
+              </div>
+
+              <br/>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" value="silence" id="trigger_enable_tx_silence">
+                  TX Silence Duration Exceeds
+                </label>
+              </div>
+              <div class="input-group">
+                <input id="trigger_val_tx_silence" class="form-control" type="text" />
+                <span class="input-group-addon">ms</span>
+              </div>
+            </div>
+
+            <!-- More Chart Options -->
+            <div id="more_chopts" style="display:none">
+              <label for="chopts_refresh">Chart Refresh Rate</label>
+              <input id="chopts_refresh" type="range" min="1" max="30" />
+              <label for="chopts_dataLen">Chart Series Length</label>
+              <input id="chopts_dataLen" type="range" min="100" max="2000" />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!--
       <div id="chartOpts">
         <em>Measurement Parameters:</em>
         <p>
-	Sampling period:
-	<input type="text" size="4" id="sample_period"/> &nbsp;
-        Chart Series:
-        <select id="chopts_series">
-          <option value="rxRate" selected="selected">Rx Bitrate</option>
-          <option value="txRate">Tx Bitrate</option>
-          <option value="txDelta">Tx Bytes per Sample</option>
-          <option value="rxDelta">Rx Bytes per Sample</option>
-          <option value="rxPacketRate">Rx Packet Rate</option>
-          <option value="txPacketRate">Tx Packet Rate</option>
-          <option value="rxPacketDelta">Rx Packets per Sample</option>
-          <option value="txPacketDelta">Tx Packets per Sample</option>
-        </select>
-        <button id="chopts_stop_start"> Stop/Start</button>
-        <button id="trigger_toggle">Traps</button>
-        <button id="more_chopts_toggle">More chart options</button>
-        <br/>
-        <br/>
-        <span id="trigger_chopts" style="display:none">
-          Trap when:<br/>
-          <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">Exceeds Max RX Throughput: &nbsp;
-          <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
-          <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Exceeds Max TX Throughput: &nbsp;
-          <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
-          <input type="checkbox" value="min_rx_throughput" id="trigger_enable_min_rx_throughput">Below Min RX Throughput: &nbsp;
-          <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
-          <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Below Min TX Throughput: &nbsp;
-          <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
-          <input type="checkbox" value="silence" id="trigger_enable_rx_silence">RX Silence Duration Exceeds &nbsp;
-          <input type="text" id="trigger_val_rx_silence"/> ms<br/>
-          <input type="checkbox" value="silence" id="trigger_enable_tx_silence">TX Silence Duration Exceeds &nbsp;
-          <input type="text" id="trigger_val_tx_silence"/> ms<br/>
-        </span>
-        <br/>
-        <span id="more_chopts" style="display:none">
-          Chart Refresh Rate:
-          <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
-          Chart Series Length:
-          <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
-        </span>
-        <br/>
-      </div>
+          Sampling period:
+          <input type="text" size="4" id="sample_period"/> &nbsp; Chart Series:
+          <select id="chopts_series">
+            <option value="rxRate" selected="selected">Rx Bitrate</option>
+            <option value="txRate">Tx Bitrate</option>
+            <option value="txDelta">Tx Bytes per Sample</option>
+            <option value="rxDelta">Rx Bytes per Sample</option>
+            <option value="rxPacketRate">Rx Packet Rate</option>
+            <option value="txPacketRate">Tx Packet Rate</option>
+            <option value="rxPacketDelta">Rx Packets per Sample</option>
+            <option value="txPacketDelta">Tx Packets per Sample</option>
+          </select>
+          <button id="chopts_stop_start"> Stop/Start</button>
+          <button id="trigger_toggle">Traps</button>
+          <button id="more_chopts_toggle">More chart options</button>
+          <br/>
+          <br/>
+          <span id="trigger_chopts" style="display:none">
+            Trap when:<br/>
+            <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">Exceeds Max RX Throughput: &nbsp;
+            <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
+            <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Exceeds Max TX Throughput: &nbsp;
+            <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
+            <input type="checkbox" value="min_rx_throughput" id="trigger_enable_min_rx_throughput">Below Min RX Throughput: &nbsp;
+            <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
+            <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Below Min TX Throughput: &nbsp;
+            <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
+            <input type="checkbox" value="silence" id="trigger_enable_rx_silence">RX Silence Duration Exceeds &nbsp;
+            <input type="text" id="trigger_val_rx_silence"/> ms<br/>
+            <input type="checkbox" value="silence" id="trigger_enable_tx_silence">TX Silence Duration Exceeds &nbsp;
+            <input type="text" id="trigger_val_tx_silence"/> ms<br/>
+          </span>
+          <br/>
+          <span id="more_chopts" style="display:none">
+            Chart Refresh Rate:
+            <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
+            Chart Series Length:
+            <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
+          </span>
+          <br/>
+        </div>
+      -->
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
       <button id="help_toggle">Help!</button>
       <div id="help" style="display:none">
         <h3>Impairment Help</h3>
-          <p>
- Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.
+        <p>Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.</p>
 
-          <p>
-          <h4>Delay:</h4> a basic time delay, specified in milliseconds.
-          <h5>Example:</h5>42ms
-          <p>
-          <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.
-          <p> Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.
-          <p> Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.
-          <h5>Example:</h5>22ms
-          <p>
-          <h4>Loss:</h4> a percentage of random packet loss. Each packet has X percent chance of being dropped.
-          <h5>Example:</h5>7%
+        <h4>Delay:</h4>
+        <p>A basic time delay, specified in milliseconds.</p>
+        <h5>Example:</h5>
+        <p>42ms</p>
+
+        <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.</p>
+        <p>Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.</p>
+        <p>Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.</p>
+        <h5>Example:</h5>
+        <p>22ms</p>
+
+        <h4>Loss:</h4>
+        <p>A percentage of random packet loss. Each packet has X percent chance of being dropped.</p>
+        <h5>Example:</h5>
+        <p>7%</p>
     </div>
   </body>
 </html>
