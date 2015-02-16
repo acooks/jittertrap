@@ -112,7 +112,7 @@ void cb_found_cache_obj(struct nl_object *found, void *p) {
 __attribute__((weak))struct nl_object *nl_cache_find(struct nl_cache *cache,
 						     struct nl_object *filter)
 {
-	struct nl_object *obj;
+	struct nl_object *obj = NULL;
 
 	/* obj will be set to point to the matched object, so if there are
 	 * multiple matches, obj will be set to point to the last match.
