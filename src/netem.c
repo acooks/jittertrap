@@ -159,7 +159,8 @@ int netem_get_params(char *iface, struct netem_params *params)
 	rtnl_tc_set_parent(TC_CAST(filter_qdisc), TC_H_ROOT);
 	rtnl_tc_set_kind(TC_CAST(filter_qdisc), "netem");
 
-	found_qdisc = nl_cache_find(qdisc_cache, OBJ_CAST(filter_qdisc));
+	found_qdisc = (struct rtnl_qdisc *)
+			nl_cache_find(qdisc_cache, OBJ_CAST(filter_qdisc));
 	if (!found_qdisc) {
 		fprintf(stderr, "could't find netem qdisc for iface: %s\n",
 			iface);
