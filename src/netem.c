@@ -183,7 +183,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 		fprintf(stderr, "couldn't get loss for iface: %s\n", iface);
 		goto cleanup_qdisc;
 	}
-	params->loss = (double)loss / (double)(UINT_MAX / 100);
+	params->loss = (double)loss / ((double)UINT_MAX / 100.0);
 
 	rtnl_qdisc_put(found_qdisc);
 	rtnl_qdisc_put(filter_qdisc);
