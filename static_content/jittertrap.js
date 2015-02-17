@@ -134,6 +134,7 @@ $(document).ready(function() {
             updatePeriod = old_updatePeriod;
           }
           setUpdatePeriod();
+          return false;
         };        
 
         // interval in milliseconds
@@ -176,8 +177,7 @@ $(document).ready(function() {
           clearInterval(drawInterval);
           drawInterval = setInterval(function() { chart.render(); },
                                      updatePeriod);
-          console.log("updateRate: " + updateRate
-                      + " sampleRate: " + sampleRate);
+          console.log("updateRate: " + updateRate + " sampleRate: " + sampleRate);
         };
 
         $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
@@ -251,6 +251,7 @@ $(document).ready(function() {
              'loss': $("#loss").val()
             });
           websocket.send(msg);
+          return false;
         };
 
         var get_sample_period = function() {
@@ -363,10 +364,12 @@ $(document).ready(function() {
 
         $('#more_chopts_toggle').click(function() {
           $('#more_chopts').toggle("fast");
+          return false;
         });
 
         $('#trigger_toggle').click(function() {
           $('#trigger_chopts').toggle("fast");
+          return false;
         });
 
         $('#help_toggle').click(function() {
