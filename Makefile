@@ -20,6 +20,9 @@ coverity-build: $(CLEANDIRS)
 	@tar caf jittertrap-coverity-build.lzma cov-int
 	@echo Coverity build archive: jittertrap-coverity-build.lzma
 
+coverity-clean:
+	rm -rf cov-int jittertrap-coverity-build.lzma
+
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
 	@echo "Cleaning $@"
