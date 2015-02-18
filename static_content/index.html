@@ -5,12 +5,10 @@
     <script type="text/javascript" src="jquery.canvasjs.min.js"></script>
     <script type="text/javascript" src="jittertrap.js"></script>
     
-    <!-- Bootstrap CDN -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <!-- Bootstrap 3.2.2 -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+    <script src="js/bootstrap.min.js"></script>
   </head>
   <body>
     <div class="container">
@@ -41,7 +39,9 @@
               <input id="loss" class="form-control" type="text" size="6" />
             </div>
             <div class="form-group">
-              <button id="set_netem_button" class="btn btn-primary"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update</button>
+              <button id="set_netem_button" class="btn btn-primary">
+                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+              </button>
             </div>
             <br/>
           </form>
@@ -76,7 +76,9 @@
             </div>
             <button id="chopts_stop_start" class="btn btn-primary"> Stop/Start</button>
             <button id="trigger_toggle" class="btn btn-default">Traps</button>
-            <button id="more_chopts_toggle" class="btn btn-default"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> More chart options</button>
+            <button id="more_chopts_toggle" class="btn btn-default">
+              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> More chart options
+            </button>
 
             <!-- Traps -->
             <div id="trigger_chopts" style="display:none">

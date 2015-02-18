@@ -251,6 +251,7 @@ $(document).ready(function() {
              'loss': $("#loss").val()
             });
           websocket.send(msg);
+          return false;
         };
 
         var get_sample_period = function() {
@@ -329,9 +330,9 @@ $(document).ready(function() {
             $("#loss").val("None");
           } else {
             $("#netem_status").html("Ready");
-            $("#delay").val(msg.netem_params.delay + "ms");
-            $("#jitter").val(msg.netem_params.jitter + "ms");
-            $("#loss").val(msg.netem_params.loss + "%");
+            $("#delay").val(params.delay + "ms");
+            $("#jitter").val(params.jitter + "ms");
+            $("#loss").val(params.loss + "%");
           }
         };
 
