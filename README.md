@@ -13,7 +13,7 @@ It has two broad areas of use:
 * introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, characterising the behaviour of the destination, with respect to delay, jitter and loss.
 
 The user interface is implemented as a web application.  
-![JitterTrap UI](/docs/screenshots/jittertrap1.png?raw=true "JitterTrap Interface")
+![JitterTrap UI](/docs/screenshots/jittertrap-20150218.png?raw=true "JitterTrap Interface")
 
 ## Building JitterTrap
 ### Dependencies
