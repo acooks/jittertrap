@@ -138,7 +138,8 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 	struct ns_connection *c;
 	struct netem_params p;
 	char *iface = malloc(tok->len + 1);
-	snprintf(iface, tok->len+1, "%s", tok->ptr);
+	memcpy(iface, tok->ptr, tok->len);
+	iface[tok->len] = 0;
 	printf("get netem for iface: [%s]\n", iface);
 	if (0 != netem_get_params(iface, &p)) {
 		fprintf(stderr, "couldn't get netem parameters.\n");
