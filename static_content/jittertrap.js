@@ -73,6 +73,7 @@ $(document).ready(function() {
         var xVal = 0;
         var dataLength = 2000; // number of dataPoints visible at any point
         var updatePeriod = 100;
+        var samplePeriod = 100;
 
         var chart = new CanvasJS.Chart("chartContainer", {
                 axisY:{
@@ -152,18 +153,16 @@ $(document).ready(function() {
 
         /* count must be bytes, duration must be milliseconds */
         var byteCountToKbpsRate = function(count) {
-          var period = parseInt($("#sample_period").val());
-          var rate = count * (1000.0 / period) * 8.0 / 1000.0;
+          var rate = count * (1000.0 / samplePeriod) * 8.0 / 1000.0;
           return rate;
         };
 
         var packetDeltaToRate = function(count) {
-          var period = parseInt($("#sample_period").val());
-          return count * (1000.0 / period);
+          return count * (1000.0 / samplePeriod);
         };
 
         var setUpdatePeriod = function() {
-          var sampleRate = millisecondsToRate(parseInt($("#sample_period").val()));
+          var sampleRate = millisecondsToRate(samplePeriod);
           var updateRate = millisecondsToRate(updatePeriod);
           if (sampleRate < updateRate) {
             updatePeriod = rateToMilliseconds(sampleRate);
@@ -210,7 +209,6 @@ $(document).ready(function() {
 
         websocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
-          var samplePeriod = parseInt($("#sample_period").val());
           if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
             handleMsgUpdateStats(samplePeriod, msg.stats);
           } else if (msg["ifaces"]) {
@@ -337,7 +335,7 @@ $(document).ready(function() {
         };
 
         var handleMsgSamplePeriod = function(period) {
-          var foo = $("#sample_period").val();
+          samplePeriod = period;
           $("#sample_period").val(period + "ms");
           console.log("sample_period: " + period);
           setUpdatePeriod();
