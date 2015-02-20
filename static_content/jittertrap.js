@@ -313,9 +313,10 @@ $(document).ready(function() {
         };
 
         var set_sample_period = function() {
+          samplePeriod = $("#sample_period").val();
           var msg = JSON.stringify(
             {'msg': 'set_sample_period',
-             'period': $("#sample_period").val()
+             'period': samplePeriod
             });
           websocket.send(msg);
         };
