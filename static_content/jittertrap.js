@@ -383,6 +383,7 @@ $(document).ready(function() {
           var newdata = [];
           for (i = 0; i < binCnt; i++) {
             var xVal = Math.ceil(i * (series.maxY.y / binCnt));
+            xVal += series.minY.y;  /* shift x to match original y range */
             series.histData.push({x: xVal, y: normBins[i], label: xVal});
           }
         };
