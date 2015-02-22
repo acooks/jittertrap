@@ -28,15 +28,24 @@
             </div>
             <div class="form-group">
               <label for="delay">Delay</label>
-              <input id="delay" class="form-control" type="text" size="6" />
+              <div class="input-group">
+                <input id="delay" class="form-control" type="text" size="6" />
+                <span class="input-group-addon">ms</span>
+              </div>
             </div>
             <div class="form-group">
               <label for="jitter">Delay variation</label>
-              <input id="jitter" class="form-control" type="text" size="6" />
+              <div class="input-group">
+                <input id="jitter" class="form-control" type="text" size="6" />
+                <span class="input-group-addon">ms</span>
+              </div>
             </div>
             <div class="form-group">
               <label for="loss">Loss</label>
-              <input id="loss" class="form-control" type="text" size="6" />
+              <div class="input-group">
+                <input id="loss" class="form-control" type="text" size="6" />
+                <span class="input-group-addon">%</span>
+              </div>
             </div>
             <div class="form-group">
               <button id="set_netem_button" class="btn btn-primary">
@@ -181,18 +190,18 @@
         <h4>Delay:</h4>
         <p>A basic time delay, specified in milliseconds.</p>
         <h5>Example:</h5>
-        <p>42ms</p>
+        <p>42</p>
 
         <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.</p>
         <p>Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.</p>
         <p>Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.</p>
         <h5>Example:</h5>
-        <p>22ms</p>
+        <p>22</p>
 
         <h4>Loss:</h4>
         <p>A percentage of random packet loss. Each packet has X percent chance of being dropped.</p>
         <h5>Example:</h5>
-        <p>7%</p>
+        <p>7</p>
     </div>
   </body>
 </html>
