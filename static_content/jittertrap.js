@@ -323,14 +323,14 @@ $(document).ready(function() {
         var handleMsgNetemParams = function(params) {
           if (params.delay == -1 && params.jitter == -1 && params.loss == -1) {
             $("#netem_status").html("No active impairment on device. Set parameters to activate.");
-            $("#delay").val("None");
-            $("#jitter").val("None");
-            $("#loss").val("None");
+            $("#delay").val("0");
+            $("#jitter").val("0");
+            $("#loss").val("0");
           } else {
             $("#netem_status").html("Ready");
-            $("#delay").val(params.delay + "ms");
-            $("#jitter").val(params.jitter + "ms");
-            $("#loss").val(params.loss + "%");
+            $("#delay").val(params.delay);
+            $("#jitter").val(params.jitter);
+            $("#loss").val(params.loss);
           }
         };
 
