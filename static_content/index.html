@@ -172,52 +172,6 @@
         </div>
       </div>
 
-      <!--
-      <div id="chartOpts">
-        <em>Measurement Parameters:</em>
-        <p>
-          Sampling period:
-          <input type="text" size="4" id="sample_period"/> &nbsp; Chart Series:
-          <select id="chopts_series">
-            <option value="rxRate" selected="selected">Rx Bitrate</option>
-            <option value="txRate">Tx Bitrate</option>
-            <option value="txDelta">Tx Bytes per Sample</option>
-            <option value="rxDelta">Rx Bytes per Sample</option>
-            <option value="rxPacketRate">Rx Packet Rate</option>
-            <option value="txPacketRate">Tx Packet Rate</option>
-            <option value="rxPacketDelta">Rx Packets per Sample</option>
-            <option value="txPacketDelta">Tx Packets per Sample</option>
-          </select>
-          <button id="chopts_stop_start"> Stop/Start</button>
-          <button id="trigger_toggle">Traps</button>
-          <button id="more_chopts_toggle">More chart options</button>
-          <br/>
-          <br/>
-          <span id="trigger_chopts" style="display:none">
-            Trap when:<br/>
-            <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">Exceeds Max RX Throughput: &nbsp;
-            <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
-            <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Exceeds Max TX Throughput: &nbsp;
-            <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
-            <input type="checkbox" value="min_rx_throughput" id="trigger_enable_min_rx_throughput">Below Min RX Throughput: &nbsp;
-            <input type="text" id="trigger_val_max_rx_throughput"/> Mbps<br/>
-            <input type="checkbox" value="max_tx_throughput" id="trigger_enable_max_tx_throughput">Below Min TX Throughput: &nbsp;
-            <input type="text" id="trigger_val_max_tx_throughput"/> Mbps<br/>
-            <input type="checkbox" value="silence" id="trigger_enable_rx_silence">RX Silence Duration Exceeds &nbsp;
-            <input type="text" id="trigger_val_rx_silence"/> ms<br/>
-            <input type="checkbox" value="silence" id="trigger_enable_tx_silence">TX Silence Duration Exceeds &nbsp;
-            <input type="text" id="trigger_val_tx_silence"/> ms<br/>
-          </span>
-          <br/>
-          <span id="more_chopts" style="display:none">
-            Chart Refresh Rate:
-            <input type="range" min="1" max="30" id="chopts_refresh"/> &nbsp;
-            Chart Series Length:
-            <input type="range" min="100" max="2000" id="chopts_dataLen"/> <br/>
-          </span>
-          <br/>
-        </div>
-      -->
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
       <button id="help_toggle">Help!</button>
       <div id="help" style="display:none">
