@@ -383,11 +383,7 @@ $(document).ready(function() {
           /* bin the normalized data */
           for (; j < series.data.length; j++) {
             var normY = (series.data[j].y - series.minY.y) / range * binCnt;
-            for (i = 0; i < binCnt; i++) {
-              if (normY >= i && normY < i+1) {
-                normBins[i]++;
-              }
-            }
+            normBins[Math.floor(normY)]++;
           }
 
           /* write the histogram x,y data */
