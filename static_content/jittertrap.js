@@ -100,8 +100,13 @@ $(document).ready(function() {
         });
 
         var histogram = new CanvasJS.Chart("histogramContainer", {
+                title: {text: "Distribution" },
                 axisY: {
+                  title: "Count",
                   includeZero: "false",
+                },
+                axisX: {
+                  title: "Bin",
                 },
                 data: [{
                         name: "rxRate_hist",
@@ -132,7 +137,13 @@ $(document).ready(function() {
           chart.render();
 
           histogram = new CanvasJS.Chart("histogramContainer", {
+            title: {text: "Distribution" },
             axisY: {
+              title: "Count",
+              includeZero: "false",
+            },
+            axisX: {
+              title: "Bin",
               includeZero: "false",
             },
             data: [{
