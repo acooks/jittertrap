@@ -206,7 +206,6 @@ $(document).ready(function() {
           drawInterval = setInterval(function() {
                                        histogram.render();
                                        chart.render();
-                                       //logHistogram();
                                      },
                                      updatePeriod);
           console.log("updateRate: " + updateRate + " sampleRate: " + sampleRate);
@@ -223,7 +222,6 @@ $(document).ready(function() {
         var drawInterval = setInterval(function() {
                                          histogram.render();
                                          chart.render();
-                                         //logHistogram();
                                        },
                                        updatePeriod);
 
@@ -327,14 +325,7 @@ $(document).ready(function() {
           series.minY = foundPair;
         };
 
-        /* updateHistogram() is expensive and no optimizations are apparent,
-         * so reduce the update rate. */
-        var histogramReductionFactor = 3;
-        var histogramThrottle = 0;
         var updateHistogram = function(series) {
-          //if (++histogramThrottle % histogramReductionFactor != 0) {
-          //  return;
-          //}
           var binCnt = 20;
           var normBins = [];
           var range = series.maxY.y - series.minY.y;
