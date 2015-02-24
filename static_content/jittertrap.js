@@ -9,6 +9,7 @@ $(document).ready(function() {
           xlabel:"Time",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.rxDelta = {
@@ -19,6 +20,7 @@ $(document).ready(function() {
           xlabel:"Time",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.rxRate = {
@@ -29,6 +31,7 @@ $(document).ready(function() {
           xlabel:"sample number",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.txRate = {
@@ -39,6 +42,7 @@ $(document).ready(function() {
           xlabel:"sample number",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.txPacketRate = {
@@ -49,6 +53,7 @@ $(document).ready(function() {
           xlabel:"time",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.rxPacketRate = {
@@ -59,6 +64,7 @@ $(document).ready(function() {
           xlabel:"time",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.txPacketDelta = {
@@ -69,6 +75,7 @@ $(document).ready(function() {
           xlabel:"sample number",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         chartData.rxPacketDelta = {
@@ -79,6 +86,7 @@ $(document).ready(function() {
           xlabel:"sample number",
           minY: {x: 0, y: 0},
           maxY: {x: 0, y: 0},
+          basicStats:[]
         };
 
         var triggers = {
@@ -101,6 +109,7 @@ $(document).ready(function() {
 
         var chart = new CanvasJS.Chart("chartContainer", {});
         var histogram = new CanvasJS.Chart("histogramContainer", {});
+        var basicStatsGraph = new CanvasJS.Chart("basicStatsContainer", {});
 
         var old_updatePeriod = updatePeriod;
 
@@ -140,6 +149,20 @@ $(document).ready(function() {
             }]
           });
           histogram.render();
+
+          basicStatsGraph = new CanvasJS.Chart("basicStatsContainer", {
+            title: { text: "Basic Stats" },
+            axisY: {
+              includeZero: "false",
+              title: chartData[s].ylabel
+            },
+            data: [{
+              name: s + "_stats",
+              type: "column",
+              dataPoints: chartData[s].basicStats
+            }]
+          });
+          basicStatsGraph.render();
 
         };
 
@@ -221,6 +244,7 @@ $(document).ready(function() {
           clearInterval(drawInterval);
           drawInterval = setInterval(function() {
                                        histogram.render();
+                                       basicStatsGraph.render();
                                        chart.render();
                                      },
                                      updatePeriod);
@@ -237,6 +261,7 @@ $(document).ready(function() {
 
         var drawInterval = setInterval(function() {
                                          histogram.render();
+                                         basicStatsGraph.render();
                                          chart.render();
                                        },
                                        updatePeriod);
@@ -324,6 +349,25 @@ $(document).ready(function() {
           /* series.maxY and series.minY must be available to the histogram */
           series.maxY = sortedData[sortedData.length-1];
           series.minY = sortedData[0];
+
+          /* median is a pair */
+          var median = sortedData[Math.floor(sortedData.length / 2.0)];
+
+          var mean = 0;
+          var sum = 0;
+          for (var i = sortedData.length-1; i >=0; i--) {
+            sum += sortedData[i].y;
+          }
+          mean = sum / sortedData.length;
+
+          for (var i = series.basicStats.length; i > 0; i--) {
+            series.basicStats.shift();
+          }
+
+          series.basicStats.push({x:1, y:series.minY.y, label:"Min"});
+          series.basicStats.push({x:2, y:median.y, label:"Median"});
+          series.basicStats.push({x:3, y:mean, label:"Mean"});
+          series.basicStats.push({x:4, y:series.maxY.y, label:"Max"});
         };
 
         var updateHistogram = function(series) {
