@@ -83,37 +83,8 @@ $(document).ready(function() {
         var updatePeriod = 100;
         var samplePeriod = 100;
 
-        var chart = new CanvasJS.Chart("chartContainer", {
-                axisY:{
-                  includeZero: "false", 
-                },
-                zoomEnabled: "true",
-                panEnabled: "true",
-                title : { text: chartData.rxRate.title },
-                axisY: { title: chartData.rxRate.ylabel },
-                axisX: { title: chartData.rxRate.xlabel },
-                data: [{
-                        name: "rxRate",
-                        type: "line",
-                        dataPoints: chartData.rxRate.data
-                }]
-        });
-
-        var histogram = new CanvasJS.Chart("histogramContainer", {
-                title: {text: "Distribution" },
-                axisY: {
-                  title: "Count",
-                  includeZero: "false",
-                },
-                axisX: {
-                  title: "Bin",
-                },
-                data: [{
-                        name: "rxRate_hist",
-                        type: "column",
-                        dataPoints: chartData.rxRate.histData
-                }]
-        });
+        var chart = new CanvasJS.Chart("chartContainer", {});
+        var histogram = new CanvasJS.Chart("histogramContainer", {});
 
         var old_updatePeriod = updatePeriod;
 
