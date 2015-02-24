@@ -6,7 +6,9 @@ $(document).ready(function() {
           histData:[],
           title:"Tx Bytes per sample period",
           ylabel:"Tx Bytes per sample",
-          xlabel:"Time"
+          xlabel:"Time",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.rxDelta = {
@@ -14,7 +16,9 @@ $(document).ready(function() {
           histData:[],
           title:"Rx Bytes per sample period",
           ylabel:"Rx Bytes per sample",
-          xlabel:"Time"
+          xlabel:"Time",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.rxRate = {
@@ -23,6 +27,8 @@ $(document).ready(function() {
           title: "Ingress throughput in kbps",
           ylabel:"kbps, mean",
           xlabel:"sample number",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.txRate = {
@@ -31,6 +37,8 @@ $(document).ready(function() {
           title: "Egress throughput in kbps",
           ylabel:"kbps, mean",
           xlabel:"sample number",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.txPacketRate = {
@@ -39,6 +47,8 @@ $(document).ready(function() {
           title: "Egress packet rate",
           ylabel:"pkts per sec, mean",
           xlabel:"time",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.rxPacketRate = {
@@ -47,6 +57,8 @@ $(document).ready(function() {
           title: "Ingress packet rate",
           ylabel:"pkts per sec, mean",
           xlabel:"time",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.txPacketDelta = {
@@ -55,6 +67,8 @@ $(document).ready(function() {
           title: "Egress packets per sample",
           ylabel:"packets sent",
           xlabel:"sample number",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         chartData.rxPacketDelta = {
@@ -63,6 +77,8 @@ $(document).ready(function() {
           title: "Ingress packets per sample",
           ylabel:"packets received",
           xlabel:"sample number",
+          minY: {x: 0, y: 0},
+          maxY: {x: 0, y: 0},
         };
 
         var triggers = {
@@ -301,28 +317,13 @@ $(document).ready(function() {
           websocket.send(msg);
         };
 
-        var updateMinMaxY = function (series) {
-          var len = series.data.length;
-          var foundPair = series.data[0];
+        var updateStats = function (series) {
+          var sortedData = series.data.slice(0);
+          sortedData.sort(function(a,b) {return (a.y|0) - (b.y|0);});
 
-          /* find max */
-          for (var i = 0; i < len; i++) {
-            var pair = series.data[i];
-            if (pair.y > foundPair.y) {
-              foundPair = series.data[i];
-            }
-          }
-          series.maxY = foundPair;
-
-          /* find min */
-          foundPair = series.data[0];
-          for (var i = 0; i < len; i++) {
-            var pair = series.data[i];
-            if (pair.y < foundPair.y) {
-              foundPair = series.data[i];
-            }
-          }
-          series.minY = foundPair;
+          /* series.maxY and series.minY must be available to the histogram */
+          series.maxY = sortedData[sortedData.length-1];
+          series.minY = sortedData[0];
         };
 
         var updateHistogram = function(series) {
@@ -369,7 +370,7 @@ $(document).ready(function() {
           while (series.data.length > dataLength) {
             series.data.shift();
           }
-          updateMinMaxY(series);
+          updateStats(series);
           updateHistogram(series);
         };
 
