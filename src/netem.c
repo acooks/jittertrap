@@ -63,7 +63,7 @@ char **netem_list_ifaces()
 		char *j = rtnl_link_get_name(link);
 		if (strcmp("lo", j) != 0) {
 			*i = malloc(strlen(j) + 1);
-			sprintf(*i, j);
+			sprintf(*i, "%s", j);
 			i++;
 			//  rtnl_link_put(link); // FIXME: Yes? No?
 		}
