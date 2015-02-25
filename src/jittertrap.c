@@ -27,8 +27,9 @@ static void print_ns_str(const struct ns_str *s)
 {
 	char *ss;
 
-	if ( (ss = malloc(s->len + 1)) == NULL)
+	if ( (ss = malloc(s->len + 1)) == NULL) {
 		err_sys("malloc");
+	}
 	memcpy(ss, s->p, s->len);
 	ss[s->len] = 0;
 	printf("%s\n", ss);
@@ -39,8 +40,9 @@ static void print_websocket_message(const struct websocket_message *m)
 {
 	char *s;
 
-	if ( (s = malloc(m->size + 1)) == NULL)
+	if ( (s = malloc(m->size + 1)) == NULL) {
 		err_sys("malloc");
+	}
 	memcpy(s, m->data, m->size);
 	s[m->size] = 0;
 	printf("websocket_message: [%s]\n", s);
@@ -61,8 +63,9 @@ static char *quote_string(const char *const s)
 {
 	char *outs;
 
-	if ( (outs = malloc(strlen(s) + 3)) == NULL)
+	if ( (outs = malloc(strlen(s) + 3)) == NULL) {
 		err_sys("malloc");
+	}
 	sprintf(outs, "\"%s\"", s);
 	return outs;
 }
@@ -72,8 +75,9 @@ static char *json_arr_alloc()
 {
 	char *buf;
 
-	if ( (buf = malloc(3)) == NULL)
+	if ( (buf = malloc(3)) == NULL) {
 		err_sys("malloc");
+	}
 	buf[0] = '[';
 	buf[1] = ']';
 	buf[2] = 0;
@@ -101,6 +105,7 @@ static void json_arr_append(char **arr, const char *const word)
 	(*arr)[buf_len + word_len - 1] = ']';
 	(*arr)[buf_len + word_len] = 0;
 }
+
 /* list_ifaces: must free returned memory */
 static char *list_ifaces()
 {
@@ -119,8 +124,9 @@ static char *list_ifaces()
 	char *tail = "}";
 	char *msg =
 	    malloc(strlen(head) + strlen(json_ifaces) + strlen(tail) + 1);
-	if (msg == NULL)
+	if (msg == NULL) {
 		err_sys("malloc");
+	}
 	*msg = 0;
 	strncat(msg, head, strlen(head));
 	strncat(msg, json_ifaces, strlen(json_ifaces));
@@ -157,8 +163,9 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 	struct netem_params p;
 	char *iface;
 
-	if ( (iface = malloc(tok->len + 1)) == NULL)
+	if ( (iface = malloc(tok->len + 1)) == NULL) {
 		err_sys("malloc");
+	}
 	memcpy(iface, tok->ptr, tok->len);
 	iface[tok->len] = 0;
 	printf("get netem for iface: [%s]\n", iface);
@@ -354,7 +361,7 @@ static void print_peer_name(struct ns_connection *c)
 	struct sockaddr_storage addr;
 	char ipstr[INET6_ADDRSTRLEN];
 	socklen_t len = sizeof addr;
-	
+
 	if (getpeername(c->sock, (struct sockaddr *)&addr, &len) < 0) {
 	    fprintf(stderr, "Error: print_peer_name: cannot get address\n");
 	    return;
