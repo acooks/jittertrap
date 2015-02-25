@@ -94,7 +94,11 @@ static void json_arr_append(char **arr, const char *const word)
 	int word_len = strlen(quoted_word);
 
 	/* comma, space, nul term */
-	*arr = realloc(*arr, buf_len + word_len + 2 + 1);
+	if ((*arr = realloc(*arr, buf_len + word_len + 2 + 1)) == NULL) {
+		err_ret("realloc"); /* error msg to stderr */
+		free(quoted_word);
+		return; /* don't memcpy if realloc failed */
+	}
 
 	if (buf_len >= 3) {
 		memcpy((*arr) + buf_len - 1, ", ", 2);
