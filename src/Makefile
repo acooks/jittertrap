@@ -15,11 +15,13 @@ SOURCES = \
  jittertrap.c \
  stats_thread.c \
  netem.c \
+ err.c \
  ../deps/fossa/fossa.c \
 
 HEADERS = \
  netem.h \
- stats_thread.h
+ stats_thread.h \
+ err.h
 
 INCLUDES = \
  -I ../deps/fossa/ \

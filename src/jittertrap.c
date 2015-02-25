@@ -4,10 +4,12 @@
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+
 #include "fossa.h"
 #include "frozen.h"
 #include "stats_thread.h"
 #include "netem.h"
+#include "err.h"
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
@@ -23,7 +25,10 @@ struct ns_connection *nc;
 
 static void print_ns_str(const struct ns_str *s)
 {
-	char *ss = malloc(s->len + 1);
+	char *ss;
+
+	if ( (ss = malloc(s->len + 1)) == NULL)
+		err_sys("malloc");
 	memcpy(ss, s->p, s->len);
 	ss[s->len] = 0;
 	printf("%s\n", ss);
@@ -32,7 +37,10 @@ static void print_ns_str(const struct ns_str *s)
 
 static void print_websocket_message(const struct websocket_message *m)
 {
-	char *s = malloc(m->size + 1);
+	char *s;
+
+	if ( (s = malloc(m->size + 1)) == NULL)
+		err_sys("malloc");
 	memcpy(s, m->data, m->size);
 	s[m->size] = 0;
 	printf("websocket_message: [%s]\n", s);
@@ -48,17 +56,24 @@ static bool match_msg_type(const struct json_token *tok, const char *r)
 	return (strncmp(tok->ptr, r, tok->len) == 0);
 }
 
+/* quote_string: must free returned memory */
 static char *quote_string(const char *const s)
 {
 	char *outs;
-	outs = malloc(strlen(s) + 3);
+
+	if ( (outs = malloc(strlen(s) + 3)) == NULL)
+		err_sys("malloc");
 	sprintf(outs, "\"%s\"", s);
 	return outs;
 }
 
+/* json_arr_alocc: must free returned memory */
 static char *json_arr_alloc()
 {
-	char *buf = malloc(3);
+	char *buf;
+
+	if ( (buf = malloc(3)) == NULL)
+		err_sys("malloc");
 	buf[0] = '[';
 	buf[1] = ']';
 	buf[2] = 0;
@@ -86,7 +101,7 @@ static void json_arr_append(char **arr, const char *const word)
 	(*arr)[buf_len + word_len - 1] = ']';
 	(*arr)[buf_len + word_len] = 0;
 }
-
+/* list_ifaces: must free returned memory */
 static char *list_ifaces()
 {
 	char *json_ifaces = json_arr_alloc();
@@ -104,6 +119,8 @@ static char *list_ifaces()
 	char *tail = "}";
 	char *msg =
 	    malloc(strlen(head) + strlen(json_ifaces) + strlen(tail) + 1);
+	if (msg == NULL)
+		err_sys("malloc");
 	*msg = 0;
 	strncat(msg, head, strlen(head));
 	strncat(msg, json_ifaces, strlen(json_ifaces));
@@ -126,7 +143,8 @@ static void handle_ws_list_ifaces(struct ns_connection *nc)
 static void handle_ws_dev_select(struct json_token *tok)
 {
 	printf("switching to iface: %.*s\n", tok->len, tok->ptr);
-	g_iface = malloc(tok->len + 1);
+	if ( (g_iface = malloc(tok->len + 1)) == NULL)
+		err_sys("malloc");
 	memcpy(g_iface, tok->ptr, tok->len);
 	g_iface[tok->len] = 0;
 	stats_monitor_iface(g_iface);
@@ -137,7 +155,10 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 {
 	struct ns_connection *c;
 	struct netem_params p;
-	char *iface = malloc(tok->len + 1);
+	char *iface;
+
+	if ( (iface = malloc(tok->len + 1)) == NULL)
+		err_sys("malloc");
 	memcpy(iface, tok->ptr, tok->len);
 	iface[tok->len] = 0;
 	printf("get netem for iface: [%s]\n", iface);
@@ -188,9 +209,13 @@ static bool parse_int(char *str, long *l)
 static void json_token_to_string(struct json_token *tok, char **str)
 {
 	if (!*str) {
-		*str = malloc(tok->len + 1);
+		if ( (*str = malloc(tok->len + 1)) == NULL)
+			err_sys("malloc");
 	} else {
-		*str = realloc(*str, tok->len + 1);
+		if ( (*str = realloc(*str, tok->len + 1)) == NULL) {
+			err_ret("realloc"); /* error msg to stderr */
+			return;	/* don't memcpy if realloc failed */
+		}
 	}
 	memcpy(*str, tok->ptr, tok->len);
 	(*str)[tok->len] = 0;
