@@ -16,7 +16,6 @@
 
 static pthread_mutex_t fossa_mutex;
 
-static char *g_iface;
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
 static struct ns_serve_http_opts s_http_server_opts =
     {.document_root = EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT) };
@@ -152,12 +151,13 @@ static void handle_ws_list_ifaces(struct ns_connection *nc)
 
 static void handle_ws_dev_select(struct json_token *tok)
 {
-	printf("switching to iface: %.*s\n", tok->len, tok->ptr);
-	if ( (g_iface = malloc(tok->len + 1)) == NULL)
-		err_sys("malloc");
-	memcpy(g_iface, tok->ptr, tok->len);
-	g_iface[tok->len] = 0;
-	stats_monitor_iface(g_iface);
+	char iface[MAX_IFACE_LEN];
+
+	assert(tok->len < MAX_IFACE_LEN);
+	memset(iface, 0, MAX_IFACE_LEN);
+	memcpy(iface, tok->ptr, tok->len);
+	printf("switching to iface: [%s]\n", iface);
+	stats_monitor_iface(iface);
 }
 
 static void handle_ws_get_netem(struct ns_connection *nc,
@@ -446,7 +446,7 @@ void stats_event_handler(struct iface_stats *counts)
 						  "\"rx-pkt-delta\":%d,"
 						  "\"tx-pkt-delta\":%d"
 						  "}}",
-						  g_iface,
+						  counts->iface,
 						  counts->rx_bytes,
 						  counts->tx_bytes,
 						  counts->rx_bytes_delta,

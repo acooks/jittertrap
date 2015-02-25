@@ -25,9 +25,10 @@ struct sigaction sa;
 struct nl_sock *nl_sock;
 struct nl_cache *nl_link_cache;
 
+static pthread_mutex_t g_iface_mutex;
 char *g_iface;
-struct iface_stats stats_o;
-struct iface_stats stats_c;
+
+struct iface_stats g_stats_o;
 int sample_period_ms;
 
 void (*stats_handler) (struct iface_stats * counts);
@@ -53,16 +54,21 @@ int stats_thread_init(void (*_stats_handler) (struct iface_stats * counts))
 	return 0;
 }
 
+/* update g_iface and reset the old stats. */
 void stats_monitor_iface(const char *_iface)
 {
+	pthread_mutex_lock(&g_iface_mutex);
+	g_stats_o.rx_bytes = 0;
+	g_stats_o.tx_bytes = 0;
+	g_stats_o.rx_packets = 0;
+	g_stats_o.tx_packets = 0;
 	if (g_iface) {
 		free(g_iface);
 	}
 	g_iface = strdup(_iface);
-	stats_o.rx_bytes = 0;
-	stats_o.tx_bytes = 0;
-	stats_o.rx_packets = 0;
-	stats_o.tx_packets = 0;
+	sprintf(g_stats_o.iface, "%s", g_iface);
+	printf("monitoring iface: [%s]\n", g_iface);
+	pthread_mutex_unlock(&g_iface_mutex);
 }
 
 static int init_nl(void)
@@ -90,7 +96,7 @@ static int init_nl(void)
 	return 0;
 }
 
-static int read_counters(const char *iface)
+static int read_counters(const char *iface, struct iface_stats *stats)
 {
 	int err;
 	struct rtnl_link *link;
@@ -109,40 +115,57 @@ static int read_counters(const char *iface)
 		return -1;
 	}
 
+	if (!stats) {
+		/* link cache is now warm; values don't matter */
+		rtnl_link_put(link);
+		return 0;
+	}
+
 	/* read and return counter */
-	stats_c.rx_bytes = rtnl_link_get_stat(link, RTNL_LINK_RX_BYTES);
-	stats_c.tx_bytes = rtnl_link_get_stat(link, RTNL_LINK_TX_BYTES);
-	stats_c.rx_packets = rtnl_link_get_stat(link, RTNL_LINK_RX_PACKETS);
-	stats_c.rx_packets += rtnl_link_get_stat(link, RTNL_LINK_RX_COMPRESSED);
-	stats_c.tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
-	stats_c.tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
+	stats->rx_bytes = rtnl_link_get_stat(link, RTNL_LINK_RX_BYTES);
+	stats->tx_bytes = rtnl_link_get_stat(link, RTNL_LINK_TX_BYTES);
+	stats->rx_packets = rtnl_link_get_stat(link, RTNL_LINK_RX_PACKETS);
+	stats->rx_packets += rtnl_link_get_stat(link, RTNL_LINK_RX_COMPRESSED);
+	stats->tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
+	stats->tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
+	sprintf(stats->iface, "%s", iface);
 	rtnl_link_put(link);
 	return 0;
 }
 
-static void calc_deltas()
+static void calc_deltas(struct iface_stats *stats_o,
+			struct iface_stats *stats_c)
 {
-	if (0 == stats_o.rx_bytes) {
-		stats_o.rx_bytes = stats_c.rx_bytes;
-		stats_o.tx_bytes = stats_c.tx_bytes;
-		stats_o.rx_packets = stats_c.rx_packets;
-		stats_o.tx_packets = stats_c.tx_packets;
+	if (0 == stats_o->rx_bytes) {
+		stats_o->rx_bytes = stats_c->rx_bytes;
+		stats_o->tx_bytes = stats_c->tx_bytes;
+		stats_o->rx_packets = stats_c->rx_packets;
+		stats_o->tx_packets = stats_c->tx_packets;
 	}
 
-	stats_c.rx_bytes_delta = stats_c.rx_bytes - stats_o.rx_bytes;
-	stats_c.tx_bytes_delta = stats_c.tx_bytes - stats_o.tx_bytes;
-	stats_c.rx_packets_delta = stats_c.rx_packets - stats_o.rx_packets;
-	stats_c.tx_packets_delta = stats_c.tx_packets - stats_o.tx_packets;
+	stats_c->rx_bytes_delta = stats_c->rx_bytes - stats_o->rx_bytes;
+	stats_c->tx_bytes_delta = stats_c->tx_bytes - stats_o->tx_bytes;
+	stats_c->rx_packets_delta = stats_c->rx_packets - stats_o->rx_packets;
+	stats_c->tx_packets_delta = stats_c->tx_packets - stats_o->tx_packets;
 }
 
 static void update_stats()
 {
-	if (0 == read_counters(g_iface)) {
+	char *iface;
+	struct iface_stats stats_o;
+	struct iface_stats stats_c;
+
+	pthread_mutex_lock(&g_iface_mutex);
+	iface = strdup(g_iface);
+	memcpy(&stats_o, &g_stats_o, sizeof(struct iface_stats));
+	pthread_mutex_unlock(&g_iface_mutex);
+
+	if (0 == read_counters(iface, &stats_c)) {
 		clock_gettime(CLOCK_MONOTONIC, &stats_c.timestamp);
-		calc_deltas();
+		calc_deltas(&stats_o, &stats_c);
 		stats_handler(&stats_c);
 	}
-	memcpy(&stats_o, &stats_c, sizeof(struct iface_stats));
+	memcpy(&g_stats_o, &stats_c, sizeof(struct iface_stats));
 }
 
 static int init_realtime(void)
@@ -164,7 +187,7 @@ static void *run(void *data)
 {
 	(void)data; /* unused parameter. silence warning. */
 	init_nl();
-	read_counters("lo"); /* warm up the link cache */
+	read_counters("lo", NULL); /* warm up the link cache */
 	init_realtime();
 	set_sample_period(SAMPLE_PERIOD_MS);
 

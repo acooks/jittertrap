@@ -70,7 +70,7 @@ char **netem_list_ifaces()
 			}
 			sprintf(*i, j);
 			i++;
-			//  rtnl_link_put(link); // FIXME: Yes? No?
+			// XXX rtnl_link_put(link); // FIXME: Yes? No?
 		}
 		link =
 		    (struct rtnl_link *)nl_cache_get_next((struct nl_object *)

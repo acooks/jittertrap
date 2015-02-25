@@ -1,6 +1,8 @@
 #ifndef STATS_THREAD_H
 #define STATS_THREAD_H
 
+#define MAX_IFACE_LEN 16
+
 struct iface_stats {
 	uint32_t sample_period_us;
 	struct timespec timestamp;
@@ -12,6 +14,7 @@ struct iface_stats {
 	uint32_t rx_packets_delta;
 	uint32_t tx_packets;
 	uint32_t tx_packets_delta;
+	char	iface[MAX_IFACE_LEN];
 };
 
 int stats_thread_init(void (*stats_handler) (struct iface_stats * counts));
