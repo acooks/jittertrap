@@ -1,3 +1,4 @@
+CC = gcc
 ifndef SAMPLE_PERIOD_MS
 SAMPLE_PERIOD_MS = 10
 endif
