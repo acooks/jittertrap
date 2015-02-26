@@ -120,11 +120,11 @@ err_exit(int error, const char *fmt, ...)
 static void
 err_doit(int errnoflag, int error, const char *fmt, va_list ap)
 {
-	char	buf[ERRMAXLINE];
+	char	buf[LIBERR_MAXLINE];
 
-	vsnprintf(buf, ERRMAXLINE-1, fmt, ap);
+	vsnprintf(buf, LIBERR_MAXLINE-1, fmt, ap);
 	if (errnoflag)
-		snprintf(buf+strlen(buf), ERRMAXLINE-strlen(buf)-1, ": %s",
+		snprintf(buf+strlen(buf), LIBERR_MAXLINE-strlen(buf)-1, ": %s",
 		  strerror(error));
 	strcat(buf, "\n");
 	fflush(stdout);		/* in case stdout and stderr are the same */
