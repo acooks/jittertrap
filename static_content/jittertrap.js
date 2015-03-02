@@ -74,17 +74,14 @@ $(document).ready(function() {
   $('#sample_period').bind('change', set_sample_period);
   $('#dev_select').bind('change', dev_select);
   $('#chopts_stop_start').bind('click', toggleStopStartGraph);
-  $('#chopts_refresh').bind('change',
-      function() {
-        updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
-        setUpdatePeriod();
-      }
-  );
+  $('#chopts_refresh').bind('change', function() {
+    updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
+    setUpdatePeriod();
+  });
 
-  $("#chopts_dataLen").bind('change',
-      function() {
-        dataLength = $("#chopts_dataLen").val();
-      });
+  $("#chopts_dataLen").bind('change', function() {
+    dataLength = $("#chopts_dataLen").val();
+  });
 
   $('#more_chopts_toggle').click(function() {
     $('#more_chopts').toggle("fast");
