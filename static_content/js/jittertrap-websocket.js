@@ -85,6 +85,14 @@ var set_netem = function() {
   return false;
 };
 
+var clear_netem = function() {
+  $("#delay").val(0);
+  $("#jitter").val(0);
+  $("#loss").val(0);
+  set_netem();
+  return false;
+}
+
 var get_sample_period = function() {
   var msg = JSON.stringify({'msg': 'get_sample_period'});
   websocket.send(msg);
