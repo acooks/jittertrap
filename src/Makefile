@@ -39,6 +39,13 @@ DEFINES = \
  -DWEB_SERVER_PORT=$(WEB_SERVER_PORT) \
  -DWEB_SERVER_DOCUMENT_ROOT=$(WEB_SERVER_DOCUMENT_ROOT)
 
+FOSSA_DEFINES = \
+ -D NS_DISABLE_MQTT \
+ -D NS_DISABLE_JSON_RPC \
+ -D NS_DISABLE_MD5 \
+ -D NS_DISABLE_HTTP_DIGEST_AUTH \
+
+
 all: $(PROG)
 	@echo -----------------------------------
 	@echo Sample period: $(SAMPLE_PERIOD_MS)ms
@@ -47,7 +54,7 @@ all: $(PROG)
 	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS)
-	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES)
+	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES) $(FOSSA_DEFINES)
 
 clean:
 	rm -rf *.o $(PROG)
