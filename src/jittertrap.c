@@ -35,7 +35,7 @@ static void print_ns_str(const struct ns_str *s)
 		err_sys("malloc");
 	}
 	memcpy(ss, s->p, s->len);
-	ss[s->len] = 0;
+	ss[s->len] = '\0';
 	printf("%s\n", ss);
 	free(ss);
 }
@@ -48,7 +48,7 @@ static void print_websocket_message(const struct websocket_message *m)
 		err_sys("malloc");
 	}
 	memcpy(s, m->data, m->size);
-	s[m->size] = 0;
+	s[m->size] = '\0';
 	printf("websocket_message: [%s]\n", s);
 	free(s);
 }
@@ -82,16 +82,20 @@ static char *json_arr_alloc()
 	if ( (buf = malloc(3)) == NULL) {
 		err_sys("malloc");
 	}
+	assert(NULL != buf);
 	buf[0] = '[';
 	buf[1] = ']';
-	buf[2] = 0;
+	buf[2] = '\0';
 	return buf;
 }
 
 static void json_arr_append(char **arr, const char *const word)
 {
 	char *quoted_word;
-	assert(arr);
+	assert(NULL != arr);
+	assert(NULL != *arr);
+	assert(NULL != word);
+
 	int buf_len = strlen(*arr);
 	assert(word);
 	quoted_word = quote_string(word);
@@ -120,6 +124,8 @@ static char *list_ifaces()
 	char *json_ifaces = json_arr_alloc();
 	char **ifaces = netem_list_ifaces();
 	char **i = ifaces;
+	assert(NULL != i);
+	assert(NULL != *i);
 
 	do {
 		json_arr_append(&json_ifaces, *i);
