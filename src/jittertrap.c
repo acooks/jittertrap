@@ -62,18 +62,6 @@ static bool match_msg_type(const struct json_token *tok, const char *r)
 	return (strncmp(tok->ptr, r, tok->len) == 0);
 }
 
-/* quote_string: must free returned memory */
-static char *quote_string(const char *const s)
-{
-	char *outs;
-
-	if ( (outs = malloc(strlen(s) + 3)) == NULL) {
-		err_sys("malloc");
-	}
-	sprintf(outs, "\"%s\"", s);
-	return outs;
-}
-
 /* json_arr_alocc: must free returned memory */
 static char *json_arr_alloc()
 {
@@ -91,20 +79,18 @@ static char *json_arr_alloc()
 
 static void json_arr_append(char **arr, const char *const word)
 {
-	char *quoted_word;
 	assert(NULL != arr);
 	assert(NULL != *arr);
 	assert(NULL != word);
 
 	int buf_len = strlen(*arr);
-	assert(word);
-	quoted_word = quote_string(word);
-	int word_len = strlen(quoted_word);
+	int word_len = strlen(word) + 2; /* Plus two quotes. */
+	char quoted_word[word_len + 1]; /* plus a terminator */
+	snprintf(quoted_word, word_len + 1, "\"%s\"", word); /* include \0 */
 
 	/* comma, space, nul term */
 	if ((*arr = realloc(*arr, buf_len + word_len + 2 + 1)) == NULL) {
 		err_ret("realloc"); /* error msg to stderr */
-		free(quoted_word);
 		return; /* don't memcpy if realloc failed */
 	}
 
@@ -113,7 +99,6 @@ static void json_arr_append(char **arr, const char *const word)
 		buf_len += 2;
 	}
 	memcpy(*arr + buf_len - 1, quoted_word, word_len);
-	free(quoted_word);
 	(*arr)[buf_len + word_len - 1] = ']';
 	(*arr)[buf_len + word_len] = 0;
 }
