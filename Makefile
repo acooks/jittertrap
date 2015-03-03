@@ -23,6 +23,13 @@ coverity-build: $(CLEANDIRS)
 coverity-clean:
 	rm -rf cov-int jittertrap-coverity-build.lzma
 
+cppcheck:
+	cppcheck --enable=style,warning,performance,portability src/ $(DEFINES)
+	#cppcheck ../deps/fossa/fossa.c $(DEFINES) $(FOSSA_DEFINES)
+
+clang-analyze:
+	scan-build make src
+
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
 	@echo "Cleaning $@"
