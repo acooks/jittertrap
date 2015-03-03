@@ -1,32 +1,32 @@
 /*
- * Error functions defined in err.c
+ * Error functions defined in liberr
  *
  * Attribution: Advanced Programming in the UNIX Environment
  *         W. Richard Stevens, 3rd edition.
  *
- * Write:
+ * Copyright Tobin Harding 2015
  *
- * if (error_condition)
- *     err_dump(<printf format string>);
+ * This file is part of liberr.
  *
- * Instead of:
+ * liberr is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * if (error_condition) {
- *     char buf[200]
- *     
- *     sprintf(buf, <printf format string>);
- *     perror(buf);
- *     abort();
- * }
+ * liberr is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Tobin Harding
+ * You should have received a copy of the GNU General Public License
+ * along with liberr.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _ERR_H
 #define _ERR_H
 
 enum {
-    ERRMAXLINE = 4096		/* max line length */   
+    LIBERR_MAXLINE = 4096		/* max line length */   
 };
 
 /* Nonfatal error related to a system call */

@@ -15,23 +15,25 @@ SOURCES = \
  jittertrap.c \
  stats_thread.c \
  netem.c \
- err.c \
  ../deps/fossa/fossa.c \
 
 HEADERS = \
  netem.h \
- stats_thread.h \
- err.h
+ stats_thread.h
 
 INCLUDES = \
  -I ../deps/fossa/ \
- -I ../deps/fossa/deps/frozen
+ -I ../deps/fossa/deps/frozen \
+ -I ../include
+
+LIBS = \
+ -L ../lib
 
 PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
  $$(pkg-config --cflags --libs libnl-route-3.0)
 
-LFLAGS = -lrt
+LFLAGS = -lrt -lerr
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 DEFINES = \
  -DSAMPLE_PERIOD_MS=$(SAMPLE_PERIOD_MS) \
@@ -46,7 +48,7 @@ all: $(PROG)
 	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS)
-	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES)
+	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LIBS) $(LFLAGS) $(PKGCONFIG_LIBNL) $(DEFINES) 
 
 clean:
 	rm -rf *.o $(PROG)
