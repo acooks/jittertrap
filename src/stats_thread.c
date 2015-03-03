@@ -151,7 +151,7 @@ static void update_stats()
 {
 	char *iface;
 	struct iface_stats stats_o;
-	struct iface_stats stats_c;
+	struct iface_stats stats_c = {0};
 
 	pthread_mutex_lock(&g_iface_mutex);
 	iface = strdup(g_iface);
