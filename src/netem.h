@@ -2,10 +2,10 @@
 #define NETEM_H
 
 struct netem_params {
-	char *iface;
 	uint32_t delay;		/* milliseconds */
 	uint32_t jitter;	/* milliseconds */
 	uint32_t loss;		/* percentage, [0-100] */
+	char iface[MAX_IFACE_LEN];
 };
 
 int netem_init();

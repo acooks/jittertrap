@@ -166,17 +166,16 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 {
 	struct ns_connection *c;
 	struct netem_params p;
-	char *iface;
 
-	if ( (iface = malloc(tok->len + 1)) == NULL) {
-		err_sys("malloc");
+	if (tok->len >= MAX_IFACE_LEN) {
+		fprintf(stderr, "invalid iface name.");
+		return;
 	}
-	memcpy(iface, tok->ptr, tok->len);
-	iface[tok->len] = 0;
-	printf("get netem for iface: [%s]\n", iface);
-	if (0 != netem_get_params(iface, &p)) {
+	memcpy(p.iface, tok->ptr, tok->len);
+	p.iface[tok->len] = 0;
+	printf("get netem for iface: [%s]\n", p.iface);
+	if (0 != netem_get_params(p.iface, &p)) {
 		fprintf(stderr, "couldn't get netem parameters.\n");
-		p.iface = iface;
 		p.delay = -1;
 		p.jitter = -1;
 		p.loss = -1;
@@ -191,7 +190,6 @@ static void handle_ws_get_netem(struct ns_connection *nc,
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
 	}
-	free(iface);
 }
 
 static bool parse_int(char *str, long *l)
@@ -218,19 +216,15 @@ static bool parse_int(char *str, long *l)
 	return true;
 }
 
-static void json_token_to_string(struct json_token *tok, char **str)
-{
-	if (!*str) {
-		if ( (*str = malloc(tok->len + 1)) == NULL)
-			err_sys("malloc");
-	} else {
-		if ( (*str = realloc(*str, tok->len + 1)) == NULL) {
-			err_ret("realloc"); /* error msg to stderr */
-			return;	/* don't memcpy if realloc failed */
-		}
-	}
-	memcpy(*str, tok->ptr, tok->len);
-	(*str)[tok->len] = 0;
+#define json_token_to_string(tok, str, strlen) \
+{ \
+	assert(str); \
+	assert(*str); \
+	(*str)[0] = '\0'; \
+	if (strlen > tok->len) { \
+		memcpy(*str, tok->ptr, tok->len); \
+		(*str)[tok->len] = 0; \
+	} \
 }
 
 static void handle_ws_set_netem(struct ns_connection *nc,
@@ -239,47 +233,40 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 				struct json_token *t_jitter,
 				struct json_token *t_loss)
 {
-	char *s = NULL;
-	char *dev = NULL;
+	char s[MAX_JSON_TOKEN_LEN];
 	long delay, jitter, loss;
 	struct netem_params p = { 0 };
 
-	json_token_to_string(t_dev, &dev);
-	p.iface = dev;
-	printf("set_netem: dev: %s, ", dev);
+	json_token_to_string(t_dev, &p.iface, MAX_IFACE_LEN);
+	printf("set_netem: dev: %s, ", p.iface);
 
-	json_token_to_string(t_delay, &s);
+	json_token_to_string(t_delay, &s, MAX_JSON_TOKEN_LEN);
 	if (!parse_int(s, &delay)) {
 		fprintf(stderr, "couldn't parse delay\n");
-		free(s);
 		return;
 	}
 	p.delay = delay;
 	printf("delay: %ld, ", delay);
 
-	json_token_to_string(t_jitter, &s);
+	json_token_to_string(t_jitter, &s, MAX_JSON_TOKEN_LEN);
 	if (!parse_int(s, &jitter)) {
 		fprintf(stderr, "couldn't parse jitter\n");
-		free(s);
 		return;
 	}
 	p.jitter = jitter;
 	printf("jitter: %ld, ", jitter);
 
-	json_token_to_string(t_loss, &s);
+	json_token_to_string(t_loss, &s, MAX_JSON_TOKEN_LEN);
 	if (!parse_int(s, &loss)) {
 		fprintf(stderr, "couldn't parse loss\n");
-		free(s);
 		return;
 	}
 	p.loss = loss;
 	printf("loss: %ld\n", loss);
 	printf("\n\n");
 
-	netem_set_params(dev, &p);
+	netem_set_params(p.iface, &p);
 	handle_ws_get_netem(nc, t_dev);
-	free(s);
-	free(dev);
 }
 
 static void handle_ws_get_period(struct ns_connection *nc)
@@ -298,17 +285,15 @@ static void handle_ws_set_period(struct ns_connection *nc,
 				 struct json_token *tok)
 {
 	long period;
-	char *s = NULL;
-	json_token_to_string(tok, &s);
+	char s[MAX_JSON_TOKEN_LEN];
+	json_token_to_string(tok, &s, MAX_JSON_TOKEN_LEN);
         if (!parse_int(s, &period)) {
                 fprintf(stderr, "couldn't parse period\n");
-                free(s);
                 return;
         }
         printf("setting sample period: %ld, ", period);
 	set_sample_period(period);
 	handle_ws_get_period(nc);
-	free(s);
 }
 
 static void handle_ws_message(struct ns_connection *nc,
@@ -318,7 +303,7 @@ static void handle_ws_message(struct ns_connection *nc,
 	struct json_token *arr, *tok;
 
 	arr = parse_json2((const char *)m->data, m->size);
-	if (!arr) {
+	if (NULL == arr) {
 		return;		/* not valid JSON. */
 	}
 

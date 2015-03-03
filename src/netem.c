@@ -173,7 +173,6 @@ int netem_get_params(char *iface, struct netem_params *params)
 		goto cleanup_filter_qdisc;
 	}
 
-	params->iface = iface;
 	if (0 > (delay = rtnl_netem_get_delay(found_qdisc))) {
 		fprintf(stderr, "couldn't get delay for iface: %s\n", iface);
 		goto cleanup_qdisc;
