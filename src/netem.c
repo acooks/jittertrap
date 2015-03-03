@@ -12,6 +12,7 @@
 #include <netlink/route/qdisc.h>
 #include <netlink/route/qdisc/netem.h>
 
+#include "jittertrap.h"
 #include "netem.h"
 #include "err.h"
 

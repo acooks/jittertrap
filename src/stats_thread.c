@@ -16,6 +16,7 @@
 #include <netlink/utils.h>
 #include <netlink/route/link.h>
 
+#include "jittertrap.h"
 #include "stats_thread.h"
 
 /* globals */

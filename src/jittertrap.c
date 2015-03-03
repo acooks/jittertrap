@@ -7,6 +7,7 @@
 
 #include "fossa.h"
 #include "frozen.h"
+#include "jittertrap.h"
 #include "stats_thread.h"
 #include "netem.h"
 #include "err.h"

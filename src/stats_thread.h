@@ -1,8 +1,6 @@
 #ifndef STATS_THREAD_H
 #define STATS_THREAD_H
 
-#define MAX_IFACE_LEN 16
-
 struct iface_stats {
 	uint32_t sample_period_us;
 	struct timespec timestamp;
