@@ -74,8 +74,6 @@ void stats_monitor_iface(const char *_iface)
 
 static int init_nl(void)
 {
-	int err;
-
 	/* Allocate and initialize a new netlink handle */
 	if (!(nl_sock = nl_socket_alloc())) {
 		fprintf(stderr, "Failed to alloc netlink socket\n");
@@ -83,14 +81,13 @@ static int init_nl(void)
 	}
 
 	/* Bind and connect socket to protocol, NETLINK_ROUTE in our case. */
-	if ((err = nl_connect(nl_sock, NETLINK_ROUTE)) < 0) {
+	if (nl_connect(nl_sock, NETLINK_ROUTE) < 0) {
 		fprintf(stderr, "Failed to connect to kernel\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Retrieve a list of all available interfaces and populate cache. */
-	if ((err =
-	     rtnl_link_alloc_cache(nl_sock, AF_UNSPEC, &nl_link_cache)) < 0) {
+	if (rtnl_link_alloc_cache(nl_sock, AF_UNSPEC, &nl_link_cache) < 0) {
 		fprintf(stderr, "Error creating link cache\n");
 		return -EOPNOTSUPP;
 	}

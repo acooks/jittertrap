@@ -21,8 +21,6 @@ static struct nl_cache *link_cache, *qdisc_cache;
 
 int netem_init()
 {
-	int err;
-
 	/* Allocate and initialize a new netlink handle */
 	if (!(sock = nl_socket_alloc())) {
 		fprintf(stderr, "Failed to alloc netlink socket\n");
@@ -30,19 +28,19 @@ int netem_init()
 	}
 
 	/* Bind and connect socket to protocol, NETLINK_ROUTE in our case. */
-	if ((err = nl_connect(sock, NETLINK_ROUTE)) < 0) {
+	if (nl_connect(sock, NETLINK_ROUTE) < 0) {
 		fprintf(stderr, "Failed to connect to kernel\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Retrieve a list of all available interfaces and populate cache. */
-	if ((err = rtnl_link_alloc_cache(sock, AF_UNSPEC, &link_cache)) < 0) {
+	if (rtnl_link_alloc_cache(sock, AF_UNSPEC, &link_cache) < 0) {
 		fprintf(stderr, "Error creating link cache\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Retrieve a list of all available qdiscs and populate cache. */
-	if ((err = rtnl_qdisc_alloc_cache(sock, &qdisc_cache)) < 0) {
+	if (rtnl_qdisc_alloc_cache(sock, &qdisc_cache) < 0) {
 		fprintf(stderr, "Error creating qdisc cache\n");
 		return -EOPNOTSUPP;
 	}

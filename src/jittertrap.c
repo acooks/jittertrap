@@ -18,8 +18,12 @@
 static pthread_mutex_t fossa_mutex;
 
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
-static struct ns_serve_http_opts s_http_server_opts =
-    {.document_root = EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT) };
+static struct ns_serve_http_opts s_http_server_opts = {
+	.document_root = EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT),
+	.per_directory_auth_file = NULL,
+	.auth_domain = NULL,
+	.global_auth_file = NULL
+};
 
 struct ns_connection *nc;
 
