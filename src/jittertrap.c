@@ -29,28 +29,20 @@ struct ns_connection *nc;
 
 static void print_ns_str(const struct ns_str *s)
 {
-	char *ss;
-
-	if ( (ss = malloc(s->len + 1)) == NULL) {
-		err_sys("malloc");
-	}
+	assert(s);
+	char ss[s->len + 1];
 	memcpy(ss, s->p, s->len);
 	ss[s->len] = '\0';
 	printf("%s\n", ss);
-	free(ss);
 }
 
 static void print_websocket_message(const struct websocket_message *m)
 {
-	char *s;
-
-	if ( (s = malloc(m->size + 1)) == NULL) {
-		err_sys("malloc");
-	}
+	assert(m);
+	char s[m->size + 1];
 	memcpy(s, m->data, m->size);
 	s[m->size] = '\0';
 	printf("websocket_message: [%s]\n", s);
-	free(s);
 }
 
 static bool match_msg_type(const struct json_token *tok, const char *r)
