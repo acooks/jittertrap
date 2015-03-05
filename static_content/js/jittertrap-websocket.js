@@ -2,15 +2,16 @@
  * Websocket Callback Functions
  * i.e. Referred to in websocket.onmessage
  */
-var handleMsgUpdateStats = function (samplePeriod, stats) {
-  updateSeries(chartData.txDelta, xVal * samplePeriod, stats["tx-delta"]);
-  updateSeries(chartData.rxDelta, xVal * samplePeriod, stats["rx-delta"]);
-  updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(stats["tx-delta"]));
-  updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(stats["rx-delta"]));
-  updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(stats["tx-pkt-delta"]));
-  updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(stats["rx-pkt-delta"]));
-  updateSeries(chartData.txPacketDelta, xVal, stats["tx-pkt-delta"]);
-  updateSeries(chartData.rxPacketDelta, xVal, stats["rx-pkt-delta"]);
+var handleMsgUpdateStats = function (samplePeriod, stats, seriesName) {
+  var selectedSeries = chartData[seriesName];
+  updateSeries(chartData.txDelta, xVal * samplePeriod, stats["tx-delta"], selectedSeries);
+  updateSeries(chartData.rxDelta, xVal * samplePeriod, stats["rx-delta"], selectedSeries);
+  updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(stats["tx-delta"]), selectedSeries);
+  updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(stats["rx-delta"]), selectedSeries);
+  updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(stats["tx-pkt-delta"]), selectedSeries);
+  updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(stats["rx-pkt-delta"]), selectedSeries);
+  updateSeries(chartData.txPacketDelta, xVal, stats["tx-pkt-delta"], selectedSeries);
+  updateSeries(chartData.rxPacketDelta, xVal, stats["rx-pkt-delta"], selectedSeries);
 
   xVal++;
   checkTriggers();

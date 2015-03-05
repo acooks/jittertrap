@@ -84,11 +84,14 @@ var updateHistogram = function(series) {
   }
 };
 
-var updateSeries = function (series, xVal, yVal) {
+var updateSeries = function (series, xVal, yVal, selectedSeries) {
   series.data.push({ x: xVal, y: yVal });
   while (series.data.length > dataLength) {
     series.data.shift();
   }
-  updateStats(series);
-  updateHistogram(series);
+
+  if (series == selectedSeries) {
+    updateStats(series);
+    updateHistogram(series);
+  }
 };

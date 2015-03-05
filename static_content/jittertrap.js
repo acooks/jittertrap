@@ -47,7 +47,8 @@ $(document).ready(function() {
   websocket.onmessage = function(evt) {
     var msg = JSON.parse(evt.data);
     if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
-      handleMsgUpdateStats(samplePeriod, msg.stats);
+      var visibleSeries = $("#chopts_series option:selected").val();
+      handleMsgUpdateStats(samplePeriod, msg.stats, visibleSeries);
     } else if (msg["ifaces"]) {
       handleMsgIfaces(msg["ifaces"]);
     } else if (msg["netem_params"]) {
