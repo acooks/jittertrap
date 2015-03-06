@@ -29,7 +29,7 @@ struct nl_cache *nl_link_cache;
 static pthread_mutex_t g_iface_mutex;
 char *g_iface;
 
-struct iface_stats g_stats_o;
+struct sample g_stats_o;
 int sample_period_ms;
 
 void (*stats_handler) (struct iface_stats * counts);
@@ -67,7 +67,6 @@ void stats_monitor_iface(const char *_iface)
 		free(g_iface);
 	}
 	g_iface = strdup(_iface);
-	sprintf(g_stats_o.iface, "%s", g_iface);
 	printf("monitoring iface: [%s]\n", g_iface);
 	pthread_mutex_unlock(&g_iface_mutex);
 }
@@ -94,7 +93,7 @@ static int init_nl(void)
 	return 0;
 }
 
-static int read_counters(const char *iface, struct iface_stats *stats)
+static int read_counters(const char *iface, struct sample *stats)
 {
 	int err;
 	struct rtnl_link *link;
@@ -126,13 +125,12 @@ static int read_counters(const char *iface, struct iface_stats *stats)
 	stats->rx_packets += rtnl_link_get_stat(link, RTNL_LINK_RX_COMPRESSED);
 	stats->tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
 	stats->tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
-	sprintf(stats->iface, "%s", iface);
 	rtnl_link_put(link);
 	return 0;
 }
 
-static void calc_deltas(struct iface_stats *stats_o,
-			struct iface_stats *stats_c)
+static void calc_deltas(struct sample *stats_o,
+			struct sample *stats_c)
 {
 	if (0 == stats_o->rx_bytes) {
 		stats_o->rx_bytes = stats_c->rx_bytes;
@@ -147,23 +145,17 @@ static void calc_deltas(struct iface_stats *stats_o,
 	stats_c->tx_packets_delta = stats_c->tx_packets - stats_o->tx_packets;
 }
 
-static void update_stats()
+static void update_stats(struct sample *sample_c, char *iface)
 {
-	char *iface;
-	struct iface_stats stats_o;
-	struct iface_stats stats_c = {0};
+	struct sample sample_o;
+	/* FIXME: this smells funny */
+	memcpy(&sample_o, &g_stats_o, sizeof(struct sample));
 
-	pthread_mutex_lock(&g_iface_mutex);
-	iface = strdup(g_iface);
-	memcpy(&stats_o, &g_stats_o, sizeof(struct iface_stats));
-	pthread_mutex_unlock(&g_iface_mutex);
-
-	if (0 == read_counters(iface, &stats_c)) {
-		clock_gettime(CLOCK_MONOTONIC, &stats_c.timestamp);
-		calc_deltas(&stats_o, &stats_c);
-		stats_handler(&stats_c);
+	if (0 == read_counters(iface, sample_c)) {
+		clock_gettime(CLOCK_MONOTONIC, &(sample_c->timestamp));
+		calc_deltas(&sample_o, sample_c);
 	}
-	memcpy(&g_stats_o, &stats_c, sizeof(struct iface_stats));
+	memcpy(&g_stats_o, sample_c, sizeof(struct sample));
 }
 
 static int init_realtime(void)
@@ -193,6 +185,10 @@ static void *run(void *data)
 	struct timespec whoosh; /* the sound of a missed deadline. */
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
+	struct iface_stats stats_frame;
+	int sample_no = 0;
+	char *iface = strdup(g_iface);
+
 	for (;;) {
 		clock_gettime(CLOCK_MONOTONIC, &whoosh);
 #if 0
@@ -210,7 +206,25 @@ static void *run(void *data)
 			deadline.tv_sec++;
 		}
 
-		update_stats();
+		/* set the iface, samples per period at start of each frame*/
+		if (sample_no == 0) {
+			pthread_mutex_lock(&g_iface_mutex);
+			iface = strdup(g_iface);
+			sprintf(stats_frame.iface, iface);
+			pthread_mutex_unlock(&g_iface_mutex);
+			stats_frame.sample_period_us = sample_period_ms * 1000;
+		}
+
+		update_stats(&stats_frame.samples[sample_no], iface);
+
+		/* execute tx callback if frame is complete */
+		if (sample_no == SAMPLES_PER_FRAME-1) {
+			stats_handler(&stats_frame);
+		}
+
+		sample_no++;
+		sample_no %= SAMPLES_PER_FRAME;
+
 	        clock_nanosleep(CLOCK_MONOTONIC,
 				TIMER_ABSTIME, &deadline, NULL);
 	}

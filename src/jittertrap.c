@@ -83,6 +83,7 @@ char * quote_string(char *str)
 	return str;
 };
 
+/* *arr MUST be a malloc'ed pointer */
 static void json_arr_append(char **arr, const char *const word)
 {
 	assert(NULL != arr);
@@ -394,47 +395,58 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 	pthread_mutex_unlock(&fossa_mutex);
 }
 
+#define MAX_JSON_MSG_LEN 2048
+
+static void stats_to_json(struct iface_stats *stats, char json_msg[]) {
+
+	char *m = json_arr_alloc();
+
+	int sample_no;
+	for (sample_no = 0; sample_no < SAMPLES_PER_FRAME; sample_no++) {
+		char msg[MAX_JSON_MSG_LEN];
+		snprintf(msg,
+			 MAX_JSON_MSG_LEN,
+			 "{"
+			 "\"rx-bytes\":%" PRIu64 ","
+			 "\"tx-bytes\":%" PRIu64 ","
+			 "\"rx-delta\":%d,"
+			 "\"tx-delta\":%d,"
+			 "\"rx-pkt-delta\":%d,"
+			 "\"tx-pkt-delta\":%d"
+			 "}",
+			 stats->samples[sample_no].rx_bytes,
+			 stats->samples[sample_no].tx_bytes,
+			 stats->samples[sample_no].rx_bytes_delta,
+			 stats->samples[sample_no].tx_bytes_delta,
+			 stats->samples[sample_no].rx_packets_delta,
+			 stats->samples[sample_no].tx_packets_delta);
+		json_arr_append(&m, msg);
+	}
+
+	snprintf(json_msg,
+		 MAX_JSON_MSG_LEN,
+		 "{\"stats\": {\"iface\": \"%s\",\"s\": %s}}",
+		 stats->iface,
+		 m);
+}
+
 /* callback for the real-time stats thread. */
+/* FIXME: this may need to change to a buffer flip operation, with the
+ * sending happening in the main jittertrap thread. */
 void stats_event_handler(struct iface_stats *counts)
 {
 	struct ns_connection *c;
 	pthread_mutex_lock(&fossa_mutex);
-#if 0
-	printf("%ld.%09ld\n",
-               counts->timestamp.tv_sec,
-               counts->timestamp.tv_nsec);
-#endif
+
+	char *json_msg = malloc(MAX_JSON_MSG_LEN);
+	assert(json_msg);
+	stats_to_json(counts, json_msg);
 
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		if (is_websocket(c)) {
-#if 0
-			printf
-			    ("stats event. timestamp:[%lld] tx-bytes:[%lld] tx-delta:[%d] rx-pkts-d:[%d] tx-pkts-d:[%d] rx-pkts:[%d]\n",
-			     counts->timestamp,
-			     counts->tx_bytes,
-			     counts->tx_bytes_delta,
-			     counts->rx_packets_delta,
-			     counts->tx_packets_delta,
-			     counts->rx_packets);
-#endif
 			ns_printf_websocket_frame(c,
 						  WEBSOCKET_OP_TEXT,
-						  "{\"stats\": {"
-						  "\"iface\": \"%s\","
-						  "\"rx-bytes\":%lld,"
-						  "\"tx-bytes\":%lld,"
-						  "\"rx-delta\":%d,"
-						  "\"tx-delta\":%d,"
-						  "\"rx-pkt-delta\":%d,"
-						  "\"tx-pkt-delta\":%d"
-						  "}}",
-						  counts->iface,
-						  counts->rx_bytes,
-						  counts->tx_bytes,
-						  counts->rx_bytes_delta,
-						  counts->tx_bytes_delta,
-						  counts->rx_packets_delta,
-						  counts->tx_packets_delta);
+						  "%s", json_msg);
 		}
 	}
 	pthread_mutex_unlock(&fossa_mutex);
