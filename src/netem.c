@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -14,7 +15,6 @@
 
 #include "jittertrap.h"
 #include "netem.h"
-#include "err.h"
 
 static struct nl_sock *sock;
 static struct nl_cache *link_cache, *qdisc_cache;
@@ -56,17 +56,15 @@ char **netem_list_ifaces()
 	int count = nl_cache_nitems(link_cache);
 	int size = (count + 1) * sizeof(char *);
 
-	if ( (ifaces = malloc(size)) == NULL) {
-		err_sys("malloc");
-	}
+	ifaces = malloc(size);
+	assert(NULL != ifaces);
 	i = ifaces;
 	link = (struct rtnl_link *)nl_cache_get_first(link_cache);
 	while (link) {
 		char *j = rtnl_link_get_name(link);
 		if (strcmp("lo", j) != 0) {
-			if ( (*i = malloc(strlen(j) + 1)) == NULL) {
-				err_sys("malloc");
-			}
+			*i = malloc(strlen(j) + 1);
+			assert(NULL != *i);
 			sprintf(*i, j);
 			i++;
 			// XXX rtnl_link_put(link); // FIXME: Yes? No?

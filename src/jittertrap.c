@@ -10,7 +10,6 @@
 #include "jittertrap.h"
 #include "stats_thread.h"
 #include "netem.h"
-#include "err.h"
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
@@ -59,9 +58,7 @@ static char *json_arr_alloc()
 {
 	char *buf;
 
-	if ( (buf = malloc(3)) == NULL) {
-		err_sys("malloc");
-	}
+	buf = malloc(3);
 	assert(NULL != buf);
 	buf[0] = '[';
 	buf[1] = ']';
@@ -81,10 +78,8 @@ static void json_arr_append(char **arr, const char *const word)
 	snprintf(quoted_word, word_len + 1, "\"%s\"", word); /* include \0 */
 
 	/* comma, space, nul term */
-	if ((*arr = realloc(*arr, buf_len + word_len + 2 + 1)) == NULL) {
-		err_ret("realloc"); /* error msg to stderr */
-		return; /* don't memcpy if realloc failed */
-	}
+	*arr = realloc(*arr, buf_len + word_len + 2 + 1);
+	assert(NULL != *arr);
 
 	if (buf_len >= 3) {
 		memcpy((*arr) + buf_len - 1, ", ", 2);
@@ -115,9 +110,7 @@ static char *list_ifaces()
 	char *tail = "}";
 	char *msg =
 	    malloc(strlen(head) + strlen(json_ifaces) + strlen(tail) + 1);
-	if (msg == NULL) {
-		err_sys("malloc");
-	}
+	assert(NULL != msg);
 	*msg = 0;
 	strncat(msg, head, strlen(head));
 	strncat(msg, json_ifaces, strlen(json_ifaces));
