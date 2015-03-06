@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 200809L
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+#include <inttypes.h>
+#include <string.h>
 
 #include "fossa.h"
 #include "frozen.h"
@@ -66,6 +69,20 @@ static char *json_arr_alloc()
 	return buf;
 }
 
+/* str MUST be a malloc'ed pointer */
+char * quote_string(char *str)
+{
+	char *s;
+	assert(str);
+	s = strdup(str);
+	assert(s);
+	str = realloc(str, strlen(str) + 3);
+	assert(str);
+	snprintf(str, strlen(str)+3, "\"%s\"", s);
+	free(s);
+	return str;
+};
+
 static void json_arr_append(char **arr, const char *const word)
 {
 	assert(NULL != arr);
@@ -73,9 +90,7 @@ static void json_arr_append(char **arr, const char *const word)
 	assert(NULL != word);
 
 	int buf_len = strlen(*arr);
-	int word_len = strlen(word) + 2; /* Plus two quotes. */
-	char quoted_word[word_len + 1]; /* plus a terminator */
-	snprintf(quoted_word, word_len + 1, "\"%s\"", word); /* include \0 */
+	int word_len = strlen(word);
 
 	/* comma, space, nul term */
 	*arr = realloc(*arr, buf_len + word_len + 2 + 1);
@@ -85,7 +100,7 @@ static void json_arr_append(char **arr, const char *const word)
 		memcpy((*arr) + buf_len - 1, ", ", 2);
 		buf_len += 2;
 	}
-	memcpy(*arr + buf_len - 1, quoted_word, word_len);
+	memcpy(*arr + buf_len - 1, word, word_len);
 	(*arr)[buf_len + word_len - 1] = ']';
 	(*arr)[buf_len + word_len] = 0;
 }
@@ -100,6 +115,7 @@ static char *list_ifaces()
 	assert(NULL != *i);
 
 	do {
+		*i = quote_string(*i);
 		json_arr_append(&json_ifaces, *i);
 		free(*i);
 		i++;
