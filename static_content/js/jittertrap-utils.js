@@ -54,7 +54,7 @@ var updateStats = function (series) {
 
 var updateHistogram = function(series) {
   var binCnt = 20;
-  var normBins = [];
+  var normBins = new Float32Array(binCnt);
   var range = series.maxY.y - series.minY.y;
 
   /* bins must use integer indexes, so we have to normalise the
@@ -76,7 +76,6 @@ var updateHistogram = function(series) {
   }
 
   /* write the histogram x,y data */
-  var newdata = [];
   for (i = 0; i < binCnt; i++) {
     var xVal = Math.ceil(i * (series.maxY.y / binCnt));
     xVal += series.minY.y;  /* shift x to match original y range */
