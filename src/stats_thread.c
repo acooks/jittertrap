@@ -209,6 +209,7 @@ static void *run(void *data)
 		/* set the iface, samples per period at start of each frame*/
 		if (sample_no == 0) {
 			pthread_mutex_lock(&g_iface_mutex);
+			free(iface);
 			iface = strdup(g_iface);
 			sprintf(stats_frame.iface, iface);
 			pthread_mutex_unlock(&g_iface_mutex);

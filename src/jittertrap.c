@@ -428,6 +428,7 @@ static void stats_to_json(struct iface_stats *stats, char json_msg[]) {
 		 "{\"stats\": {\"iface\": \"%s\",\"s\": %s}}",
 		 stats->iface,
 		 m);
+	free(m);
 }
 
 /* callback for the real-time stats thread. */
@@ -450,6 +451,7 @@ void stats_event_handler(struct iface_stats *counts)
 		}
 	}
 	pthread_mutex_unlock(&fossa_mutex);
+	free(json_msg);
 }
 
 int main()

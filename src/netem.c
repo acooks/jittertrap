@@ -67,7 +67,6 @@ char **netem_list_ifaces()
 			assert(NULL != *i);
 			sprintf(*i, j);
 			i++;
-			// XXX rtnl_link_put(link); // FIXME: Yes? No?
 		}
 		link =
 		    (struct rtnl_link *)nl_cache_get_next((struct nl_object *)
