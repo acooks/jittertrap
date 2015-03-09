@@ -186,7 +186,43 @@ var clearChart = function() {
   xVal = 0;
 };
 
+
+// Trap Checking Functions
+/**
+ * Returns the data to be used in checking to see if a particualar trap has been triggered.
+ * The data is an array of objects {x,y} containing x,y values for the chart.
+ */
+var trapData = function(trapId) {
+  var data = null;
+  switch (trapId) {
+    case 'max_rx_bitrate':
+      data = chartData.rxRate.data;
+    break;
+  }
+  return data;
+};
+/**
+ * Returns true if the given trap has been triggered
+ */
+var trapTriggered = function(trapId, trapVal) {
+  var triggered = false,
+      data      = trapData(trapId);
+
+  switch (trapId) {
+    case 'max_rx_bitrate':
+      if (data[data.length-1].y > trapVal) {
+        triggered = true;
+      }
+    break;
+  }
+  return triggered;
+};
 var checkTriggers = function() {
+  $.each(traps, function(trapId, trapVal){
+    if (trapTriggered(trapId, trapVal)) {
+      console.log("Trap Triggered: " + trapId + "/" + trapVal);
+    }
+  });
   ;
 };
 
@@ -198,7 +234,7 @@ var renderGraphs = function() {
 
 var toggleStopStartGraph = function() {
   var maxUpdatePeriod = 9999999999;
-  if (updatePeriod  != maxUpdatePeriod) {
+  if (updatePeriod != maxUpdatePeriod) {
     old_updatePeriod = updatePeriod;
     updatePeriod = maxUpdatePeriod;
   } else {

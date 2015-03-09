@@ -46,7 +46,9 @@ $(document).ready(function() {
 
   websocket.onmessage = function(evt) {
     var msg = JSON.parse(evt.data);
-    if (msg["stats"] && msg.stats.iface == $('#dev_select').val()) {
+    var selectedIface = $('#dev_select').val();
+
+    if (msg["stats"] && msg.stats.iface == selectedIface) {
       var visibleSeries = $("#chopts_series option:selected").val();
       handleMsgUpdateStats(samplePeriod, msg.stats.s, visibleSeries);
     } else if (msg["ifaces"]) {
@@ -92,6 +94,59 @@ $(document).ready(function() {
     $('#trigger_chopts').toggle("fast");
     return false;
   });
+
+
+  // Returns true if the given DOM element is checked (assuming it's a checkbox)
+  var isChecked = function(checkbox) {
+    var checkboxEnabled = $(checkbox).prop('checked');
+    return checkboxEnabled;
+  };
+  // Returns a jQuery object of the Traps value input, found inside the given traps container
+  var trapInput = function(trapContainer) {
+    var inputSelector = '.input-group input';
+    return trapContainer.find(inputSelector).first();
+  };
+  // The trapId for a given traps container
+  var trapId = function(trapContainer) {
+    return trapInput(trapContainer).prop('id');
+  };
+  // The value of the Trap inside the traps container
+  var trapValue = function(trapContainer) {
+    return trapInput(trapContainer).val();
+  };
+  // Enable a trap
+  var addTrap = function(trapContainer) {
+    var id = trapId(trapContainer);
+
+    console.log("Adding Trap: " + id);
+    traps[id] = trapValue(trapContainer);
+    console.log(traps);
+  };
+  // Disable a trap
+  var removeTrap = function(trapContainer) {
+    var id = trapId(trapContainer);
+
+    console.log("Removing Trap: " + id);
+    delete traps[id]
+    console.log(traps);
+  };
+  // The change event handler, to be used as a toggle for enabling/disabling traps
+  var toggleTrap = function(event) {
+    var trapContainer = $(event.target).parents('.trapContainer'),
+        trapCheckbox  = event.target;
+
+    console.log("Toggled Trap...");
+
+    // Adding a Trap
+    if (isChecked(trapCheckbox)) {
+      addTrap(trapContainer);
+    }
+    // Removing a Trap
+    else {
+      removeTrap(trapContainer);
+    }
+  };
+  $('#trigger_chopts :checkbox').bind('change', toggleTrap);
 
   $('#help_toggle').click(function() {
     $('#help').toggle("fast");

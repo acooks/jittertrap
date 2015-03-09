@@ -8,7 +8,9 @@
     <script type="text/javascript" src="js/jittertrap-charting.js"></script>
     <script type="text/javascript" src="js/jittertrap-websocket.js"></script>
     <script type="text/javascript" src="jittertrap.js"></script>
-    
+
+    <link rel="stylesheet" href="css/jittertrap.css">
+
     <!-- Bootstrap 3.2.2 -->
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/bootstrap-theme.min.css">
@@ -17,12 +19,12 @@
   <body>
     <div class="container">
       <div class="page-header">
-        <h2 class="text-muted">JitterTrap</h2>
+        <h1 class="text-muted">JitterTrap</h1>
       </div>
 
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h3 class="panel-title">Impairment Parameters</h3>
+          <h2 class="panel-title">Impairment Parameters</h2>
         </div>
         <div class="panel-body">
           <form class="form-inline">
@@ -70,7 +72,7 @@
       <!-- Measurement Parameters -->
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h3 class="panel-title">Measurement Parameters</h3>
+          <h2 class="panel-title">Measurement Parameters</h2>
         </div>
         <div class="panel-body">
           <form class="form-inline">
@@ -99,9 +101,39 @@
             </button>
 
             <!-- Traps -->
+            <!--
+            The '.checkbox input' enables and disables traps for different charts
+            In enabling a trap you first enable it in the triggers object
+            -->
             <div id="trigger_chopts" style="display:none">
               Trap when: <br/>
-              
+
+              <div class="trapContainer">
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox">
+                    Exceeds RX Bitrate
+                  </label>
+                </div>
+                <div class="input-group">
+                  <input id="max_rx_bitrate" class="form-control" type="text" />
+                  <span class="input-group-addon">kbps</span>
+                </div>
+              </div>
+
+              <div class="trapContainer">
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox">
+                    Exceeds TX Bitrate
+                  </label>
+                </div>
+                <div class="input-group">
+                  <input id="max_tx_bitrate" class="form-control" type="text" />
+                  <span class="input-group-addon">Mbps</span>
+                </div>
+              </div>
+
               <div class="checkbox">
                 <label>
                   <input type="checkbox" value="max_rx_throughput" id="trigger_enable_max_rx_throughput">
@@ -113,7 +145,7 @@
                 <span class="input-group-addon">Mbps</span>
               </div>
 
-              <br/>
+              <br />
 
               <div class="checkbox">
                 <label>

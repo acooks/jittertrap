@@ -25,3 +25,8 @@ var dataLengthMultiplier = 200;
  * dataLength = chartingPeriod * dataLengthMultiplier
  */
 var dataLength = 4000;
+
+/*
+ * list of active traps
+ */
+var traps = {};
