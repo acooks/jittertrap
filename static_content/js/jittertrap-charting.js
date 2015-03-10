@@ -198,6 +198,9 @@ var trapData = function(trapId) {
     case 'max_rx_bitrate':
       data = chartData.rxRate.data;
     break;
+    case 'max_tx_bitrate':
+      data = chartData.txRate.data;
+    break;
   }
   return data;
 };
@@ -210,6 +213,7 @@ var trapTriggered = function(trapId, trapVal) {
 
   switch (trapId) {
     case 'max_rx_bitrate':
+    case 'max_tx_bitrate':
       if (data[data.length-1].y > trapVal) {
         triggered = true;
       }
