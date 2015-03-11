@@ -1,5 +1,5 @@
-ifndef SAMPLE_PERIOD_MS
-SAMPLE_PERIOD_MS = 10
+ifndef SAMPLE_PERIOD_US
+SAMPLE_PERIOD_US = 250
 endif
 
 ifndef WEB_SERVER_PORT
@@ -33,7 +33,7 @@ PKGCONFIG_LIBNL = \
 LFLAGS = -lrt
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 DEFINES = \
- -DSAMPLE_PERIOD_MS=$(SAMPLE_PERIOD_MS) \
+ -DSAMPLE_PERIOD_US=$(SAMPLE_PERIOD_US) \
  -DWEB_SERVER_PORT=$(WEB_SERVER_PORT) \
  -DWEB_SERVER_DOCUMENT_ROOT=$(WEB_SERVER_DOCUMENT_ROOT)
 
@@ -46,7 +46,7 @@ FOSSA_DEFINES = \
 
 all: $(PROG)
 	@echo -----------------------------------
-	@echo Sample period: $(SAMPLE_PERIOD_MS)ms
+	@echo Sample period: $(SAMPLE_PERIOD_US)us
 	@echo Web server port: $(WEB_SERVER_PORT)
 	@echo Web server document root: $(WEB_SERVER_DOCUMENT_ROOT)
 	@echo -----------------------------------

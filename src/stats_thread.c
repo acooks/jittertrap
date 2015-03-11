@@ -30,7 +30,7 @@ static pthread_mutex_t g_iface_mutex;
 char *g_iface;
 
 struct sample g_stats_o;
-int sample_period_ms;
+int sample_period_us;
 
 void (*stats_handler) (struct iface_stats * counts);
 
@@ -39,7 +39,7 @@ static void *run(void *data);
 
 int get_sample_period()
 {
-	return sample_period_ms;
+	return sample_period_us;
 }
 
 int stats_thread_init(void (*_stats_handler) (struct iface_stats * counts))
@@ -166,11 +166,12 @@ static int init_realtime(void)
 	return sched_setscheduler(0, SCHED_FIFO, &schedparm);
 }
 
+/* microseconds */
 void set_sample_period(int period)
 {
-	if (period < 1)
-		period = 1;
-	sample_period_ms = period;
+	if (period < 100)
+		period = 100;
+	sample_period_us = period;
 }
 
 static void *run(void *data)
@@ -179,7 +180,7 @@ static void *run(void *data)
 	init_nl();
 	read_counters("lo", NULL); /* warm up the link cache */
 	init_realtime();
-	set_sample_period(SAMPLE_PERIOD_MS);
+	set_sample_period(SAMPLE_PERIOD_US);
 
 	struct timespec deadline;
 	struct timespec whoosh; /* the sound of a missed deadline. */
@@ -198,7 +199,7 @@ static void *run(void *data)
 			whoosh.tv_sec - deadline.tv_sec,
 			whoosh.tv_nsec - deadline.tv_nsec);
 #endif
-		deadline.tv_nsec += 1000 * 1000 * sample_period_ms;
+		deadline.tv_nsec += 1000 * sample_period_us;
 
 		/* Normalize the time to account for the second boundary */
 		if(deadline.tv_nsec >= 1000000000) {
@@ -213,7 +214,7 @@ static void *run(void *data)
 			iface = strdup(g_iface);
 			sprintf(stats_frame.iface, iface);
 			pthread_mutex_unlock(&g_iface_mutex);
-			stats_frame.sample_period_us = sample_period_ms * 1000;
+			stats_frame.sample_period_us = sample_period_us;
 		}
 
 		update_stats(&stats_frame.samples[sample_no], iface);
