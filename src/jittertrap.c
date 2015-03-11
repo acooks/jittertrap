@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <string.h>
+#include <math.h>
 
 #include "fossa.h"
 #include "frozen.h"
@@ -18,6 +19,10 @@
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
 static pthread_mutex_t fossa_mutex;
+
+struct iface_stats *g_raw_samples;
+int g_unsent_frame_count = 0;
+
 
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
 static struct ns_serve_http_opts s_http_server_opts = {
@@ -395,14 +400,12 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 	pthread_mutex_unlock(&fossa_mutex);
 }
 
-#define MAX_JSON_MSG_LEN 2048
-
-static void stats_to_json(struct iface_stats *stats, char json_msg[]) {
+static void stats_to_json(struct iface_stats *s, char json_msg[]) {
 
 	char *m = json_arr_alloc();
 
-	int sample_no;
-	for (sample_no = 0; sample_no < SAMPLES_PER_FRAME; sample_no++) {
+	int i;
+	for (i = 0; i < FILTERED_SAMPLES_PER_MSG; i++) {
 		char msg[MAX_JSON_MSG_LEN];
 		snprintf(msg,
 			 MAX_JSON_MSG_LEN,
@@ -414,34 +417,32 @@ static void stats_to_json(struct iface_stats *stats, char json_msg[]) {
 			 "\"rx-pkt-delta\":%d,"
 			 "\"tx-pkt-delta\":%d"
 			 "}",
-			 stats->samples[sample_no].rx_bytes,
-			 stats->samples[sample_no].tx_bytes,
-			 stats->samples[sample_no].rx_bytes_delta,
-			 stats->samples[sample_no].tx_bytes_delta,
-			 stats->samples[sample_no].rx_packets_delta,
-			 stats->samples[sample_no].tx_packets_delta);
+			 s->samples[i].rx_bytes,
+			 s->samples[i].tx_bytes,
+			 s->samples[i].rx_bytes_delta,
+			 s->samples[i].tx_bytes_delta,
+			 s->samples[i].rx_packets_delta,
+			 s->samples[i].tx_packets_delta);
 		json_arr_append(&m, msg);
 	}
 
 	snprintf(json_msg,
 		 MAX_JSON_MSG_LEN,
 		 "{\"stats\": {\"iface\": \"%s\",\"s\": %s}}",
-		 stats->iface,
+		 s->iface,
 		 m);
 	free(m);
 }
 
-/* callback for the real-time stats thread. */
-/* FIXME: this may need to change to a buffer flip operation, with the
- * sending happening in the main jittertrap thread. */
-void stats_event_handler(struct iface_stats *counts)
+inline static void stats_send(struct iface_stats *samples)
 {
 	struct ns_connection *c;
 	pthread_mutex_lock(&fossa_mutex);
 
 	char *json_msg = malloc(MAX_JSON_MSG_LEN);
 	assert(json_msg);
-	stats_to_json(counts, json_msg);
+
+	stats_to_json(samples, json_msg);
 
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		if (is_websocket(c)) {
@@ -452,6 +453,25 @@ void stats_event_handler(struct iface_stats *counts)
 	}
 	pthread_mutex_unlock(&fossa_mutex);
 	free(json_msg);
+}
+
+static void stats_filter_and_send()
+{
+	/* FIXME: g_unsent_frame_count needs a guard */
+	if (g_unsent_frame_count > 0) {
+		stats_send(g_raw_samples);
+		g_unsent_frame_count--;
+	}
+}
+
+/* callback for the real-time stats thread. */
+void stats_event_handler(struct iface_stats *raw_samples)
+{
+	/* FIXME: needs a guard. */
+	g_raw_samples = raw_samples;
+
+	/* FIXME: needs a guard. */
+	g_unsent_frame_count++;
 }
 
 int main()
@@ -478,7 +498,8 @@ int main()
 	stats_thread_init(stats_event_handler);
 
 	for (;;) {
-		ns_mgr_poll(&mgr, 10);
+		ns_mgr_poll(&mgr, 1);
+		stats_filter_and_send();
 	}
 	ns_mgr_free(&mgr);
 

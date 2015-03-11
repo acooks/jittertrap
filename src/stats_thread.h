@@ -1,9 +1,6 @@
 #ifndef STATS_THREAD_H
 #define STATS_THREAD_H
 
-#define MAX_IFACE_LEN 16
-#define SAMPLES_PER_FRAME 10
-
 struct sample {
 	struct timespec timestamp;
 	uint64_t 	rx_bytes;

@@ -1,5 +1,5 @@
 ifndef SAMPLE_PERIOD_US
-SAMPLE_PERIOD_US = 250
+SAMPLE_PERIOD_US = 500
 endif
 
 ifndef WEB_SERVER_PORT
@@ -14,6 +14,7 @@ PROG = jittertrap
 SOURCES = \
  jittertrap.c \
  stats_thread.c \
+ sample_buf.c \
  netem.c \
  ../deps/fossa/fossa.c \
 
@@ -21,6 +22,7 @@ HEADERS = \
  jittertrap.h \
  netem.h \
  stats_thread.h \
+ sample_buf.h \
 
 INCLUDES = \
  -I ../deps/fossa/ \
@@ -30,7 +32,7 @@ PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
  $$(pkg-config --cflags --libs libnl-route-3.0)
 
-LFLAGS = -lrt
+LFLAGS = -lrt -lm
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 DEFINES = \
  -DSAMPLE_PERIOD_US=$(SAMPLE_PERIOD_US) \

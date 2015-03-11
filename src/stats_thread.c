@@ -18,6 +18,11 @@
 
 #include "jittertrap.h"
 #include "stats_thread.h"
+#include "sample_buf.h"
+
+/* 10ms of samples per message */
+static_assert((SAMPLES_PER_FRAME * SAMPLE_PERIOD_US) == 10000,
+	      "Message must contain exactly 10ms of data samples");
 
 /* globals */
 static pthread_t stats_thread;
@@ -179,6 +184,7 @@ static void *run(void *data)
 	(void)data; /* unused parameter. silence warning. */
 	init_nl();
 	read_counters("lo", NULL); /* warm up the link cache */
+	raw_sample_buf_init();
 	init_realtime();
 	set_sample_period(SAMPLE_PERIOD_US);
 
@@ -186,13 +192,16 @@ static void *run(void *data)
 	struct timespec whoosh; /* the sound of a missed deadline. */
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
-	struct iface_stats stats_frame;
 	int sample_no = 0;
 	char *iface = strdup(g_iface);
+	struct iface_stats *stats_frame = raw_sample_buf_produce_next();
+	sprintf(stats_frame->iface, iface);
+	stats_frame->sample_period_us = sample_period_us;
 
 	for (;;) {
 		clock_gettime(CLOCK_MONOTONIC, &whoosh);
 #if 0
+/* TODO: put the whoosh in the sample */
 		printf("%ld.%09ld : %ld.%09ld\n",
 			deadline.tv_sec,
 			deadline.tv_nsec,
@@ -207,25 +216,23 @@ static void *run(void *data)
 			deadline.tv_sec++;
 		}
 
+		update_stats(&(stats_frame->samples[sample_no]), iface);
+
+		sample_no++;
+		sample_no %= SAMPLES_PER_FRAME;
+
 		/* set the iface, samples per period at start of each frame*/
 		if (sample_no == 0) {
 			pthread_mutex_lock(&g_iface_mutex);
 			free(iface);
 			iface = strdup(g_iface);
-			sprintf(stats_frame.iface, iface);
+
+			stats_frame = raw_sample_buf_produce_next();
+			sprintf(stats_frame->iface, iface);
 			pthread_mutex_unlock(&g_iface_mutex);
-			stats_frame.sample_period_us = sample_period_us;
+			stats_frame->sample_period_us = sample_period_us;
+			stats_handler(raw_sample_buf_consume_next());
 		}
-
-		update_stats(&stats_frame.samples[sample_no], iface);
-
-		/* execute tx callback if frame is complete */
-		if (sample_no == SAMPLES_PER_FRAME-1) {
-			stats_handler(&stats_frame);
-		}
-
-		sample_no++;
-		sample_no %= SAMPLES_PER_FRAME;
 
 	        clock_nanosleep(CLOCK_MONOTONIC,
 				TIMER_ABSTIME, &deadline, NULL);
