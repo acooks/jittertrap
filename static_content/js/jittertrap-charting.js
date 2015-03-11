@@ -200,18 +200,19 @@ var toggleStopStartGraph = function() {
 };        
 
 var setUpdatePeriod = function() {
-  var sampleRate = millisecondsToRate(samplePeriod);
-  var updateRate = millisecondsToRate(updatePeriod);
+  var sampleRate = microsecondsToRate(samplePeriod);
+  var updateRate = microsecondsToRate(updatePeriod * 1000.0);
+
   if (sampleRate < updateRate) {
-    updatePeriod = rateToMilliseconds(sampleRate);
+    updatePeriod = rateToMicroseconds(sampleRate) / 1000.0;
     $("#chopts_refresh").val(sampleRate);
   } else if (updateRate > 30) {
-    updatePeriod = rateToMilliseconds(30);
+    updatePeriod = rateToMicroseconds(30);
     $("#chopts_refresh").val(30);
   } else {
     $("#chopts_refresh").val(updateRate);
   }
   clearInterval(drawInterval);
   drawInterval = getRenderInterval(updatePeriod);
-  console.log("updateRate: " + updateRate + " sampleRate: " + sampleRate);
+  console.log("updateRate: " + updateRate + "Hz. sampleRate: " + sampleRate + "Hz");
 };

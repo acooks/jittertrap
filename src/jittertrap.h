@@ -7,8 +7,8 @@
 
 #define MAX_JSON_MSG_LEN 4096
 
-#define FILTERED_SAMPLES_PER_MSG 20
-#define SAMPLES_PER_FRAME 20
+#define FILTERED_SAMPLES_PER_MSG 10
+#define SAMPLES_PER_FRAME 10
 
 #ifndef static_assert
 #define static_assert _Static_assert

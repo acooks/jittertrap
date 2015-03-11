@@ -22,7 +22,7 @@ $(document).ready(function() {
 
 
   // Initialize Chart Options
-  $("#chopts_refresh").val(millisecondsToRate(updatePeriod));
+  $("#chopts_refresh").val(microsecondsToRate(updatePeriod)/1000.0);
   $("#chopts_dataLen").val(dataLength);
 
 
@@ -77,7 +77,7 @@ $(document).ready(function() {
   $('#dev_select').bind('change', dev_select);
   $('#chopts_stop_start').bind('click', toggleStopStartGraph);
   $('#chopts_refresh').bind('change', function() {
-    updatePeriod = rateToMilliseconds($("#chopts_refresh").val());
+    updatePeriod = rateToMicroseconds($("#chopts_refresh").val()) / 1000.0;
     setUpdatePeriod();
   });
 

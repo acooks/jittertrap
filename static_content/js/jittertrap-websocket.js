@@ -47,7 +47,7 @@ var handleMsgNetemParams = function(params) {
 
 var handleMsgSamplePeriod = function(period) {
   samplePeriod = period;
-  $("#sample_period").val(period + "ms");
+  $("#sample_period").val(period / 1000.0 + "ms");
   console.log("sample_period: " + period);
   setUpdatePeriod();
   clearChart();
@@ -103,7 +103,7 @@ var get_sample_period = function() {
 };
 
 var set_sample_period = function() {
-  samplePeriod = $("#sample_period").val();
+  samplePeriod =  1000.0 * parseFloat($("#sample_period").val());
   var msg = JSON.stringify(
     {'msg': 'set_sample_period',
       'period': samplePeriod

@@ -1,24 +1,24 @@
 // interval in milliseconds
-var millisecondsToRate = function(ms) {
-  if (ms > 0) {
-    return Math.ceil(1.0 / ms * 1000.0);
+var microsecondsToRate = function(us) {
+  if (us > 0) {
+    return Math.ceil(1.0 / us * 1000000.0);
   }
 };
 
-var rateToMilliseconds = function(r) {
+var rateToMicroseconds = function(r) {
   if (r > 0) {
-    return Math.ceil(1.0 / r * 1000.0);
+    return Math.ceil(1.0 / r * 1000000.0);
   }
 };
 
-/* count must be bytes, duration must be milliseconds */
+/* count must be bytes, samplePeriod is microseconds */
 var byteCountToKbpsRate = function(count) {
-  var rate = count * (1000.0 / samplePeriod) * 8.0 / 1000.0;
+  var rate = count * 8.0 / samplePeriod * 1000.0;
   return rate;
 };
 
 var packetDeltaToRate = function(count) {
-  return count * (1000.0 / samplePeriod);
+  return count * (1000000.0 / samplePeriod);
 };
 
 
