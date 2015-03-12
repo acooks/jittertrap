@@ -21,9 +21,6 @@ var packetDeltaToRate = function(count) {
   return count * (1000000.0 / samplePeriod);
 };
 
-
-
-
 var updateStats = function (series) {
   var sortedData = series.data.slice(0);
   sortedData.sort(function(a,b) {return (a.y|0) - (b.y|0);});
@@ -83,14 +80,67 @@ var updateHistogram = function(series) {
   }
 };
 
+var updateFilteredSeries = function (series) {
+
+  /* FIXME: float vs integer is important here! */
+  var decimationFactor = Math.floor(chartingPeriod / (samplePeriod / 1000.0));
+  var fseriesLength = Math.floor(series.data.length / decimationFactor);
+
+  // the downsampled data has to be scaled.
+  var scale = 1/chartingPeriod;
+
+  // how many filtered data points have been collected already?
+  var filteredDataCount = series.filteredData.length;
+
+  // if the series is complete, expire the first value.
+  if (filteredDataCount == fseriesLength) {
+    series.filteredData.shift();
+    filteredDataCount--;
+  }
+
+  // all the X values will be updated, but save the Y values.
+  var filteredY = new Float32Array(fseriesLength);
+  for (var i = filteredDataCount - 1; i >= 0; i--) {
+    filteredY[i] = series.filteredData[i].y;
+  }
+
+  // now, discard all previous values, because all the X values will change.
+  for (var i = filteredDataCount; i > 0; i--) {
+    series.filteredData.shift();
+  }
+
+  // calculate any/all missing Y values from raw data
+  for (var i = filteredDataCount; i < fseriesLength; i++) {
+    filteredY[i] = 0.0;
+    for (var j = 0; j < decimationFactor; j++) {
+      var idx = i * decimationFactor + j;
+      if (idx > series.data.length) {
+        break;
+      }
+      filteredY[i] += series.data[idx].y;
+    }
+
+    // scale the value to the correct range.
+    filteredY[i] *= scale;
+  }
+
+  // finally, update the filteredData
+  for (var i = 0; i < fseriesLength; i++) {
+    series.filteredData.push({x: i * chartingPeriod, y: filteredY[i]});
+  }
+
+};
+
 var updateSeries = function (series, xVal, yVal, selectedSeries) {
   series.data.push({ x: xVal, y: yVal });
   while (series.data.length > dataLength) {
     series.data.shift();
   }
 
-  if (series == selectedSeries) {
+  /* do expensive operations once per filtered sample/chartingPeriod. */
+  if ((xVal % chartingPeriod == 0) && (series == selectedSeries)) {
     updateStats(series);
     updateHistogram(series);
+    updateFilteredSeries(series);
   }
 };

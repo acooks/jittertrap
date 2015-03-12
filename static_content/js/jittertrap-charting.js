@@ -1,7 +1,8 @@
 var chartData = {};
 
 chartData.txDelta = {
-  data:[],
+  data:[],  // raw samples
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title:"Tx Bytes per sample period",
   ylabel:"Tx Bytes per sample",
@@ -13,6 +14,7 @@ chartData.txDelta = {
 
 chartData.rxDelta = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title:"Rx Bytes per sample period",
   ylabel:"Rx Bytes per sample",
@@ -24,6 +26,7 @@ chartData.rxDelta = {
 
 chartData.rxRate = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Ingress throughput in kbps",
   ylabel:"kbps, mean",
@@ -35,6 +38,7 @@ chartData.rxRate = {
 
 chartData.txRate = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Egress throughput in kbps",
   ylabel:"kbps, mean",
@@ -46,6 +50,7 @@ chartData.txRate = {
 
 chartData.txPacketRate = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Egress packet rate",
   ylabel:"pkts per sec, mean",
@@ -57,6 +62,7 @@ chartData.txPacketRate = {
 
 chartData.rxPacketRate = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Ingress packet rate",
   ylabel:"pkts per sec, mean",
@@ -68,6 +74,7 @@ chartData.rxPacketRate = {
 
 chartData.txPacketDelta = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Egress packets per sample",
   ylabel:"packets sent",
@@ -79,6 +86,7 @@ chartData.txPacketDelta = {
 
 chartData.rxPacketDelta = {
   data:[],
+  filteredData:[], // filtered & decimated to chartingPeriod
   histData:[],
   title: "Ingress packets per sample",
   ylabel:"packets received",
@@ -102,7 +110,7 @@ var resetChart = function() {
     data: [{
       name: s,
       type: "line",
-      dataPoints: chartData[s].data
+      dataPoints: chartData[s].filteredData
     }]
   });
   chart.render();
@@ -144,27 +152,35 @@ var resetChart = function() {
 
 var clearChart = function() {
   chartData.txDelta.data = [];
+  chartData.txDelta.filteredData = [];
   chartData.txDelta.histData = [];
 
   chartData.rxDelta.data = [];
+  chartData.rxDelta.filteredData = [];
   chartData.rxDelta.histData = [];
 
   chartData.rxRate.data = [];
+  chartData.rxRate.filteredData = [];
   chartData.rxRate.histData = [];
 
   chartData.txRate.data = [];
+  chartData.txRate.filteredData = [];
   chartData.txRate.histData = [];
 
   chartData.txPacketRate.data = [];
+  chartData.txPacketRate.filteredData = [];
   chartData.txPacketRate.histData = [];
 
   chartData.rxPacketRate.data = [];
+  chartData.rxPacketRate.filteredData = [];
   chartData.rxPacketRate.histData = [];
 
   chartData.rxPacketDelta.data = [];
+  chartData.rxPacketDelta.filteredData = [];
   chartData.rxPacketDelta.histData = [];
 
   chartData.txPacketDelta.data = [];
+  chartData.txPacketDelta.filteredData = [];
   chartData.txPacketDelta.histData = [];
   resetChart();
   xVal = 0;
