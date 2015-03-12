@@ -180,13 +180,6 @@ var renderGraphs = function() {
   chart.render();
 };
 
-function getRenderInterval(updatePeriod) {
-  var interval = setInterval(renderGraphs, updatePeriod);
-  return interval;
-}
-
-var drawInterval = getRenderInterval(updatePeriod);
-
 var toggleStopStartGraph = function() {
   var maxUpdatePeriod = 9999999999;
   if (updatePeriod  != maxUpdatePeriod) {
@@ -199,20 +192,12 @@ var toggleStopStartGraph = function() {
   return false;
 };        
 
-var setUpdatePeriod = function() {
-  var sampleRate = microsecondsToRate(samplePeriod);
-  var updateRate = microsecondsToRate(updatePeriod * 1000.0);
+var drawIntervalID = setInterval(renderGraphs, updatePeriod);
 
-  if (sampleRate < updateRate) {
-    updatePeriod = rateToMicroseconds(sampleRate) / 1000.0;
-    $("#chopts_refresh").val(sampleRate);
-  } else if (updateRate > 30) {
-    updatePeriod = rateToMicroseconds(30);
-    $("#chopts_refresh").val(30);
-  } else {
-    $("#chopts_refresh").val(updateRate);
-  }
-  clearInterval(drawInterval);
-  drawInterval = getRenderInterval(updatePeriod);
-  console.log("updateRate: " + updateRate + "Hz. sampleRate: " + sampleRate + "Hz");
+var setUpdatePeriod = function() {
+  var updateRate = 1000.0 / updatePeriod; /* Hz */
+  $("#chopts_refresh").val(updateRate); /* update the slider */
+  clearInterval(drawIntervalID);
+  drawIntervalID = setInterval(renderGraphs, updatePeriod);
+  console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
 };
