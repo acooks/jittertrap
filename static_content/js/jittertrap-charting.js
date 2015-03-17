@@ -212,7 +212,6 @@ var drawIntervalID = setInterval(renderGraphs, updatePeriod);
 
 var setUpdatePeriod = function() {
   var updateRate = 1000.0 / updatePeriod; /* Hz */
-  $("#chopts_refresh").val(updateRate); /* update the slider */
   clearInterval(drawIntervalID);
   drawIntervalID = setInterval(renderGraphs, updatePeriod);
   console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
