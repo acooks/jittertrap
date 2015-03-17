@@ -128,6 +128,11 @@ $(document).ready(function() {
       $('#add_trap_modal button').first().click();
     }
   });
+  // Remove trap button(s)
+  $('#traps_table tbody').on('click', 'tr button', function(event){
+    // Removal from the UI
+    $(event.target).parents('tr').remove();
+  });
 
   $('#help_toggle').click(function() {
     $('#help').toggle("fast");
