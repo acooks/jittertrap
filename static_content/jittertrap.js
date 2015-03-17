@@ -72,7 +72,6 @@ $(document).ready(function() {
   $("#dev_select").bind('change', clearChart);
   $('#set_netem_button').bind('click', set_netem);
   $('#clear_netem_button').bind('click', clear_netem);
-  $('#sample_period').bind('change', set_sample_period);
   $('#dev_select').bind('change', dev_select);
   $('#chopts_stop_start').bind('click', toggleStopStartGraph);
 
