@@ -3,8 +3,11 @@
   <head>
     <script type="text/javascript" src="jquery-2.1.3.min.js"></script>
     <script type="text/javascript" src="jquery.canvasjs.min.js"></script>
+    <script type="text/javascript" src="js/mustache.min.js"></script>
+
     <script type="text/javascript" src="js/jittertrap-globals.js"></script>
     <script type="text/javascript" src="js/jittertrap-utils.js"></script>
+    <script type="text/javascript" src="js/jittertrap-traps.js"></script>
     <script type="text/javascript" src="js/jittertrap-charting.js"></script>
     <script type="text/javascript" src="js/jittertrap-websocket.js"></script>
     <script type="text/javascript" src="jittertrap.js"></script>
@@ -97,21 +100,81 @@
             <button id="chopts_stop_start" class="btn btn-primary"> Stop/Start</button>
             <button id="trigger_toggle" class="btn btn-default">Traps</button>
             <button id="more_chopts_toggle" class="btn btn-default">
-              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> More chart options
+              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+              More chart options
             </button>
 
             <!-- Traps -->
-            <!--
-            The '.checkbox input' enables and disables traps for different charts
-            In enabling a trap you first enable it in the triggers object
-            -->
             <div id="trigger_chopts" style="display:none">
+              <button id="trap_add" class="btn btn-default" data-toggle="modal" data-target="#add_trap_modal" type="button">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Add Trap
+              </button>
+
+              <!-- Trap Dialog viewed by clicking the Add Trap button -->
+              <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title" id="myModalLabel">Add a Trap</h4>
+                    </div>
+                    <div class="modal-body">
+                      <form>
+                        <select id="trap_names">
+                          <option value="kbps">Exceeds RX Bitrate</option>
+                          <option value="kbps">Exceeds TX Bitrate</option>
+                        </select>
+                        <div class="input-group">
+                          <input id="trap_value" class="form-control" type="text" />
+                          <span class="input-group-addon">kbps</span>
+                        </div>
+                      </form>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-primary">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <table id="traps_table" class="table">
+                <thead>
+                  <tr>
+                    <th>Trap</th>
+                    <th>Value</th>
+                    <th>Options</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example Trap after being added through the UI
+                  <tr data-trap-id="max_rx_bitrate" data-trap-value="123">
+                    <td>Exceeds RX Bitrate</td>
+                    <td>
+                      <div class="input-group">
+                        <span class="form-control">123</span>
+                        <span class="input-group-addon">kbps</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-default">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                      </button>
+                    </td>
+                  </tr>
+                  -->
+                </tbody>
+              </table>
+
+              <br />
+
               Trap when: <br/>
 
               <div class="trapContainer">
                 <div class="checkbox">
                   <label>
-                    <input type="checkbox">
+                    <input type="checkbox" disabled>
                     Exceeds RX Bitrate
                   </label>
                 </div>
@@ -124,7 +187,7 @@
               <div class="trapContainer">
                 <div class="checkbox">
                   <label>
-                    <input type="checkbox">
+                    <input type="checkbox" disabled>
                     Exceeds TX Bitrate
                   </label>
                 </div>

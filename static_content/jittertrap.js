@@ -95,58 +95,39 @@ $(document).ready(function() {
     return false;
   });
 
-
-  // Returns true if the given DOM element is checked (assuming it's a checkbox)
-  var isChecked = function(checkbox) {
-    var checkboxEnabled = $(checkbox).prop('checked');
-    return checkboxEnabled;
-  };
-  // Returns a jQuery object of the Traps value input, found inside the given traps container
-  var trapInput = function(trapContainer) {
-    var inputSelector = '.input-group input';
-    return trapContainer.find(inputSelector).first();
-  };
-  // The trapId for a given traps container
-  var trapId = function(trapContainer) {
-    return trapInput(trapContainer).prop('id');
-  };
-  // The value of the Trap inside the traps container
-  var trapValue = function(trapContainer) {
-    return trapInput(trapContainer).val();
-  };
-  // Enable a trap
-  var addTrap = function(trapContainer) {
-    var id = trapId(trapContainer);
-
-    console.log("Adding Trap: " + id);
-    traps[id] = trapValue(trapContainer);
-    console.log(traps);
-  };
-  // Disable a trap
-  var removeTrap = function(trapContainer) {
-    var id = trapId(trapContainer);
-
-    console.log("Removing Trap: " + id);
-    delete traps[id]
-    console.log(traps);
-  };
-  // The change event handler, to be used as a toggle for enabling/disabling traps
-  var toggleTrap = function(event) {
-    var trapContainer = $(event.target).parents('.trapContainer'),
-        trapCheckbox  = event.target;
-
-    console.log("Toggled Trap...");
-
-    // Adding a Trap
-    if (isChecked(trapCheckbox)) {
-      addTrap(trapContainer);
-    }
-    // Removing a Trap
-    else {
-      removeTrap(trapContainer);
-    }
-  };
   $('#trigger_chopts :checkbox').bind('change', toggleTrap);
+  $('#trigger_chopts .trapContainer .form-control').bind('keyup', trapInputHandler);
+  // Prevent form submission
+  //$('#trap_add').bind('click', function(event){ event.preventDefault(); });
+  // Selecting a new trap from the list of traps
+  $('#trap_names').bind('change', function(event){
+    var $input_group_addon = $(event.target).parent().find('.input-group-addon'),
+        units              = $(event.target).val();
+
+    // Update the input-group-addon with the correct units for the type of trap selected
+    $input_group_addon.text(units);
+  });
+  // Add a trap
+  $('#add_trap_modal button').last().click(function(event){
+    var trapValue        = $('#trap_value').val(),
+        trapValueInt     = parseInt(trapValue),
+        trapNameSelected = $('#trap_names option:selected').text(),
+        $trapTable       = $('#traps_table'),
+        trapUnits        = $('#trap_names option:selected').val();
+
+    // Validity/Verification checks first
+    if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
+      // Add the trap to the traps table
+      $.get('/templates/add_trap.html', function(template) {
+        var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits };
+        var rendered = Mustache.render(template, template_data);
+        //$('#target').html(rendered);
+        $trapTable.find('tbody').append(rendered);
+      });
+      
+      $('#add_trap_modal button').first().click();
+    }
+  });
 
   $('#help_toggle').click(function() {
     $('#help').toggle("fast");
