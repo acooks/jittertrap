@@ -23,6 +23,7 @@ $(document).ready(function() {
 
   // Initialize Chart Options
   $("#chopts_dataLen").val(dataLength);
+  $("#chopts_chartPeriod").val(chartingPeriod);
 
 
   // Initialize WebSockets
@@ -77,6 +78,11 @@ $(document).ready(function() {
 
   $("#chopts_dataLen").bind('change', function() {
     dataLength = $("#chopts_dataLen").val();
+  });
+
+  $("#chopts_chartPeriod").bind('change', function() {
+    chartingPeriod = $("#chopts_chartPeriod").val();
+    resetChart();
   });
 
   $('#more_chopts_toggle').click(function() {
