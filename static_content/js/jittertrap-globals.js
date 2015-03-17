@@ -1,6 +1,27 @@
 var xVal = 0;
-var dataLength = 1000; // number of dataPoints visible at any point
-var updatePeriod = 100; // chart updates; milliseconds
 
-var chartingPeriod = 50; // time (milliseconds) represented by each data point
-var samplePeriod = 1000; // data samples; microseconds
+/**
+ * chart updates; milliseconds; 40ms == 25 Hz
+ */
+var updatePeriod = 50;
+
+/**
+ * data samples; microseconds
+ */
+var samplePeriod = 1000;
+
+/**
+ * time (milliseconds) represented by each data point
+ */
+var chartingPeriod = 20;
+
+/*
+ *
+ */
+var dataLengthMultiplier = 200;
+
+/*
+ * number of raw data samples.
+ * dataLength = chartingPeriod * dataLengthMultiplier
+ */
+var dataLength = 4000;

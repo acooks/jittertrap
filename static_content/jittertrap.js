@@ -76,12 +76,10 @@ $(document).ready(function() {
   $('#dev_select').bind('change', dev_select);
   $('#chopts_stop_start').bind('click', toggleStopStartGraph);
 
-  $("#chopts_dataLen").bind('change', function() {
-    dataLength = $("#chopts_dataLen").val();
-  });
-
   $("#chopts_chartPeriod").bind('change', function() {
     chartingPeriod = $("#chopts_chartPeriod").val();
+    dataLength = Math.floor(dataLengthMultiplier * chartingPeriod);
+    $("#chopts_dataLen").val(dataLength);
     resetChart();
   });
 
