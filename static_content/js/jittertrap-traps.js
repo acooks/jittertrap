@@ -42,32 +42,7 @@ var checkTriggers = function() {
 };
 
 
-/**
- * Handler for Trap input elements
- * Just enables and disables the associated checkbox when there is data or no-data
- */
-var trapInputHandler = function(event) {
-  var inputValue = $(event.target).val(),
-      inputInt = parseInt(inputValue),
-      $checkbox = $(event.target).parents('.trapContainer').find('input:checkbox');
-
-  // Enable the checkbox to allow the trap to be activated when valid input is given
-  if (inputInt > 0) {
-    $checkbox.prop('disabled', false);
-  }
-  // Diable the checkbox when no or invalid input is given
-  else if (isNaN(inputInt)) {
-    $checkbox.prop('disabled', true);
-  }
-};
-
-
-
 // Functions for the alternative approach to controlling traps
-// function getParentTrapContainer($element) {
-//   return $element.parents('.trapContainer');
-// }
-
 /**
  * 
  */
@@ -115,8 +90,11 @@ var addTrapToUI = function(){
 var addTrapHandler = function(event) {
   var $selectedTrapOption = $(event.target).parents('.modal').find('option:selected'),
       trapId              = $selectedTrapOption.data('trapId'),
-      trapValue           = $('#trap_value').val();
+      trapValue           = $('#trap_value').val(),
+      trapValueInt        = parseInt(trapValue);
 
-  traps[trapId] = trapValue;
-  addTrapToUI();
+  if (trapValueInt > 0) {
+    traps[trapId] = trapValue;
+    addTrapToUI();
+  }
 };
