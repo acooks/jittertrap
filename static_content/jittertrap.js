@@ -101,8 +101,14 @@ $(document).ready(function() {
   $('#add_trap_modal button').last().click(addTrapHandler);
   // Remove trap button(s)
   $('#traps_table tbody').on('click', 'tr button', function(event){
+    var $trapTr = $(event.target).parents('tr');
+
+    // Remove from JS
+    var trapId = $trapTr.data("trapId");
+    delete traps[trapId];
+
     // Removal from the UI
-    $(event.target).parents('tr').remove();
+    $trapTr.remove();
   });
 
   $('#help_toggle').click(function() {

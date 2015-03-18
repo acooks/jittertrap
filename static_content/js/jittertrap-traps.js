@@ -69,6 +69,7 @@ var trapSelectionHandler = function(event){
 var addTrapToUI = function(){
   var trapValue        = $('#trap_value').val(),
       trapValueInt     = parseInt(trapValue),
+      trapIdSelected   = $('#trap_names option:selected').data('trapId'),
       trapNameSelected = $('#trap_names option:selected').text(),
       $trapTable       = $('#traps_table'),
       trapUnits        = $('#trap_names option:selected').val();
@@ -77,7 +78,7 @@ var addTrapToUI = function(){
   if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
     // Add the trap to the traps table
     $.get('/templates/trap.html', function(template) {
-      var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits },
+      var template_data = { trapId: trapIdSelected, trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits },
           rendered      = Mustache.render(template, template_data);
 
       $trapTable.find('tbody').append(rendered);
