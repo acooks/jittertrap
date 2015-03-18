@@ -5,8 +5,8 @@
 var handleMsgUpdateStats = function (samplePeriod, stats, seriesName) {
   var selectedSeries = chartData[seriesName];
   for (var i = 0; i < stats.length; i++) {
-    updateSeries(chartData.txDelta, xVal * samplePeriod, stats[i]["tx-delta"], selectedSeries);
-    updateSeries(chartData.rxDelta, xVal * samplePeriod, stats[i]["rx-delta"], selectedSeries);
+    updateSeries(chartData.txDelta, xVal, stats[i]["tx-delta"], selectedSeries);
+    updateSeries(chartData.rxDelta, xVal, stats[i]["rx-delta"], selectedSeries);
     updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(stats[i]["tx-delta"]), selectedSeries);
     updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(stats[i]["rx-delta"]), selectedSeries);
     updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(stats[i]["tx-pkt-delta"]), selectedSeries);
