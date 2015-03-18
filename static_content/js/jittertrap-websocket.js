@@ -14,6 +14,7 @@ var handleMsgUpdateStats = function (samplePeriod, stats, seriesName) {
     updateSeries(chartData.txPacketDelta, xVal, stats[i]["tx-pkt-delta"], selectedSeries);
     updateSeries(chartData.rxPacketDelta, xVal, stats[i]["rx-pkt-delta"], selectedSeries);
     xVal++;
+    xVal = xVal % dataLength;
   }
 
   checkTriggers();
