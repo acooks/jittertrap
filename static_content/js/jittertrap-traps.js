@@ -8,7 +8,7 @@ var trapInput = function(trapContainer) {
   var inputSelector = '.input-group input';
   return trapContainer.find(inputSelector).first();
 };
-// The trapId for a given traps container
+// The trapId for the given traps container
 var trapId = function(trapContainer) {
   return trapInput(trapContainer).prop('id');
 };
@@ -94,6 +94,7 @@ var checkTriggers = function() {
   ;
 };
 
+
 /**
  * Handler for Trap input elements
  * Just enables and disables the associated checkbox when there is data or no-data
@@ -111,4 +112,64 @@ var trapInputHandler = function(event) {
   else if (isNaN(inputInt)) {
     $checkbox.prop('disabled', true);
   }
+};
+
+
+
+// Functions for the alternative approach to controlling traps
+// function getParentTrapContainer($element) {
+//   return $element.parents('.trapContainer');
+// }
+
+/**
+ * 
+ */
+var closeAddTrapModal = function() {
+  $('#add_trap_modal input').val("");
+  $('#add_trap_modal button').get(1).click();
+}
+
+/**
+ * Handler for selecting a trap in the modal for adding traps
+ * Just needs to ensure the trap measurement units are displayed
+ */
+var trapSelectionHandler = function(event){
+  var $input_group_addon = $(event.target).parent().find('.input-group-addon'),
+      units              = $(event.target).find('option:selected').data('trapUnits');
+
+  // Update the input-group-addon with the correct units for the type of trap selected
+  $input_group_addon.text(units);
+};
+
+/**
+ * 
+ */
+var addTrapToUI = function(){
+  var trapValue        = $('#trap_value').val(),
+      trapValueInt     = parseInt(trapValue),
+      trapNameSelected = $('#trap_names option:selected').text(),
+      $trapTable       = $('#traps_table'),
+      trapUnits        = $('#trap_names option:selected').val();
+
+  // Validity/Verification checks first
+  if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
+    // Add the trap to the traps table
+    $.get('/templates/trap.html', function(template) {
+      var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits };
+      var rendered = Mustache.render(template, template_data);
+      //$('#target').html(rendered);
+      $trapTable.find('tbody').append(rendered);
+    });
+
+    closeAddTrapModal();
+  }
+};
+
+var addTrapHandler = function(event) {
+  var $selectedTrapOption = $(event.target).parents('.modal').find('option:selected'),
+      trapId              = $selectedTrapOption.data('trapId'),
+      trapValue           = $('#trap_value').val();
+
+  traps[trapId] = trapValue;
+  addTrapToUI();
 };

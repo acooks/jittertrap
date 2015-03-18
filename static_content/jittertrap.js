@@ -95,39 +95,13 @@ $(document).ready(function() {
     return false;
   });
 
-  $('#trigger_chopts :checkbox').bind('change', toggleTrap);
-  $('#trigger_chopts .trapContainer .form-control').bind('keyup', trapInputHandler);
-  // Prevent form submission
-  //$('#trap_add').bind('click', function(event){ event.preventDefault(); });
-  // Selecting a new trap from the list of traps
-  $('#trap_names').bind('change', function(event){
-    var $input_group_addon = $(event.target).parent().find('.input-group-addon'),
-        units              = $(event.target).val();
+//   $('#trigger_chopts :checkbox').bind('change', toggleTrap);
+//   $('#trigger_chopts .trapContainer .form-control').bind('keyup', trapInputHandler);
 
-    // Update the input-group-addon with the correct units for the type of trap selected
-    $input_group_addon.text(units);
-  });
+  // Changing traps from the list of traps in the trap modal
+  $('#trap_names').bind('change', trapSelectionHandler);
   // Add a trap
-  $('#add_trap_modal button').last().click(function(event){
-    var trapValue        = $('#trap_value').val(),
-        trapValueInt     = parseInt(trapValue),
-        trapNameSelected = $('#trap_names option:selected').text(),
-        $trapTable       = $('#traps_table'),
-        trapUnits        = $('#trap_names option:selected').val();
-
-    // Validity/Verification checks first
-    if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
-      // Add the trap to the traps table
-      $.get('/templates/add_trap.html', function(template) {
-        var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits };
-        var rendered = Mustache.render(template, template_data);
-        //$('#target').html(rendered);
-        $trapTable.find('tbody').append(rendered);
-      });
-      
-      $('#add_trap_modal button').first().click();
-    }
-  });
+  $('#add_trap_modal button').last().click(addTrapHandler);
   // Remove trap button(s)
   $('#traps_table tbody').on('click', 'tr button', function(event){
     // Removal from the UI

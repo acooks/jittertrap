@@ -121,13 +121,21 @@
                     </div>
                     <div class="modal-body">
                       <form>
+                        <!-- Traps and their measurement units -->
                         <select id="trap_names">
-                          <option value="kbps">Exceeds RX Bitrate</option>
-                          <option value="kbps">Exceeds TX Bitrate</option>
+                          <option data-trap-id="max_rx_bitrate" data-trap-units="Kbps">Exceeds RX Bitrate</option>
+                          <option data-trap-id="max_tx_bitrate" data-trap-units="Kbps">Exceeds TX Bitrate</option>
+                          <option data-trap-id="max_rx_throughput" data-trap-units="Kbps">Exceeds Max RX Throughput</option>
+                          <option data-trap-id="max_tx_throughput" data-trap-units="Kbps">Exceeds Max TX Throughput</option>
+                          <option data-trap-id="min_rx_throughput" data-trap-units="Kbps">Below Min RX Throughput</option>
+                          <option data-trap-id="min_tx_thoughput" data-trap-units="Kbps">Below Min TX Throughput</option>
+                          <option data-trap-id="rx_silence" data-trap-units="ms">RX Silence Duration Exceeds</option>
+                          <option data-trap-id="tx_silence" data-trap-units="ms">TX Silence Duration Exceeds</option>
                         </select>
+                        <!-- Trap value and measurement units for that value -->
                         <div class="input-group">
                           <input id="trap_value" class="form-control" type="text" />
-                          <span class="input-group-addon">kbps</span>
+                          <span class="input-group-addon">Kbps</span>
                         </div>
                       </form>
                     </div>
