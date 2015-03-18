@@ -132,7 +132,7 @@ var updateFilteredSeries = function (series) {
 };
 
 var updateSeries = function (series, xVal, yVal, selectedSeries) {
-  series.data.push({ x: xVal, y: yVal });
+  series.data.push({ y: yVal });
   while (series.data.length > dataLength) {
     series.data.shift();
   }
