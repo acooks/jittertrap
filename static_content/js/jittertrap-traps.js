@@ -1,56 +1,3 @@
-// Returns true if the given DOM element is checked (assuming it's a checkbox)
-var isChecked = function(checkbox) {
-  var checkboxEnabled = $(checkbox).prop('checked');
-  return checkboxEnabled;
-};
-// Returns a jQuery object of the Traps value input, found inside the given traps container
-var trapInput = function(trapContainer) {
-  var inputSelector = '.input-group input';
-  return trapContainer.find(inputSelector).first();
-};
-// The trapId for the given traps container
-var trapId = function(trapContainer) {
-  return trapInput(trapContainer).prop('id');
-};
-// The value of the Trap inside the traps container
-var trapValue = function(trapContainer) {
-  return trapInput(trapContainer).val();
-};
-// Enable a trap
-var addTrap = function(trapContainer) {
-  var id = trapId(trapContainer);
-
-  console.log("Adding Trap: " + id);
-  traps[id] = trapValue(trapContainer);
-  console.log(traps);
-};
-// Disable a trap
-var removeTrap = function(trapContainer) {
-  var id = trapId(trapContainer);
-
-  console.log("Removing Trap: " + id);
-  delete traps[id]
-  console.log(traps);
-};
-// The change event handler, to be used as a toggle for enabling/disabling traps
-var toggleTrap = function(event) {
-  var trapContainer = $(event.target).parents('.trapContainer'),
-      trapCheckbox  = event.target;
-
-  console.log("Toggled Trap...");
-
-  // Adding a Trap
-  if (isChecked(trapCheckbox)) {
-    addTrap(trapContainer);
-  }
-  // Removing a Trap
-  else {
-    removeTrap(trapContainer);
-  }
-};
-
-
-
 // Trap Checking Functions
 /**
  * Returns the data to be used in checking to see if a particualar trap has been triggered.
@@ -155,9 +102,9 @@ var addTrapToUI = function(){
   if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
     // Add the trap to the traps table
     $.get('/templates/trap.html', function(template) {
-      var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits };
-      var rendered = Mustache.render(template, template_data);
-      //$('#target').html(rendered);
+      var template_data = { trapName: trapNameSelected, trapValue: trapValueInt, trapUnits: trapUnits },
+          rendered      = Mustache.render(template, template_data);
+
       $trapTable.find('tbody').append(rendered);
     });
 

@@ -95,9 +95,6 @@ $(document).ready(function() {
     return false;
   });
 
-//   $('#trigger_chopts :checkbox').bind('change', toggleTrap);
-//   $('#trigger_chopts .trapContainer .form-control').bind('keyup', trapInputHandler);
-
   // Changing traps from the list of traps in the trap modal
   $('#trap_names').bind('change', trapSelectionHandler);
   // Add a trap
