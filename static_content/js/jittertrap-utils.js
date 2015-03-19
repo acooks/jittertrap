@@ -92,6 +92,11 @@ var updateFilteredSeries = function (series) {
   // how many filtered data points have been collected already?
   var filteredDataCount = series.filteredData.length;
 
+  // if there isn't enough data for one filtered sample, return.
+  if (fseriesLength == 0) {
+    return;
+  }
+
   // if the series is complete, expire the first value.
   if (filteredDataCount == fseriesLength) {
     series.filteredData.shift();
@@ -114,7 +119,7 @@ var updateFilteredSeries = function (series) {
     filteredY[i] = 0.0;
     for (var j = 0; j < decimationFactor; j++) {
       var idx = i * decimationFactor + j;
-      if (idx > series.data.length) {
+      if (idx >= series.data.length) {
         break;
       }
       filteredY[i] += series.data[idx].y;
