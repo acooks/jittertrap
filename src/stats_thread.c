@@ -146,7 +146,7 @@ static int read_counters(const char *iface, struct sample *stats)
 static void calc_deltas(struct sample *stats_o,
 			struct sample *stats_c)
 {
-	if (0 == stats_o->rx_bytes) {
+	if (0 == stats_o->rx_bytes || stats_o->rx_bytes > stats_c->rx_bytes) {
 		stats_o->rx_bytes = stats_c->rx_bytes;
 		stats_o->tx_bytes = stats_c->tx_bytes;
 		stats_o->rx_packets = stats_c->rx_packets;
