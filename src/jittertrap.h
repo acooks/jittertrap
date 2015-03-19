@@ -19,4 +19,7 @@ static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
 	      "Decimation requires SAMPLES_PER_FRAME to be an integer "
 	      "multiple of FILTERED_SAMPLES_PER_MSG");
 
+/* for synchronization of netlink cache operations. */
+pthread_mutex_t netlink_cache_mutex;
+
 #endif

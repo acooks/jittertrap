@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <pthread.h>
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
@@ -53,8 +54,12 @@ char **netem_list_ifaces()
 	struct rtnl_link *link;
 	char **ifaces;
 	char **i;
-	int count = nl_cache_nitems(link_cache);
-	int size = (count + 1) * sizeof(char *);
+	int count, size;
+
+	pthread_mutex_lock(&netlink_cache_mutex);
+
+	count = nl_cache_nitems(link_cache);
+	size = (count + 1) * sizeof(char *);
 
 	ifaces = malloc(size);
 	assert(NULL != ifaces);
@@ -74,6 +79,7 @@ char **netem_list_ifaces()
 	}
 	*i = 0;
 
+	pthread_mutex_unlock(&netlink_cache_mutex);
 	return ifaces;
 }
 
@@ -132,6 +138,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 	int err;
 	int delay, jitter, loss;
 
+	pthread_mutex_lock(&netlink_cache_mutex);
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
 			nl_geterror(err));
@@ -189,6 +196,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 	rtnl_qdisc_put(found_qdisc);
 	rtnl_qdisc_put(filter_qdisc);
 	rtnl_link_put(link);
+	pthread_mutex_unlock(&netlink_cache_mutex);
 	return 0;
 
 cleanup_qdisc:
@@ -198,6 +206,7 @@ cleanup_filter_qdisc:
 cleanup_link:
 	rtnl_link_put(link);
 cleanup:
+	pthread_mutex_unlock(&netlink_cache_mutex);
 	return -1;
 }
 
@@ -207,15 +216,19 @@ int netem_set_params(const char *iface, struct netem_params *params)
 	struct rtnl_qdisc *qdisc;
 	int err;
 
+	pthread_mutex_lock(&netlink_cache_mutex);
+
 	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(link_cache, iface)) == NULL) {
 		fprintf(stderr, "unknown interface/link name.\n");
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return -1;
 	}
 
 	if (!(qdisc = rtnl_qdisc_alloc())) {
 		/* OOM error */
 		fprintf(stderr, "couldn't alloc qdisc\n");
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return -1;
 	}
 
@@ -235,14 +248,17 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	if (err < 0) {
 		fprintf(stderr, "Unable to add qdisc: %s\n", nl_geterror(err));
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return err;
 	}
 
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
 			nl_geterror(err));
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return -1;
 	}
 
+	pthread_mutex_unlock(&netlink_cache_mutex);
 	return 0;
 }

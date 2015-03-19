@@ -108,21 +108,26 @@ static int read_counters(const char *iface, struct sample *stats)
 	assert(nl_sock);
 	assert(nl_link_cache);
 
+	pthread_mutex_lock(&netlink_cache_mutex);
+
 	if ((err = nl_cache_refill(nl_sock, nl_link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
 			nl_geterror(err));
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return -1;
 	}
 
 	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(nl_link_cache, iface)) == NULL) {
 		fprintf(stderr, "unknown interface/link name.\n");
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return -1;
 	}
 
 	if (!stats) {
 		/* link cache is now warm; values don't matter */
 		rtnl_link_put(link);
+		pthread_mutex_unlock(&netlink_cache_mutex);
 		return 0;
 	}
 
@@ -134,6 +139,7 @@ static int read_counters(const char *iface, struct sample *stats)
 	stats->tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
 	stats->tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
 	rtnl_link_put(link);
+	pthread_mutex_unlock(&netlink_cache_mutex);
 	return 0;
 }
 
@@ -156,8 +162,8 @@ static void calc_deltas(struct sample *stats_o,
 static void update_stats(struct sample *sample_c, char *iface)
 {
 	struct sample sample_o;
-	/* FIXME: this smells funny */
 	pthread_mutex_lock(&g_stats_mutex);
+	/* FIXME: this smells funny */
 	memcpy(&sample_o, &g_stats_o, sizeof(struct sample));
 
 	if (0 == read_counters(iface, sample_c)) {
