@@ -32,6 +32,7 @@ struct nl_sock *nl_sock;
 struct nl_cache *nl_link_cache;
 
 static pthread_mutex_t g_iface_mutex;
+static pthread_mutex_t g_stats_mutex;
 char *g_iface;
 
 struct sample g_stats_o;
@@ -64,10 +65,12 @@ int stats_thread_init(void (*_stats_handler) (struct iface_stats * counts))
 void stats_monitor_iface(const char *_iface)
 {
 	pthread_mutex_lock(&g_iface_mutex);
+	pthread_mutex_lock(&g_stats_mutex);
 	g_stats_o.rx_bytes = 0;
 	g_stats_o.tx_bytes = 0;
 	g_stats_o.rx_packets = 0;
 	g_stats_o.tx_packets = 0;
+	pthread_mutex_unlock(&g_stats_mutex);
 	if (g_iface) {
 		free(g_iface);
 	}
@@ -154,6 +157,7 @@ static void update_stats(struct sample *sample_c, char *iface)
 {
 	struct sample sample_o;
 	/* FIXME: this smells funny */
+	pthread_mutex_lock(&g_stats_mutex);
 	memcpy(&sample_o, &g_stats_o, sizeof(struct sample));
 
 	if (0 == read_counters(iface, sample_c)) {
@@ -161,6 +165,7 @@ static void update_stats(struct sample *sample_c, char *iface)
 		calc_deltas(&sample_o, sample_c);
 	}
 	memcpy(&g_stats_o, sample_c, sizeof(struct sample));
+	pthread_mutex_unlock(&g_stats_mutex);
 }
 
 static int init_realtime(void)
