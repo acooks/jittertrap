@@ -19,6 +19,7 @@
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
 static pthread_mutex_t fossa_mutex;
+static pthread_mutex_t unsent_frame_count_mutex;
 
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
@@ -453,21 +454,21 @@ inline static void stats_send(struct iface_stats *samples)
 
 static void stats_filter_and_send()
 {
-	/* FIXME: g_unsent_frame_count needs a guard */
+	pthread_mutex_lock(&unsent_frame_count_mutex);
 	if (g_unsent_frame_count > 0) {
 		stats_send(g_raw_samples);
 		g_unsent_frame_count--;
 	}
+	pthread_mutex_unlock(&unsent_frame_count_mutex);
 }
 
 /* callback for the real-time stats thread. */
 void stats_event_handler(struct iface_stats *raw_samples)
 {
-	/* FIXME: needs a guard. */
+	pthread_mutex_lock(&unsent_frame_count_mutex);
 	g_raw_samples = raw_samples;
-
-	/* FIXME: needs a guard. */
 	g_unsent_frame_count++;
+	pthread_mutex_unlock(&unsent_frame_count_mutex);
 }
 
 int main()
