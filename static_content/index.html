@@ -102,9 +102,9 @@
             </div>
             <button id="chopts_stop_start" class="btn btn-primary"> Stop/Start</button>
             <button id="trigger_toggle" class="btn btn-default">Traps</button>
-            <button id="more_chopts_toggle" class="btn btn-default">
-              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-              More chart options
+            <button id="more_chopts_toggle" class="btn btn-info">
+              <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+              Info
             </button>
 
             <!-- Traps -->
@@ -182,10 +182,15 @@
 
             <!-- More Chart Options -->
             <div id="more_chopts" style="display:none">
-              <label for="sample_period">Sample Period</label>
-              <output id="sample_period"></output>
-              <label for="chopts_dataLen">Chart Series Length</label>
-              <output id="chopts_dataLen"></output>
+              <table class="table">
+                <tr>
+                  <td>Sample Period</td>
+                  <td><span id="sample_period"></span></td>
+                </tr><tr>
+                  <td>Data Samples</td>
+                  <td><span id="chopts_dataLen"></span></td>
+                </tr>
+              </table>
             </div>
           </form>
         </div>

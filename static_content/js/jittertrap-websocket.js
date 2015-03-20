@@ -48,7 +48,7 @@ var handleMsgNetemParams = function(params) {
 
 var handleMsgSamplePeriod = function(period) {
   samplePeriod = period;
-  $("#sample_period").val(period / 1000.0 + "ms");
+  $("#sample_period").html(period / 1000.0 + "ms");
   console.log("sample_period: " + period);
   setUpdatePeriod();
   clearChart();

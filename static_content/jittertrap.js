@@ -22,9 +22,8 @@ $(document).ready(function() {
 
 
   // Initialize Chart Options
-  $("#chopts_dataLen").val(dataLength);
+  $("#chopts_dataLen").html(dataLength);
   $("#chopts_chartPeriod").val(chartingPeriod);
-
 
   // Initialize WebSockets
   var wsUri = "ws://" + document.domain + ":" + location.port;
@@ -81,7 +80,7 @@ $(document).ready(function() {
   $("#chopts_chartPeriod").bind('change', function() {
     chartingPeriod = $("#chopts_chartPeriod").val();
     dataLength = Math.floor(dataLengthMultiplier * chartingPeriod);
-    $("#chopts_dataLen").val(dataLength);
+    $("#chopts_dataLen").html(dataLength);
     resetChart();
   });
 
