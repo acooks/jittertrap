@@ -206,7 +206,7 @@ static void *run(void *data)
 	int sample_no = 0;
 	char *iface = strdup(g_iface);
 	struct iface_stats *stats_frame = raw_sample_buf_produce_next();
-	sprintf(stats_frame->iface, iface);
+	snprintf(stats_frame->iface, MAX_IFACE_LEN, "%s", iface);
 	stats_frame->sample_period_us = sample_period_us;
 
 	for (;;) {
@@ -239,7 +239,7 @@ static void *run(void *data)
 			iface = strdup(g_iface);
 
 			stats_frame = raw_sample_buf_produce_next();
-			sprintf(stats_frame->iface, iface);
+			snprintf(stats_frame->iface, MAX_IFACE_LEN, "%s", iface);
 			pthread_mutex_unlock(&g_iface_mutex);
 			stats_frame->sample_period_us = sample_period_us;
 			stats_handler(raw_sample_buf_consume_next());

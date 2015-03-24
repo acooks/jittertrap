@@ -238,7 +238,12 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 {
 	char s[MAX_JSON_TOKEN_LEN];
 	long delay, jitter, loss;
-	struct netem_params p = { 0 };
+	struct netem_params p = {
+		.delay  = 0,
+		.jitter = 0,
+		.loss   = 0,
+		.iface  = {0}
+	};
 
 	json_token_to_string(t_dev, &p.iface, MAX_IFACE_LEN);
 	printf("set_netem: dev: %s, ", p.iface);

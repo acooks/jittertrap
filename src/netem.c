@@ -70,7 +70,7 @@ char **netem_list_ifaces()
 		if (strcmp("lo", j) != 0) {
 			*i = malloc(strlen(j) + 1);
 			assert(NULL != *i);
-			sprintf(*i, j);
+			sprintf(*i, "%s", j);
 			i++;
 		}
 		link =
