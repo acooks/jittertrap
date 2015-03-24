@@ -12,7 +12,6 @@
 #include <linux/types.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
-#include <netlink/cache.h>
 #include <netlink/utils.h>
 #include <netlink/route/link.h>
 
@@ -29,7 +28,6 @@ static pthread_t stats_thread;
 struct sigaction sa;
 
 struct nl_sock *nl_sock;
-struct nl_cache *nl_link_cache;
 
 static pthread_mutex_t g_iface_mutex;
 static pthread_mutex_t g_stats_mutex;
@@ -93,42 +91,18 @@ static int init_nl(void)
 		return -EOPNOTSUPP;
 	}
 
-	/* Retrieve a list of all available interfaces and populate cache. */
-	if (rtnl_link_alloc_cache(nl_sock, AF_UNSPEC, &nl_link_cache) < 0) {
-		fprintf(stderr, "Error creating link cache\n");
-		return -EOPNOTSUPP;
-	}
 	return 0;
 }
 
 static int read_counters(const char *iface, struct sample *stats)
 {
-	int err;
 	struct rtnl_link *link;
 	assert(nl_sock);
-	assert(nl_link_cache);
 
-	pthread_mutex_lock(&netlink_cache_mutex);
-
-	if ((err = nl_cache_refill(nl_sock, nl_link_cache)) < 0) {
-		fprintf(stderr, "Unable to resync link cache: %s\n",
-			nl_geterror(err));
-		pthread_mutex_unlock(&netlink_cache_mutex);
+	/* iface index zero means use the iface name */
+	if (rtnl_link_get_kernel(nl_sock, 0, iface, &link) < 0) {
+		fprintf(stderr, "unknown interface/link name: %s\n", iface);
 		return -1;
-	}
-
-	/* filter link by name */
-	if ((link = rtnl_link_get_by_name(nl_link_cache, iface)) == NULL) {
-		fprintf(stderr, "unknown interface/link name.\n");
-		pthread_mutex_unlock(&netlink_cache_mutex);
-		return -1;
-	}
-
-	if (!stats) {
-		/* link cache is now warm; values don't matter */
-		rtnl_link_put(link);
-		pthread_mutex_unlock(&netlink_cache_mutex);
-		return 0;
 	}
 
 	/* read and return counter */
@@ -139,7 +113,6 @@ static int read_counters(const char *iface, struct sample *stats)
 	stats->tx_packets = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
 	stats->tx_packets += rtnl_link_get_stat(link, RTNL_LINK_TX_COMPRESSED);
 	rtnl_link_put(link);
-	pthread_mutex_unlock(&netlink_cache_mutex);
 	return 0;
 }
 
@@ -194,7 +167,6 @@ static void *run(void *data)
 {
 	(void)data; /* unused parameter. silence warning. */
 	init_nl();
-	read_counters("lo", NULL); /* warm up the link cache */
 	raw_sample_buf_init();
 	init_realtime();
 	set_sample_period(SAMPLE_PERIOD_US);
