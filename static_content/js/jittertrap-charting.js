@@ -202,6 +202,13 @@ var renderGraphs = function() {
   chart.render();
 };
 
+var setUpdatePeriod = function() {
+  var updateRate = 1000.0 / updatePeriod; /* Hz */
+  clearInterval(drawIntervalID);
+  drawIntervalID = setInterval(renderGraphs, updatePeriod);
+  console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
+};
+
 var toggleStopStartGraph = function() {
   var maxUpdatePeriod = 9999999999;
   if (updatePeriod != maxUpdatePeriod) {
@@ -216,9 +223,3 @@ var toggleStopStartGraph = function() {
 
 var drawIntervalID = setInterval(renderGraphs, updatePeriod);
 
-var setUpdatePeriod = function() {
-  var updateRate = 1000.0 / updatePeriod; /* Hz */
-  clearInterval(drawIntervalID);
-  drawIntervalID = setInterval(renderGraphs, updatePeriod);
-  console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
-};
