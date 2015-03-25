@@ -108,13 +108,13 @@ var resetChart = function() {
   var s = $("#chopts_series option:selected").val();
   clearArray(chartData[s].filteredData);
   chart = new CanvasJS.Chart("chartContainer", {
-    axisY:{
-      includeZero: "false",
-    },
     zoomEnabled: "true",
     panEnabled: "true",
     title: { text: chartData[s].title },
-    axisY: { title: chartData[s].ylabel },
+    axisY: {
+      title: chartData[s].ylabel,
+      includeZero: "false",
+    },
     axisX: { title: chartData[s].xlabel },
     data: [{
       name: s,
