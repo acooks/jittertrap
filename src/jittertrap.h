@@ -20,6 +20,6 @@ static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
 	      "multiple of FILTERED_SAMPLES_PER_MSG");
 
 /* for synchronization of netlink cache operations. */
-pthread_mutex_t netlink_cache_mutex;
+pthread_mutex_t nl_sock_mutex;
 
 #endif
