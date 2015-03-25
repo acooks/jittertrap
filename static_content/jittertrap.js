@@ -47,15 +47,15 @@ $(document).ready(function() {
     var msg = JSON.parse(evt.data);
     var selectedIface = $('#dev_select').val();
 
-    if (msg["stats"] && msg.stats.iface == selectedIface) {
+    if (msg.stats && msg.stats.iface == selectedIface) {
       var visibleSeries = $("#chopts_series option:selected").val();
       handleMsgUpdateStats(samplePeriod, msg.stats.s, visibleSeries);
-    } else if (msg["ifaces"]) {
-      handleMsgIfaces(msg["ifaces"]);
-    } else if (msg["netem_params"]) {
-      handleMsgNetemParams(msg["netem_params"]);
-    } else if (msg["sample_period"]) {
-      handleMsgSamplePeriod(msg["sample_period"]);
+    } else if (msg.ifaces) {
+      handleMsgIfaces(msg.ifaces);
+    } else if (msg.netem_params) {
+      handleMsgNetemParams(msg.netem_params);
+    } else if (msg.sample_period) {
+      handleMsgSamplePeriod(msg.sample_period);
     }
   };
 
