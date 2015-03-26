@@ -5,7 +5,6 @@
        src="https://scan.coverity.com/projects/4088/badge.svg"/>
 </a>
 [![Build Status](https://travis-ci.org/acooks/jittertrap.svg)](https://travis-ci.org/acooks/jittertrap)
-
 [![Code Climate](https://codeclimate.com/github/acooks/jittertrap/badges/gpa.svg)](https://codeclimate.com/github/acooks/jittertrap)
 
 JitterTrap is a network measurement and impairment tool for developers of real-time applications and devices.
