@@ -202,6 +202,8 @@ var renderGraphs = function() {
   chart.render();
 };
 
+var drawIntervalID = setInterval(renderGraphs, updatePeriod);
+
 var setUpdatePeriod = function() {
   var updateRate = 1000.0 / updatePeriod; /* Hz */
   clearInterval(drawIntervalID);
@@ -221,5 +223,4 @@ var toggleStopStartGraph = function() {
   return false;
 };        
 
-var drawIntervalID = setInterval(renderGraphs, updatePeriod);
 
