@@ -416,10 +416,10 @@ static void stats_to_json(struct iface_stats *s, char json_msg[]) {
 		snprintf(msg,
 			 MAX_JSON_MSG_LEN,
 			 "{"
-			 "\"rx-delta\":%" PRId64 ","
-			 "\"tx-delta\":%" PRId64 ","
-			 "\"rx-pkt-delta\":%" PRId64 ","
-			 "\"tx-pkt-delta\":%" PRId64 ""
+			 "\"rx_delta\":%" PRId64 ","
+			 "\"tx_delta\":%" PRId64 ","
+			 "\"rx_pkt_delta\":%" PRId64 ","
+			 "\"tx_pkt_delta\":%" PRId64 ""
 			 "}",
 			 s->samples[i].rx_bytes_delta,
 			 s->samples[i].tx_bytes_delta,

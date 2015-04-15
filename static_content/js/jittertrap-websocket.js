@@ -4,15 +4,17 @@
  */
 var handleMsgUpdateStats = function (samplePeriod, stats, seriesName) {
   var selectedSeries = chartData[seriesName];
-  for (var i = 0; i < stats.length; i++) {
-    updateSeries(chartData.txDelta, xVal, stats[i]["tx-delta"], selectedSeries);
-    updateSeries(chartData.rxDelta, xVal, stats[i]["rx-delta"], selectedSeries);
-    updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(stats[i]["tx-delta"]), selectedSeries);
-    updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(stats[i]["rx-delta"]), selectedSeries);
-    updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(stats[i]["tx-pkt-delta"]), selectedSeries);
-    updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(stats[i]["rx-pkt-delta"]), selectedSeries);
-    updateSeries(chartData.txPacketDelta, xVal, stats[i]["tx-pkt-delta"], selectedSeries);
-    updateSeries(chartData.rxPacketDelta, xVal, stats[i]["rx-pkt-delta"], selectedSeries);
+  var len = stats.length;
+  for (var i = 0; i < len; i++) {
+    var d = stats[i];
+    updateSeries(chartData.txDelta, xVal, d.tx_delta, selectedSeries);
+    updateSeries(chartData.rxDelta, xVal, d.rx_delta, selectedSeries);
+    updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(d.tx_delta), selectedSeries);
+    updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(d.rx_delta), selectedSeries);
+    updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(d.tx_pkt_delta), selectedSeries);
+    updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(d.rx_pkt_delta), selectedSeries);
+    updateSeries(chartData.txPacketDelta, xVal, d.tx_pkt_delta, selectedSeries);
+    updateSeries(chartData.rxPacketDelta, xVal, d.rx_pkt_delta, selectedSeries);
     xVal++;
     xVal = xVal % dataLength;
   }
