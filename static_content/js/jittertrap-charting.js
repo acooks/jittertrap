@@ -96,17 +96,9 @@ chartData.rxPacketDelta = {
   basicStats:[]
 };
 
-/* CanvasJS is fussy about how arrays are cleared (?!) and holds on to the
- * objects if you create a new array without removing the old elements. */
-var clearArray = function(arr) {
-  while (arr.length > 0) {
-    arr.shift();
-  }
-};
-
 var resetChart = function() {
   var s = $("#chopts_series option:selected").val();
-  clearArray(chartData[s].filteredData);
+  chartData[s].filteredData.length = 0;
   chart = new CanvasJS.Chart("chartContainer", {
     zoomEnabled: "true",
     panEnabled: "true",
