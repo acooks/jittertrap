@@ -55,7 +55,7 @@ var updateStats = function (series) {
 };
 
 var updateHistogram = function(series) {
-  var binCnt = 20;
+  var binCnt = 25;
   var normBins = new Float32Array(binCnt);
 
   var sortedData = series.data.slice(0);
