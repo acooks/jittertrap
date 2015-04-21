@@ -119,9 +119,7 @@ var updateFilteredSeries = function (series) {
   }
 
   // now, discard all previous values, because all the X values will change.
-  for (var i = filteredDataCount; i > 0; i--) {
-    series.filteredData.shift();
-  }
+  series.filteredData.length = 0;
 
   // calculate any/all missing Y values from raw data
   for (var i = filteredDataCount; i < fseriesLength; i++) {
