@@ -14,6 +14,10 @@ update-fossa:
 	git subtree split --prefix deps/fossa --annotate='split ' --rejoin
 	git subtree pull --prefix deps/fossa https://github.com/cesanta/fossa master --squash
 
+update-cbuffer:
+	git subtree split --prefix deps/cbuffer --annotate='split ' --rejoin
+	git subtree pull --prefix deps/cbuffer https://github.com/acooks/cbuffer.git master --squash
+
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
 	cov-build --dir cov-int make src
