@@ -67,7 +67,10 @@ char **netem_list_ifaces()
 	link = (struct rtnl_link *)nl_cache_get_first(link_cache);
 	while (link) {
 		char *j = rtnl_link_get_name(link);
-		if (strcmp("lo", j) != 0) {
+		if ((strcmp("lo", j) != 0)
+		    && (strcmp("sit0", j) != 0)
+		    && (strcmp("br0", j) != 0))
+		{
 			*i = malloc(strlen(j) + 1);
 			assert(NULL != *i);
 			sprintf(*i, "%s", j);
