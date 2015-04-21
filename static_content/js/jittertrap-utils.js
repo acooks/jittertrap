@@ -81,12 +81,18 @@ var updateHistogram = function(series) {
     normBins[Math.round(normY)]++;
   }
 
+  /* convert to logarithmic scale */
+  for (i = 0; i < normBins.length; i++) {
+    if (normBins[i] > 0) normBins[i] = Math.log(normBins[i]);
+  }
+
   /* write the histogram x,y data */
   for (i = 0; i < binCnt; i++) {
     var xVal = Math.round(i * (maxY / binCnt));
     xVal += Math.round(minY);  /* shift x to match original y range */
     series.histData.push({x: xVal, y: normBins[i], label: xVal});
   }
+
 };
 
 var updateFilteredSeries = function (series) {

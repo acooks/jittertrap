@@ -119,7 +119,7 @@ var resetChart = function() {
   histogram = new CanvasJS.Chart("histogramContainer", {
     title: {text: "Distribution" },
     axisY: {
-      title: "Count",
+      title: "log(Count)",
       includeZero: "false",
     },
     axisX: {
