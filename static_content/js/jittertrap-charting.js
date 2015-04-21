@@ -147,40 +147,63 @@ var resetChart = function() {
     }]
   });
   basicStatsGraph.render();
-
 };
 
+var resizeCBuf = function(cbuf, len) {
+  cbuf.filteredData = [];
+  b = new CBuffer(len);
+
+  var l = (len < cbuf.data.size) ? len : cbuf.data.size;
+  while (l--) {
+    b.push(cbuf.data.shift());
+  }
+  cbuf.data = b;
+};
+
+var resizeDataBufs = function(newlen) {
+  resizeCBuf(chartData.txDelta, newlen);
+  resizeCBuf(chartData.rxDelta, newlen);
+
+  resizeCBuf(chartData.rxRate, newlen);
+  resizeCBuf(chartData.txRate, newlen);
+
+  resizeCBuf(chartData.txPacketRate, newlen);
+  resizeCBuf(chartData.rxPacketRate, newlen);
+
+  resizeCBuf(chartData.txPacketDelta, newlen);
+  resizeCBuf(chartData.rxPacketDelta, newlen);
+};
 
 var clearChart = function() {
-  chartData.txDelta.data = [];
+  chartData.txDelta.data = new CBuffer(dataLength);
   chartData.txDelta.filteredData = [];
   chartData.txDelta.histData = [];
 
-  chartData.rxDelta.data = [];
+  chartData.rxDelta.data = new CBuffer(dataLength);
   chartData.rxDelta.filteredData = [];
   chartData.rxDelta.histData = [];
 
-  chartData.rxRate.data = [];
+  chartData.rxRate.data = new CBuffer(dataLength);
   chartData.rxRate.filteredData = [];
   chartData.rxRate.histData = [];
 
-  chartData.txRate.data = [];
+  chartData.txRate.data = new CBuffer(dataLength);
   chartData.txRate.filteredData = [];
   chartData.txRate.histData = [];
 
-  chartData.txPacketRate.data = [];
+  chartData.txPacketRate.data = new CBuffer(dataLength);
   chartData.txPacketRate.filteredData = [];
   chartData.txPacketRate.histData = [];
 
-  chartData.rxPacketRate.data = [];
+  chartData.rxPacketRate.data = new CBuffer(dataLength);
   chartData.rxPacketRate.filteredData = [];
   chartData.rxPacketRate.histData = [];
 
-  chartData.rxPacketDelta.data = [];
+  chartData.rxPacketDelta.data = new CBuffer(dataLength);
   chartData.rxPacketDelta.filteredData = [];
   chartData.rxPacketDelta.histData = [];
 
-  chartData.txPacketDelta.data = [];
+  chartData.txPacketDelta.data = new CBuffer(dataLength);
   chartData.txPacketDelta.filteredData = [];
   chartData.txPacketDelta.histData = [];
   resetChart();

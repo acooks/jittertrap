@@ -89,6 +89,7 @@ $(document).ready(function() {
 
     dataLength = Math.floor(dataLengthMultiplier * chartingPeriod);
     $("#chopts_dataLen").html(dataLength);
+    resizeDataBufs(dataLength);
     resetChart();
   });
 

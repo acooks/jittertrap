@@ -55,7 +55,13 @@ var updateStats = function (series) {
 var updateHistogram = function(series) {
   var binCnt = 20;
   var normBins = new Float32Array(binCnt);
-  var range = series.maxY.y - series.minY.y;
+
+  var sortedData = series.data.slice(0);
+  sortedData.sort();
+
+  var maxY = sortedData[sortedData.length-1];
+  var minY = sortedData[0];
+  var range = (maxY - minY) * 1.1;
 
   /* bins must use integer indexes, so we have to normalise the
     * data and then convert it back before display.
@@ -66,19 +72,19 @@ var updateHistogram = function(series) {
   /* initialise the bins */
   for (; i < binCnt; i++) {
     normBins[i] = 0;
-    series.histData.shift();
   }
+  series.histData.length = 0;
 
   /* bin the normalized data */
-  for (; j < series.data.length; j++) {
-    var normY = (series.data[j].y - series.minY.y) / range * binCnt;
-    normBins[Math.floor(normY)]++;
+  for (j = 0; j < series.data.size; j++) {
+    var normY = (series.data.get(j) - minY) / range * binCnt;
+    normBins[Math.round(normY)]++;
   }
 
   /* write the histogram x,y data */
   for (i = 0; i < binCnt; i++) {
-    var xVal = Math.ceil(i * (series.maxY.y / binCnt));
-    xVal += series.minY.y;  /* shift x to match original y range */
+    var xVal = Math.round(i * (maxY / binCnt));
+    xVal += Math.round(minY);  /* shift x to match original y range */
     series.histData.push({x: xVal, y: normBins[i], label: xVal});
   }
 };
@@ -87,7 +93,7 @@ var updateFilteredSeries = function (series) {
 
   /* FIXME: float vs integer is important here! */
   var decimationFactor = Math.floor(chartingPeriod / (samplePeriod / 1000.0));
-  var fseriesLength = Math.floor(series.data.length / decimationFactor);
+  var fseriesLength = Math.floor(series.data.size / decimationFactor);
 
   // the downsampled data has to be scaled.
   var scale = 1/chartingPeriod;
@@ -122,10 +128,10 @@ var updateFilteredSeries = function (series) {
     filteredY[i] = 0.0;
     for (var j = 0; j < decimationFactor; j++) {
       var idx = i * decimationFactor + j;
-      if (idx >= series.data.length) {
+      if (idx >= series.data.size) {
         break;
       }
-      filteredY[i] += series.data[idx].y;
+      filteredY[i] += series.data.get(idx);
     }
 
     // scale the value to the correct range.
@@ -140,10 +146,7 @@ var updateFilteredSeries = function (series) {
 };
 
 var updateSeries = function (series, xVal, yVal, selectedSeries) {
-  series.data.push({ y: yVal });
-  while (series.data.length > dataLength) {
-    series.data.shift();
-  }
+  series.data.push(yVal);
 
   /* do expensive operations once per filtered sample/chartingPeriod. */
   if ((xVal % chartingPeriod == 0) && (series == selectedSeries)) {
