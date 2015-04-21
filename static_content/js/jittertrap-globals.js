@@ -8,7 +8,7 @@ var updatePeriodMin = 40;
 var updatePeriodMax = 100;
 
 /**
- * data samples; microseconds
+ * data samples; microseconds; fixed.
  */
 var samplePeriod = 1000;
 
@@ -22,13 +22,13 @@ var chartingPeriodMax = 500;
 /*
  *
  */
-var dataLengthMultiplier = 200;
+var dataLengthMultiplier = 300;
 
 /*
  * number of raw data samples.
  * dataLength = chartingPeriod * dataLengthMultiplier
  */
-var dataLength = 4000;
+var dataLength = 18000;
 
 /*
  * list of active traps
