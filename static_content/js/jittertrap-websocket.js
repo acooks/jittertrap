@@ -2,21 +2,22 @@
  * Websocket Callback Functions
  * i.e. Referred to in websocket.onmessage
  */
+
 var handleMsgUpdateStats = function (samplePeriod, stats, seriesName) {
-  var selectedSeries = chartData[seriesName];
-  var len = stats.length;
-  for (var i = 0; i < len; i++) {
-    var d = stats[i];
-    updateSeries(chartData.txDelta, xVal, d.tx_delta, selectedSeries);
-    updateSeries(chartData.rxDelta, xVal, d.rx_delta, selectedSeries);
-    updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(d.tx_delta), selectedSeries);
-    updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(d.rx_delta), selectedSeries);
-    updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(d.tx_pkt_delta), selectedSeries);
-    updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(d.rx_pkt_delta), selectedSeries);
-    updateSeries(chartData.txPacketDelta, xVal, d.tx_pkt_delta, selectedSeries);
-    updateSeries(chartData.rxPacketDelta, xVal, d.rx_pkt_delta, selectedSeries);
-    xVal++;
-    xVal = xVal % dataLength;
+   var selectedSeries = chartData[seriesName];
+   var len = stats.length;
+   for (var i = 0; i < len; i++) {
+     var d = stats[i];
+     updateSeries(chartData.txDelta, xVal, d.txDelta, selectedSeries);
+     updateSeries(chartData.rxDelta, xVal, d.rxDelta, selectedSeries);
+     updateSeries(chartData.txRate, xVal, byteCountToKbpsRate(d.txDelta), selectedSeries);
+     updateSeries(chartData.rxRate, xVal, byteCountToKbpsRate(d.rxDelta), selectedSeries);
+     updateSeries(chartData.txPacketRate, xVal, packetDeltaToRate(d.txPktDelta), selectedSeries);
+     updateSeries(chartData.rxPacketRate, xVal, packetDeltaToRate(d.rxPktDelta), selectedSeries);
+     updateSeries(chartData.txPacketDelta, xVal, d.txPktDelta, selectedSeries);
+     updateSeries(chartData.rxPacketDelta, xVal, d.rxPktDelta, selectedSeries);
+     xVal++;
+     xVal = xVal % dataLength;
   }
 
   checkTriggers();
