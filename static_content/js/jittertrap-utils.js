@@ -22,16 +22,16 @@ var packetDeltaToRate = function(count) {
 };
 
 var updateStats = function (series) {
-  var sortedData = series.data.slice(0);
-  sortedData.sort(function(a,b) {return (a.y|0) - (b.y|0);});
+  'use strict';
 
-  /* series.maxY and series.minY must be available to the histogram */
-  series.maxY = sortedData[sortedData.length-1];
-  series.minY = sortedData[0];
+  if (! series.filteredData || series.filteredData.length == 0) return;
 
-  /* median is a pair */
-  var median = sortedData[Math.floor(sortedData.length / 2.0)];
+  var sortedData = series.filteredData.slice(0);
+  sortedData.sort(function(a,b) {return (a.y - b.y)});
 
+  var maxY = sortedData[sortedData.length-1].y;
+  var minY = sortedData[0].y;
+  var median = sortedData[Math.floor(sortedData.length / 2.0)].y;
   var mean = 0;
   var sum = 0;
   for (var i = sortedData.length-1; i >=0; i--) {
@@ -39,14 +39,17 @@ var updateStats = function (series) {
   }
   mean = sum / sortedData.length;
 
-  for (var i = series.basicStats.length; i > 0; i--) {
-    series.basicStats.shift();
+  if (series.basicStats[0]) {
+    series.basicStats[0].y = minY;
+    series.basicStats[1].y = median;
+    series.basicStats[2].y = mean;
+    series.basicStats[3].y = maxY;
+  } else {
+    series.basicStats.push({x:1, y:minY, label:"Min"});
+    series.basicStats.push({x:2, y:median, label:"Median"});
+    series.basicStats.push({x:3, y:mean, label:"Mean"});
+    series.basicStats.push({x:4, y:maxY, label:"Max"});
   }
-
-  series.basicStats.push({x:1, y:series.minY.y, label:"Min"});
-  series.basicStats.push({x:2, y:median.y, label:"Median"});
-  series.basicStats.push({x:3, y:mean, label:"Mean"});
-  series.basicStats.push({x:4, y:series.maxY.y, label:"Max"});
 };
 
 var updateHistogram = function(series) {
