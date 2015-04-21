@@ -72,7 +72,7 @@ var addTrapToUI = function(){
       trapIdSelected   = $('#trap_names option:selected').data('trapId'),
       trapNameSelected = $('#trap_names option:selected').text(),
       $trapTable       = $('#traps_table'),
-      trapUnits        = $('#trap_names option:selected').val();
+      trapUnits        = $('#trap_names option:selected').data('trapUnits');
 
   // Validity/Verification checks first
   if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
