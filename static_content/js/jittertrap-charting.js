@@ -100,6 +100,13 @@ var resetChart = function() {
   var s = $("#chopts_series option:selected").val();
   chartData[s].filteredData.length = 0;
   chart = new CanvasJS.Chart("chartContainer", {
+    height: 300,
+    animationEnabled: false,
+    exportEnabled: false,
+    toolTip:{
+      enabled: true,
+    },
+    interactivityEnabled: true,
     zoomEnabled: "true",
     panEnabled: "true",
     title: { text: chartData[s].title },
