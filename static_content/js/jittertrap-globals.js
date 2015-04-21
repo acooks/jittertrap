@@ -3,7 +3,9 @@ var xVal = 0;
 /**
  * chart updates; milliseconds; 40ms == 25 Hz
  */
-var updatePeriod = 50;
+var updatePeriod = 60;
+var updatePeriodMin = 40;
+var updatePeriodMax = 100;
 
 /**
  * data samples; microseconds

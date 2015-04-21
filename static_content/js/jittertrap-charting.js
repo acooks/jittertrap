@@ -187,11 +187,43 @@ var clearChart = function() {
   xVal = 0;
 };
 
+var renderCount = 0;
+var renderTime = 0;
+
+var tuneChartUpdatePeriod = function() {
+
+  var tuneWindowSize = 5; // how often to adjust the updatePeriod.
+
+  if ((renderCount % tuneWindowSize) != 0) {
+    return;
+  }
+
+  var avgRenderTime =  Math.floor(renderTime / renderCount);
+  //console.log("Rendering time: " + avgRenderTime
+  //            + " Processing time: " + procTime
+  //            + " Charting Period: " + chartingPeriod);
+
+  updatePeriod = chartingPeriod / 2;
+
+  if (updatePeriod < updatePeriodMin) updatePeriod = updatePeriodMin;
+  else if (updatePeriod > updatePeriodMax) updatePeriod = updatePeriodMax;
+
+  setUpdatePeriod();
+
+  renderCount = renderCount % tuneWindowSize;
+  renderTime = 0;
+};
 
 var renderGraphs = function() {
+  var d1 = Date.now();
   histogram.render();
   basicStatsGraph.render();
   chart.render();
+  var d2 = Date.now();
+  renderCount++;
+  renderTime += d2 - d1;
+  tuneChartUpdatePeriod();
+
 };
 
 var drawIntervalID = setInterval(renderGraphs, updatePeriod);
@@ -200,7 +232,7 @@ var setUpdatePeriod = function() {
   var updateRate = 1000.0 / updatePeriod; /* Hz */
   clearInterval(drawIntervalID);
   drawIntervalID = setInterval(renderGraphs, updatePeriod);
-  console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
+  //console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
 };
 
 var toggleStopStartGraph = function() {
