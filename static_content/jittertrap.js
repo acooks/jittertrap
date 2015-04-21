@@ -79,6 +79,14 @@ $(document).ready(function() {
 
   $("#chopts_chartPeriod").bind('change', function() {
     chartingPeriod = $("#chopts_chartPeriod").val();
+    if (chartingPeriod < chartingPeriodMin) {
+       chartingPeriod = chartingPeriodMin;
+       $("#chopts_chartPeriod").val(chartingPeriod);
+    } else if (chartingPeriod > chartingPeriodMax) {
+       chartingPeriod = chartingPeriodMax;
+       $("#chopts_chartPeriod").val(chartingPeriod);
+    }
+
     dataLength = Math.floor(dataLengthMultiplier * chartingPeriod);
     $("#chopts_dataLen").html(dataLength);
     resetChart();

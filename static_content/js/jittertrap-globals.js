@@ -13,7 +13,9 @@ var samplePeriod = 1000;
 /**
  * time (milliseconds) represented by each data point
  */
-var chartingPeriod = 20;
+var chartingPeriod = 60;
+var chartingPeriodMin = 1;
+var chartingPeriodMax = 500;
 
 /*
  *
