@@ -13,11 +13,13 @@ var rateToMicroseconds = function(r) {
 
 /* count must be bytes, samplePeriod is microseconds */
 var byteCountToKbpsRate = function(count) {
-  var rate = count * 8.0 / samplePeriod * 1000.0;
+  'use strict';
+  var rate = count / samplePeriod * 8000.0;
   return rate;
 };
 
 var packetDeltaToRate = function(count) {
+  'use strict';
   return count * (1000000.0 / samplePeriod);
 };
 
