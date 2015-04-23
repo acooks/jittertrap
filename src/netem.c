@@ -20,6 +20,9 @@
 static struct nl_sock *sock;
 static struct nl_cache *link_cache, *qdisc_cache;
 
+#define QUOTE(str) #str
+#define EXPAND_AND_QUOTE(str) QUOTE(str)
+
 int netem_init()
 {
 	/* Allocate and initialize a new netlink handle */
@@ -49,6 +52,24 @@ int netem_init()
 	return 0;
 }
 
+int is_iface_allowed(const char const *needle)
+{
+	const char *haystack = EXPAND_AND_QUOTE(ALLOWED_IFACES);
+	char *tokens = strdup(haystack);
+	char *iface;
+
+	iface = strtok(tokens, ":");
+	while (iface) {
+		if (0 == strcmp(iface, needle)) {
+			free(tokens);
+			return 1;
+		}
+		iface = strtok(NULL, ":");
+	}
+	free(tokens);
+	return 0;
+}
+
 char **netem_list_ifaces()
 {
 	struct rtnl_link *link;
@@ -67,9 +88,9 @@ char **netem_list_ifaces()
 	link = (struct rtnl_link *)nl_cache_get_first(link_cache);
 	while (link) {
 		char *j = rtnl_link_get_name(link);
+
 		if ((strcmp("lo", j) != 0)
-		    && (strcmp("sit0", j) != 0)
-		    && (strcmp("br0", j) != 0))
+		    && is_iface_allowed(j))
 		{
 			*i = malloc(strlen(j) + 1);
 			assert(NULL != *i);
