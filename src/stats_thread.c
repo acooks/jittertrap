@@ -34,6 +34,18 @@ static pthread_mutex_t g_stats_mutex;
 char *g_iface;
 
 struct sample g_stats_o;
+
+/* FIXME: Treat with extreme prejudice!
+ * There's some kind of bug (maybe in libnl?) where the rtnl_link_get_stat()
+ * will return stale data after a rtnl_link_get_kernel() call that changes
+ * the iface (and therefore also the link object).
+ *
+ * This hack effectively ignores the values of the first 50 results from
+ * rtnl_link_get_kernel();
+ */
+#define DISCARD_FIRST_N_READINGS 50
+int reset_stats = DISCARD_FIRST_N_READINGS;
+
 int sample_period_us;
 
 void (*stats_handler) (struct iface_stats * counts);
@@ -68,6 +80,7 @@ void stats_monitor_iface(const char *_iface)
 	g_stats_o.tx_bytes = 0;
 	g_stats_o.rx_packets = 0;
 	g_stats_o.tx_packets = 0;
+	reset_stats = DISCARD_FIRST_N_READINGS;
 	pthread_mutex_unlock(&g_stats_mutex);
 	if (g_iface) {
 		free(g_iface);
@@ -123,7 +136,7 @@ static int read_counters(const char *iface, struct sample *stats)
 static void calc_deltas(struct sample *stats_o,
 			struct sample *stats_c)
 {
-	if (0 == stats_o->rx_bytes || stats_o->rx_bytes > stats_c->rx_bytes) {
+	if (reset_stats-- > 0 || stats_o->rx_bytes > stats_c->rx_bytes) {
 		stats_o->rx_bytes = stats_c->rx_bytes;
 		stats_o->tx_bytes = stats_c->tx_bytes;
 		stats_o->rx_packets = stats_c->rx_packets;
