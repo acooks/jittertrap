@@ -493,7 +493,11 @@ int main()
 	struct ns_bind_opts opts = {.flags = TCP_NODELAY };
 
 	ns_mgr_init(&mgr, NULL);
-	printf("Binding to port:%s\n", s_http_port);
+	printf("Allowed ifaces: %s\n", EXPAND_AND_QUOTE(ALLOWED_IFACES));
+	printf("Web document root: %s\n",
+	       EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT));
+	printf("Binding to port: %s\n", s_http_port);
+
 	nc = ns_bind_opt(&mgr, s_http_port, ev_handler, opts);
 	if (nc == NULL) {
 		fprintf(stderr, "Couldn't bind to port:%s\n", s_http_port);
