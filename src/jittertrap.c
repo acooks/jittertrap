@@ -119,15 +119,20 @@ static char *list_ifaces()
 	char **ifaces = netem_list_ifaces();
 	char **i = ifaces;
 	assert(NULL != i);
-	assert(NULL != *i);
-
-	do {
-		*i = quote_string(*i);
-		json_arr_append(&json_ifaces, *i);
-		free(*i);
-		i++;
-	} while (*i);
-	free(ifaces);
+	if (NULL == *i) {
+		fprintf(stderr,
+		        "No interfaces available. "
+		        "Allowed interfaces (compile-time): %s\n",
+		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+	} else {
+		do {
+			*i = quote_string(*i);
+			json_arr_append(&json_ifaces, *i);
+			free(*i);
+			i++;
+		} while (*i);
+		free(ifaces);
+	}
 
 	char *head = "{\"ifaces\":";
 	char *tail = "}";
@@ -160,6 +165,12 @@ static void handle_ws_dev_select(struct json_token *tok)
 	assert(tok->len < MAX_IFACE_LEN);
 	memset(iface, 0, MAX_IFACE_LEN);
 	memcpy(iface, tok->ptr, tok->len);
+	if (!is_iface_allowed(iface)) {
+		printf("ignoring request to switch to iface: [%s] - "
+		       "iface not in allowed list: [%s]\n",
+		       iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		return;
+	}
 	printf("switching to iface: [%s]\n", iface);
 	stats_monitor_iface(iface);
 }
