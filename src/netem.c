@@ -58,6 +58,11 @@ int is_iface_allowed(const char *needle)
 	char *tokens = strdup(haystack);
 	char *iface;
 
+	if (0 == strlen(haystack)) {
+		free(tokens);
+		return 1;
+	}
+
 	iface = strtok(tokens, ":");
 	while (iface) {
 		if (0 == strcmp(iface, needle)) {
