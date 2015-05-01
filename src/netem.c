@@ -52,7 +52,7 @@ int netem_init()
 	return 0;
 }
 
-int is_iface_allowed(const char const *needle)
+int is_iface_allowed(const char *needle)
 {
 	const char *haystack = EXPAND_AND_QUOTE(ALLOWED_IFACES);
 	char *tokens = strdup(haystack);

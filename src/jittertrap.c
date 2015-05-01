@@ -87,7 +87,7 @@ char * quote_string(char *str)
 	snprintf(str, strlen(str)+3, "\"%s\"", s);
 	free(s);
 	return str;
-};
+}
 
 /* *arr MUST be a malloc'ed pointer */
 static void json_arr_append(char **arr, const char *const word)

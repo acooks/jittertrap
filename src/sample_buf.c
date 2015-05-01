@@ -30,7 +30,7 @@ void raw_sample_buf_init() {
 struct iface_stats* raw_sample_buf_produce_next() {
 	pthread_mutex_lock(&pc_mutex);
 	produce_ptr++;
-	if (produce_ptr == ((void*)sample_buf + BUF_BYTE_LEN)) {
+	if ((uint8_t*)produce_ptr == ((uint8_t*)sample_buf + BUF_BYTE_LEN)) {
 		/* end of buffer, wrap around */
 		produce_ptr = sample_buf;
 	}
@@ -39,14 +39,14 @@ struct iface_stats* raw_sample_buf_produce_next() {
 	/* FIXME: needs some kind of lock instead */
 	assert(produce_ptr != consume_ptr);
 	pthread_mutex_unlock(&pc_mutex);
-	assert((void *)produce_ptr < ((void*)sample_buf + BUF_BYTE_LEN));
+	assert((uint8_t *)produce_ptr < ((uint8_t*)sample_buf + BUF_BYTE_LEN));
 	return produce_ptr;
 }
 
 struct iface_stats* raw_sample_buf_consume_next() {
 	pthread_mutex_lock(&pc_mutex);
 	consume_ptr++;
-	if (consume_ptr == ((void*)sample_buf + BUF_BYTE_LEN)) {
+	if ((uint8_t*)consume_ptr == ((uint8_t*)sample_buf + BUF_BYTE_LEN)) {
 		consume_ptr = sample_buf;
 	}
 
