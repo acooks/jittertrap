@@ -6,7 +6,7 @@ var xVal = 0;
 var updatePeriod = 60;
 var updatePeriodMin = 40;
 var updatePeriodMax = 100;
-
+var old_updatePeriod; // used for pausing/resuming
 /**
  * data samples; microseconds; fixed.
  */
@@ -34,3 +34,9 @@ var dataLength = 18000;
  * list of active traps
  */
 var traps = {};
+
+
+var websocket = {};
+var chart = {};
+var histogram = {};
+var basicStatsGraph = {};
