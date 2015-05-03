@@ -13,14 +13,6 @@ $(document).ready(function() {
     minTxThroughputTriggerVal: 0,
   };
 
-  // Charting
-  var chart = new CanvasJS.Chart("chartContainer", {});
-  var histogram = new CanvasJS.Chart("histogramContainer", {});
-  var basicStatsGraph = new CanvasJS.Chart("basicStatsContainer", {});
-
-  var old_updatePeriod = updatePeriod;
-
-
   // Initialize Chart Options
   $("#chopts_dataLen").html(dataLength);
   $("#chopts_chartPeriod").val(chartingPeriod);

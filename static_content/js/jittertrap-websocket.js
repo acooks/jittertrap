@@ -106,11 +106,3 @@ var get_sample_period = function() {
   websocket.send(msg);
 };
 
-var set_sample_period = function() {
-  samplePeriod =  1000.0 * parseFloat($("#sample_period").val());
-  var msg = JSON.stringify(
-    {'msg': 'set_sample_period',
-      'period': samplePeriod
-    });
-  websocket.send(msg);
-};

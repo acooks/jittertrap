@@ -1,16 +1,3 @@
-// interval in milliseconds
-var microsecondsToRate = function(us) {
-  if (us > 0) {
-    return Math.ceil(1.0 / us * 1000000.0);
-  }
-};
-
-var rateToMicroseconds = function(r) {
-  if (r > 0) {
-    return Math.ceil(1.0 / r * 1000000.0);
-  }
-};
-
 /* count must be bytes, samplePeriod is microseconds */
 var byteCountToKbpsRate = function(count) {
   'use strict';
