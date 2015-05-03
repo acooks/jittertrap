@@ -1,4 +1,4 @@
-SUBDIRS = src docs
+SUBDIRS = src docs static_content
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
