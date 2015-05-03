@@ -99,7 +99,7 @@ var clear_netem = function() {
   $("#loss").val(0);
   set_netem();
   return false;
-}
+};
 
 var get_sample_period = function() {
   var msg = JSON.stringify({'msg': 'get_sample_period'});

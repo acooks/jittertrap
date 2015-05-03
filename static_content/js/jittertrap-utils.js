@@ -13,10 +13,10 @@ var packetDeltaToRate = function(count) {
 var updateStats = function (series) {
   'use strict';
 
-  if (! series.filteredData || series.filteredData.length == 0) return;
+  if (! series.filteredData || series.filteredData.length === 0) return;
 
   var sortedData = series.filteredData.slice(0);
-  sortedData.sort(function(a,b) {return (a.y - b.y)});
+  sortedData.sort(function(a,b) {return (a.y - b.y);});
 
   var maxY = sortedData[sortedData.length-1].y;
   var minY = sortedData[0].y;
@@ -97,7 +97,7 @@ var updateFilteredSeries = function (series) {
   var filteredDataCount = series.filteredData.length;
 
   // if there isn't enough data for one filtered sample, return.
-  if (fseriesLength == 0) {
+  if (fseriesLength === 0) {
     return;
   }
 
@@ -117,7 +117,7 @@ var updateFilteredSeries = function (series) {
   series.filteredData.length = 0;
 
   // calculate any/all missing Y values from raw data
-  for (var i = filteredDataCount; i < fseriesLength; i++) {
+  for (i = filteredDataCount; i < fseriesLength; i++) {
     filteredY[i] = 0.0;
     for (var j = 0; j < decimationFactor; j++) {
       var idx = i * decimationFactor + j;
@@ -132,7 +132,7 @@ var updateFilteredSeries = function (series) {
   }
 
   // finally, update the filteredData
-  for (var i = 0; i < fseriesLength; i++) {
+  for (i = 0; i < fseriesLength; i++) {
     series.filteredData.push({x: i * chartingPeriod, y: filteredY[i]});
   }
 
@@ -142,7 +142,7 @@ var updateSeries = function (series, xVal, yVal, selectedSeries) {
   series.data.push(yVal);
 
   /* do expensive operations once per filtered sample/chartingPeriod. */
-  if ((xVal % chartingPeriod == 0) && (series == selectedSeries)) {
+  if ((xVal % chartingPeriod === 0) && (series == selectedSeries)) {
     updateStats(series);
     updateHistogram(series);
     updateFilteredSeries(series);

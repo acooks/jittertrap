@@ -158,7 +158,7 @@ var resetChart = function() {
 
 var resizeCBuf = function(cbuf, len) {
   cbuf.filteredData = [];
-  b = new CBuffer(len);
+  var b = new CBuffer(len);
 
   var l = (len < cbuf.data.size) ? len : cbuf.data.size;
   while (l--) {
@@ -224,7 +224,7 @@ var tuneChartUpdatePeriod = function() {
 
   var tuneWindowSize = 5; // how often to adjust the updatePeriod.
 
-  if ((renderCount % tuneWindowSize) != 0) {
+  if ((renderCount % tuneWindowSize) !== 0) {
     return;
   }
 

@@ -38,7 +38,6 @@ var checkTriggers = function() {
       console.log("Trap Triggered: " + trapId + "/" + trapVal);
     }
   });
-  ;
 };
 
 
@@ -49,7 +48,7 @@ var checkTriggers = function() {
 var closeAddTrapModal = function() {
   $('#add_trap_modal input').val("");
   $('#add_trap_modal button').get(1).click();
-}
+};
 
 /**
  * Handler for selecting a trap in the modal for adding traps
