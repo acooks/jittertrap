@@ -16,3 +16,19 @@ before_install:
 # - sudo apt-get install -qq libnl-genl-3-200
 
 install: true
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #    #   via the "travis encrypt" command using the project repo's public key
+   - secure: "UZ124N+xNO6Wccrg03c7/9o+GH0dVp7a1aWaGieaR0Jy3bZzC3BvtkXhABS6uvGQLEvaUHzBGlkGK5d5cK6+kZNlJj7c1FTd7pn+0OaSQbhZsTuYswZ9i//7+nLmo3wjDstRQAkFhRdJiNAvc1gnFVw56U2tTAr6CQxr5ujndPA="
+
+addons:
+  coverity_scan:
+    project:
+      name: "acooks/jittertrap"
+      description: "JitterTrap is a measurement and impairment tool for developers of latency-sensitive applications and devices."
+    notification_email: acooks@rationali.st
+    build_command_prepend: "make clean"
+    build_command:   "make"
+    branch_pattern: master
