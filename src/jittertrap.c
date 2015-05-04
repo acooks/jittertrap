@@ -131,8 +131,8 @@ static char *list_ifaces()
 			free(*i);
 			i++;
 		} while (*i);
-		free(ifaces);
 	}
+	free(ifaces);
 
 	char *head = "{\"ifaces\":";
 	char *tail = "}";
