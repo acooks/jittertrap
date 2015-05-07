@@ -1,4 +1,4 @@
-SUBDIRS = src docs static_content
+SUBDIRS = backend frontend docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
@@ -20,7 +20,7 @@ update-cbuffer:
 
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
-	cov-build --dir cov-int make src
+	cov-build --dir cov-int make backend
 	@tar caf jittertrap-coverity-build.lzma cov-int
 	@echo Coverity build archive: jittertrap-coverity-build.lzma
 
@@ -28,11 +28,11 @@ coverity-clean:
 	rm -rf cov-int jittertrap-coverity-build.lzma
 
 cppcheck:
-	cppcheck --enable=style,warning,performance,portability src/
+	cppcheck --enable=style,warning,performance,portability backend/
 	#cppcheck deps/fossa/fossa.c
 
 clang-analyze:
-	scan-build make src
+	scan-build make backend
 
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
