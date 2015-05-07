@@ -6,18 +6,6 @@ languages:
 
 # We only care about jittertrap-concat.js
 exclude_paths:
- - static_content/jquery-2.1.3.js
- - static_content/jquery-2.1.3.min.js
- - static_content/jquery.canvasjs.min.js
- - static_content/js/bootstrap.js
- - static_content/js/bootstrap.min.js
- - static_content/js/mustache.js
- - static_content/js/mustache.min.js
- - static_content/cbuffer.js
- - static_content/jittertrap.js
- - static_conent/js/jittertrap-charting.js
- - static_conent/js/jittertrap-globals.js
- - static_conent/js/jittertrap-traps.js
- - static_conent/js/jittertrap-utils.js
- - static_conent/js/jittertrap-websocket.js
-
+ - deps/*
+ - src/*
+ 
