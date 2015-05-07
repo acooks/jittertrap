@@ -9,4 +9,4 @@ all:
 	cat js/jittertrap-traps.js >> jittertrap-concat.js
 
 clean:
-	rm jittertrap-concat.js
+	rm jittertrap-concat.js || true
