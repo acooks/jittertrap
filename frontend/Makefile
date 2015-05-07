@@ -3,7 +3,7 @@
 # BE CAREFUL! Check the 'rm -rf' if you edit this!
 OUT = output
 
-all: clean createdirs concat copydeps copyhtml
+all: clean createdirs concat copydeps copyhtml copycss
 
 createdirs:
 	mkdir ${OUT}
@@ -35,6 +35,9 @@ copydeps:
 copyhtml:
 	cp src/html/index.html ${OUT}/
 	cp -r src/html/templates ${OUT}/
+
+copycss:
+	cp src/css/jittertrap.css ${OUT}/css/
 
 clean:
 	rm -rf ${OUT} || true
