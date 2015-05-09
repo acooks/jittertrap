@@ -600,37 +600,22 @@ var resizeDataBufs = function(newlen) {
 };
 
 var clearChart = function() {
-  chartData.txDelta.data = new CBuffer(dataLength);
-  chartData.txDelta.filteredData = [];
-  chartData.txDelta.histData = [];
 
-  chartData.rxDelta.data = new CBuffer(dataLength);
-  chartData.rxDelta.filteredData = [];
-  chartData.rxDelta.histData = [];
+  var clearSeries = function (s) {
+    s.data = new CBuffer(dataLength);
+    s.filteredData = [];
+    s.histData = [];
+  };
 
-  chartData.rxRate.data = new CBuffer(dataLength);
-  chartData.rxRate.filteredData = [];
-  chartData.rxRate.histData = [];
+  clearSeries(chartData.txDelta);
+  clearSeries(chartData.rxDelta);
+  clearSeries(chartData.txRate);
+  clearSeries(chartData.rxRate);
+  clearSeries(chartData.txPacketRate);
+  clearSeries(chartData.rxPacketRate);
+  clearSeries(chartData.txPacketDelta);
+  clearSeries(chartData.rxPacketDelta);
 
-  chartData.txRate.data = new CBuffer(dataLength);
-  chartData.txRate.filteredData = [];
-  chartData.txRate.histData = [];
-
-  chartData.txPacketRate.data = new CBuffer(dataLength);
-  chartData.txPacketRate.filteredData = [];
-  chartData.txPacketRate.histData = [];
-
-  chartData.rxPacketRate.data = new CBuffer(dataLength);
-  chartData.rxPacketRate.filteredData = [];
-  chartData.rxPacketRate.histData = [];
-
-  chartData.rxPacketDelta.data = new CBuffer(dataLength);
-  chartData.rxPacketDelta.filteredData = [];
-  chartData.rxPacketDelta.histData = [];
-
-  chartData.txPacketDelta.data = new CBuffer(dataLength);
-  chartData.txPacketDelta.filteredData = [];
-  chartData.txPacketDelta.histData = [];
   resetChart();
   xVal = 0;
 };
