@@ -52,7 +52,7 @@ $(document).ready(function() {
     maxRxThroughputTriggerVal: 0,
     maxTxThroughputTriggerVal: 0,
     minRxThroughputTriggerVal: 0,
-    minTxThroughputTriggerVal: 0,
+    minTxThroughputTriggerVal: 0
   };
 
   // Initialize Chart Options
@@ -81,7 +81,7 @@ $(document).ready(function() {
     var msg = JSON.parse(evt.data);
     var selectedIface = $('#dev_select').val();
 
-    if (msg.stats && msg.stats.iface == selectedIface) {
+    if (msg.stats && msg.stats.iface === selectedIface) {
       var visibleSeries = $("#chopts_series option:selected").val();
       handleMsgUpdateStats(samplePeriod, msg.stats.s, visibleSeries);
     } else if (msg.ifaces) {
@@ -90,15 +90,6 @@ $(document).ready(function() {
       handleMsgNetemParams(msg.netem_params);
     } else if (msg.sample_period) {
       handleMsgSamplePeriod(msg.sample_period);
-    }
-  };
-
-
-  // Console Debug Logging
-  var logHistogram = function () {
-    var s = $("#chopts_series option:selected").val();
-    for (var i = 0; i < chartData[s].histData.length; i++) {
-      console.log(chartData[s].histData[i]);
     }
   };
 
@@ -173,7 +164,9 @@ var packetDeltaToRate = function(count) {
 var updateStats = function (series) {
   'use strict';
 
-  if (! series.filteredData || series.filteredData.length === 0) return;
+  if (! series.filteredData || series.filteredData.length === 0) {
+    return;
+  }
 
   var sortedData = series.filteredData.slice(0);
   sortedData.sort(function(a,b) {return (a.y - b.y);});
@@ -183,7 +176,9 @@ var updateStats = function (series) {
   var median = sortedData[Math.floor(sortedData.length / 2.0)].y;
   var mean = 0;
   var sum = 0;
-  for (var i = sortedData.length-1; i >=0; i--) {
+  var i = 0;
+
+  for (i = sortedData.length-1; i >=0; i--) {
     sum += sortedData[i].y;
   }
   mean = sum / sortedData.length;
@@ -232,7 +227,9 @@ var updateHistogram = function(series) {
 
   /* convert to logarithmic scale */
   for (i = 0; i < normBins.length; i++) {
-    if (normBins[i] > 0) normBins[i] = Math.log(normBins[i]);
+    if (normBins[i] > 0) {
+      normBins[i] = Math.log(normBins[i]);
+    }
   }
 
   /* write the histogram x,y data */
@@ -262,7 +259,7 @@ var updateFilteredSeries = function (series) {
   }
 
   // if the series is complete, expire the first value.
-  if (filteredDataCount == fseriesLength) {
+  if (filteredDataCount === fseriesLength) {
     series.filteredData.shift();
     filteredDataCount--;
   }
@@ -302,7 +299,7 @@ var updateSeries = function (series, xVal, yVal, selectedSeries) {
   series.data.push(yVal);
 
   /* do expensive operations once per filtered sample/chartingPeriod. */
-  if ((xVal % chartingPeriod === 0) && (series == selectedSeries)) {
+  if ((xVal % chartingPeriod === 0) && (series === selectedSeries)) {
     updateStats(series);
     updateHistogram(series);
     updateFilteredSeries(series);
@@ -578,8 +575,11 @@ var tuneChartUpdatePeriod = function() {
 
   updatePeriod = chartingPeriod / 2;
 
-  if (updatePeriod < updatePeriodMin) updatePeriod = updatePeriodMin;
-  else if (updatePeriod > updatePeriodMax) updatePeriod = updatePeriodMax;
+  if (updatePeriod < updatePeriodMin) {
+    updatePeriod = updatePeriodMin;
+  } else if (updatePeriod > updatePeriodMax) {
+    updatePeriod = updatePeriodMax;
+  }
 
   setUpdatePeriod();
 
@@ -610,7 +610,7 @@ var setUpdatePeriod = function() {
 
 var toggleStopStartGraph = function() {
   var maxUpdatePeriod = 9999999999;
-  if (updatePeriod != maxUpdatePeriod) {
+  if (updatePeriod !== maxUpdatePeriod) {
     old_updatePeriod = updatePeriod;
     updatePeriod = maxUpdatePeriod;
   } else {

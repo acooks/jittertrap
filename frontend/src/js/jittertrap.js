@@ -10,7 +10,7 @@ $(document).ready(function() {
     maxRxThroughputTriggerVal: 0,
     maxTxThroughputTriggerVal: 0,
     minRxThroughputTriggerVal: 0,
-    minTxThroughputTriggerVal: 0,
+    minTxThroughputTriggerVal: 0
   };
 
   // Initialize Chart Options
@@ -39,7 +39,7 @@ $(document).ready(function() {
     var msg = JSON.parse(evt.data);
     var selectedIface = $('#dev_select').val();
 
-    if (msg.stats && msg.stats.iface == selectedIface) {
+    if (msg.stats && msg.stats.iface === selectedIface) {
       var visibleSeries = $("#chopts_series option:selected").val();
       handleMsgUpdateStats(samplePeriod, msg.stats.s, visibleSeries);
     } else if (msg.ifaces) {
@@ -48,15 +48,6 @@ $(document).ready(function() {
       handleMsgNetemParams(msg.netem_params);
     } else if (msg.sample_period) {
       handleMsgSamplePeriod(msg.sample_period);
-    }
-  };
-
-
-  // Console Debug Logging
-  var logHistogram = function () {
-    var s = $("#chopts_series option:selected").val();
-    for (var i = 0; i < chartData[s].histData.length; i++) {
-      console.log(chartData[s].histData[i]);
     }
   };
 

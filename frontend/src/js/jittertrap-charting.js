@@ -160,8 +160,11 @@ var tuneChartUpdatePeriod = function() {
 
   updatePeriod = chartingPeriod / 2;
 
-  if (updatePeriod < updatePeriodMin) updatePeriod = updatePeriodMin;
-  else if (updatePeriod > updatePeriodMax) updatePeriod = updatePeriodMax;
+  if (updatePeriod < updatePeriodMin) {
+    updatePeriod = updatePeriodMin;
+  } else if (updatePeriod > updatePeriodMax) {
+    updatePeriod = updatePeriodMax;
+  }
 
   setUpdatePeriod();
 
@@ -192,7 +195,7 @@ var setUpdatePeriod = function() {
 
 var toggleStopStartGraph = function() {
   var maxUpdatePeriod = 9999999999;
-  if (updatePeriod != maxUpdatePeriod) {
+  if (updatePeriod !== maxUpdatePeriod) {
     old_updatePeriod = updatePeriod;
     updatePeriod = maxUpdatePeriod;
   } else {
