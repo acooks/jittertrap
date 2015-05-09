@@ -234,7 +234,7 @@ var handleMsgIfaces = function(ifaces) {
 };
 
 var handleMsgNetemParams = function(params) {
-  if (params.delay == -1 && params.jitter == -1 && params.loss == -1) {
+  if (params.delay === -1 && params.jitter === -1 && params.loss === -1) {
     $("#netem_status").html("No active impairment on device. Set parameters to activate.");
     $("#delay").val("0");
     $("#jitter").val("0");
