@@ -6,6 +6,6 @@ languages:
 
 # We only care about jittertrap-concat.js
 exclude_paths:
- - deps/*
- - src/*
+ - frontend/deps/*
+ - frontend/src/*
  
