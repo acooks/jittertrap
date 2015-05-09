@@ -418,101 +418,71 @@ var get_sample_period = function() {
 
 var chartData = {};
 
+chartData.init = function(obj) {
+  obj.data = []; // raw samples
+  obj.filteredData = []; // filtered & decimated to chartingPeriod
+  obj.histData = [];
+  obj.minY = {x:0, y:0};
+  obj.maxY = {x:0, y:0};
+  obj.basicStats = [];
+};
+
 chartData.txDelta = {
-  data:[],  // raw samples
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title:"Tx Bytes per sample period",
   ylabel:"Tx Bytes per sample",
   xlabel:"Time",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
 
+chartData.init(chartData.txDelta);
+
 chartData.rxDelta = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title:"Rx Bytes per sample period",
   ylabel:"Rx Bytes per sample",
   xlabel:"Time",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.rxDelta);
 
 chartData.rxRate = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Ingress throughput in kbps",
   ylabel:"kbps, mean",
   xlabel:"sample number",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.rxRate);
 
 chartData.txRate = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Egress throughput in kbps",
   ylabel:"kbps, mean",
   xlabel:"sample number",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.txRate);
 
 chartData.txPacketRate = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Egress packet rate",
   ylabel:"pkts per sec, mean",
   xlabel:"time",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.txPacketRate);
 
 chartData.rxPacketRate = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Ingress packet rate",
   ylabel:"pkts per sec, mean",
   xlabel:"time",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.rxPacketRate);
 
 chartData.txPacketDelta = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Egress packets per sample",
   ylabel:"packets sent",
   xlabel:"sample number",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.txPacketDelta);
 
 chartData.rxPacketDelta = {
-  data:[],
-  filteredData:[], // filtered & decimated to chartingPeriod
-  histData:[],
   title: "Ingress packets per sample",
   ylabel:"packets received",
   xlabel:"sample number",
-  minY: {x: 0, y: 0},
-  maxY: {x: 0, y: 0},
-  basicStats:[]
 };
+chartData.init(chartData.rxPacketDelta);
 
 var resetChart = function() {
   var s = $("#chopts_series option:selected").val();
