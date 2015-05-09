@@ -430,7 +430,7 @@ chartData.init = function(obj) {
 chartData.txDelta = {
   title:"Tx Bytes per sample period",
   ylabel:"Tx Bytes per sample",
-  xlabel:"Time",
+  xlabel:"Time (ms)",
 };
 
 chartData.init(chartData.txDelta);
@@ -438,49 +438,49 @@ chartData.init(chartData.txDelta);
 chartData.rxDelta = {
   title:"Rx Bytes per sample period",
   ylabel:"Rx Bytes per sample",
-  xlabel:"Time",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.rxDelta);
 
 chartData.rxRate = {
   title: "Ingress throughput in kbps",
   ylabel:"kbps, mean",
-  xlabel:"sample number",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.rxRate);
 
 chartData.txRate = {
   title: "Egress throughput in kbps",
   ylabel:"kbps, mean",
-  xlabel:"sample number",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.txRate);
 
 chartData.txPacketRate = {
   title: "Egress packet rate",
   ylabel:"pkts per sec, mean",
-  xlabel:"time",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.txPacketRate);
 
 chartData.rxPacketRate = {
   title: "Ingress packet rate",
   ylabel:"pkts per sec, mean",
-  xlabel:"time",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.rxPacketRate);
 
 chartData.txPacketDelta = {
   title: "Egress packets per sample",
   ylabel:"packets sent",
-  xlabel:"sample number",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.txPacketDelta);
 
 chartData.rxPacketDelta = {
   title: "Ingress packets per sample",
   ylabel:"packets received",
-  xlabel:"sample number",
+  xlabel:"Time (ms)",
 };
 chartData.init(chartData.rxPacketDelta);
 
