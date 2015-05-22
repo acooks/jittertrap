@@ -1,208 +1,242 @@
-var chartData = {};
+/* jittertrap-charting.js */
+JT = (function (my) {
+  'use strict';
+  my.charts.series = {};
 
-var series = function(title, ylabel) {
-  this.title = title;
-  this.ylabel = ylabel;
-  this.xlabel = "Time (ms)";
+  /* short, local alias */
+  var series = my.charts.series;
+
+  /*
+   * series is a prototype object that encapsulates chart data.
+   */
+  var Series = function(name, title, ylabel) {
+    this.name = name;
+    this.title = title;
+    this.ylabel = ylabel;
+    this.xlabel = "Time (ms)";
   this.data = []; // raw samples
-  this.filteredData = []; // filtered & decimated to chartingPeriod
-  this.histData = [];
-  this.minY = {x:0, y:0};
-  this.maxY = {x:0, y:0};
-  this.basicStats = [];
-};
-
-chartData.txDelta = new series("Tx Bytes per sample period",
-                               "Tx Bytes per sample");
-
-chartData.rxDelta = new series("Rx Bytes per sample period",
-                               "Rx Bytes per sample");
-
-chartData.rxRate = new series("Ingress throughput in kbps",
-                              "kbps, mean");
-
-chartData.txRate = new series("Egress throughput in kbps",
-                              "kbps, mean");
-
-chartData.txPacketRate = new series("Egress packet rate",
-                                    "pkts per sec, mean");
-
-chartData.rxPacketRate = new series("Ingress packet rate",
-                                    "pkts per sec, mean");
-
-chartData.txPacketDelta = new series("Egress packets per sample",
-                                     "packets sent");
-
-chartData.rxPacketDelta = new series("Ingress packets per sample",
-                                     "packets received");
-
-var resetChart = function() {
-  var s = $("#chopts_series option:selected").val();
-  chartData[s].filteredData.length = 0;
-  chart = new CanvasJS.Chart("chartContainer", {
-    height: 300,
-    animationEnabled: false,
-    exportEnabled: false,
-    toolTip:{
-      enabled: true,
-    },
-    interactivityEnabled: true,
-    zoomEnabled: "true",
-    panEnabled: "true",
-    title: { text: chartData[s].title },
-    axisY: {
-      title: chartData[s].ylabel,
-      includeZero: "false",
-    },
-    axisX: { title: chartData[s].xlabel },
-    data: [{
-      name: s,
-      type: "line",
-      dataPoints: chartData[s].filteredData
-    }]
-  });
-  chart.render();
-
-  histogram = new CanvasJS.Chart("histogramContainer", {
-    title: {text: "Distribution" },
-    axisY: {
-      title: "log(Count)",
-      includeZero: "false",
-    },
-    axisX: {
-      title: "Bin",
-      includeZero: "false",
-    },
-    data: [{
-      name: s + "_hist",
-      type: "column",
-      dataPoints: chartData[s].histData
-    }]
-  });
-  histogram.render();
-
-  basicStatsGraph = new CanvasJS.Chart("basicStatsContainer", {
-    title: { text: "Basic Stats" },
-    axisY: {
-      includeZero: "false",
-      title: chartData[s].ylabel
-    },
-    data: [{
-      name: s + "_stats",
-      type: "column",
-      dataPoints: chartData[s].basicStats
-    }]
-  });
-  basicStatsGraph.render();
-};
-
-var resizeCBuf = function(cbuf, len) {
-  cbuf.filteredData = [];
-  var b = new CBuffer(len);
-
-  var l = (len < cbuf.data.size) ? len : cbuf.data.size;
-  while (l--) {
-    b.push(cbuf.data.shift());
-  }
-  cbuf.data = b;
-};
-
-var resizeDataBufs = function(newlen) {
-  resizeCBuf(chartData.txDelta, newlen);
-  resizeCBuf(chartData.rxDelta, newlen);
-
-  resizeCBuf(chartData.rxRate, newlen);
-  resizeCBuf(chartData.txRate, newlen);
-
-  resizeCBuf(chartData.txPacketRate, newlen);
-  resizeCBuf(chartData.rxPacketRate, newlen);
-
-  resizeCBuf(chartData.txPacketDelta, newlen);
-  resizeCBuf(chartData.rxPacketDelta, newlen);
-};
-
-var clearChart = function() {
-
-  var clearSeries = function (s) {
-    s.data = new CBuffer(dataLength);
-    s.filteredData = [];
-    s.histData = [];
+    this.filteredData = []; // filtered & decimated to chartingPeriod
+    this.histData = [];
+    this.minY = {x:0, y:0};
+    this.maxY = {x:0, y:0};
+    this.basicStats = [];
   };
 
-  clearSeries(chartData.txDelta);
-  clearSeries(chartData.rxDelta);
-  clearSeries(chartData.txRate);
-  clearSeries(chartData.rxRate);
-  clearSeries(chartData.txPacketRate);
-  clearSeries(chartData.rxPacketRate);
-  clearSeries(chartData.txPacketDelta);
-  clearSeries(chartData.rxPacketDelta);
+  series.txDelta = new Series("txDelta",
+                              "Tx Bytes per sample period",
+                              "Tx Bytes per sample");
 
-  resetChart();
-  xVal = 0;
-};
+  series.rxDelta = new Series("rxDelta",
+                              "Rx Bytes per sample period",
+                              "Rx Bytes per sample");
 
-var renderCount = 0;
-var renderTime = 0;
+  series.rxRate = new Series("rxRate",
+                             "Ingress throughput in kbps",
+                             "kbps, mean");
 
-var tuneChartUpdatePeriod = function() {
+  series.txRate = new Series("txRate",
+                             "Egress throughput in kbps",
+                             "kbps, mean");
 
-  var tuneWindowSize = 5; // how often to adjust the updatePeriod.
+  series.txPacketRate = new Series("txPacketRate",
+                                   "Egress packet rate",
+                                   "pkts per sec, mean");
 
-  if ((renderCount % tuneWindowSize) !== 0) {
-    return;
-  }
+  series.rxPacketRate = new Series("rxPacketRate",
+                                   "Ingress packet rate",
+                                   "pkts per sec, mean");
 
-  var avgRenderTime =  Math.floor(renderTime / renderCount);
-  //console.log("Rendering time: " + avgRenderTime
-  //            + " Processing time: " + procTime
-  //            + " Charting Period: " + chartingPeriod);
+  series.txPacketDelta = new Series("txPacketDelta",
+                                    "Egress packets per sample",
+                                    "packets sent");
 
-  updatePeriod = chartingPeriod / 2;
+  series.rxPacketDelta = new Series("rxPacketDelta",
+                                    "Ingress packets per sample",
+                                    "packets received");
 
-  if (updatePeriod < updatePeriodMin) {
-    updatePeriod = updatePeriodMin;
-  } else if (updatePeriod > updatePeriodMax) {
-    updatePeriod = updatePeriodMax;
-  }
+  var resetChart = function() {
+    var selectedSeriesOpt = $("#chopts_series option:selected").val();
+    var selectedSeries = my.charts.series[selectedSeriesOpt];
+    selectedSeries.filteredData.length = 0;
 
-  setUpdatePeriod();
+    my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
+      height: 300,
+      animationEnabled: false,
+      exportEnabled: false,
+      toolTip:{
+        enabled: true
+      },
+      interactivityEnabled: true,
+      zoomEnabled: "true",
+      panEnabled: "true",
+      title: { text: selectedSeries.title },
+      axisY: {
+        title: selectedSeries.ylabel,
+        includeZero: "false"
+      },
+      axisX: { title: selectedSeries.xlabel },
+      data: [{
+        name: selectedSeries.name,
+        type: "line",
+        dataPoints: selectedSeries.filteredData
+      }]
+    });
+    my.charts.mainChart.render();
 
-  renderCount = renderCount % tuneWindowSize;
-  renderTime = 0;
-};
+    my.charts.histogram = new CanvasJS.Chart("histogramContainer", {
+      title: {text: "Distribution" },
+      axisY: {
+        title: "log(Count)",
+        includeZero: "false"
+      },
+      axisX: {
+        title: "Bin",
+        includeZero: "false"
+      },
+      data: [{
+        name: selectedSeries.name + "_hist",
+        type: "column",
+        dataPoints: selectedSeries.histData
+      }]
+    });
+    my.charts.histogram.render();
 
-var renderGraphs = function() {
-  var d1 = Date.now();
-  histogram.render();
-  basicStatsGraph.render();
-  chart.render();
-  var d2 = Date.now();
-  renderCount++;
-  renderTime += d2 - d1;
-  tuneChartUpdatePeriod();
+    my.charts.basicStats = new CanvasJS.Chart("basicStatsContainer", {
+      title: { text: "Basic Stats" },
+      axisY: {
+        includeZero: "false",
+        title: selectedSeries.ylabel
+      },
+      data: [{
+        name: selectedSeries.name + "_stats",
+        type: "column",
+        dataPoints: selectedSeries.basicStats
+      }]
+    });
+    my.charts.basicStats.render();
 
-};
+  };
 
-var drawIntervalID = setInterval(renderGraphs, updatePeriod);
+  var resizeCBuf = function(cbuf, len) {
+    cbuf.filteredData = [];
+    var b = new CBuffer(len);
 
-var setUpdatePeriod = function() {
-  var updateRate = 1000.0 / updatePeriod; /* Hz */
-  clearInterval(drawIntervalID);
-  drawIntervalID = setInterval(renderGraphs, updatePeriod);
-  //console.log("chart updateRate: " + updateRate + "Hz. period: "+ updatePeriod + "ms");
-};
+    var l = (len < cbuf.data.size) ? len : cbuf.data.size;
+    while (l--) {
+      b.push(cbuf.data.shift());
+    }
+    cbuf.data = b;
+  };
 
-var toggleStopStartGraph = function() {
-  var maxUpdatePeriod = 9999999999;
-  if (updatePeriod !== maxUpdatePeriod) {
-    old_updatePeriod = updatePeriod;
-    updatePeriod = maxUpdatePeriod;
-  } else {
-    updatePeriod = old_updatePeriod;
-  }
-  setUpdatePeriod();
-  return false;
-};        
+  var resizeDataBufs = function(newlen) {
 
+    /* local alias for brevity */
+    var s = my.charts.series;
 
+    resizeCBuf(s.txDelta, newlen);
+    resizeCBuf(s.rxDelta, newlen);
+
+    resizeCBuf(s.rxRate, newlen);
+    resizeCBuf(s.txRate, newlen);
+
+    resizeCBuf(s.txPacketRate, newlen);
+    resizeCBuf(s.rxPacketRate, newlen);
+
+    resizeCBuf(s.txPacketDelta, newlen);
+    resizeCBuf(s.rxPacketDelta, newlen);
+  };
+
+  var clearChart = function() {
+
+    var clearSeries = function (s) {
+      s.data = new CBuffer(my.rawData.dataLength);
+      s.filteredData = [];
+      s.histData = [];
+    };
+
+    var s = my.charts.series; /* local alias for brevity */
+
+    clearSeries(s.txDelta);
+    clearSeries(s.rxDelta);
+    clearSeries(s.txRate);
+    clearSeries(s.rxRate);
+    clearSeries(s.txPacketRate);
+    clearSeries(s.rxPacketRate);
+    clearSeries(s.txPacketDelta);
+    clearSeries(s.rxPacketDelta);
+
+    resetChart();
+    my.rawData.xVal = 0;
+  };
+
+  var renderCount = 0;
+  var renderTime = 0;
+
+  var tuneChartUpdatePeriod = function() {
+
+    var tuneWindowSize = 5; // how often to adjust the updatePeriod.
+
+    if ((renderCount % tuneWindowSize) !== 0) {
+      return;
+    }
+
+    var avgRenderTime =  Math.floor(renderTime / renderCount);
+    //console.log("Rendering time: " + avgRenderTime
+    //            + " Processing time: " + procTime
+    //            + " Charting Period: " + chartingPeriod);
+
+    my.charts.params.redrawPeriod = my.charts.params.plotPeriod / 2;
+
+    if (my.charts.params.redrawPeriod < my.charts.params.redrawPeriodMin) {
+      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMin;
+    } else if (my.charts.params.redrawPeriod > my.charts.params.redrawPeriodMax) {
+      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMax;
+    }
+
+    setUpdatePeriod();
+
+    renderCount = renderCount % tuneWindowSize;
+    renderTime = 0;
+  };
+
+  var renderGraphs = function() {
+    var d1 = Date.now();
+    my.charts.histogram.render();
+    my.charts.basicStats.render();
+    my.charts.mainChart.render();
+    var d2 = Date.now();
+    renderCount++;
+    renderTime += d2 - d1;
+    tuneChartUpdatePeriod();
+  };
+
+  var drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+
+  var setUpdatePeriod = function() {
+    var updateRate = 1000.0 / my.charts.params.redrawPeriod; /* Hz */
+    clearInterval(drawIntervalID);
+    drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+  };
+
+  var toggleStopStartGraph = function() {
+    var maxUpdatePeriod = 9999999999;
+    if (my.charts.params.redrawPeriod !== maxUpdatePeriod) {
+      my.charts.params.redrawPeriodSaved = my.charts.params.redrawPeriod;
+      my.charts.params.redrawPeriod = maxUpdatePeriod;
+    } else {
+      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodSaved;
+    }
+    setUpdatePeriod();
+    return false;
+  };
+
+  /* Export "public" functions */
+  my.charts.toggleStopStartGraph = toggleStopStartGraph;
+  my.charts.setUpdatePeriod = setUpdatePeriod;
+  my.charts.clearChart = clearChart;
+  my.charts.resizeDataBufs = resizeDataBufs;
+  my.charts.resetChart = resetChart;
+
+  return my;
+}(JT));
+/* End of jittertrap-charting.js */

@@ -14,66 +14,35 @@ $(document).ready(function() {
   };
 
   // Initialize Chart Options
-  $("#chopts_dataLen").html(dataLength);
-  $("#chopts_chartPeriod").val(chartingPeriod);
+  $("#chopts_dataLen").html(JT.rawData.dataLength);
+  $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
 
   // Initialize WebSockets
   var wsUri = "ws://" + document.domain + ":" + location.port;
-  websocket = new WebSocket(wsUri);
-
-  websocket.onopen = function(evt) { 
-    websocket.send("open!");
-    list_ifaces();
-    get_sample_period();
-  };
-
-  websocket.onclose = function(evt) {
-    console.log("unhandled websocket onclose event: " + evt);
-  };
-
-  websocket.onerror = function(evt) {
-    console.log("unhandled websocket onerror event: " + evt);
-  };
-
-  websocket.onmessage = function(evt) {
-    var msg = JSON.parse(evt.data);
-    var selectedIface = $('#dev_select').val();
-
-    if (msg.stats && msg.stats.iface === selectedIface) {
-      var visibleSeries = $("#chopts_series option:selected").val();
-      handleMsgUpdateStats(samplePeriod, msg.stats.s, visibleSeries);
-    } else if (msg.ifaces) {
-      handleMsgIfaces(msg.ifaces);
-    } else if (msg.netem_params) {
-      handleMsgNetemParams(msg.netem_params);
-    } else if (msg.sample_period) {
-      handleMsgSamplePeriod(msg.sample_period);
-    }
-  };
-
-
+  JT.ws.init(wsUri);
+  
   // UI Event Handlers
-  $("#chopts_series").bind('change', resetChart);
-  $("#dev_select").bind('change', clearChart);
-  $('#set_netem_button').bind('click', set_netem);
-  $('#clear_netem_button').bind('click', clear_netem);
-  $('#dev_select').bind('change', dev_select);
-  $('#chopts_stop_start').bind('click', toggleStopStartGraph);
+  $("#chopts_series").bind('change', JT.charts.resetChart);
+  $("#dev_select").bind('change', JT.charts.clearChart);
+  $('#set_netem_button').bind('click', JT.ws.set_netem);
+  $('#clear_netem_button').bind('click', JT.ws.clear_netem);
+  $('#dev_select').bind('change', JT.ws.dev_select);
+  $('#chopts_stop_start').bind('click', JT.charts.toggleStopStartGraph);
 
   $("#chopts_chartPeriod").bind('change', function() {
-    chartingPeriod = $("#chopts_chartPeriod").val();
-    if (chartingPeriod < chartingPeriodMin) {
-       chartingPeriod = chartingPeriodMin;
-       $("#chopts_chartPeriod").val(chartingPeriod);
-    } else if (chartingPeriod > chartingPeriodMax) {
-       chartingPeriod = chartingPeriodMax;
-       $("#chopts_chartPeriod").val(chartingPeriod);
+    JT.charts.params.plotPeriod = $("#chopts_chartPeriod").val();
+    if (JT.charts.params.plotPeriod < JT.charts.params.plotPeriodMin) {
+       JT.charts.params.plotPeriod = JT.charts.params.plotPeriodMin;
+       $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
+    } else if (JT.charts.params.plotPeriod > JT.charts.params.plotPeriodMax) {
+       JT.charts.params.plotPeriod = JT.charts.params.plotPeriodMax;
+       $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
     }
 
-    dataLength = Math.floor(dataLengthMultiplier * chartingPeriod);
-    $("#chopts_dataLen").html(dataLength);
-    resizeDataBufs(dataLength);
-    resetChart();
+    JT.rawData.dataLength = Math.floor(JT.rawData.dataLengthMultiplier * JT.charts.params.plotPeriod);
+    $("#chopts_dataLen").html(JT.rawData.dataLength);
+    JT.charts.resizeDataBufs(JT.rawData.dataLength);
+    JT.charts.resetChart();
   });
 
   $('#more_chopts_toggle').click(function() {
@@ -87,16 +56,16 @@ $(document).ready(function() {
   });
 
   // Changing traps from the list of traps in the trap modal
-  $('#trap_names').bind('change', trapSelectionHandler);
+  $('#trap_names').bind('change', JT.trapModule.trapSelectionHandler);
   // Add a trap
-  $('#add_trap_modal button').last().click(addTrapHandler);
+  $('#add_trap_modal button').last().click(JT.trapModule.addTrapHandler);
   // Remove trap button(s)
   $('#traps_table tbody').on('click', 'tr button', function(event){
     var $trapTr = $(event.target).parents('tr');
 
     // Remove from JS
     var trapId = $trapTr.data("trapId");
-    delete traps[trapId];
+    JT.trapModule.deleteTrap(trapId);
 
     // Removal from the UI
     $trapTr.remove();
