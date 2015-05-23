@@ -23,7 +23,7 @@
 
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h2 class="panel-title">Impairment Parameters</h2>
+          <h2 class="panel-title">Interface Selection</h2>
         </div>
         <div class="panel-body">
           <form class="form-inline">
@@ -31,80 +31,94 @@
               <label for="dev_select">Interface</label>
               <select id="dev_select" class="form-control"></select>
             </div>
-            <div class="form-group">
-              <label for="delay">Delay</label>
-              <div class="input-group">
-                <input id="delay" class="form-control" type="number" min="0" max="200" />
-                <span class="input-group-addon">ms</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="jitter">Delay variation</label>
-              <div class="input-group">
-                <input id="jitter" class="form-control" type="number" min="0" max="100" />
-                <span class="input-group-addon">ms</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="loss">Loss</label>
-              <div class="input-group">
-                <input id="loss" class="form-control" type="number" min="0" max="100" />
-                <span class="input-group-addon">%</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <button id="set_netem_button" class="btn btn-primary">
-                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
-              </button>
-            </div>
-            <div class="form-group">
-              <button id="clear_netem_button" class="btn btn-default">
-                <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Clear
-              </button>
-            </div>
-            <br/>
           </form>
         </div>
-        <div class="panel-footer"><em>Status:</em> <span id="netem_status"></span></div>
       </div>
 
-      <!-- Measurement Parameters -->
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h2 class="panel-title">Measurement Parameters</h2>
-        </div>
-        <div class="panel-body">
-          <form class="form-inline">
-            <div class="form-group">
-              <label for="chopts_chartPeriod">Chart Period</label>
-              <div class="input-group">
-                <input id="chopts_chartPeriod" class="form-control" type="number" min="1" max="200" />
-                <span class="input-group-addon">ms</span>
-              </div>
-            </div>
+      <ul class="nav nav-tabs nav-justified">
+        <li class="active"><a data-toggle="tab" href="#chartsPanel"><span class="glyphicon glyphicon-stats" aria-hidden="true"></span>&nbsp;Charts</a></li>
+        <li><a data-toggle="tab" href="#impairmentsPanel"><span class="glyphicon glyphicon-hourglass" aria-hidden="true"></span>&nbsp;Impairments</a></li>
+        <li><a data-toggle="tab" href="#trapsPanel"><span class="glyphicon glyphicon-alert" aria-hidden="true"></span>&nbsp;Traps</a></li>
+        <li><a data-toggle="tab" href="#measurementsPanel"><span class="glyphicon glyphicon-scale" aria-hidden="true"></span>&nbsp;Measurements</a></li>
+      </ul>
 
-            <div class="form-group">
-              <label for="chopts_series">Chart Series</label>
-              <select id="chopts_series" class="form-control">
-                <option value="rxRate" selected="selected">Rx Bitrate</option>
-                <option value="txRate">Tx Bitrate</option>
-                <option value="rxDelta">Rx Bytes per Sample</option>
-                <option value="txDelta">Tx Bytes per Sample</option>
-                <option value="rxPacketRate">Rx Packet Rate</option>
-                <option value="txPacketRate">Tx Packet Rate</option>
-                <option value="rxPacketDelta">Rx Packets per Sample</option>
-                <option value="txPacketDelta">Tx Packets per Sample</option>
-              </select>
+      <div class="tab-content">
+        <div id="impairmentsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <form class="form-inline">
+                <div class="form-group">
+                  <label for="delay">Delay</label>
+                  <div class="input-group">
+                    <input id="delay" class="form-control" type="number" min="0" max="200" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="jitter">Delay variation</label>
+                  <div class="input-group">
+                    <input id="jitter" class="form-control" type="number" min="0" max="100" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="loss">Loss</label>
+                  <div class="input-group">
+                    <input id="loss" class="form-control" type="number" min="0" max="100" />
+                    <span class="input-group-addon">%</span>
+                  </div>
+                </div>
+                <div class="btn-group">
+                  <button id="set_netem_button" class="btn btn-primary">
+                    <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                  </button>
+                  <button id="clear_netem_button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Clear
+                  </button>
+                </div>
+                <br/>
+              </form>
             </div>
-            <button id="chopts_stop_start" class="btn btn-primary"> Pause/Run</button>
-            <button id="trigger_toggle" class="btn btn-default">Traps</button>
-            <button id="more_chopts_toggle" class="btn btn-info">
-              <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
-              Info
-            </button>
+            <div class="panel-footer"><em>Status:</em> <span id="netem_status"></span></div>
+          </div>
+        </div> <!-- tab pane -->
 
-            <!-- Traps -->
-            <div id="trigger_chopts" style="display:none">
+        <!-- Chart Parameters -->
+        <div id="chartsPanel" class="tab-pane fade in active">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <form class="form-inline">
+                <div class="form-group">
+                  <label for="chopts_chartPeriod">Chart Period</label>
+                  <div class="input-group">
+                    <input id="chopts_chartPeriod" class="form-control" type="number" min="1" max="200" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="chopts_series">Chart Series</label>
+                  <select id="chopts_series" class="form-control">
+                    <option value="rxRate" selected="selected">Rx Bitrate</option>
+                    <option value="txRate">Tx Bitrate</option>
+                    <option value="rxDelta">Rx Bytes per Sample</option>
+                    <option value="txDelta">Tx Bytes per Sample</option>
+                    <option value="rxPacketRate">Rx Packet Rate</option>
+                    <option value="txPacketRate">Tx Packet Rate</option>
+                    <option value="rxPacketDelta">Rx Packets per Sample</option>
+                    <option value="txPacketDelta">Tx Packets per Sample</option>
+                  </select>
+                </div>
+                <button id="chopts_stop_start" class="btn btn-primary"> Pause/Run</button>
+              </form>
+            </div>
+          </div> <!-- panel -->
+        </div> <!-- tab pane -->
+
+        <!-- Traps -->
+        <div id="trapsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
               <button id="trap_add" class="btn btn-default" data-toggle="modal" data-target="#add_trap_modal" type="button">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 Add Trap
@@ -173,11 +187,15 @@
                   -->
                 </tbody>
               </table>
-            </div>
-            <!-- End of Traps -->
+            </div> <!-- end panel body -->
+          </div> <!-- end panel -->
+        </div> <!-- end tab pane -->
+        <!-- End of Traps -->
 
-            <!-- More Chart Options -->
-            <div id="more_chopts" style="display:none">
+        <!-- More Chart Options -->
+        <div id="measurementsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
               <table class="table">
                 <tr>
                   <td>Sample Period</td>
@@ -188,9 +206,11 @@
                 </tr>
               </table>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+      </div> <!-- end tab-content -->
+
 
       <div id="chartContainer" style="height: 300px; width:100%;"></div>
       <div id="subGraphs" style="display:flex;">
