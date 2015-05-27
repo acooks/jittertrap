@@ -1,4 +1,7 @@
 /* jittertrap-websocket.js */
+
+/* global JT:true */
+
 JT = (function (my) {
   'use strict';
 

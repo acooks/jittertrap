@@ -1,4 +1,9 @@
 /* jittertrap-charting.js */
+
+/* global CanvasJS */
+/* global CBuffer */
+/* global JT:true */
+
 JT = (function (my) {
   'use strict';
   my.charts.series = {};

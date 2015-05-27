@@ -1,4 +1,5 @@
 /* jittertrap-utils.js */
+
 JT = (function (my) {
   'use strict';
   my.utils = {};
@@ -29,7 +30,7 @@ JT = (function (my) {
       }
     }
     return maxRunLen;
-  }
+  };
 
   var updateStats = function (series) {
 
@@ -173,7 +174,7 @@ JT = (function (my) {
     /* do expensive operations once per filtered sample/chartingPeriod. */
     if ((xVal % my.charts.params.plotPeriod === 0) ) {
       updateStats(series);
-      if (series == selectedSeries) {
+      if (series === selectedSeries) {
         updateHistogram(series);
       }
       updateFilteredSeries(series);

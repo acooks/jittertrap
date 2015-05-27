@@ -1,3 +1,8 @@
+/* jittertrap-traps.js */
+
+/* global Mustache */
+/* global JT:true */
+
 JT = (function (my) {
   'use strict';
   my.trapModule = {};

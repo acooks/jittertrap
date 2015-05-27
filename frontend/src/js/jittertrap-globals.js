@@ -2,10 +2,6 @@
  * ==== The JitterTrap Module ====
  */
 
-/* global CBuffer */
-/* global CanvasJS */
-/* global Mustache */
-
 /* global JT: true */
 JT = {};
 

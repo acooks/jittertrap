@@ -1,4 +1,7 @@
 /* jittertrap-measure.js */
+
+/* global JT: true */
+
 JT = (function (my) {
   'use strict';
   my.measurementsModule = {};
