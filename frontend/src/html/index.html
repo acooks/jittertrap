@@ -196,12 +196,58 @@
         <div id="measurementsPanel" class="tab-pane fade">
           <div class="panel panel-default">
             <div class="panel-body">
-              <table class="table">
+              <table class="table table-striped table-hover table-condensed">
                 <tr>
-                  <td>Sample Period</td>
+                  <td></td>
+                  <th>Rx</th>
+                  <th>Tx</th>
+                </tr>
+                <tr>
+                  <th>Throughput (min)</th>
+                  <td><span id="jt-measure-tput-min-rx"></span></td>
+                  <td><span id="jt-measure-tput-min-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Throughput (max)</th>
+                  <td><span id="jt-measure-tput-max-rx"></span></td>
+                  <td><span id="jt-measure-tput-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Throughput (mean)</th>
+                  <td><span id="jt-measure-tput-mean-rx"></span></td>
+                  <td><span id="jt-measure-tput-mean-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Packet Rate (max)</th>
+                  <td><span id="jt-measure-pktRate-max-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Packet Rate (min)</th>
+                  <td><span id="jt-measure-pktRate-min-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-min-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Packet Rate (mean)</th>
+                  <td><span id="jt-measure-pktRate-mean-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-mean-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Zero Run (max)</th>
+                  <td><span id="jt-measure-zRun-max-rx"></span></td>
+                  <td><span id="jt-measure-zRun-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th>Zero Run (mean)</th>
+                  <td><span id="jt-measure-zRun-mean-rx"></span></td>
+                  <td><span id="jt-measure-zRun-mean-tx"></span></td>
+                </tr>
+                <tr><td colspan=3>&nbsp;</td></tr>
+                <tr>
+                  <th>Sample Period</th>
                   <td><span id="sample_period"></span></td>
                 </tr><tr>
-                  <td>Data Samples</td>
+                  <th>Data Samples</th>
                   <td><span id="chopts_dataLen"></span></td>
                 </tr>
               </table>
