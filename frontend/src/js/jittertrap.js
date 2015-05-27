@@ -14,7 +14,7 @@ $(document).ready(function() {
   };
 
   // Initialize Chart Options
-  $("#chopts_dataLen").html(JT.rawData.dataLength);
+  $("#jt-measure-datalength").html(JT.rawData.dataLength);
   $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
 
   // Initialize WebSockets
@@ -40,7 +40,7 @@ $(document).ready(function() {
     }
 
     JT.rawData.dataLength = Math.floor(JT.rawData.dataLengthMultiplier * JT.charts.params.plotPeriod);
-    $("#chopts_dataLen").html(JT.rawData.dataLength);
+    $("#jt-measure-datalength").html(JT.rawData.dataLength);
     JT.charts.resizeDataBufs(JT.rawData.dataLength);
     JT.charts.resetChart();
   });
