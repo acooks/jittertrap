@@ -44,7 +44,7 @@ Fetch:
 
 Build:  
 `$ cd jittertrap`  
-`$ make WEB_SERVER_DOCUMENT_ROOT=$(pwd)/static_content`
+`$ make WEB_SERVER_DOCUMENT_ROOT=$(pwd)/frontend/output`
 
 Run:  
-`$ sudo src/jittertrap`
+`$ sudo backend/jittertrap`
