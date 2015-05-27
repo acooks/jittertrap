@@ -150,10 +150,11 @@ JT = (function (my) {
     series.data.push(yVal);
 
     /* do expensive operations once per filtered sample/chartingPeriod. */
-    if ((xVal % my.charts.params.plotPeriod === 0) &&
-        (series === selectedSeries)) {
+    if ((xVal % my.charts.params.plotPeriod === 0) ) {
       updateStats(series);
-      updateHistogram(series);
+      if (series == selectedSeries) {
+        updateHistogram(series);
+      }
       updateFilteredSeries(series);
     }
   };
