@@ -13,6 +13,24 @@ JT = (function (my) {
     return count * (1000000.0 / my.rawData.samplePeriod);
   };
 
+  var maxZRun = function (series) {
+    if (series.data.size === 0) {
+      return;
+    }
+    var maxRunLen = 0;
+    var runLen = 0;
+
+    for (var i = series.data.size - 1; i >= 0 ; i--) {
+      if (series.data.get(i) === 0) {
+        runLen++;
+        maxRunLen = (maxRunLen > runLen) ? maxRunLen : runLen;
+      } else {
+        runLen = 0;
+      }
+    }
+    return maxRunLen;
+  }
+
   var updateStats = function (series) {
 
     if (! series.filteredData || series.filteredData.length === 0) {
@@ -45,6 +63,9 @@ JT = (function (my) {
       series.basicStats.push({x:3, y:mean, label:"Mean"});
       series.basicStats.push({x:4, y:maxY, label:"Max"});
     }
+
+    var maxZ = maxZRun(series);
+    JT.measurementsModule.updateSeries(series.name, minY, maxY, mean, maxZ);
   };
 
   var updateHistogram = function(series) {

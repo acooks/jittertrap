@@ -55,33 +55,6 @@ JT = (function (my) {
 
 
 /*
- * ==== Measurements ====
- */
-JT = (function (my) {
-  'use strict';
-
-  my.measurements = {
-
-    /* Throughput */
-    minTput:  { tx: 999999, rx: 99999 },
-    maxTput:  { tx: 0, rx: 0 },
-    meanTput: { tx: 0, rx: 0 },
-
-    /* Packet Rate */
-    minPktRate:  { tx: 99999, rx: 99999 },
-    maxPktRate:  { tx: 0, rx: 0 },
-    meanPktRate: { tx: 0, rx: 0 },
-
-    /* Zero Runs */
-    maxZRun:  { tx: 0, rx: 0 },
-    meanZRun: { tx: 0, rx: 0 }
-  };
-
-  return my;
-}(JT));
-
-
-/*
  * ==== Charts ====
  */
 JT = (function (my) {
