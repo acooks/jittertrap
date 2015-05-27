@@ -63,8 +63,8 @@ JT = (function (my) {
 
   var handleMsgSamplePeriod = function(period) {
     my.rawData.samplePeriod = period;
-    $("#sample_period").html(period / 1000.0 + "ms");
-    console.log("sample_period: " + period);
+    $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
+    console.log("sample period: " + period);
     my.charts.setUpdatePeriod();
     my.charts.clearChart();
   };
