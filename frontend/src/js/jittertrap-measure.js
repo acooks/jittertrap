@@ -8,31 +8,12 @@ JT = (function (my) {
   var measurements = {};
 
   measurements.rxRate = {};
-  measurements.rxRate.min = 9999999;
-  measurements.rxRate.max = 0;
-  measurements.rxRate.mean = 9999999;
-
   measurements.txRate = {};
-  measurements.txRate.min = 9999999;
-  measurements.txRate.max = 0;
-  measurements.txRate.mean = 9999999;
-
   measurements.rxPacketRate = {};
-  measurements.rxPacketRate.min = 9999999;
-  measurements.rxPacketRate.max = 0;
-  measurements.rxPacketRate.mean = 9999999;
-
   measurements.txPacketRate = {};
-  measurements.txPacketRate.min = 9999999;
-  measurements.txPacketRate.max = 0;
-  measurements.txPacketRate.mean = 9999999;
-
   measurements.rxZRun = {};
-  measurements.rxZRun.max = 0;
-  measurements.rxZRun.mean = "TODO";
-
   measurements.txZRun = {};
-  measurements.txZRun.max = 0;
+  measurements.rxZRun.mean = "TODO";
   measurements.txZRun.mean = "TODO";
 
   var updateDOM = function () {

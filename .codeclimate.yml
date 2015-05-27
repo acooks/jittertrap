@@ -4,7 +4,6 @@ languages:
     Python: false
     PHP: false
 
-# We only care about jittertrap-concat.js
 exclude_paths:
  - frontend/deps/*
  
