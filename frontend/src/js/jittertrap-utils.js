@@ -19,17 +19,23 @@ JT = (function (my) {
       return;
     }
     var maxRunLen = 0;
-    var runLen = 0;
+    var meanRunLen = 0;
+    var runLengths = [ 0 ];
+    var i, j = 0;
 
-    for (var i = series.data.size - 1; i >= 0 ; i--) {
+    for (i = series.data.size - 1; i >= 0 ; i--) {
       if (series.data.get(i) === 0) {
-        runLen++;
-        maxRunLen = (maxRunLen > runLen) ? maxRunLen : runLen;
-      } else {
-        runLen = 0;
+        runLengths[j]++;
+        maxRunLen = (maxRunLen > runLengths[j]) ? maxRunLen : runLengths[j];
+      } else if (runLengths[j] > 0) {
+        meanRunLen += runLengths[j];
+        j++;
+        runLengths[j] = 0;
       }
     }
-    return maxRunLen;
+    meanRunLen /= runLengths.length;
+
+    return { max: maxRunLen, mean: meanRunLen } ;
   };
 
   var updateStats = function (series) {

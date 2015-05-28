@@ -11,10 +11,6 @@ JT = (function (my) {
   measurements.txRate = {};
   measurements.rxPacketRate = {};
   measurements.txPacketRate = {};
-  measurements.rxZRun = {};
-  measurements.txZRun = {};
-  measurements.rxZRun.mean = "TODO";
-  measurements.txZRun.mean = "TODO";
 
   var updateTputDOM = function () {
     $("#jt-measure-tput-min-rx").html(measurements.rxRate.min);
@@ -37,12 +33,11 @@ JT = (function (my) {
   };
 
   var updateZRunDOM = function () {
-    $("#jt-measure-zRun-max-rx").html(measurements.rxZRun.max);
-    $("#jt-measure-zRun-mean-rx").html(measurements.rxZRun.mean);
-
     $("#jt-measure-zRun-max-rx").html(measurements.rxRate.maxZ);
+    $("#jt-measure-zRun-mean-rx").html(measurements.rxRate.meanZ);
+
     $("#jt-measure-zRun-max-tx").html(measurements.txRate.maxZ);
-    $("#jt-measure-zRun-mean-tx").html(measurements.txZRun.mean);
+    $("#jt-measure-zRun-mean-tx").html(measurements.txRate.meanZ);
   };
 
   var updateDOM = function () {
@@ -53,7 +48,7 @@ JT = (function (my) {
 
   var drawIntervalID = setInterval(updateDOM, 100);
 
-  my.measurementsModule.updateSeries = function (series, min, max, mean, maxZ) {
+  my.measurementsModule.updateSeries = function (series, min, max, mean, zrun) {
 
     if (!measurements[series]) {
       measurements[series] = {};
@@ -61,7 +56,8 @@ JT = (function (my) {
     measurements[series].min = min.toFixed(2);
     measurements[series].max = max.toFixed(2);
     measurements[series].mean = mean.toFixed(2);
-    measurements[series].maxZ = maxZ;
+    measurements[series].maxZ = zrun.max;
+    measurements[series].meanZ = zrun.mean.toFixed(2);
   };
 
   return my;
