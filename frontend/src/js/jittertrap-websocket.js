@@ -17,9 +17,10 @@ JT = (function (my) {
    * i.e. Referred to in websocket.onmessage
    */
 
-  var handleMsgUpdateStats = function (stats, seriesName) {
+  var handleMsgUpdateStats = function (stats) {
     var s = my.charts.series;
-    var sSeries = s[seriesName];
+    var visibleSeries = $("#chopts_series option:selected").val();
+    var sSeries = s[visibleSeries];
     var len = stats.length;
     var x = my.rawData.xVal; /* careful! copy, not alias */
     for (var i = 0; i < len; i++) {
@@ -141,8 +142,7 @@ JT = (function (my) {
       var msg = JSON.parse(evt.data);
 
       if (msg.stats && msg.stats.iface === selectedIface) {
-        var visibleSeries = $("#chopts_series option:selected").val();
-        handleMsgUpdateStats(msg.stats.s, visibleSeries);
+        handleMsgUpdateStats(msg.stats.s);
       } else if (msg.dev_select) {
         handleMsgDevSelect(msg.dev_select);
       } else if (msg.ifaces) {
