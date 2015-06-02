@@ -168,7 +168,7 @@ static char *list_ifaces()
 	return msg;
 }
 
-static void handle_ws_list_ifaces(struct ns_connection *nc)
+static void ws_send_iface_list(struct ns_connection *nc)
 {
 	struct ns_connection *c;
 	char *buf = list_ifaces();
@@ -356,9 +356,7 @@ static void handle_ws_message(struct ns_connection *nc,
 	const char *key = "msg";
 	tok = find_json_token(arr, key);
 	if (tok) {
-		if (match_msg_type(tok, "list_ifaces")) {
-			handle_ws_list_ifaces(nc);
-		} else if (match_msg_type(tok, "dev_select")) {
+		if (match_msg_type(tok, "dev_select")) {
 			tok = find_json_token(arr, "dev");
 			handle_ws_dev_select(tok);
 		} else if (match_msg_type(tok, "get_netem")) {
@@ -422,6 +420,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 		break;
 	case NS_WEBSOCKET_HANDSHAKE_DONE:
 		print_peer_name(nc);
+		ws_send_iface_list(nc);
 		break;
 	case NS_WEBSOCKET_FRAME:
 		handle_ws_message(nc, wm);

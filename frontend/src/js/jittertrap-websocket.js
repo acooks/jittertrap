@@ -159,7 +159,6 @@ JT = (function (my) {
   /**
    * Websocket Sending Functions
    */
-  my.ws.list_ifaces = list_ifaces;
   my.ws.dev_select = dev_select;
   my.ws.get_netem = get_netem;
   my.ws.set_netem = set_netem;
