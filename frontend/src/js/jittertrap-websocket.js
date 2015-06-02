@@ -89,15 +89,6 @@ JT = (function (my) {
     var msg = JSON.stringify({'msg':'dev_select',
                               'dev': $("#dev_select").val()});
     sock.send(msg);
-    get_netem();
-  };
-
-  var get_netem = function() {
-    var msg = JSON.stringify(
-      {'msg': 'get_netem', 
-       'dev': $("#dev_select").val()
-      });
-    sock.send(msg);
   };
 
   var set_netem = function() {
@@ -166,7 +157,6 @@ JT = (function (my) {
    * Websocket Sending Functions
    */
   my.ws.dev_select = dev_select;
-  my.ws.get_netem = get_netem;
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
   my.ws.get_sample_period = get_sample_period;
