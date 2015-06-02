@@ -14,8 +14,11 @@ JT = (function (my) {
     return count * (1000000.0 / my.rawData.samplePeriod);
   };
 
-  var maxZRun = function (series) {
-    if (series.data.size === 0) {
+  /* Takes a CBuffer and counts the consecutive 0 elements.
+   * Returns an object with max and mean counts.
+   */
+  var maxZRun = function (data) {
+    if (data.size === 0) {
       return;
     }
     var maxRunLen = 0;
@@ -23,8 +26,8 @@ JT = (function (my) {
     var runLengths = [ 0 ];
     var i, j = 0;
 
-    for (i = series.data.size - 1; i >= 0 ; i--) {
-      if (series.data.get(i) === 0) {
+    for (i = data.size - 1; i >= 0 ; i--) {
+      if (data.get(i) === 0) {
         runLengths[j]++;
         maxRunLen = (maxRunLen > runLengths[j]) ? maxRunLen : runLengths[j];
       } else if (runLengths[j] > 0) {
@@ -71,7 +74,7 @@ JT = (function (my) {
       series.basicStats.push({x:4, y:maxY, label:"Max"});
     }
 
-    var maxZ = maxZRun(series);
+    var maxZ = maxZRun(series.data);
     JT.measurementsModule.updateSeries(series.name, minY, maxY, mean, maxZ);
   };
 
