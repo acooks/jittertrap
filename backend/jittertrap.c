@@ -192,6 +192,32 @@ static void ws_send_dev_select(struct ns_connection *nc)
 	}
 }
 
+static void ws_send_netem(struct ns_connection *nc, char *iface)
+{
+	struct ns_connection *c;
+	struct netem_params p;
+
+	printf("get netem for iface: [%s]\n", iface);
+	memcpy(p.iface, iface, MAX_IFACE_LEN);
+	if (0 != netem_get_params(p.iface, &p)) {
+		fprintf(stderr, "couldn't get netem parameters.\n");
+		p.delay = -1;
+		p.jitter = -1;
+		p.loss = -1;
+	}
+	char *template =
+	    "{\"netem_params\":"
+	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
+
+	char msg[MAX_JSON_MSG_LEN] = { 0 };
+
+	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
+	printf("%s\n", msg);
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
+}
+
 static void handle_ws_dev_select(struct json_token *tok)
 {
 	char iface[MAX_IFACE_LEN];
@@ -209,37 +235,22 @@ static void handle_ws_dev_select(struct json_token *tok)
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
 	stats_monitor_iface(iface);
 	ws_send_dev_select(nc);
+	ws_send_netem(nc, iface);
 }
 
 static void handle_ws_get_netem(struct ns_connection *nc,
 				struct json_token *tok)
 {
-	struct ns_connection *c;
-	struct netem_params p;
+	char iface[MAX_IFACE_LEN];
 
 	if (tok->len >= MAX_IFACE_LEN) {
 		fprintf(stderr, "invalid iface name.");
 		return;
 	}
-	memcpy(p.iface, tok->ptr, tok->len);
-	p.iface[tok->len] = 0;
-	printf("get netem for iface: [%s]\n", p.iface);
-	if (0 != netem_get_params(p.iface, &p)) {
-		fprintf(stderr, "couldn't get netem parameters.\n");
-		p.delay = -1;
-		p.jitter = -1;
-		p.loss = -1;
-	}
+	memcpy(iface, tok->ptr, tok->len);
+	iface[tok->len] = 0;
 
-	char *template =
-	    "{\"netem_params\":"
-	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
-	char msg[200] = { 0 };
-	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
-	printf("%s\n", msg);
-	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
-		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
-	}
+	ws_send_netem(nc, iface);
 }
 
 static bool parse_int(char *str, long *l)
@@ -437,6 +448,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 		print_peer_name(nc);
 		ws_send_iface_list(nc);
 		ws_send_dev_select(nc);
+		ws_send_netem(nc, g_selected_iface);
 		break;
 	case NS_WEBSOCKET_FRAME:
 		handle_ws_message(nc, wm);
