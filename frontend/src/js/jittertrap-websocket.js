@@ -7,6 +7,8 @@ JT = (function (my) {
 
   my.ws = {};
 
+  var selectedIface = {}; // set on dev_select message
+
   /* the websocket object, see my.ws.init() */
   var sock = {};
 
@@ -41,6 +43,7 @@ JT = (function (my) {
 
   var handleMsgDevSelect = function(iface) {
     $('#dev_select').val(iface);
+    selectedIface = $('#dev_select').val();
     JT.charts.clearChart();
   };
 
@@ -136,7 +139,6 @@ JT = (function (my) {
 
     sock.onmessage = function(evt) {
       var msg = JSON.parse(evt.data);
-      var selectedIface = $('#dev_select').val();
 
       if (msg.stats && msg.stats.iface === selectedIface) {
         var visibleSeries = $("#chopts_series option:selected").val();
