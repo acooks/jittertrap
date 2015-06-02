@@ -77,7 +77,7 @@ static char *json_arr_alloc()
 }
 
 /* str MUST be a malloc'ed pointer */
-char * quote_string(char *str)
+static char * quote_string(char *str)
 {
 	char *s;
 	assert(str);
