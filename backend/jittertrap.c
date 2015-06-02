@@ -24,6 +24,7 @@ static pthread_mutex_t unsent_frame_count_mutex;
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
 
+char g_selected_iface[MAX_IFACE_LEN];
 
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
 static struct ns_serve_http_opts s_http_server_opts = {
@@ -179,6 +180,18 @@ static void ws_send_iface_list(struct ns_connection *nc)
 	free(buf);
 }
 
+static void ws_send_dev_select(struct ns_connection *nc)
+{
+	struct ns_connection *c;
+	char msg[MAX_JSON_MSG_LEN] = { 0 };
+	char *template = "{\"dev_select\": \"%s\"}";
+	snprintf(msg, MAX_JSON_MSG_LEN, template, g_selected_iface);
+
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
+}
+
 static void handle_ws_dev_select(struct json_token *tok)
 {
 	char iface[MAX_IFACE_LEN];
@@ -193,7 +206,9 @@ static void handle_ws_dev_select(struct json_token *tok)
 		return;
 	}
 	printf("switching to iface: [%s]\n", iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
 	stats_monitor_iface(iface);
+	ws_send_dev_select(nc);
 }
 
 static void handle_ws_get_netem(struct ns_connection *nc,
@@ -421,6 +436,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 	case NS_WEBSOCKET_HANDSHAKE_DONE:
 		print_peer_name(nc);
 		ws_send_iface_list(nc);
+		ws_send_dev_select(nc);
 		break;
 	case NS_WEBSOCKET_FRAME:
 		handle_ws_message(nc, wm);

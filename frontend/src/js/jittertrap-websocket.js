@@ -39,6 +39,11 @@ JT = (function (my) {
 
   };
 
+  var handleMsgDevSelect = function(iface) {
+    $('#dev_select').val(iface);
+    JT.charts.clearChart();
+  };
+
   var handleMsgIfaces = function(ifaces) {
     $('#dev_select').empty();
     $.each(ifaces,
@@ -47,7 +52,6 @@ JT = (function (my) {
         $('#dev_select').append(option);
       }
     );
-    dev_select();
   };
 
   var handleMsgNetemParams = function(params) {
@@ -146,6 +150,8 @@ JT = (function (my) {
       if (msg.stats && msg.stats.iface === selectedIface) {
         var visibleSeries = $("#chopts_series option:selected").val();
         handleMsgUpdateStats(msg.stats.s, visibleSeries);
+      } else if (msg.dev_select) {
+        handleMsgDevSelect(msg.dev_select);
       } else if (msg.ifaces) {
         handleMsgIfaces(msg.ifaces);
       } else if (msg.netem_params) {
