@@ -63,7 +63,7 @@ static bool match_msg_type(const struct json_token *tok, const char *r)
 	return (strncmp(tok->ptr, r, tok->len) == 0);
 }
 
-/* json_arr_alocc: must free returned memory */
+/* json_arr_alloc: must free returned memory */
 static char *json_arr_alloc()
 {
 	char *buf;
