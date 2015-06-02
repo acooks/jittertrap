@@ -112,6 +112,27 @@ static void json_arr_append(char **arr, const char *const word)
 	(*arr)[buf_len + word_len] = 0;
 }
 
+static void get_first_iface(char *iface)
+{
+	char **ifaces = netem_list_ifaces();
+	char **i = ifaces;
+	assert(NULL != i);
+	if (NULL == *i) {
+		fprintf(stderr,
+		        "No interfaces available. "
+		        "Allowed interfaces (compile-time): %s\n",
+		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+	}
+	snprintf(iface, MAX_IFACE_LEN, "%s", *i);
+
+	while (*i) {
+		free(*i);
+		i++;
+	}
+
+	free(ifaces);
+}
+
 /* list_ifaces: must free returned memory */
 static char *list_ifaces()
 {
@@ -511,7 +532,10 @@ int main()
 		return -1;
 	}
 
-	stats_monitor_iface("lo");
+	char iface[MAX_IFACE_LEN];
+	get_first_iface(iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
+	stats_monitor_iface(iface);
 	stats_thread_init(stats_event_handler);
 
 	for (;;) {
