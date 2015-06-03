@@ -13,31 +13,6 @@ JT = (function (my) {
   my.rawData = {};
   var rd = my.rawData;
 
-  var samplePeriod = 1000;
-
-  /* raw data sample period; microseconds; fixed. */
-  rd.samplePeriod = function(sp) {
-    if (sp) {
-      console.log("sample period set to " + sp + " microseconds");
-      samplePeriod = sp;
-    }
-    return samplePeriod;
-  };
-
-  /* scaling factor for number of raw data points */
-  var dataLengthMultiplier = 300;
-
-  /* number of raw data samples. */
-  var sampleCount = 18000;
-
-  rd.sampleCount = function (plotPeriod) {
-    if (plotPeriod) {
-      sampleCount = Math.floor(dataLengthMultiplier * plotPeriod);
-    }
-    return sampleCount;
-  };
-
-
   rd.byteDelta = {
     tx: [],
     rx: []
