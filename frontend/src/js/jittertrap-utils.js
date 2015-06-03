@@ -116,9 +116,9 @@ JT = (function (my) {
 
     /* write the histogram x,y data */
     for (i = 0; i < binCnt; i++) {
-      var xVal = Math.round(i * (maxY / binCnt));
-      xVal += Math.round(minY);  /* shift x to match original y range */
-      series.histData.push({x: xVal, y: normBins[i], label: xVal});
+      var x = Math.round(i * (maxY / binCnt));
+      x += Math.round(minY);  /* shift x to match original y range */
+      series.histData.push({x: x, y: normBins[i], label: x});
     }
 
   };
