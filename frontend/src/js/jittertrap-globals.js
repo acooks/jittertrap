@@ -20,9 +20,9 @@ JT = (function (my) {
   rd.dataLengthMultiplier = 300;
 
   /* number of raw data samples.
-   * dataLength = chartParams.plotPeriod * dataLengthMultiplier
+   * sampleCount = chartParams.plotPeriod * dataLengthMultiplier
    */
-  rd.dataLength = 18000;
+  rd.sampleCount = 18000;
 
   rd.byteDelta = {
     tx: [],

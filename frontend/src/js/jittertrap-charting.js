@@ -154,7 +154,7 @@ JT = (function (my) {
   var clearChart = function() {
 
     var clearSeries = function (s) {
-      s.data = new CBuffer(my.rawData.dataLength);
+      s.data = new CBuffer(my.rawData.sampleCount);
       s.filteredData = [];
       s.histData = [];
     };

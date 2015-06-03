@@ -217,7 +217,7 @@ JT = (function (my) {
     for (var i = 0; i < len; i++) {
       updateData(stats[i], selectedSeries);
       xVal++;
-      xVal = xVal % my.rawData.dataLength;
+      xVal = xVal % my.rawData.sampleCount;
     }
 
     my.trapModule.checkTriggers();
