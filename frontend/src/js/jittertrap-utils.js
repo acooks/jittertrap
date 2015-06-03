@@ -177,7 +177,13 @@ JT = (function (my) {
 
   };
 
-  var updateSeries = function (series, xVal, yVal, selectedSeries) {
+  var xVal = 0;
+
+  my.utils.clearData = function () {
+    xVal = 0;
+  };
+
+  var updateSeries = function (series, yVal, selectedSeries) {
     series.data.push(yVal);
 
     /* do expensive operations once per filtered sample/chartingPeriod. */
@@ -190,16 +196,16 @@ JT = (function (my) {
     }
   };
 
-  var updateData = function (x, d, sSeries) {
+  var updateData = function (d, sSeries) {
     var s = my.charts.series;
-    updateSeries(s.txDelta, x, d.txDelta, sSeries);
-    updateSeries(s.rxDelta, x, d.rxDelta, sSeries);
-    updateSeries(s.txRate, x, byteCountToKbpsRate(d.txDelta), sSeries);
-    updateSeries(s.rxRate, x, byteCountToKbpsRate(d.rxDelta), sSeries);
-    updateSeries(s.txPacketRate, x, packetDeltaToRate(d.txPktDelta), sSeries);
-    updateSeries(s.rxPacketRate, x, packetDeltaToRate(d.rxPktDelta), sSeries);
-    updateSeries(s.txPacketDelta, x, d.txPktDelta, sSeries);
-    updateSeries(s.rxPacketDelta, x, d.rxPktDelta, sSeries);
+    updateSeries(s.txDelta, d.txDelta, sSeries);
+    updateSeries(s.rxDelta, d.rxDelta, sSeries);
+    updateSeries(s.txRate, byteCountToKbpsRate(d.txDelta), sSeries);
+    updateSeries(s.rxRate, byteCountToKbpsRate(d.rxDelta), sSeries);
+    updateSeries(s.txPacketRate, packetDeltaToRate(d.txPktDelta), sSeries);
+    updateSeries(s.rxPacketRate, packetDeltaToRate(d.rxPktDelta), sSeries);
+    updateSeries(s.txPacketDelta, d.txPktDelta, sSeries);
+    updateSeries(s.rxPacketDelta, d.rxPktDelta, sSeries);
   };
 
   my.utils.processDataMsg = function (stats) {
@@ -208,13 +214,11 @@ JT = (function (my) {
     var selectedSeries = s[visibleSeries];
 
     var len = stats.length;
-    var x = my.rawData.xVal; /* careful! copy, not alias */
     for (var i = 0; i < len; i++) {
-      updateData(x, stats[i], selectedSeries);
-      x++;
-      x = x % my.rawData.dataLength;
+      updateData(stats[i], selectedSeries);
+      xVal++;
+      xVal = xVal % my.rawData.dataLength;
     }
-    my.rawData.xVal = x; /* update global, because x is local, not a pointer */
 
     my.trapModule.checkTriggers();
 

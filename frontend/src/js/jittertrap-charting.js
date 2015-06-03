@@ -171,7 +171,7 @@ JT = (function (my) {
     clearSeries(s.rxPacketDelta);
 
     resetChart();
-    my.rawData.xVal = 0;
+    my.utils.clearData();
   };
 
   var renderCount = 0;

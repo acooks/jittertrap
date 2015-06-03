@@ -13,8 +13,6 @@ JT = (function (my) {
   my.rawData = {};
   var rd = my.rawData;
 
-  rd.xVal = 0;
-
   /* raw data sample period; microseconds; fixed. */
   rd.samplePeriod = 1000;
 
