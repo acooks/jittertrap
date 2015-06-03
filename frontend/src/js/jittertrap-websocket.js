@@ -18,28 +18,7 @@ JT = (function (my) {
    */
 
   var handleMsgUpdateStats = function (stats) {
-    var s = my.charts.series;
-    var visibleSeries = $("#chopts_series option:selected").val();
-    var sSeries = s[visibleSeries];
-    var len = stats.length;
-    var x = my.rawData.xVal; /* careful! copy, not alias */
-    for (var i = 0; i < len; i++) {
-      var d = stats[i];
-      my.utils.updateSeries(s.txDelta, x, d.txDelta, sSeries);
-      my.utils.updateSeries(s.rxDelta, x, d.rxDelta, sSeries);
-      my.utils.updateSeries(s.txRate, x, my.utils.byteCountToKbpsRate(d.txDelta), sSeries);
-      my.utils.updateSeries(s.rxRate, x, my.utils.byteCountToKbpsRate(d.rxDelta), sSeries);
-      my.utils.updateSeries(s.txPacketRate, x, my.utils.packetDeltaToRate(d.txPktDelta), sSeries);
-      my.utils.updateSeries(s.rxPacketRate, x, my.utils.packetDeltaToRate(d.rxPktDelta), sSeries);
-      my.utils.updateSeries(s.txPacketDelta, x, d.txPktDelta, sSeries);
-      my.utils.updateSeries(s.rxPacketDelta, x, d.rxPktDelta, sSeries);
-      x++;
-      x = x % my.rawData.dataLength;
-    }
-    my.rawData.xVal = x; /* update global, because x is local, not a pointer */
-
-    my.trapModule.checkTriggers();
-
+    JT.utils.processDataMsg(stats);
   };
 
   var handleMsgDevSelect = function(iface) {

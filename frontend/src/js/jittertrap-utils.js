@@ -5,12 +5,12 @@ JT = (function (my) {
   my.utils = {};
 
   /* count must be bytes, samplePeriod is microseconds */
-  my.utils.byteCountToKbpsRate = function(count) {
+  var byteCountToKbpsRate = function(count) {
     var rate = count / my.rawData.samplePeriod * 8000.0;
     return rate;
   };
 
-  my.utils.packetDeltaToRate = function(count) {
+  var packetDeltaToRate = function(count) {
     return count * (1000000.0 / my.rawData.samplePeriod);
   };
 
@@ -177,7 +177,7 @@ JT = (function (my) {
 
   };
 
-  my.utils.updateSeries = function (series, xVal, yVal, selectedSeries) {
+  var updateSeries = function (series, xVal, yVal, selectedSeries) {
     series.data.push(yVal);
 
     /* do expensive operations once per filtered sample/chartingPeriod. */
@@ -188,6 +188,36 @@ JT = (function (my) {
       }
       updateFilteredSeries(series);
     }
+  };
+
+  var updateData = function (x, d, sSeries) {
+    var s = my.charts.series;
+    updateSeries(s.txDelta, x, d.txDelta, sSeries);
+    updateSeries(s.rxDelta, x, d.rxDelta, sSeries);
+    updateSeries(s.txRate, x, byteCountToKbpsRate(d.txDelta), sSeries);
+    updateSeries(s.rxRate, x, byteCountToKbpsRate(d.rxDelta), sSeries);
+    updateSeries(s.txPacketRate, x, packetDeltaToRate(d.txPktDelta), sSeries);
+    updateSeries(s.rxPacketRate, x, packetDeltaToRate(d.rxPktDelta), sSeries);
+    updateSeries(s.txPacketDelta, x, d.txPktDelta, sSeries);
+    updateSeries(s.rxPacketDelta, x, d.rxPktDelta, sSeries);
+  };
+
+  my.utils.processDataMsg = function (stats) {
+    var visibleSeries = $("#chopts_series option:selected").val();
+    var s = my.charts.series;
+    var selectedSeries = s[visibleSeries];
+
+    var len = stats.length;
+    var x = my.rawData.xVal; /* careful! copy, not alias */
+    for (var i = 0; i < len; i++) {
+      updateData(x, stats[i], selectedSeries);
+      x++;
+      x = x % my.rawData.dataLength;
+    }
+    my.rawData.xVal = x; /* update global, because x is local, not a pointer */
+
+    my.trapModule.checkTriggers();
+
   };
 
   return my;
