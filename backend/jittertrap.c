@@ -348,33 +348,6 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 	handle_ws_get_netem(nc, t_dev);
 }
 
-static void handle_ws_get_period(struct ns_connection *nc)
-{
-	struct ns_connection *c;
-	char *template = "{\"sample_period\":%d}";
-	char msg[200] = { 0 };
-	sprintf(msg, template, get_sample_period());
-	printf("%s\n", msg);
-	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
-		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
-	}
-}
-
-static void handle_ws_set_period(struct ns_connection *nc,
-				 struct json_token *tok)
-{
-	long period;
-	char s[MAX_JSON_TOKEN_LEN];
-	json_token_to_string(tok, &s, MAX_JSON_TOKEN_LEN);
-        if (!parse_int(s, &period)) {
-                fprintf(stderr, "couldn't parse period\n");
-                return;
-        }
-        printf("setting sample period: %ld, ", period);
-	set_sample_period(period);
-	handle_ws_get_period(nc);
-}
-
 static void handle_ws_message(struct ns_connection *nc,
 			      const struct websocket_message *m)
 {
@@ -407,11 +380,6 @@ static void handle_ws_message(struct ns_connection *nc,
 					    find_json_token(arr, "delay"),
 					    find_json_token(arr, "jitter"),
 					    find_json_token(arr, "loss"));
-		} else if (match_msg_type(tok, "set_sample_period")) {
-			tok = find_json_token(arr, "period");
-			handle_ws_set_period(nc, tok);
-		} else if (match_msg_type(tok, "get_sample_period")) {
-			handle_ws_get_period(nc);
 		}
 	}
 

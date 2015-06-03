@@ -94,11 +94,6 @@ JT = (function (my) {
     return false;
   };
 
-  var get_sample_period = function() {
-    var msg = JSON.stringify({'msg': 'get_sample_period'});
-    sock.send(msg);
-  };
-
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri);
@@ -106,7 +101,6 @@ JT = (function (my) {
     sock.onopen = function(evt) {
       sock.send("open!");
       list_ifaces();
-      get_sample_period();
     };
 
     sock.onclose = function(evt) {
@@ -140,7 +134,6 @@ JT = (function (my) {
   my.ws.dev_select = dev_select;
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
-  my.ws.get_sample_period = get_sample_period;
 
   return my;
 }(JT));
