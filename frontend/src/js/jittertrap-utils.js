@@ -6,12 +6,12 @@ JT = (function (my) {
 
   /* count must be bytes, samplePeriod is microseconds */
   var byteCountToKbpsRate = function(count) {
-    var rate = count / my.rawData.samplePeriod * 8000.0;
+    var rate = count / my.rawData.samplePeriod() * 8000.0;
     return rate;
   };
 
   var packetDeltaToRate = function(count) {
-    return count * (1000000.0 / my.rawData.samplePeriod);
+    return count * (1000000.0 / my.rawData.samplePeriod());
   };
 
   /* Takes a CBuffer and counts the consecutive 0 elements.
@@ -126,7 +126,7 @@ JT = (function (my) {
   var updateFilteredSeries = function (series) {
 
     /* FIXME: float vs integer is important here! */
-    var decimationFactor = Math.floor(my.charts.params.plotPeriod / (my.rawData.samplePeriod / 1000.0));
+    var decimationFactor = Math.floor(my.charts.params.plotPeriod / (my.rawData.samplePeriod() / 1000.0));
     var fseriesLength = Math.floor(series.data.size / decimationFactor);
 
     // the downsampled data has to be scaled.
@@ -217,7 +217,7 @@ JT = (function (my) {
     for (var i = 0; i < len; i++) {
       updateData(stats[i], selectedSeries);
       xVal++;
-      xVal = xVal % my.rawData.sampleCount;
+      xVal = xVal % my.rawData.sampleCount();
     }
 
     my.trapModule.checkTriggers();
