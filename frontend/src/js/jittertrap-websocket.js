@@ -100,7 +100,6 @@ JT = (function (my) {
 
     sock.onopen = function(evt) {
       sock.send("open!");
-      list_ifaces();
     };
 
     sock.onclose = function(evt) {
