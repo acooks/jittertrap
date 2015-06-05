@@ -130,9 +130,24 @@ JT = (function (my) {
     return false;
   };
 
+  var setChartPeriod = function (newPeriod) {
+    if (newPeriod < JT.charts.params.plotPeriodMin) {
+       newPeriod = JT.charts.params.plotPeriodMin;
+    } else if (newPeriod > JT.charts.params.plotPeriodMax) {
+       newPeriod = JT.charts.params.plotPeriodMax;
+    }
+
+    var sampleCount = JT.core.sampleCount(newPeriod);
+    JT.charts.resizeDataBufs(sampleCount);
+    JT.charts.resetChart();
+
+    return {newPeriod: newPeriod, sampleCount: sampleCount};
+  };
+
   /* Export "public" functions */
   my.charts.toggleStopStartGraph = toggleStopStartGraph;
   my.charts.setUpdatePeriod = setUpdatePeriod;
+  my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
 
   return my;
