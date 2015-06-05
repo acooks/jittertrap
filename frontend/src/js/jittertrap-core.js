@@ -2,6 +2,7 @@
 
 /* global CBuffer */
 /* global JT:true */
+JT = {};
 
 JT = (function (my) {
   'use strict';
