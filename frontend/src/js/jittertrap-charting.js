@@ -138,7 +138,7 @@ JT = (function (my) {
     }
 
     var sampleCount = JT.core.sampleCount(newPeriod);
-    JT.charts.resizeDataBufs(sampleCount);
+    JT.core.resizeDataBufs(sampleCount);
     JT.charts.resetChart();
 
     return {newPeriod: newPeriod, sampleCount: sampleCount};
