@@ -15,7 +15,7 @@ $(document).ready(function() {
 
   // Initialize Chart Options
   $("#jt-measure-datalength").html(JT.core.sampleCount());
-  $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
+  $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
 
   // Initialize WebSockets
   var wsUri = "ws://" + document.domain + ":" + location.port;

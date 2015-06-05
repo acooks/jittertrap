@@ -254,11 +254,11 @@ JT = (function (my) {
   var updateFilteredSeries = function (series) {
 
     /* FIXME: float vs integer is important here! */
-    var decimationFactor = Math.floor(my.charts.params.plotPeriod / (my.core.samplePeriod() / 1000.0));
+    var decimationFactor = Math.floor(my.charts.getChartPeriod() / (my.core.samplePeriod() / 1000.0));
     var fseriesLength = Math.floor(series.data.size / decimationFactor);
 
     // the downsampled data has to be scaled.
-    var scale = 1 / my.charts.params.plotPeriod;
+    var scale = 1 / my.charts.getChartPeriod();
 
     // how many filtered data points have been collected already?
     var filteredDataCount = series.filteredData.length;
@@ -300,7 +300,7 @@ JT = (function (my) {
 
     // finally, update the filteredData
     for (i = 0; i < fseriesLength; i++) {
-      series.filteredData.push({x: i * my.charts.params.plotPeriod,
+      series.filteredData.push({x: i * my.charts.getChartPeriod(),
                                 y: filteredY[i]});
     }
 
@@ -311,7 +311,7 @@ JT = (function (my) {
     series.data.push(yVal);
 
     /* do expensive operations once per filtered sample/chartingPeriod. */
-    if ((xVal % my.charts.params.plotPeriod === 0) ) {
+    if ((xVal % my.charts.getChartPeriod() === 0) ) {
       updateStats(series);
       if (series === selectedSeries) {
         updateHistogram(series);

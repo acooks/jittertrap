@@ -9,18 +9,18 @@ JT = (function (my) {
   my.charts = {};
 
   /* Add a container for charting parameters */
-  my.charts.params = {};
+  var params = {};
 
-  /* time (milliseconds) represented by each data point */
-  my.charts.params.plotPeriod        = 60;
-  my.charts.params.plotPeriodMin     = 1;
-  my.charts.params.plotPeriodMax     = 500;
+  /* time (milliseconds) represented by each point on the chart */
+  params.plotPeriod        = 60;
+  params.plotPeriodMin     = 1;
+  params.plotPeriodMax     = 500;
 
   /* chart redraw/refresh/updates; milliseconds; 40ms == 25 Hz */
-  my.charts.params.redrawPeriod      = 60;
-  my.charts.params.redrawPeriodMin   = 40;
-  my.charts.params.redrawPeriodMax   = 100;
-  my.charts.params.redrawPeriodSaved = 0;
+  params.redrawPeriod      = 60;
+  params.redrawPeriodMin   = 40;
+  params.redrawPeriodMax   = 100;
+  params.redrawPeriodSaved = 0;
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
@@ -101,12 +101,12 @@ JT = (function (my) {
     //            + " Processing time: " + procTime
     //            + " Charting Period: " + chartingPeriod);
 
-    my.charts.params.redrawPeriod = my.charts.params.plotPeriod / 2;
+    params.redrawPeriod = params.plotPeriod / 2;
 
-    if (my.charts.params.redrawPeriod < my.charts.params.redrawPeriodMin) {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMin;
-    } else if (my.charts.params.redrawPeriod > my.charts.params.redrawPeriodMax) {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMax;
+    if (params.redrawPeriod < params.redrawPeriodMin) {
+      params.redrawPeriod = params.redrawPeriodMin;
+    } else if (params.redrawPeriod > params.redrawPeriodMax) {
+      params.redrawPeriod = params.redrawPeriodMax;
     }
 
     setUpdatePeriod();
@@ -126,31 +126,35 @@ JT = (function (my) {
     tuneChartUpdatePeriod();
   };
 
-  var drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+  var drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
 
   var setUpdatePeriod = function() {
-    var updateRate = 1000.0 / my.charts.params.redrawPeriod; /* Hz */
+    var updateRate = 1000.0 / params.redrawPeriod; /* Hz */
     clearInterval(drawIntervalID);
-    drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+    drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
   };
 
   var toggleStopStartGraph = function() {
     var maxUpdatePeriod = 9999999999;
-    if (my.charts.params.redrawPeriod !== maxUpdatePeriod) {
-      my.charts.params.redrawPeriodSaved = my.charts.params.redrawPeriod;
-      my.charts.params.redrawPeriod = maxUpdatePeriod;
+    if (params.redrawPeriod !== maxUpdatePeriod) {
+      params.redrawPeriodSaved = params.redrawPeriod;
+      params.redrawPeriod = maxUpdatePeriod;
     } else {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodSaved;
+      params.redrawPeriod = params.redrawPeriodSaved;
     }
     setUpdatePeriod();
     return false;
   };
 
+  var getChartPeriod = function () {
+    return params.plotPeriod;
+  };
+
   var setChartPeriod = function (newPeriod) {
-    if (newPeriod < JT.charts.params.plotPeriodMin) {
-       newPeriod = JT.charts.params.plotPeriodMin;
-    } else if (newPeriod > JT.charts.params.plotPeriodMax) {
-       newPeriod = JT.charts.params.plotPeriodMax;
+    if (newPeriod < params.plotPeriodMin) {
+       newPeriod = params.plotPeriodMin;
+    } else if (newPeriod > params.plotPeriodMax) {
+       newPeriod = params.plotPeriodMax;
     }
 
     var sampleCount = JT.core.sampleCount(newPeriod);
@@ -163,6 +167,7 @@ JT = (function (my) {
   /* Export "public" functions */
   my.charts.toggleStopStartGraph = toggleStopStartGraph;
   my.charts.setUpdatePeriod = setUpdatePeriod;
+  my.charts.getChartPeriod = getChartPeriod;
   my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
 
