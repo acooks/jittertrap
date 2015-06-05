@@ -24,7 +24,9 @@ JT = (function (my) {
   var handleMsgDevSelect = function(iface) {
     $('#dev_select').val(iface);
     selectedIface = $('#dev_select').val();
-    JT.charts.clearChart();
+    JT.core.clearAllSeries();
+    JT.utils.clearData();
+    JT.charts.resetChart();
   };
 
   var handleMsgIfaces = function(ifaces) {
@@ -56,7 +58,9 @@ JT = (function (my) {
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
     my.charts.setUpdatePeriod();
-    my.charts.clearChart();
+    JT.core.clearAllSeries();
+    JT.utils.clearData();
+    JT.charts.resetChart();
   };
 
 

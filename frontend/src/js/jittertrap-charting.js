@@ -69,12 +69,6 @@ JT = (function (my) {
 
   };
 
-  var clearChart = function() {
-    my.core.clearAllSeries();
-    resetChart();
-    my.utils.clearData();
-  };
-
   var renderCount = 0;
   var renderTime = 0;
 
@@ -139,7 +133,6 @@ JT = (function (my) {
   /* Export "public" functions */
   my.charts.toggleStopStartGraph = toggleStopStartGraph;
   my.charts.setUpdatePeriod = setUpdatePeriod;
-  my.charts.clearChart = clearChart;
   my.charts.resetChart = resetChart;
 
   return my;

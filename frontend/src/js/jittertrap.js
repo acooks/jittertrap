@@ -20,10 +20,9 @@ $(document).ready(function() {
   // Initialize WebSockets
   var wsUri = "ws://" + document.domain + ":" + location.port;
   JT.ws.init(wsUri);
-  
+
   // UI Event Handlers
   $("#chopts_series").bind('change', JT.charts.resetChart);
-  $("#dev_select").bind('change', JT.charts.clearChart);
   $('#set_netem_button').bind('click', JT.ws.set_netem);
   $('#clear_netem_button').bind('click', JT.ws.clear_netem);
   $('#dev_select').bind('change', JT.ws.dev_select);
