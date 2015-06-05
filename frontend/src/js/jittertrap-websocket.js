@@ -18,14 +18,13 @@ JT = (function (my) {
    */
 
   var handleMsgUpdateStats = function (stats) {
-    JT.utils.processDataMsg(stats);
+    JT.core.processDataMsg(stats);
   };
 
   var handleMsgDevSelect = function(iface) {
     $('#dev_select').val(iface);
     selectedIface = $('#dev_select').val();
     JT.core.clearAllSeries();
-    JT.utils.clearData();
     JT.charts.resetChart();
   };
 
@@ -59,7 +58,6 @@ JT = (function (my) {
     console.log("sample period: " + period);
     my.charts.setUpdatePeriod();
     JT.core.clearAllSeries();
-    JT.utils.clearData();
     JT.charts.resetChart();
   };
 
