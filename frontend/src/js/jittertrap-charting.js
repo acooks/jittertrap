@@ -1,67 +1,14 @@
 /* jittertrap-charting.js */
 
 /* global CanvasJS */
-/* global CBuffer */
 /* global JT:true */
 
 JT = (function (my) {
   'use strict';
-  my.charts.series = {};
-
-  /* short, local alias */
-  var series = my.charts.series;
-
-  /*
-   * series is a prototype object that encapsulates chart data.
-   */
-  var Series = function(name, title, ylabel) {
-    this.name = name;
-    this.title = title;
-    this.ylabel = ylabel;
-    this.xlabel = "Time (ms)";
-  this.data = []; // raw samples
-    this.filteredData = []; // filtered & decimated to chartingPeriod
-    this.histData = [];
-    this.minY = {x:0, y:0};
-    this.maxY = {x:0, y:0};
-    this.basicStats = [];
-  };
-
-  series.txDelta = new Series("txDelta",
-                              "Tx Bytes per sample period",
-                              "Tx Bytes per sample");
-
-  series.rxDelta = new Series("rxDelta",
-                              "Rx Bytes per sample period",
-                              "Rx Bytes per sample");
-
-  series.rxRate = new Series("rxRate",
-                             "Ingress throughput in kbps",
-                             "kbps, mean");
-
-  series.txRate = new Series("txRate",
-                             "Egress throughput in kbps",
-                             "kbps, mean");
-
-  series.txPacketRate = new Series("txPacketRate",
-                                   "Egress packet rate",
-                                   "pkts per sec, mean");
-
-  series.rxPacketRate = new Series("rxPacketRate",
-                                   "Ingress packet rate",
-                                   "pkts per sec, mean");
-
-  series.txPacketDelta = new Series("txPacketDelta",
-                                    "Egress packets per sample",
-                                    "packets sent");
-
-  series.rxPacketDelta = new Series("rxPacketDelta",
-                                    "Ingress packets per sample",
-                                    "packets received");
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
-    var selectedSeries = my.charts.series[selectedSeriesOpt];
+    var selectedSeries = my.core.series[selectedSeriesOpt];
     selectedSeries.filteredData.length = 0;
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
@@ -122,54 +69,8 @@ JT = (function (my) {
 
   };
 
-  var resizeCBuf = function(cbuf, len) {
-    cbuf.filteredData = [];
-    var b = new CBuffer(len);
-
-    var l = (len < cbuf.data.size) ? len : cbuf.data.size;
-    while (l--) {
-      b.push(cbuf.data.shift());
-    }
-    cbuf.data = b;
-  };
-
-  var resizeDataBufs = function(newlen) {
-
-    /* local alias for brevity */
-    var s = my.charts.series;
-
-    resizeCBuf(s.txDelta, newlen);
-    resizeCBuf(s.rxDelta, newlen);
-
-    resizeCBuf(s.rxRate, newlen);
-    resizeCBuf(s.txRate, newlen);
-
-    resizeCBuf(s.txPacketRate, newlen);
-    resizeCBuf(s.rxPacketRate, newlen);
-
-    resizeCBuf(s.txPacketDelta, newlen);
-    resizeCBuf(s.rxPacketDelta, newlen);
-  };
-
   var clearChart = function() {
-
-    var clearSeries = function (s) {
-      s.data = new CBuffer(my.core.sampleCount());
-      s.filteredData = [];
-      s.histData = [];
-    };
-
-    var s = my.charts.series; /* local alias for brevity */
-
-    clearSeries(s.txDelta);
-    clearSeries(s.rxDelta);
-    clearSeries(s.txRate);
-    clearSeries(s.rxRate);
-    clearSeries(s.txPacketRate);
-    clearSeries(s.rxPacketRate);
-    clearSeries(s.txPacketDelta);
-    clearSeries(s.rxPacketDelta);
-
+    my.core.clearAllSeries();
     resetChart();
     my.utils.clearData();
   };
@@ -239,7 +140,6 @@ JT = (function (my) {
   my.charts.toggleStopStartGraph = toggleStopStartGraph;
   my.charts.setUpdatePeriod = setUpdatePeriod;
   my.charts.clearChart = clearChart;
-  my.charts.resizeDataBufs = resizeDataBufs;
   my.charts.resetChart = resetChart;
 
   return my;

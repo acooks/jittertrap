@@ -172,7 +172,8 @@ JT = (function (my) {
 
     // finally, update the filteredData
     for (i = 0; i < fseriesLength; i++) {
-      series.filteredData.push({x: i * my.charts.params.plotPeriod, y: filteredY[i]});
+      series.filteredData.push({x: i * my.charts.params.plotPeriod,
+                                y: filteredY[i]});
     }
 
   };
@@ -197,7 +198,7 @@ JT = (function (my) {
   };
 
   var updateData = function (d, sSeries) {
-    var s = my.charts.series;
+    var s = my.core.series;
     updateSeries(s.txDelta, d.txDelta, sSeries);
     updateSeries(s.rxDelta, d.rxDelta, sSeries);
     updateSeries(s.txRate, byteCountToKbpsRate(d.txDelta), sSeries);
@@ -210,7 +211,7 @@ JT = (function (my) {
 
   my.utils.processDataMsg = function (stats) {
     var visibleSeries = $("#chopts_series option:selected").val();
-    var s = my.charts.series;
+    var s = my.core.series;
     var selectedSeries = s[visibleSeries];
 
     var len = stats.length;

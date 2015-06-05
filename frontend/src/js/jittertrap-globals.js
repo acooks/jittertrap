@@ -44,7 +44,7 @@ JT = (function (my) {
   'use strict';
   my.charts = {};
 
-    /* Add a container for charting parameters */
+  /* Add a container for charting parameters */
   my.charts.params = {};
 
   /* time (milliseconds) represented by each data point */

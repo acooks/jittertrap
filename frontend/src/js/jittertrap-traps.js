@@ -19,10 +19,10 @@ JT = (function (my) {
     var data = null;
     switch (trapId) {
       case 'max_rx_bitrate':
-        data = my.charts.series.rxRate.filteredData;
+        data = my.core.series.rxRate.filteredData;
       break;
       case 'max_tx_bitrate':
-        data = my.charts.series.txRate.filteredData;
+        data = my.core.series.txRate.filteredData;
       break;
     }
     return data;
