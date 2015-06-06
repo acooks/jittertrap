@@ -1,3 +1,5 @@
+/* global JT */
+
 $(document).ready(function() {
 
   var triggers = {
