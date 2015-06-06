@@ -49,39 +49,44 @@ JT = (function (my) {
     this.maxY = {x:0, y:0};
   };
 
-  my.core.series = {};
-  my.core.series.txDelta = new Series("txDelta",
-                                 "Tx Bytes per sample period",
-                                 "Tx Bytes per sample");
 
-  my.core.series.rxDelta = new Series("rxDelta",
-                                 "Rx Bytes per sample period",
-                                 "Rx Bytes per sample");
+  var sBin = {};  // a container (Bin) for series.
+  sBin.txDelta = new Series("txDelta",
+                            "Tx Bytes per sample period",
+                            "Tx Bytes per sample");
 
-  my.core.series.rxRate = new Series("rxRate",
-                                "Ingress throughput in kbps",
-                                "kbps, mean");
+  sBin.rxDelta = new Series("rxDelta",
+                            "Rx Bytes per sample period",
+                            "Rx Bytes per sample");
 
-  my.core.series.txRate = new Series("txRate",
-                                "Egress throughput in kbps",
-                                "kbps, mean");
+  sBin.rxRate = new Series("rxRate",
+                           "Ingress throughput in kbps",
+                           "kbps, mean");
 
-  my.core.series.txPacketRate = new Series("txPacketRate",
-                                      "Egress packet rate",
-                                      "pkts per sec, mean");
+  sBin.txRate = new Series("txRate",
+                           "Egress throughput in kbps",
+                           "kbps, mean");
 
-  my.core.series.rxPacketRate = new Series("rxPacketRate",
-                                      "Ingress packet rate",
-                                      "pkts per sec, mean");
+  sBin.txPacketRate = new Series("txPacketRate",
+                                 "Egress packet rate",
+                                 "pkts per sec, mean");
 
-  my.core.series.txPacketDelta = new Series("txPacketDelta",
-                                       "Egress packets per sample",
-                                       "packets sent");
+  sBin.rxPacketRate = new Series("rxPacketRate",
+                                 "Ingress packet rate",
+                                 "pkts per sec, mean");
 
-  my.core.series.rxPacketDelta = new Series("rxPacketDelta",
-                                       "Ingress packets per sample",
-                                       "packets received");
+  sBin.txPacketDelta = new Series("txPacketDelta",
+                                  "Egress packets per sample",
+                                  "packets sent");
 
+  sBin.rxPacketDelta = new Series("rxPacketDelta",
+                                  "Ingress packets per sample",
+                                  "packets received");
+
+  /* FIXME: this is a stepping stone to nowhere. */
+  my.core.getSeriesByName = function (sName) {
+    return sBin[sName];
+  };
 
   var resizeCBuf = function(cbuf, len) {
     cbuf.filteredData = [];
@@ -96,20 +101,17 @@ JT = (function (my) {
 
   my.core.resizeDataBufs = function(newlen) {
 
-    /* local alias for brevity */
-    var s = my.core.series;
+    resizeCBuf(sBin.txDelta, newlen);
+    resizeCBuf(sBin.rxDelta, newlen);
 
-    resizeCBuf(s.txDelta, newlen);
-    resizeCBuf(s.rxDelta, newlen);
+    resizeCBuf(sBin.rxRate, newlen);
+    resizeCBuf(sBin.txRate, newlen);
 
-    resizeCBuf(s.rxRate, newlen);
-    resizeCBuf(s.txRate, newlen);
+    resizeCBuf(sBin.txPacketRate, newlen);
+    resizeCBuf(sBin.rxPacketRate, newlen);
 
-    resizeCBuf(s.txPacketRate, newlen);
-    resizeCBuf(s.rxPacketRate, newlen);
-
-    resizeCBuf(s.txPacketDelta, newlen);
-    resizeCBuf(s.rxPacketDelta, newlen);
+    resizeCBuf(sBin.txPacketDelta, newlen);
+    resizeCBuf(sBin.rxPacketDelta, newlen);
   };
 
   var clearSeries = function (s) {
@@ -119,16 +121,14 @@ JT = (function (my) {
   };
 
   my.core.clearAllSeries = function () {
-    var s = my.core.series; /* local alias for brevity */
-
-    clearSeries(s.txDelta);
-    clearSeries(s.rxDelta);
-    clearSeries(s.txRate);
-    clearSeries(s.rxRate);
-    clearSeries(s.txPacketRate);
-    clearSeries(s.rxPacketRate);
-    clearSeries(s.txPacketDelta);
-    clearSeries(s.rxPacketDelta);
+    clearSeries(sBin.txDelta);
+    clearSeries(sBin.rxDelta);
+    clearSeries(sBin.txRate);
+    clearSeries(sBin.rxRate);
+    clearSeries(sBin.txPacketRate);
+    clearSeries(sBin.rxPacketRate);
+    clearSeries(sBin.txPacketDelta);
+    clearSeries(sBin.rxPacketDelta);
     xVal = 0;
   };
 
@@ -322,21 +322,19 @@ JT = (function (my) {
   };
 
   var updateData = function (d, sSeries) {
-    var s = my.core.series;
-    updateSeries(s.txDelta, d.txDelta, sSeries);
-    updateSeries(s.rxDelta, d.rxDelta, sSeries);
-    updateSeries(s.txRate, byteCountToKbpsRate(d.txDelta), sSeries);
-    updateSeries(s.rxRate, byteCountToKbpsRate(d.rxDelta), sSeries);
-    updateSeries(s.txPacketRate, packetDeltaToRate(d.txPktDelta), sSeries);
-    updateSeries(s.rxPacketRate, packetDeltaToRate(d.rxPktDelta), sSeries);
-    updateSeries(s.txPacketDelta, d.txPktDelta, sSeries);
-    updateSeries(s.rxPacketDelta, d.rxPktDelta, sSeries);
+    updateSeries(sBin.txDelta, d.txDelta, sSeries);
+    updateSeries(sBin.rxDelta, d.rxDelta, sSeries);
+    updateSeries(sBin.txRate, byteCountToKbpsRate(d.txDelta), sSeries);
+    updateSeries(sBin.rxRate, byteCountToKbpsRate(d.rxDelta), sSeries);
+    updateSeries(sBin.txPacketRate, packetDeltaToRate(d.txPktDelta), sSeries);
+    updateSeries(sBin.rxPacketRate, packetDeltaToRate(d.rxPktDelta), sSeries);
+    updateSeries(sBin.txPacketDelta, d.txPktDelta, sSeries);
+    updateSeries(sBin.rxPacketDelta, d.rxPktDelta, sSeries);
   };
 
   my.core.processDataMsg = function (stats) {
     var visibleSeries = $("#chopts_series option:selected").val();
-    var s = my.core.series;
-    var selectedSeries = s[visibleSeries];
+    var selectedSeries = sBin[visibleSeries];
 
     var len = stats.length;
     for (var i = 0; i < len; i++) {

@@ -24,7 +24,7 @@ JT = (function (my) {
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
-    var selectedSeries = my.core.series[selectedSeriesOpt];
+    var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
     selectedSeries.filteredData.length = 0;
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
