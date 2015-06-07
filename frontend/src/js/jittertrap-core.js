@@ -49,6 +49,26 @@ JT = (function (my) {
     this.maxY = {x:0, y:0};
   };
 
+  var chartData = {
+    mainChart: [],
+    histogram: [],
+    basicStats: []
+  };
+
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.core.getHistogramRef = function () {
+    return chartData.histogram;
+  };
+
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.core.getBasicStatsRef = function () {
+    return chartData.basicStats;
+  };
+
+  /* must return a reference to an array of {x:x, y:y} */
+  my.core.getMainChartDataRef = function () {
+    return chartData.mainChart;
+  };
 
   var sBin = {};  // a container (Bin) for series.
   sBin.txDelta = new Series("txDelta",
