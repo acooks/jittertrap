@@ -46,7 +46,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name,
         type: "line",
-        dataPoints: selectedSeries.filteredData
+        dataPoints: my.core.getMainChartDataRef()
       }]
     });
     my.charts.mainChart.render();

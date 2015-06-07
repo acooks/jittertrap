@@ -214,7 +214,7 @@ JT = (function (my) {
     }
 
     var sortedData = series.filteredData.slice(0);
-    sortedData.sort(function(a,b) {return (a.y - b.y);});
+    sortedData.sort(function(a,b) {return (a - b);});
 
     series.stats.max = sortedData[sortedData.length-1];
     series.stats.min = sortedData[0];
@@ -273,9 +273,21 @@ JT = (function (my) {
 
   };
 
+  var updateMainChartData = function(filteredData) {
+    var chartPeriod = my.charts.getChartPeriod();
+    var len = filteredData.length;
+
+    chartData.mainChart.length = 0;
+
+    for (var i = 0; i < len; i++) {
+      chartData.mainChart.push({x: i * chartPeriod,
+                                y: filteredData[i]});
+    }
+  };
+
   var updateFilteredSeries = function (series) {
 
-    /* FIXME: float vs integer is important here! */
+    /* NB: float vs integer is important here! */
     var decimationFactor = Math.floor(my.charts.getChartPeriod() / (my.core.samplePeriod() / 1000.0));
     var fseriesLength = Math.floor(series.data.size / decimationFactor);
 
@@ -296,36 +308,20 @@ JT = (function (my) {
       filteredDataCount--;
     }
 
-    // all the X values will be updated, but save the Y values.
-    var filteredY = new Float32Array(fseriesLength);
-    for (var i = filteredDataCount - 1; i >= 0; i--) {
-      filteredY[i] = series.filteredData[i].y;
-    }
-
-    // now, discard all previous values, because all the X values will change.
-    series.filteredData.length = 0;
-
     // calculate any/all missing Y values from raw data
-    for (i = filteredDataCount; i < fseriesLength; i++) {
-      filteredY[i] = 0.0;
+    for (var i = filteredDataCount; i < fseriesLength; i++) {
+      series.filteredData[i] = 0.0;
       for (var j = 0; j < decimationFactor; j++) {
         var idx = i * decimationFactor + j;
         if (idx >= series.data.size) {
           break;
         }
-        filteredY[i] += series.data.get(idx);
+        series.filteredData[i] += series.data.get(idx);
       }
 
       // scale the value to the correct range.
-      filteredY[i] *= scale;
+      series.filteredData[i] *= scale;
     }
-
-    // finally, update the filteredData
-    for (i = 0; i < fseriesLength; i++) {
-      series.filteredData.push({x: i * my.charts.getChartPeriod(),
-                                y: filteredY[i]});
-    }
-
   };
 
   /* This is the object that is passed to the measurements module.
@@ -350,6 +346,7 @@ JT = (function (my) {
 
     /* do expensive operations once per filtered sample/chartingPeriod. */
     if ((xVal % my.charts.getChartPeriod() === 0) ) {
+      updateFilteredSeries(series);
       updateStats(series);
 
       var stats = new Stats(series.stats);
@@ -357,10 +354,11 @@ JT = (function (my) {
       JT.trapModule.checkTriggers(series.name, stats);
 
       if (series === selectedSeries) {
+        /* update the charts data */
+        updateMainChartData(series.filteredData);
         updateHistogram(series);
         updateBasicStatsChartData(new Stats(series.stats));
       }
-      updateFilteredSeries(series);
     }
   };
 
@@ -385,9 +383,6 @@ JT = (function (my) {
       xVal++;
       xVal = xVal % my.core.sampleCount();
     }
-
-    my.trapModule.checkTriggers();
-
   };
 
   return my;
