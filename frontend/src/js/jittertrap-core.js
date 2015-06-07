@@ -43,7 +43,6 @@ JT = (function (my) {
     this.xlabel = "Time (ms)";
     this.data = []; // raw samples
     this.filteredData = []; // filtered & decimated to chartingPeriod
-    this.histData = [];
     this.basicStats = [];
     this.minY = {x:0, y:0};
     this.maxY = {x:0, y:0};
@@ -143,7 +142,6 @@ JT = (function (my) {
   var clearSeries = function (s) {
     s.data = new CBuffer(my.core.sampleCount());
     s.filteredData = [];
-    s.histData = [];
   };
 
   my.core.clearAllSeries = function () {
@@ -255,7 +253,6 @@ JT = (function (my) {
     for (; i < binCnt; i++) {
       normBins[i] = 0;
     }
-    series.histData.length = 0;
 
     /* bin the normalized data */
     for (j = 0; j < series.data.size; j++) {
@@ -271,10 +268,11 @@ JT = (function (my) {
     }
 
     /* write the histogram x,y data */
+    chartData.histogram.length = 0;
     for (i = 0; i < binCnt; i++) {
       var x = Math.round(i * (maxY / binCnt));
       x += Math.round(minY);  /* shift x to match original y range */
-      series.histData.push({x: x, y: normBins[i], label: x});
+      chartData.histogram.push({x: x, y: normBins[i], label: x});
     }
 
   };

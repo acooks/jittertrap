@@ -64,7 +64,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_hist",
         type: "column",
-        dataPoints: selectedSeries.histData
+        dataPoints: my.core.getHistogramRef()
       }]
     });
     my.charts.histogram.render();
