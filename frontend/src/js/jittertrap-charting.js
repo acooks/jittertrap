@@ -78,7 +78,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_stats",
         type: "column",
-        dataPoints: selectedSeries.basicStats
+        dataPoints: my.core.getBasicStatsRef()
       }]
     });
     my.charts.basicStats.render();

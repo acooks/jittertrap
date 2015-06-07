@@ -43,9 +43,7 @@ JT = (function (my) {
     this.xlabel = "Time (ms)";
     this.data = []; // raw samples
     this.filteredData = []; // filtered & decimated to chartingPeriod
-    this.basicStats = [];
-    this.minY = {x:0, y:0};
-    this.maxY = {x:0, y:0};
+    this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
   };
 
   var chartData = {
@@ -195,6 +193,20 @@ JT = (function (my) {
     return { max: maxRunLen, mean: meanRunLen } ;
   };
 
+  var updateBasicStatsChartData = function (s) {
+    if (chartData.basicStats[0]) {
+      chartData.basicStats[0].y = s.min;
+      chartData.basicStats[1].y = s.median;
+      chartData.basicStats[2].y = s.mean;
+      chartData.basicStats[3].y = s.max;
+    } else {
+      chartData.basicStats.push({x:1, y:s.min, label:"Min"});
+      chartData.basicStats.push({x:2, y:s.median, label:"Median"});
+      chartData.basicStats.push({x:3, y:s.mean, label:"Mean"});
+      chartData.basicStats.push({x:4, y:s.max, label:"Max"});
+    }
+  };
+
   var updateStats = function (series) {
 
     if (! series.filteredData || series.filteredData.length === 0) {
@@ -204,43 +216,27 @@ JT = (function (my) {
     var sortedData = series.filteredData.slice(0);
     sortedData.sort(function(a,b) {return (a.y - b.y);});
 
-    var maxY = sortedData[sortedData.length-1].y;
-    var minY = sortedData[0].y;
-    var median = sortedData[Math.floor(sortedData.length / 2.0)].y;
-    var mean = 0;
+    series.stats.max = sortedData[sortedData.length-1];
+    series.stats.min = sortedData[0];
+    series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
     var sum = 0;
     var i = 0;
 
     for (i = sortedData.length-1; i >=0; i--) {
-      sum += sortedData[i].y;
+      sum += sortedData[i];
     }
-    mean = sum / sortedData.length;
+    series.stats.mean = sum / sortedData.length;
 
-    if (series.basicStats[0]) {
-      series.basicStats[0].y = minY;
-      series.basicStats[1].y = median;
-      series.basicStats[2].y = mean;
-      series.basicStats[3].y = maxY;
-    } else {
-      series.basicStats.push({x:1, y:minY, label:"Min"});
-      series.basicStats.push({x:2, y:median, label:"Median"});
-      series.basicStats.push({x:3, y:mean, label:"Mean"});
-      series.basicStats.push({x:4, y:maxY, label:"Max"});
-    }
-
-    var maxZ = maxZRun(series.data);
-    JT.measurementsModule.updateSeries(series.name, minY, maxY, mean, maxZ);
+    var zeroRuns = maxZRun(series.data);
+    series.stats.maxZ = zeroRuns.max;
+    series.stats.meanZ = zeroRuns.mean;
   };
 
   var updateHistogram = function(series) {
     var binCnt = 25;
     var normBins = new Float32Array(binCnt);
-
-    var sortedData = series.data.slice(0);
-    sortedData.sort();
-
-    var maxY = sortedData[sortedData.length-1];
-    var minY = sortedData[0];
+    var maxY = series.stats.max;
+    var minY = series.stats.min;
     var range = (maxY - minY) * 1.1;
 
     /* bins must use integer indexes, so we have to normalise the
@@ -332,6 +328,22 @@ JT = (function (my) {
 
   };
 
+  /* This is the object that is passed to the measurements module.
+   *
+   * This is an attempt to communicate to the developer what the interface
+   * is between the core and the measurements and traps modules.
+   *
+   * There must be a better way to do this, that doesn't go through
+   * object construction/destruction garbage and doesn't pass 700 parameters?
+   */
+  var Stats = function(s) {
+    this.min = s.min;
+    this.max = s.max;
+    this.median = s.median;
+    this.mean = s.mean;
+    this.maxZ = s.maxZ;
+    this.meanZ = s.meanZ;
+  };
 
   var updateSeries = function (series, yVal, selectedSeries) {
     series.data.push(yVal);
@@ -339,8 +351,14 @@ JT = (function (my) {
     /* do expensive operations once per filtered sample/chartingPeriod. */
     if ((xVal % my.charts.getChartPeriod() === 0) ) {
       updateStats(series);
+
+      var stats = new Stats(series.stats);
+      JT.measurementsModule.updateSeries(series.name, stats);
+      JT.trapModule.checkTriggers(series.name, stats);
+
       if (series === selectedSeries) {
         updateHistogram(series);
+        updateBasicStatsChartData(new Stats(series.stats));
       }
       updateFilteredSeries(series);
     }
