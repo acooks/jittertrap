@@ -193,17 +193,17 @@ JT = (function (my) {
     return { max: maxRunLen, mean: meanRunLen } ;
   };
 
-  var updateBasicStatsChartData = function (s) {
-    if (chartData.basicStats[0]) {
-      chartData.basicStats[0].y = s.min;
-      chartData.basicStats[1].y = s.median;
-      chartData.basicStats[2].y = s.mean;
-      chartData.basicStats[3].y = s.max;
+  var updateBasicStatsChartData = function (stats, chartSeries) {
+    if (chartSeries[0]) {
+      chartSeries[0].y = stats.min;
+      chartSeries[1].y = stats.median;
+      chartSeries[2].y = stats.mean;
+      chartSeries[3].y = stats.max;
     } else {
-      chartData.basicStats.push({x:1, y:s.min, label:"Min"});
-      chartData.basicStats.push({x:2, y:s.median, label:"Median"});
-      chartData.basicStats.push({x:3, y:s.mean, label:"Mean"});
-      chartData.basicStats.push({x:4, y:s.max, label:"Max"});
+      chartSeries.push({x:1, y:stats.min, label:"Min"});
+      chartSeries.push({x:2, y:stats.median, label:"Median"});
+      chartSeries.push({x:3, y:stats.mean, label:"Mean"});
+      chartSeries.push({x:4, y:stats.max, label:"Max"});
     }
   };
 
@@ -232,7 +232,7 @@ JT = (function (my) {
     series.stats.meanZ = zeroRuns.mean;
   };
 
-  var updateHistogram = function(series) {
+  var updateHistogram = function(series, chartSeries) {
     var binCnt = 25;
     var normBins = new Float32Array(binCnt);
     var maxY = series.stats.max;
@@ -264,24 +264,22 @@ JT = (function (my) {
     }
 
     /* write the histogram x,y data */
-    chartData.histogram.length = 0;
+    chartSeries.length = 0;
     for (i = 0; i < binCnt; i++) {
       var x = Math.round(i * (maxY / binCnt));
       x += Math.round(minY);  /* shift x to match original y range */
-      chartData.histogram.push({x: x, y: normBins[i], label: x});
+      chartSeries.push({x: x, y: normBins[i], label: x});
     }
-
   };
 
-  var updateMainChartData = function(filteredData) {
+  var updateMainChartData = function(filteredData, chartSeries) {
     var chartPeriod = my.charts.getChartPeriod();
     var len = filteredData.length;
 
-    chartData.mainChart.length = 0;
+    chartSeries.length = 0;
 
     for (var i = 0; i < len; i++) {
-      chartData.mainChart.push({x: i * chartPeriod,
-                                y: filteredData[i]});
+      chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
     }
   };
 
@@ -324,23 +322,6 @@ JT = (function (my) {
     }
   };
 
-  /* This is the object that is passed to the measurements module.
-   *
-   * This is an attempt to communicate to the developer what the interface
-   * is between the core and the measurements and traps modules.
-   *
-   * There must be a better way to do this, that doesn't go through
-   * object construction/destruction garbage and doesn't pass 700 parameters?
-   */
-  var Stats = function(s) {
-    this.min = s.min;
-    this.max = s.max;
-    this.median = s.median;
-    this.mean = s.mean;
-    this.maxZ = s.maxZ;
-    this.meanZ = s.meanZ;
-  };
-
   var updateSeries = function (series, yVal, selectedSeries) {
     series.data.push(yVal);
 
@@ -349,15 +330,14 @@ JT = (function (my) {
       updateFilteredSeries(series);
       updateStats(series);
 
-      var stats = new Stats(series.stats);
-      JT.measurementsModule.updateSeries(series.name, stats);
-      JT.trapModule.checkTriggers(series.name, stats);
+      JT.measurementsModule.updateSeries(series.name, series.stats);
+      JT.trapModule.checkTriggers(series.name, series.stats);
 
       if (series === selectedSeries) {
         /* update the charts data */
-        updateMainChartData(series.filteredData);
-        updateHistogram(series);
-        updateBasicStatsChartData(new Stats(series.stats));
+        updateMainChartData(series.filteredData, chartData.mainChart);
+        updateHistogram(series, chartData.histogram);
+        updateBasicStatsChartData(series.stats, chartData.basicStats);
       }
     }
   };
