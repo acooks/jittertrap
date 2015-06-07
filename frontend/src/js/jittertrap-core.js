@@ -88,15 +88,15 @@ JT = (function (my) {
     return sBin[sName];
   };
 
-  var resizeCBuf = function(cbuf, len) {
-    cbuf.filteredData = [];
+  var resizeCBuf = function(series, len) {
+    series.filteredData = [];
     var b = new CBuffer(len);
 
-    var l = (len < cbuf.data.size) ? len : cbuf.data.size;
+    var l = (len < series.data.size) ? len : series.data.size;
     while (l--) {
-      b.push(cbuf.data.shift());
+      b.push(series.data.shift());
     }
-    cbuf.data = b;
+    series.data = b;
   };
 
   my.core.resizeDataBufs = function(newlen) {
