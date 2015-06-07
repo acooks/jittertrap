@@ -134,6 +134,12 @@ JT = (function (my) {
     resizeCBuf(sBin.rxPacketDelta, newlen);
   };
 
+  var clearChartData = function () {
+    chartData.basicStats.length = 0;
+    chartData.histogram.length = 0;
+    chartData.mainChart.length = 0;
+  };
+
   var clearSeries = function (s) {
     s.data = new CBuffer(my.core.sampleCount());
     s.filteredData = [];
@@ -149,6 +155,7 @@ JT = (function (my) {
     clearSeries(sBin.rxPacketRate);
     clearSeries(sBin.txPacketDelta);
     clearSeries(sBin.rxPacketDelta);
+    clearChartData();
     xVal = 0;
   };
 
