@@ -22,10 +22,30 @@ JT = (function (my) {
   params.redrawPeriodMax   = 100;
   params.redrawPeriodSaved = 0;
 
+  var chartData = {
+    mainChart: [],
+    histogram: [],
+    basicStats: []
+  };
+
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.charts.getHistogramRef = function () {
+    return chartData.histogram;
+  };
+
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.charts.getBasicStatsRef = function () {
+    return chartData.basicStats;
+  };
+
+  /* must return a reference to an array of {x:x, y:y} */
+  my.charts.getMainChartRef = function () {
+    return chartData.mainChart;
+  };
+
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
     var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
-    selectedSeries.filteredData.length = 0;
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
       height: 300,
@@ -46,7 +66,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name,
         type: "line",
-        dataPoints: my.core.getMainChartDataRef()
+        dataPoints: chartData.mainChart
       }]
     });
     my.charts.mainChart.render();
@@ -64,7 +84,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_hist",
         type: "column",
-        dataPoints: my.core.getHistogramRef()
+        dataPoints: chartData.histogram
       }]
     });
     my.charts.histogram.render();
@@ -78,7 +98,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_stats",
         type: "column",
-        dataPoints: my.core.getBasicStatsRef()
+        dataPoints: chartData.basicStats
       }]
     });
     my.charts.basicStats.render();

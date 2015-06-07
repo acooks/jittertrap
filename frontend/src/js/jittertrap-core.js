@@ -46,27 +46,6 @@ JT = (function (my) {
     this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
   };
 
-  var chartData = {
-    mainChart: [],
-    histogram: [],
-    basicStats: []
-  };
-
-  /* must return a reference to an array of {x:x, y:y, label:l} */
-  my.core.getHistogramRef = function () {
-    return chartData.histogram;
-  };
-
-  /* must return a reference to an array of {x:x, y:y, label:l} */
-  my.core.getBasicStatsRef = function () {
-    return chartData.basicStats;
-  };
-
-  /* must return a reference to an array of {x:x, y:y} */
-  my.core.getMainChartDataRef = function () {
-    return chartData.mainChart;
-  };
-
   var sBin = {};  // a container (Bin) for series.
   sBin.txDelta = new Series("txDelta",
                             "Tx Bytes per sample period",
@@ -131,12 +110,6 @@ JT = (function (my) {
     resizeCBuf(sBin.rxPacketDelta, newlen);
   };
 
-  var clearChartData = function () {
-    chartData.basicStats.length = 0;
-    chartData.histogram.length = 0;
-    chartData.mainChart.length = 0;
-  };
-
   var clearSeries = function (s) {
     s.data = new CBuffer(my.core.sampleCount());
     s.filteredData = [];
@@ -151,7 +124,6 @@ JT = (function (my) {
     clearSeries(sBin.rxPacketRate);
     clearSeries(sBin.txPacketDelta);
     clearSeries(sBin.rxPacketDelta);
-    clearChartData();
     xVal = 0;
   };
 
@@ -335,9 +307,9 @@ JT = (function (my) {
 
       if (series === selectedSeries) {
         /* update the charts data */
-        updateMainChartData(series.filteredData, chartData.mainChart);
-        updateHistogram(series, chartData.histogram);
-        updateBasicStatsChartData(series.stats, chartData.basicStats);
+        updateMainChartData(series.filteredData, JT.charts.getMainChartRef());
+        updateHistogram(series, JT.charts.getHistogramRef());
+        updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
       }
     }
   };
