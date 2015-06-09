@@ -28,6 +28,12 @@ JT = (function (my) {
     basicStats: []
   };
 
+  var clearChartData = function () {
+    chartData.mainChart.length = 0;
+    chartData.histogram.length = 0;
+    chartData.basicStats.length = 0;
+  };
+
   /* must return a reference to an array of {x:x, y:y, label:l} */
   my.charts.getHistogramRef = function () {
     return chartData.histogram;
@@ -46,6 +52,8 @@ JT = (function (my) {
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
     var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
+
+    clearChartData();
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
       height: 300,
