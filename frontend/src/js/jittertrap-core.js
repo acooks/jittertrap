@@ -43,6 +43,7 @@ JT = (function (my) {
     this.xlabel = "Time (ms)";
     this.data = []; // raw samples
     this.filteredData = []; // filtered & decimated to chartingPeriod
+    this.packetGapData = [];
     this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
   };
 
@@ -86,6 +87,7 @@ JT = (function (my) {
 
   var resizeCBuf = function(series, len) {
     series.filteredData = [];
+    series.packetGapData = [];
     var b = new CBuffer(len);
 
     var l = (len < series.data.size) ? len : series.data.size;
@@ -113,6 +115,7 @@ JT = (function (my) {
   var clearSeries = function (s) {
     s.data = new CBuffer(my.core.sampleCount());
     s.filteredData = [];
+    s.packetGapData = [];
   };
 
   my.core.clearAllSeries = function () {
@@ -137,11 +140,11 @@ JT = (function (my) {
     return count * (1000000.0 / my.core.samplePeriod());
   };
 
-  /* Takes a CBuffer and counts the consecutive 0 elements.
+  /* Takes an Array and counts the consecutive 0 elements.
    * Returns an object with max and mean counts.
    */
-  var maxZRun = function (data) {
-    if (data.size === 0) {
+  var maxPacketGap = function (data) {
+    if (data.length === 0) {
       return;
     }
     var maxRunLen = 0;
@@ -149,8 +152,8 @@ JT = (function (my) {
     var runLengths = [ 0 ];
     var i, j = 0;
 
-    for (i = data.size - 1; i >= 0 ; i--) {
-      if (data.get(i) === 0) {
+    for (i = data.length - 1; i >= 0 ; i--) {
+      if (data[i] === 0) {
         runLengths[j]++;
         maxRunLen = (maxRunLen > runLengths[j]) ? maxRunLen : runLengths[j];
       } else if (runLengths[j] > 0) {
@@ -159,7 +162,11 @@ JT = (function (my) {
         runLengths[j] = 0;
       }
     }
-    meanRunLen /= runLengths.length;
+    if (runLengths.length === 1) {
+      meanRunLen = runLengths[0];
+    } else {
+      meanRunLen /= runLengths.length;
+    }
 
     return { max: maxRunLen, mean: meanRunLen } ;
   };
@@ -178,15 +185,16 @@ JT = (function (my) {
     }
   };
 
-  var updatePacketGapChartData = function (stats, chartSeries) {
-    while (chartSeries.length > 100) {
-      chartSeries.shift();
+  var updatePacketGapChartData = function (packetGapData, chartSeries) {
+
+    var chartPeriod = my.charts.getChartPeriod();
+    var len = packetGapData.length;
+
+    chartSeries.length = 0;
+
+    for (var i = 0; i < len; i++) {
+      chartSeries.push({x: i * chartPeriod, y: packetGapData[i].mean});
     }
-    var x = 0;
-    if (chartSeries.length > 0) {
-      x = chartSeries[chartSeries.length-1].x;
-    }
-    chartSeries.push({x:x+1, y: stats.meanZ});
   };
 
   var updateStats = function (series) {
@@ -209,7 +217,7 @@ JT = (function (my) {
     }
     series.stats.mean = sum / sortedData.length;
 
-    var zeroRuns = maxZRun(series.data);
+    var zeroRuns = maxPacketGap(series.data.toArray());
     series.stats.maxZ = zeroRuns.max;
     series.stats.meanZ = zeroRuns.mean;
   };
@@ -285,12 +293,19 @@ JT = (function (my) {
     // if the series is complete, expire the first value.
     if (filteredDataCount === fseriesLength) {
       series.filteredData.shift();
+      series.packetGapData.shift();
       filteredDataCount--;
     }
 
     // calculate any/all missing Y values from raw data
     for (var i = filteredDataCount; i < fseriesLength; i++) {
       series.filteredData[i] = 0.0;
+      var subSeriesStartIdx = i * decimationFactor;
+      var subSeriesEndIdx = i * decimationFactor + decimationFactor;
+      var subSeries = series.data.slice(subSeriesStartIdx, subSeriesEndIdx);
+      var pgd = maxPacketGap(subSeries);
+      series.packetGapData.push(pgd);
+
       for (var j = 0; j < decimationFactor; j++) {
         var idx = i * decimationFactor + j;
         if (idx >= series.data.size) {
@@ -320,7 +335,7 @@ JT = (function (my) {
         updateMainChartData(series.filteredData, JT.charts.getMainChartRef());
         updateHistogram(series, JT.charts.getHistogramRef());
         updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
-        updatePacketGapChartData(series.stats, JT.charts.getPacketGapRef());
+        updatePacketGapChartData(series.packetGapData, JT.charts.getPacketGapRef());
       }
     }
   };
