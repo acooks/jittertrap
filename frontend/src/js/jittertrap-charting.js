@@ -1,68 +1,51 @@
 /* jittertrap-charting.js */
 
 /* global CanvasJS */
-/* global CBuffer */
 /* global JT:true */
 
 JT = (function (my) {
   'use strict';
-  my.charts.series = {};
 
-  /* short, local alias */
-  var series = my.charts.series;
+  my.charts = {};
 
-  /*
-   * series is a prototype object that encapsulates chart data.
-   */
-  var Series = function(name, title, ylabel) {
-    this.name = name;
-    this.title = title;
-    this.ylabel = ylabel;
-    this.xlabel = "Time (ms)";
-  this.data = []; // raw samples
-    this.filteredData = []; // filtered & decimated to chartingPeriod
-    this.histData = [];
-    this.minY = {x:0, y:0};
-    this.maxY = {x:0, y:0};
-    this.basicStats = [];
+  /* Add a container for charting parameters */
+  var params = {};
+
+  /* time (milliseconds) represented by each point on the chart */
+  params.plotPeriod        = 60;
+  params.plotPeriodMin     = 1;
+  params.plotPeriodMax     = 500;
+
+  /* chart redraw/refresh/updates; milliseconds; 40ms == 25 Hz */
+  params.redrawPeriod      = 60;
+  params.redrawPeriodMin   = 40;
+  params.redrawPeriodMax   = 100;
+  params.redrawPeriodSaved = 0;
+
+  var chartData = {
+    mainChart: [],
+    histogram: [],
+    basicStats: []
   };
 
-  series.txDelta = new Series("txDelta",
-                              "Tx Bytes per sample period",
-                              "Tx Bytes per sample");
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.charts.getHistogramRef = function () {
+    return chartData.histogram;
+  };
 
-  series.rxDelta = new Series("rxDelta",
-                              "Rx Bytes per sample period",
-                              "Rx Bytes per sample");
+  /* must return a reference to an array of {x:x, y:y, label:l} */
+  my.charts.getBasicStatsRef = function () {
+    return chartData.basicStats;
+  };
 
-  series.rxRate = new Series("rxRate",
-                             "Ingress throughput in kbps",
-                             "kbps, mean");
-
-  series.txRate = new Series("txRate",
-                             "Egress throughput in kbps",
-                             "kbps, mean");
-
-  series.txPacketRate = new Series("txPacketRate",
-                                   "Egress packet rate",
-                                   "pkts per sec, mean");
-
-  series.rxPacketRate = new Series("rxPacketRate",
-                                   "Ingress packet rate",
-                                   "pkts per sec, mean");
-
-  series.txPacketDelta = new Series("txPacketDelta",
-                                    "Egress packets per sample",
-                                    "packets sent");
-
-  series.rxPacketDelta = new Series("rxPacketDelta",
-                                    "Ingress packets per sample",
-                                    "packets received");
+  /* must return a reference to an array of {x:x, y:y} */
+  my.charts.getMainChartRef = function () {
+    return chartData.mainChart;
+  };
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
-    var selectedSeries = my.charts.series[selectedSeriesOpt];
-    selectedSeries.filteredData.length = 0;
+    var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
       height: 300,
@@ -83,7 +66,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name,
         type: "line",
-        dataPoints: selectedSeries.filteredData
+        dataPoints: chartData.mainChart
       }]
     });
     my.charts.mainChart.render();
@@ -101,7 +84,7 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_hist",
         type: "column",
-        dataPoints: selectedSeries.histData
+        dataPoints: chartData.histogram
       }]
     });
     my.charts.histogram.render();
@@ -115,63 +98,11 @@ JT = (function (my) {
       data: [{
         name: selectedSeries.name + "_stats",
         type: "column",
-        dataPoints: selectedSeries.basicStats
+        dataPoints: chartData.basicStats
       }]
     });
     my.charts.basicStats.render();
 
-  };
-
-  var resizeCBuf = function(cbuf, len) {
-    cbuf.filteredData = [];
-    var b = new CBuffer(len);
-
-    var l = (len < cbuf.data.size) ? len : cbuf.data.size;
-    while (l--) {
-      b.push(cbuf.data.shift());
-    }
-    cbuf.data = b;
-  };
-
-  var resizeDataBufs = function(newlen) {
-
-    /* local alias for brevity */
-    var s = my.charts.series;
-
-    resizeCBuf(s.txDelta, newlen);
-    resizeCBuf(s.rxDelta, newlen);
-
-    resizeCBuf(s.rxRate, newlen);
-    resizeCBuf(s.txRate, newlen);
-
-    resizeCBuf(s.txPacketRate, newlen);
-    resizeCBuf(s.rxPacketRate, newlen);
-
-    resizeCBuf(s.txPacketDelta, newlen);
-    resizeCBuf(s.rxPacketDelta, newlen);
-  };
-
-  var clearChart = function() {
-
-    var clearSeries = function (s) {
-      s.data = new CBuffer(my.rawData.dataLength);
-      s.filteredData = [];
-      s.histData = [];
-    };
-
-    var s = my.charts.series; /* local alias for brevity */
-
-    clearSeries(s.txDelta);
-    clearSeries(s.rxDelta);
-    clearSeries(s.txRate);
-    clearSeries(s.rxRate);
-    clearSeries(s.txPacketRate);
-    clearSeries(s.rxPacketRate);
-    clearSeries(s.txPacketDelta);
-    clearSeries(s.rxPacketDelta);
-
-    resetChart();
-    my.rawData.xVal = 0;
   };
 
   var renderCount = 0;
@@ -190,12 +121,12 @@ JT = (function (my) {
     //            + " Processing time: " + procTime
     //            + " Charting Period: " + chartingPeriod);
 
-    my.charts.params.redrawPeriod = my.charts.params.plotPeriod / 2;
+    params.redrawPeriod = params.plotPeriod / 2;
 
-    if (my.charts.params.redrawPeriod < my.charts.params.redrawPeriodMin) {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMin;
-    } else if (my.charts.params.redrawPeriod > my.charts.params.redrawPeriodMax) {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodMax;
+    if (params.redrawPeriod < params.redrawPeriodMin) {
+      params.redrawPeriod = params.redrawPeriodMin;
+    } else if (params.redrawPeriod > params.redrawPeriodMax) {
+      params.redrawPeriod = params.redrawPeriodMax;
     }
 
     setUpdatePeriod();
@@ -215,31 +146,49 @@ JT = (function (my) {
     tuneChartUpdatePeriod();
   };
 
-  var drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+  var drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
 
   var setUpdatePeriod = function() {
-    var updateRate = 1000.0 / my.charts.params.redrawPeriod; /* Hz */
+    var updateRate = 1000.0 / params.redrawPeriod; /* Hz */
     clearInterval(drawIntervalID);
-    drawIntervalID = setInterval(renderGraphs, my.charts.params.redrawPeriod);
+    drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
   };
 
   var toggleStopStartGraph = function() {
     var maxUpdatePeriod = 9999999999;
-    if (my.charts.params.redrawPeriod !== maxUpdatePeriod) {
-      my.charts.params.redrawPeriodSaved = my.charts.params.redrawPeriod;
-      my.charts.params.redrawPeriod = maxUpdatePeriod;
+    if (params.redrawPeriod !== maxUpdatePeriod) {
+      params.redrawPeriodSaved = params.redrawPeriod;
+      params.redrawPeriod = maxUpdatePeriod;
     } else {
-      my.charts.params.redrawPeriod = my.charts.params.redrawPeriodSaved;
+      params.redrawPeriod = params.redrawPeriodSaved;
     }
     setUpdatePeriod();
     return false;
   };
 
+  var getChartPeriod = function () {
+    return params.plotPeriod;
+  };
+
+  var setChartPeriod = function (newPeriod) {
+    if (newPeriod < params.plotPeriodMin) {
+       newPeriod = params.plotPeriodMin;
+    } else if (newPeriod > params.plotPeriodMax) {
+       newPeriod = params.plotPeriodMax;
+    }
+
+    var sampleCount = JT.core.sampleCount(newPeriod);
+    JT.core.resizeDataBufs(sampleCount);
+    JT.charts.resetChart();
+
+    return {newPeriod: newPeriod, sampleCount: sampleCount};
+  };
+
   /* Export "public" functions */
   my.charts.toggleStopStartGraph = toggleStopStartGraph;
   my.charts.setUpdatePeriod = setUpdatePeriod;
-  my.charts.clearChart = clearChart;
-  my.charts.resizeDataBufs = resizeDataBufs;
+  my.charts.getChartPeriod = getChartPeriod;
+  my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
 
   return my;

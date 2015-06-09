@@ -7,6 +7,8 @@ JT = (function (my) {
 
   my.ws = {};
 
+  var selectedIface = {}; // set on dev_select message
+
   /* the websocket object, see my.ws.init() */
   var sock = {};
 
@@ -15,28 +17,15 @@ JT = (function (my) {
    * i.e. Referred to in websocket.onmessage
    */
 
-  var handleMsgUpdateStats = function (stats, seriesName) {
-    var s = my.charts.series;
-    var sSeries = s[seriesName];
-    var len = stats.length;
-    var x = my.rawData.xVal; /* careful! copy, not alias */
-    for (var i = 0; i < len; i++) {
-      var d = stats[i];
-      my.utils.updateSeries(s.txDelta, x, d.txDelta, sSeries);
-      my.utils.updateSeries(s.rxDelta, x, d.rxDelta, sSeries);
-      my.utils.updateSeries(s.txRate, x, my.utils.byteCountToKbpsRate(d.txDelta), sSeries);
-      my.utils.updateSeries(s.rxRate, x, my.utils.byteCountToKbpsRate(d.rxDelta), sSeries);
-      my.utils.updateSeries(s.txPacketRate, x, my.utils.packetDeltaToRate(d.txPktDelta), sSeries);
-      my.utils.updateSeries(s.rxPacketRate, x, my.utils.packetDeltaToRate(d.rxPktDelta), sSeries);
-      my.utils.updateSeries(s.txPacketDelta, x, d.txPktDelta, sSeries);
-      my.utils.updateSeries(s.rxPacketDelta, x, d.rxPktDelta, sSeries);
-      x++;
-      x = x % my.rawData.dataLength;
-    }
-    my.rawData.xVal = x; /* update global, because x is local, not a pointer */
+  var handleMsgUpdateStats = function (stats) {
+    JT.core.processDataMsg(stats);
+  };
 
-    my.trapModule.checkTriggers();
-
+  var handleMsgDevSelect = function(iface) {
+    $('#dev_select').val(iface);
+    selectedIface = $('#dev_select').val();
+    JT.core.clearAllSeries();
+    JT.charts.resetChart();
   };
 
   var handleMsgIfaces = function(ifaces) {
@@ -47,7 +36,6 @@ JT = (function (my) {
         $('#dev_select').append(option);
       }
     );
-    dev_select();
   };
 
   var handleMsgNetemParams = function(params) {
@@ -65,11 +53,12 @@ JT = (function (my) {
   };
 
   var handleMsgSamplePeriod = function(period) {
-    my.rawData.samplePeriod = period;
+    my.core.samplePeriod(period);
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
     my.charts.setUpdatePeriod();
-    my.charts.clearChart();
+    JT.core.clearAllSeries();
+    JT.charts.resetChart();
   };
 
 
@@ -84,15 +73,6 @@ JT = (function (my) {
   var dev_select = function() {
     var msg = JSON.stringify({'msg':'dev_select',
                               'dev': $("#dev_select").val()});
-    sock.send(msg);
-    get_netem();
-  };
-
-  var get_netem = function() {
-    var msg = JSON.stringify(
-      {'msg': 'get_netem', 
-       'dev': $("#dev_select").val()
-      });
     sock.send(msg);
   };
 
@@ -116,19 +96,12 @@ JT = (function (my) {
     return false;
   };
 
-  var get_sample_period = function() {
-    var msg = JSON.stringify({'msg': 'get_sample_period'});
-    sock.send(msg);
-  };
-
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri);
 
     sock.onopen = function(evt) {
       sock.send("open!");
-      list_ifaces();
-      get_sample_period();
     };
 
     sock.onclose = function(evt) {
@@ -141,11 +114,11 @@ JT = (function (my) {
 
     sock.onmessage = function(evt) {
       var msg = JSON.parse(evt.data);
-      var selectedIface = $('#dev_select').val();
 
       if (msg.stats && msg.stats.iface === selectedIface) {
-        var visibleSeries = $("#chopts_series option:selected").val();
-        handleMsgUpdateStats(msg.stats.s, visibleSeries);
+        handleMsgUpdateStats(msg.stats.s);
+      } else if (msg.dev_select) {
+        handleMsgDevSelect(msg.dev_select);
       } else if (msg.ifaces) {
         handleMsgIfaces(msg.ifaces);
       } else if (msg.netem_params) {
@@ -159,12 +132,9 @@ JT = (function (my) {
   /**
    * Websocket Sending Functions
    */
-  my.ws.list_ifaces = list_ifaces;
   my.ws.dev_select = dev_select;
-  my.ws.get_netem = get_netem;
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
-  my.ws.get_sample_period = get_sample_period;
 
   return my;
 }(JT));

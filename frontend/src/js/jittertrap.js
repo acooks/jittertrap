@@ -1,3 +1,5 @@
+/* global JT */
+
 $(document).ready(function() {
 
   var triggers = {
@@ -14,35 +16,25 @@ $(document).ready(function() {
   };
 
   // Initialize Chart Options
-  $("#jt-measure-datalength").html(JT.rawData.dataLength);
-  $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
+  $("#jt-measure-datalength").html(JT.core.sampleCount());
+  $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
 
   // Initialize WebSockets
   var wsUri = "ws://" + document.domain + ":" + location.port;
   JT.ws.init(wsUri);
-  
+
   // UI Event Handlers
   $("#chopts_series").bind('change', JT.charts.resetChart);
-  $("#dev_select").bind('change', JT.charts.clearChart);
   $('#set_netem_button').bind('click', JT.ws.set_netem);
   $('#clear_netem_button').bind('click', JT.ws.clear_netem);
   $('#dev_select').bind('change', JT.ws.dev_select);
   $('#chopts_stop_start').bind('click', JT.charts.toggleStopStartGraph);
 
   $("#chopts_chartPeriod").bind('change', function() {
-    JT.charts.params.plotPeriod = $("#chopts_chartPeriod").val();
-    if (JT.charts.params.plotPeriod < JT.charts.params.plotPeriodMin) {
-       JT.charts.params.plotPeriod = JT.charts.params.plotPeriodMin;
-       $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
-    } else if (JT.charts.params.plotPeriod > JT.charts.params.plotPeriodMax) {
-       JT.charts.params.plotPeriod = JT.charts.params.plotPeriodMax;
-       $("#chopts_chartPeriod").val(JT.charts.params.plotPeriod);
-    }
-
-    JT.rawData.dataLength = Math.floor(JT.rawData.dataLengthMultiplier * JT.charts.params.plotPeriod);
-    $("#jt-measure-datalength").html(JT.rawData.dataLength);
-    JT.charts.resizeDataBufs(JT.rawData.dataLength);
-    JT.charts.resetChart();
+    var plotPeriod = $("#chopts_chartPeriod").val();
+    var result = JT.charts.setChartPeriod(plotPeriod);
+    $("#chopts_chartPeriod").val(result.newPeriod);
+    $("#jt-measure-datalength").html(result.sampleCount);
   });
 
   $('#more_chopts_toggle').click(function() {

@@ -24,6 +24,7 @@ static pthread_mutex_t unsent_frame_count_mutex;
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
 
+char g_selected_iface[MAX_IFACE_LEN];
 
 static const char *s_http_port = EXPAND_AND_QUOTE(WEB_SERVER_PORT);
 static struct ns_serve_http_opts s_http_server_opts = {
@@ -62,7 +63,7 @@ static bool match_msg_type(const struct json_token *tok, const char *r)
 	return (strncmp(tok->ptr, r, tok->len) == 0);
 }
 
-/* json_arr_alocc: must free returned memory */
+/* json_arr_alloc: must free returned memory */
 static char *json_arr_alloc()
 {
 	char *buf;
@@ -76,7 +77,7 @@ static char *json_arr_alloc()
 }
 
 /* str MUST be a malloc'ed pointer */
-char * quote_string(char *str)
+static char * quote_string(char *str)
 {
 	char *s;
 	assert(str);
@@ -110,6 +111,27 @@ static void json_arr_append(char **arr, const char *const word)
 	memcpy(*arr + buf_len - 1, word, word_len);
 	(*arr)[buf_len + word_len - 1] = ']';
 	(*arr)[buf_len + word_len] = 0;
+}
+
+static void get_first_iface(char *iface)
+{
+	char **ifaces = netem_list_ifaces();
+	char **i = ifaces;
+	assert(NULL != i);
+	if (NULL == *i) {
+		fprintf(stderr,
+		        "No interfaces available. "
+		        "Allowed interfaces (compile-time): %s\n",
+		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+	}
+	snprintf(iface, MAX_IFACE_LEN, "%s", *i);
+
+	while (*i) {
+		free(*i);
+		i++;
+	}
+
+	free(ifaces);
 }
 
 /* list_ifaces: must free returned memory */
@@ -147,7 +169,7 @@ static char *list_ifaces()
 	return msg;
 }
 
-static void handle_ws_list_ifaces(struct ns_connection *nc)
+static void ws_send_iface_list(struct ns_connection *nc)
 {
 	struct ns_connection *c;
 	char *buf = list_ifaces();
@@ -156,6 +178,56 @@ static void handle_ws_list_ifaces(struct ns_connection *nc)
 		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, buf, strlen(buf));
 	}
 	free(buf);
+}
+
+static void ws_send_dev_select(struct ns_connection *nc)
+{
+	struct ns_connection *c;
+	char msg[MAX_JSON_MSG_LEN] = { 0 };
+	char *template = "{\"dev_select\": \"%s\"}";
+	snprintf(msg, MAX_JSON_MSG_LEN, template, g_selected_iface);
+
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
+}
+
+static void ws_send_netem(struct ns_connection *nc, char *iface)
+{
+	struct ns_connection *c;
+	struct netem_params p;
+
+	printf("get netem for iface: [%s]\n", iface);
+	memcpy(p.iface, iface, MAX_IFACE_LEN);
+	if (0 != netem_get_params(p.iface, &p)) {
+		fprintf(stderr, "couldn't get netem parameters.\n");
+		p.delay = -1;
+		p.jitter = -1;
+		p.loss = -1;
+	}
+	char *template =
+	    "{\"netem_params\":"
+	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
+
+	char msg[MAX_JSON_MSG_LEN] = { 0 };
+
+	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
+	printf("%s\n", msg);
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
+}
+
+static void ws_send_sample_period(struct ns_connection *nc)
+{
+	struct ns_connection *c;
+	char *template = "{\"sample_period\":%d}";
+	char msg[200] = { 0 };
+	sprintf(msg, template, get_sample_period());
+	printf("%s\n", msg);
+	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
+		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
+	}
 }
 
 static void handle_ws_dev_select(struct json_token *tok)
@@ -172,38 +244,26 @@ static void handle_ws_dev_select(struct json_token *tok)
 		return;
 	}
 	printf("switching to iface: [%s]\n", iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
 	stats_monitor_iface(iface);
+	ws_send_dev_select(nc);
+	ws_send_netem(nc, iface);
+	ws_send_sample_period(nc);
 }
 
 static void handle_ws_get_netem(struct ns_connection *nc,
 				struct json_token *tok)
 {
-	struct ns_connection *c;
-	struct netem_params p;
+	char iface[MAX_IFACE_LEN];
 
 	if (tok->len >= MAX_IFACE_LEN) {
 		fprintf(stderr, "invalid iface name.");
 		return;
 	}
-	memcpy(p.iface, tok->ptr, tok->len);
-	p.iface[tok->len] = 0;
-	printf("get netem for iface: [%s]\n", p.iface);
-	if (0 != netem_get_params(p.iface, &p)) {
-		fprintf(stderr, "couldn't get netem parameters.\n");
-		p.delay = -1;
-		p.jitter = -1;
-		p.loss = -1;
-	}
+	memcpy(iface, tok->ptr, tok->len);
+	iface[tok->len] = 0;
 
-	char *template =
-	    "{\"netem_params\":"
-	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
-	char msg[200] = { 0 };
-	sprintf(msg, template, p.iface, p.delay, p.jitter, p.loss);
-	printf("%s\n", msg);
-	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
-		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
-	}
+	ws_send_netem(nc, iface);
 }
 
 static bool parse_int(char *str, long *l)
@@ -288,33 +348,6 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 	handle_ws_get_netem(nc, t_dev);
 }
 
-static void handle_ws_get_period(struct ns_connection *nc)
-{
-	struct ns_connection *c;
-	char *template = "{\"sample_period\":%d}";
-	char msg[200] = { 0 };
-	sprintf(msg, template, get_sample_period());
-	printf("%s\n", msg);
-	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
-		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
-	}
-}
-
-static void handle_ws_set_period(struct ns_connection *nc,
-				 struct json_token *tok)
-{
-	long period;
-	char s[MAX_JSON_TOKEN_LEN];
-	json_token_to_string(tok, &s, MAX_JSON_TOKEN_LEN);
-        if (!parse_int(s, &period)) {
-                fprintf(stderr, "couldn't parse period\n");
-                return;
-        }
-        printf("setting sample period: %ld, ", period);
-	set_sample_period(period);
-	handle_ws_get_period(nc);
-}
-
 static void handle_ws_message(struct ns_connection *nc,
 			      const struct websocket_message *m)
 {
@@ -335,9 +368,7 @@ static void handle_ws_message(struct ns_connection *nc,
 	const char *key = "msg";
 	tok = find_json_token(arr, key);
 	if (tok) {
-		if (match_msg_type(tok, "list_ifaces")) {
-			handle_ws_list_ifaces(nc);
-		} else if (match_msg_type(tok, "dev_select")) {
+		if (match_msg_type(tok, "dev_select")) {
 			tok = find_json_token(arr, "dev");
 			handle_ws_dev_select(tok);
 		} else if (match_msg_type(tok, "get_netem")) {
@@ -349,11 +380,6 @@ static void handle_ws_message(struct ns_connection *nc,
 					    find_json_token(arr, "delay"),
 					    find_json_token(arr, "jitter"),
 					    find_json_token(arr, "loss"));
-		} else if (match_msg_type(tok, "set_sample_period")) {
-			tok = find_json_token(arr, "period");
-			handle_ws_set_period(nc, tok);
-		} else if (match_msg_type(tok, "get_sample_period")) {
-			handle_ws_get_period(nc);
 		}
 	}
 
@@ -401,6 +427,10 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 		break;
 	case NS_WEBSOCKET_HANDSHAKE_DONE:
 		print_peer_name(nc);
+		ws_send_iface_list(nc);
+		ws_send_dev_select(nc);
+		ws_send_netem(nc, g_selected_iface);
+		ws_send_sample_period(nc);
 		break;
 	case NS_WEBSOCKET_FRAME:
 		handle_ws_message(nc, wm);
@@ -511,7 +541,10 @@ int main()
 		return -1;
 	}
 
-	stats_monitor_iface("lo");
+	char iface[MAX_IFACE_LEN];
+	get_first_iface(iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
+	stats_monitor_iface(iface);
 	stats_thread_init(stats_event_handler);
 
 	for (;;) {

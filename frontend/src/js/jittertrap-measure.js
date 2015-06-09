@@ -48,16 +48,16 @@ JT = (function (my) {
 
   var drawIntervalID = setInterval(updateDOM, 100);
 
-  my.measurementsModule.updateSeries = function (series, min, max, mean, zrun) {
+  my.measurementsModule.updateSeries = function (series, stats) {
 
     if (!measurements[series]) {
       measurements[series] = {};
     }
-    measurements[series].min = min.toFixed(2);
-    measurements[series].max = max.toFixed(2);
-    measurements[series].mean = mean.toFixed(2);
-    measurements[series].maxZ = zrun.max;
-    measurements[series].meanZ = zrun.mean.toFixed(2);
+    measurements[series].min = stats.min.toFixed(2);
+    measurements[series].max = stats.max.toFixed(2);
+    measurements[series].mean = stats.mean.toFixed(2);
+    measurements[series].maxZ = stats.maxZ;
+    measurements[series].meanZ = stats.meanZ.toFixed(2);
   };
 
   return my;
