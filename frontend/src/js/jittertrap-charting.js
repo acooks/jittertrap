@@ -25,13 +25,15 @@ JT = (function (my) {
   var chartData = {
     mainChart: [],
     histogram: [],
-    basicStats: []
+    basicStats: [],
+    packetGap: []
   };
 
   var clearChartData = function () {
     chartData.mainChart.length = 0;
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
+    chartData.packetGap.length = 0;
   };
 
   /* must return a reference to an array of {x:x, y:y, label:l} */
@@ -47,6 +49,10 @@ JT = (function (my) {
   /* must return a reference to an array of {x:x, y:y} */
   my.charts.getMainChartRef = function () {
     return chartData.mainChart;
+  };
+
+  my.charts.getPacketGapRef = function () {
+    return chartData.packetGap;
   };
 
   var resetChart = function() {
@@ -111,6 +117,20 @@ JT = (function (my) {
     });
     my.charts.basicStats.render();
 
+    my.charts.packetGap = new CanvasJS.Chart("packetGapContainer", {
+      title: { text: "Inter Packet Gap" },
+      axisY: {
+        includeZero: "false",
+        title: "Packet Gap (ms, mean)"
+      },
+      data: [{
+        name: selectedSeries.name + "_packetGap",
+        type: "line",
+        dataPoints: chartData.packetGap
+      }]
+    });
+    my.charts.packetGap.render();
+
   };
 
   var renderCount = 0;
@@ -148,6 +168,7 @@ JT = (function (my) {
     my.charts.histogram.render();
     my.charts.basicStats.render();
     my.charts.mainChart.render();
+    my.charts.packetGap.render();
     var d2 = Date.now();
     renderCount++;
     renderTime += d2 - d1;

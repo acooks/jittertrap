@@ -178,6 +178,17 @@ JT = (function (my) {
     }
   };
 
+  var updatePacketGapChartData = function (stats, chartSeries) {
+    while (chartSeries.length > 100) {
+      chartSeries.shift();
+    }
+    var x = 0;
+    if (chartSeries.length > 0) {
+      x = chartSeries[chartSeries.length-1].x;
+    }
+    chartSeries.push({x:x+1, y: stats.meanZ});
+  };
+
   var updateStats = function (series) {
 
     if (! series.filteredData || series.filteredData.length === 0) {
@@ -309,6 +320,7 @@ JT = (function (my) {
         updateMainChartData(series.filteredData, JT.charts.getMainChartRef());
         updateHistogram(series, JT.charts.getHistogramRef());
         updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
+        updatePacketGapChartData(series.stats, JT.charts.getPacketGapRef());
       }
     }
   };
