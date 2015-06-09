@@ -56,11 +56,11 @@ JT = (function (my) {
                             "Rx Bytes per sample");
 
   sBin.rxRate = new Series("rxRate",
-                           "Ingress throughput in kbps",
+                           "Ingress Bitrate in kbps",
                            "kbps, mean");
 
   sBin.txRate = new Series("txRate",
-                           "Egress throughput in kbps",
+                           "Egress Bitrate in kbps",
                            "kbps, mean");
 
   sBin.txPacketRate = new Series("txPacketRate",
