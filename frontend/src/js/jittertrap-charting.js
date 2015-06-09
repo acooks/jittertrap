@@ -206,6 +206,7 @@ JT = (function (my) {
        newPeriod = params.plotPeriodMax;
     }
 
+    params.plotPeriod = newPeriod;
     var sampleCount = JT.core.sampleCount(newPeriod);
     JT.core.resizeDataBufs(sampleCount);
     JT.charts.resetChart();
