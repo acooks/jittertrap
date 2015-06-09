@@ -127,7 +127,6 @@ JT = (function (my) {
     xVal = 0;
   };
 
-
   /* count must be bytes, samplePeriod is microseconds */
   var byteCountToKbpsRate = function(count) {
     var rate = count / my.core.samplePeriod() * 8000.0;
@@ -297,7 +296,7 @@ JT = (function (my) {
   var updateSeries = function (series, yVal, selectedSeries) {
     series.data.push(yVal);
 
-    /* do expensive operations once per filtered sample/chartingPeriod. */
+    /* do expensive operations once per charted data point. */
     if ((xVal % my.charts.getChartPeriod() === 0) ) {
       updateFilteredSeries(series);
       updateStats(series);
