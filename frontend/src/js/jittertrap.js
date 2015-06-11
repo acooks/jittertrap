@@ -2,19 +2,6 @@
 
 $(document).ready(function() {
 
-  var triggers = {
-    maxRxThroughputEnabled: false,
-    maxTxThroughputEnabled: false,
-    minRxThroughputEnabled: false,
-    minTxThroughputEnabled: false,
-    maxTxSilenceEnabled:    false,
-    maxRxSilenceEnabled:    false,
-    maxRxThroughputTriggerVal: 0,
-    maxTxThroughputTriggerVal: 0,
-    minRxThroughputTriggerVal: 0,
-    minTxThroughputTriggerVal: 0
-  };
-
   // Initialize Chart Options
   $("#jt-measure-datalength").html(JT.core.sampleCount());
   $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());

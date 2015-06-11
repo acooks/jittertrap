@@ -224,9 +224,14 @@ JT = (function (my) {
 
   var updateHistogram = function(series, chartSeries) {
     var binCnt = 25;
+
+    var sortedData = series.data.toArray();
+    sortedData.sort(function(a,b) {return (a - b);});
+
+    var maxY = sortedData[sortedData.length-1];
+    var minY = sortedData[0];
+
     var normBins = new Float32Array(binCnt);
-    var maxY = series.stats.max;
-    var minY = series.stats.min;
     var range = (maxY - minY) * 1.1;
 
     /* bins must use integer indexes, so we have to normalise the

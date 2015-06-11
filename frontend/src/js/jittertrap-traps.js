@@ -7,61 +7,123 @@ JT = (function (my) {
   'use strict';
   my.trapModule = {};
 
-  var traps = {};
+  var trapsBin = {}; // a container for Traps
 
-  // Trap Checking Functions
-  /**
-   * Returns the data to be used in checking to see if a particualar trap has
-   * been triggered.
-   * The data is an array of objects {x,y} containing x,y values for the chart.
-   */
-  var trapData = function(trapId) {
-    var data = null;
-    switch (trapId) {
-      case 'max_rx_bitrate':
-        data = my.core.series.rxRate.filteredData;
-      break;
-      case 'max_tx_bitrate':
-        data = my.core.series.txRate.filteredData;
-      break;
+  var trapStates = { disarmed: 0, armed: 1, triggered: 2 };
+
+  var testTypes = {
+    minLessThan: function (val, stats) {
+      return { pass: (stats.min < val), val: stats.min };
+    },
+    maxMoreThan: function (val, stats) {
+      return { pass: (stats.max > val), val: stats.max };
+    },
+    meanMoreThan: function (val, stats) {
+      return { pass: (stats.mean > val), val: stats.mean };
+    },
+    meanLessThan: function (val, stats) {
+      return { pass: (stats.mean < val), val: stats.mean };
+    },
+    meanPGapMoreThan: function (val, stats) {
+      return { pass: (stats.meanZ > val), val: stats.meanZ };
+    },
+    maxPGapMoreThan: function (val, stats) {
+      return { pass:(stats.maxZ > val), val: stats.maxZ };
     }
-    return data;
+  };
+
+  var mapTrapIdToSeriesAndTest = {
+    mean_rx_bitrate: { series: "rxRate", test: testTypes.meanMoreThan },
+    mean_tx_bitrate: { series: "txRate", test: testTypes.meanMoreThan },
+    max_rx_bitrate : { series: "rxRate", test: testTypes.maxMoreThan },
+    max_tx_bitrate : { series: "txRate", test: testTypes.maxMoreThan },
+    min_rx_bitrate : { series: "rxRate", test: testTypes.minLessThan },
+    min_tx_bitrate : { series: "txRate", test: testTypes.minLessThan },
+    rx_pkt_gap     : { series: "rxRate", test: testTypes.maxPGapMoreThan },
+    tx_pkt_gap     : { series: "txRate", test: testTypes.maxPGapMoreThan },
+  };
+
+  var actionTypes = {};
+
+  actionTypes.logAction = function (trap, triggeredVal) {
+    console.log("log action. Trap: " + trap.trapId
+                + " series: " + trap.seriesName
+                + " threshold Val: " + trap.threshVal
+                + " triggered Val: " + triggeredVal);
+  };
+
+  actionTypes.blinkTimeoutHandles = {};
+  actionTypes.blinkAction = function (trap, triggeredVal) {
+
+    var handles = actionTypes.blinkTimeoutHandles;
+
+    var ledOff = function (ledId) {
+      var led = $("#"+ledId);
+      led.css("color", "#FF9900");
+      actionTypes.blinkTimeoutHandles.ledId = 0;
+    };
+
+    var ledOn = function (ledId) {
+      var led = $("#"+ledId);
+      led.css("color", "red");
+      led.html("&nbsp;"+triggeredVal.toFixed(2));
+      if (handles.ledId) {
+        clearTimeout(handles.ledId);
+      }
+      handles.ledId = setTimeout(function() { ledOff(ledId); },
+                                 my.charts.getChartPeriod() + 10);
+    };
+
+    ledOn(trap.trapId + "_led");
   };
 
   /**
-   * Returns true if the given trap has been triggered
+   *
    */
-  var trapTriggered = function(trapId, trapVal) {
-    var triggered = false,
-        data      = trapData(trapId);
-
-    switch (trapId) {
-      case 'max_rx_bitrate':
-      case 'max_tx_bitrate':
-        if (data[data.length-1].y > trapVal) {
-          triggered = true;
-        }
-      break;
-    }
-    return triggered;
+  var TrapAction = function (trap, actionType) {
+    this.trap = trap;
+    this.execute = function (triggeredVal) {
+      actionType(trap, triggeredVal);
+    };
   };
 
-  my.trapModule.checkTriggers = function() {
-    $.each(traps, function(trapId, trapVal){
-      if (trapTriggered(trapId, trapVal)) {
-        console.log("Trap Triggered: " + trapId + "/" + trapVal);
+  /**
+   *
+   */
+  var Trap = function (trapId, seriesName, triggerTester, threshVal) {
+    this.trapId = trapId;
+    this.seriesName = seriesName;
+    this.triggerTester = triggerTester;
+    this.threshVal = threshVal;  // threshold value
+    this.state = trapStates.disarmed;
+    this.actionList = []; // a list of TrapAction
+
+    this.addAction = function (actionType) {
+      var ta = new TrapAction(this, actionType);
+      this.actionList.push(ta);
+    };
+
+    this.testAndAct = function (stats) {
+      var result = this.triggerTester(this.threshVal, stats);
+      if (result.pass) {
+        //console.log("trap triggered.");
+        $.each(this.actionList, function(idx, action) {
+          //console.log("taking action: " + idx);
+          action.execute(result.val);
+        });
+      }
+    };
+  };
+
+  /**
+   *
+   */
+  my.trapModule.checkTriggers = function(seriesName, stats) {
+    $.each(trapsBin, function(idx, trap) {
+      if (trap.seriesName == seriesName) {
+        trap.testAndAct(stats);
       }
     });
-  };
-
-
-  // Functions for the alternative approach to controlling traps
-  /**
-   * 
-   */
-  var closeAddTrapModal = function() {
-    $('#add_trap_modal input').val("");
-    $('#add_trap_modal button').get(1).click();
   };
 
   /**
@@ -69,15 +131,17 @@ JT = (function (my) {
    * Just needs to ensure the trap measurement units are displayed
    */
   my.trapModule.trapSelectionHandler = function(event){
-    var $input_group_addon = $(event.target).parent().find('.input-group-addon'),
-        units              = $(event.target).find('option:selected').data('trapUnits');
+    var $input_group_addon = $(event.target).parent()
+                             .find('.input-group-addon');
+    var units = $(event.target).find('option:selected')
+                .data('trapUnits');
 
-    // Update the input-group-addon with the correct units for the type of trap selected
+    // Update input-group-addon with correct units for type of trap selected
     $input_group_addon.text(units);
   };
 
   /**
-   * 
+   *
    */
   var addTrapToUI = function(){
     var trapValue        = $('#trap_value').val(),
@@ -101,24 +165,36 @@ JT = (function (my) {
         $trapTable.find('tbody').append(rendered);
       });
 
-      closeAddTrapModal();
+      $('#add_trap_modal input').val("");
+      $('#add_trap_modal button').get(1).click();
     }
   };
 
+  /**
+   *
+   */
   my.trapModule.addTrapHandler = function(event) {
-    var $selectedTrapOption = $(event.target).parents('.modal').find('option:selected'),
-        trapId              = $selectedTrapOption.data('trapId'),
-        trapValue           = $('#trap_value').val(),
-        trapValueInt        = parseInt(trapValue);
+    var $selectedTrapOption = $(event.target).parents('.modal')
+                              .find('option:selected');
+    var trapId              = $selectedTrapOption.data('trapId');
+    var trapValue           = $('#trap_value').val();
+    var trapValueInt        = parseInt(trapValue);
 
     if (trapValueInt > 0) {
-      traps[trapId] = trapValue;
+      var map = mapTrapIdToSeriesAndTest[trapId];
+      var t = new Trap(trapId, map.series, map.test, trapValue);
+      //t.addAction(actionTypes.logAction);
+      t.addAction(actionTypes.blinkAction);
+      trapsBin[trapId] = t;
       addTrapToUI();
     }
   };
 
+  /**
+   *
+   */
   my.trapModule.deleteTrap = function (trapId) {
-    delete traps[trapId];
+    delete trapsBin[trapId];
   };
 
   return my;
