@@ -1,14 +1,19 @@
 <tr data-trap-id="{{trapId}}">
-  <td>{{trapName}}</td>
-  <td>
+  <td class="col-xs-4">{{trapName}}</td>
+  <td class="col-xs-2">
     <div class="input-group">
       <span class="form-control">{{trapValue}}</span>
       <span class="input-group-addon">{{trapUnits}}</span>
     </div>
   </td>
-  <td>
+  <td class="col-xs-2">
     <button type="button" class="btn btn-default">
       <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
     </button>
+  </td>
+  <td class="col-xs-2">
+    <div>
+      <span class="glyphicon glyphicon-exclamation-sign" id="{{trapId}}_led"></span>
+    </div>
   </td>
 </tr>

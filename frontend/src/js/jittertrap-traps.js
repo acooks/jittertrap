@@ -12,12 +12,24 @@ JT = (function (my) {
   var trapStates = { disarmed: 0, armed: 1, triggered: 2 };
 
   var testTypes = {
-    minLessThan:      function (val, stats) { return (stats.min < val); },
-    maxMoreThan:      function (val, stats) { return (stats.max > val); },
-    meanMoreThan:     function (val, stats) { return (stats.mean > val); },
-    meanLessThan:     function (val, stats) { return (stats.mean < val); },
-    meanPGapMoreThan: function (val, stats) { return (stats.meanZ > val); },
-    maxPGapMoreThan:  function (val, stats) { return (stats.maxZ > val); }
+    minLessThan: function (val, stats) {
+      return { pass: (stats.min < val), val: stats.min };
+    },
+    maxMoreThan: function (val, stats) {
+      return { pass: (stats.max > val), val: stats.max };
+    },
+    meanMoreThan: function (val, stats) {
+      return { pass: (stats.mean > val), val: stats.mean };
+    },
+    meanLessThan: function (val, stats) {
+      return { pass: (stats.mean < val), val: stats.mean };
+    },
+    meanPGapMoreThan: function (val, stats) {
+      return { pass: (stats.meanZ > val), val: stats.meanZ };
+    },
+    maxPGapMoreThan: function (val, stats) {
+      return { pass:(stats.maxZ > val), val: stats.maxZ };
+    }
   };
 
   var mapTrapIdToSeriesAndTest = {
@@ -33,42 +45,71 @@ JT = (function (my) {
 
   var actionTypes = {};
 
-  actionTypes.logAction = function (sName, tVal) {
-    console.log("log action. Series: " + sName + " triggerVal: " + tVal);
+  actionTypes.logAction = function (trap, triggeredVal) {
+    console.log("log action. Trap: " + trap.trapId
+                + " series: " + trap.seriesName
+                + " threshold Val: " + trap.threshVal
+                + " triggered Val: " + triggeredVal);
+  };
+
+  actionTypes.blinkTimeoutHandles = {};
+  actionTypes.blinkAction = function (trap, triggeredVal) {
+
+    var handles = actionTypes.blinkTimeoutHandles;
+
+    var ledOff = function (ledId) {
+      var led = $("#"+ledId);
+      led.css("color", "#FF9900");
+      actionTypes.blinkTimeoutHandles.ledId = 0;
+    };
+
+    var ledOn = function (ledId) {
+      var led = $("#"+ledId);
+      led.css("color", "red");
+      led.html("&nbsp;"+triggeredVal.toFixed(2));
+      if (handles.ledId) {
+        clearTimeout(handles.ledId);
+      }
+      handles.ledId = setTimeout(function() { ledOff(ledId); },
+                                 my.charts.getChartPeriod() + 10);
+    };
+
+    ledOn(trap.trapId + "_led");
   };
 
   /**
    *
    */
-  var TrapAction = function (seriesName, actionType, triggerVal) {
-    this.seriesName = seriesName;
-    this.triggerVal = triggerVal;
-    this.execute = function () {
-      actionType(this.seriesName, this.triggerVal);
+  var TrapAction = function (trap, actionType) {
+    this.trap = trap;
+    this.execute = function (triggeredVal) {
+      actionType(trap, triggeredVal);
     };
   };
 
   /**
    *
    */
-  var Trap = function (seriesName, triggerTester, triggerVal) {
+  var Trap = function (trapId, seriesName, triggerTester, threshVal) {
+    this.trapId = trapId;
     this.seriesName = seriesName;
     this.triggerTester = triggerTester;
-    this.triggerVal = triggerVal;  // threshold value
+    this.threshVal = threshVal;  // threshold value
     this.state = trapStates.disarmed;
     this.actionList = []; // a list of TrapAction
 
     this.addAction = function (actionType) {
-      var ta = new TrapAction(this.seriesName, actionType, this.triggerVal);
+      var ta = new TrapAction(this, actionType);
       this.actionList.push(ta);
     };
 
     this.testAndAct = function (stats) {
-      if (this.triggerTester(this.triggerVal, stats)) {
+      var result = this.triggerTester(this.threshVal, stats);
+      if (result.pass) {
         //console.log("trap triggered.");
         $.each(this.actionList, function(idx, action) {
           //console.log("taking action: " + idx);
-          action.execute();
+          action.execute(result.val);
         });
       }
     };
@@ -79,7 +120,9 @@ JT = (function (my) {
    */
   my.trapModule.checkTriggers = function(seriesName, stats) {
     $.each(trapsBin, function(idx, trap) {
-      trap.testAndAct(stats);
+      if (trap.seriesName == seriesName) {
+        trap.testAndAct(stats);
+      }
     });
   };
 
@@ -139,8 +182,9 @@ JT = (function (my) {
 
     if (trapValueInt > 0) {
       var map = mapTrapIdToSeriesAndTest[trapId];
-      var t = new Trap(map.series, map.test, trapValue);
-      t.addAction(actionTypes.logAction);
+      var t = new Trap(trapId, map.series, map.test, trapValue);
+      //t.addAction(actionTypes.logAction);
+      t.addAction(actionTypes.blinkAction);
       trapsBin[trapId] = t;
       addTrapToUI();
     }
