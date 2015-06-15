@@ -143,32 +143,38 @@ JT = (function (my) {
   /* Takes an Array and counts the consecutive 0 elements.
    * Returns an object with max and mean counts.
    */
-  var maxPacketGap = function (data) {
+  var packetGap = function (data) {
     if (data.length === 0) {
       return;
     }
-    var maxRunLen = 0;
-    var meanRunLen = 0;
+    var maxGap = 0;
+    var meanGap = 0;
+    var minGap = 99;
     var runLengths = [ 0 ];
     var i, j = 0;
 
     for (i = data.length - 1; i >= 0 ; i--) {
       if (data[i] === 0) {
         runLengths[j]++;
-        maxRunLen = (maxRunLen > runLengths[j]) ? maxRunLen : runLengths[j];
+        maxGap = (maxGap > runLengths[j]) ? maxGap : runLengths[j];
       } else if (runLengths[j] > 0) {
-        meanRunLen += runLengths[j];
+        meanGap += runLengths[j];
         j++;
         runLengths[j] = 0;
       }
     }
     if (runLengths.length === 1) {
-      meanRunLen = runLengths[0];
+      meanGap = runLengths[0];
     } else {
-      meanRunLen /= runLengths.length;
+      meanGap /= runLengths.length;
     }
 
-    return { max: maxRunLen, mean: meanRunLen } ;
+
+    var s = runLengths.slice(0);
+    s.sort(function(a,b) {return (a - b);});
+    minGap = s[0];
+
+    return { max: maxGap, mean: meanGap, min: minGap } ;
   };
 
   var updateBasicStatsChartData = function (stats, chartSeries) {
@@ -185,15 +191,18 @@ JT = (function (my) {
     }
   };
 
-  var updatePacketGapChartData = function (packetGapData, chartSeries) {
+  var updatePacketGapChartData = function (packetGapData, mean, minMax) {
 
     var chartPeriod = my.charts.getChartPeriod();
     var len = packetGapData.length;
 
-    chartSeries.length = 0;
+    mean.length = 0;
+    minMax.length = 0;
 
     for (var i = 0; i < len; i++) {
-      chartSeries.push({x: i * chartPeriod, y: packetGapData[i].mean});
+      var x = i * chartPeriod;
+      mean.push({x: x, y: packetGapData[i].mean});
+      minMax.push({x: x, y: [packetGapData[i].min, packetGapData[i].max]});
     }
   };
 
@@ -217,9 +226,10 @@ JT = (function (my) {
     }
     series.stats.mean = sum / sortedData.length;
 
-    var zeroRuns = maxPacketGap(series.data.toArray());
-    series.stats.maxZ = zeroRuns.max;
-    series.stats.meanZ = zeroRuns.mean;
+    var pGap = packetGap(series.data.toArray());
+    series.stats.maxZ = pGap.max;
+    series.stats.meanZ = pGap.mean;
+    series.stats.minZ = pGap.min
   };
 
   var updateHistogram = function(series, chartSeries) {
@@ -308,7 +318,7 @@ JT = (function (my) {
       var subSeriesStartIdx = i * decimationFactor;
       var subSeriesEndIdx = i * decimationFactor + decimationFactor;
       var subSeries = series.data.slice(subSeriesStartIdx, subSeriesEndIdx);
-      var pgd = maxPacketGap(subSeries);
+      var pgd = packetGap(subSeries);
       series.packetGapData.push(pgd);
 
       for (var j = 0; j < decimationFactor; j++) {
@@ -340,7 +350,9 @@ JT = (function (my) {
         updateMainChartData(series.filteredData, JT.charts.getMainChartRef());
         updateHistogram(series, JT.charts.getHistogramRef());
         updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
-        updatePacketGapChartData(series.packetGapData, JT.charts.getPacketGapRef());
+        updatePacketGapChartData(series.packetGapData,
+                                 JT.charts.getPacketGapMeanRef(),
+                                 JT.charts.getPacketGapMinMaxRef());
       }
     }
   };

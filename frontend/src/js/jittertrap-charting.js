@@ -26,14 +26,16 @@ JT = (function (my) {
     mainChart: [],
     histogram: [],
     basicStats: [],
-    packetGap: []
+    packetGapMean: [],
+    packetGapMinMax: [],
   };
 
   var clearChartData = function () {
     chartData.mainChart.length = 0;
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
-    chartData.packetGap.length = 0;
+    chartData.packetGapMean.length = 0;
+    chartData.packetGapMinMax.length = 0;
   };
 
   /* must return a reference to an array of {x:x, y:y, label:l} */
@@ -51,8 +53,12 @@ JT = (function (my) {
     return chartData.mainChart;
   };
 
-  my.charts.getPacketGapRef = function () {
-    return chartData.packetGap;
+  my.charts.getPacketGapMeanRef = function () {
+    return chartData.packetGapMean;
+  };
+
+  my.charts.getPacketGapMinMaxRef = function () {
+    return chartData.packetGapMinMax;
   };
 
   var resetChart = function() {
@@ -123,11 +129,20 @@ JT = (function (my) {
         includeZero: "false",
         title: "Packet Gap (ms, mean)"
       },
-      data: [{
-        name: selectedSeries.name + "_packetGap",
-        type: "line",
-        dataPoints: chartData.packetGap
-      }]
+      data: [
+        {
+          showInLegend: true,
+          name: "range(min,max)",
+          type: "rangeArea",
+          dataPoints: chartData.packetGapMinMax
+        },
+        {
+          showInLegend: true,
+          name: "mean",
+          type: "line",
+          dataPoints: chartData.packetGapMean
+        }
+      ]
     });
     my.charts.packetGap.render();
 
