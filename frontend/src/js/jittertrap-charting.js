@@ -85,7 +85,7 @@ JT = (function (my) {
       axisX: { title: selectedSeries.xlabel },
       data: [{
         name: selectedSeries.name,
-        type: "line",
+        type: "stepLine",
         dataPoints: chartData.mainChart
       }]
     });
@@ -139,7 +139,7 @@ JT = (function (my) {
         {
           showInLegend: true,
           name: "mean",
-          type: "line",
+          type: "stepLine",
           dataPoints: chartData.packetGapMean
         }
       ]
