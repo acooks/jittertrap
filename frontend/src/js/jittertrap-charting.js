@@ -80,9 +80,15 @@ JT = (function (my) {
       title: { text: selectedSeries.title },
       axisY: {
         title: selectedSeries.ylabel,
-        includeZero: "false"
+        includeZero: "false",
+        gridThickness: 1,
       },
-      axisX: { title: selectedSeries.xlabel },
+      axisX: {
+        title: selectedSeries.xlabel,
+        gridDashType: "dash",
+        gridThickness: 1,
+        gridColor: "#EEEEEE"
+      },
       data: [{
         name: selectedSeries.name,
         type: "stepLine",
@@ -125,9 +131,15 @@ JT = (function (my) {
 
     my.charts.packetGap = new CanvasJS.Chart("packetGapContainer", {
       title: { text: "Inter Packet Gap" },
+      axisX: {
+        gridDashType: "dash",
+        gridThickness: 1,
+        gridColor: "#EEEEEE"
+      },
       axisY: {
         includeZero: "false",
-        title: "Packet Gap (ms, mean)"
+        title: "Packet Gap (ms, mean)",
+        gridThickness: 1,
       },
       data: [
         {
