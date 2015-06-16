@@ -345,14 +345,19 @@ JT = (function (my) {
       JT.measurementsModule.updateSeries(series.name, series.stats);
       JT.trapModule.checkTriggers(series.name, series.stats);
 
+      /* update the charts data */
       if (series === selectedSeries) {
-        /* update the charts data */
-        updateMainChartData(series.filteredData, JT.charts.getMainChartRef());
-        updateHistogram(series, JT.charts.getHistogramRef());
-        updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
+
+        /* these look at windows the size of chart period */
+        updateMainChartData(series.filteredData,
+                            JT.charts.getMainChartRef());
         updatePacketGapChartData(series.packetGapData,
                                  JT.charts.getPacketGapMeanRef(),
                                  JT.charts.getPacketGapMinMaxRef());
+
+        /* these look at the whole series */
+        updateHistogram(series, JT.charts.getHistogramRef());
+        updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
       }
     }
   };
