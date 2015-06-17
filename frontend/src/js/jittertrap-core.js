@@ -35,11 +35,22 @@ JT = (function (my) {
     return sampleCount;
   };
 
+  /* count must be bytes, samplePeriod is microseconds */
+  var byteCountToKbpsRate = function(count) {
+    var rate = count / my.core.samplePeriod() * 8000.0;
+    return rate;
+  };
+
+  var packetDeltaToRate = function(count) {
+    return count * (1000000.0 / my.core.samplePeriod());
+  };
+
   /* a prototype object to encapsulate timeseries data. */
-  var Series = function(name, title, ylabel) {
+  var Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
     this.title = title;
     this.ylabel = ylabel;
+    this.rateFormatter = rateFormatter;
     this.xlabel = "Time (ms)";
     this.data = []; // raw samples
     this.filteredData = []; // filtered & decimated to chartingPeriod
@@ -48,37 +59,25 @@ JT = (function (my) {
   };
 
   var sBin = {};  // a container (Bin) for series.
-  sBin.txDelta = new Series("txDelta",
-                            "Tx Bytes per sample period",
-                            "Tx Bytes per sample");
-
-  sBin.rxDelta = new Series("rxDelta",
-                            "Rx Bytes per sample period",
-                            "Rx Bytes per sample");
-
   sBin.rxRate = new Series("rxRate",
                            "Ingress Bitrate in kbps",
-                           "kbps, mean");
+                           "kbps, mean",
+                           byteCountToKbpsRate);
 
   sBin.txRate = new Series("txRate",
                            "Egress Bitrate in kbps",
-                           "kbps, mean");
+                           "kbps, mean",
+                           byteCountToKbpsRate);
 
   sBin.txPacketRate = new Series("txPacketRate",
                                  "Egress packet rate",
-                                 "pkts per sec, mean");
+                                 "pkts per sec, mean",
+                                 packetDeltaToRate);
 
   sBin.rxPacketRate = new Series("rxPacketRate",
                                  "Ingress packet rate",
-                                 "pkts per sec, mean");
-
-  sBin.txPacketDelta = new Series("txPacketDelta",
-                                  "Egress packets per sample",
-                                  "packets sent");
-
-  sBin.rxPacketDelta = new Series("rxPacketDelta",
-                                  "Ingress packets per sample",
-                                  "packets received");
+                                 "pkts per sec, mean",
+                                 packetDeltaToRate);
 
   /* FIXME: this is a stepping stone to nowhere. */
   my.core.getSeriesByName = function (sName) {
@@ -99,17 +98,12 @@ JT = (function (my) {
 
   my.core.resizeDataBufs = function(newlen) {
 
-    resizeCBuf(sBin.txDelta, newlen);
-    resizeCBuf(sBin.rxDelta, newlen);
-
     resizeCBuf(sBin.rxRate, newlen);
     resizeCBuf(sBin.txRate, newlen);
 
     resizeCBuf(sBin.txPacketRate, newlen);
     resizeCBuf(sBin.rxPacketRate, newlen);
 
-    resizeCBuf(sBin.txPacketDelta, newlen);
-    resizeCBuf(sBin.rxPacketDelta, newlen);
   };
 
   var clearSeries = function (s) {
@@ -119,25 +113,11 @@ JT = (function (my) {
   };
 
   my.core.clearAllSeries = function () {
-    clearSeries(sBin.txDelta);
-    clearSeries(sBin.rxDelta);
     clearSeries(sBin.txRate);
     clearSeries(sBin.rxRate);
     clearSeries(sBin.txPacketRate);
     clearSeries(sBin.rxPacketRate);
-    clearSeries(sBin.txPacketDelta);
-    clearSeries(sBin.rxPacketDelta);
     xVal = 0;
-  };
-
-  /* count must be bytes, samplePeriod is microseconds */
-  var byteCountToKbpsRate = function(count) {
-    var rate = count / my.core.samplePeriod() * 8000.0;
-    return rate;
-  };
-
-  var packetDeltaToRate = function(count) {
-    return count * (1000000.0 / my.core.samplePeriod());
   };
 
   /* Takes an Array and counts the consecutive 0 elements.
@@ -215,16 +195,16 @@ JT = (function (my) {
     var sortedData = series.filteredData.slice(0);
     sortedData.sort(function(a,b) {return (a - b);});
 
-    series.stats.max = sortedData[sortedData.length-1];
-    series.stats.min = sortedData[0];
-    series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
+    series.stats.max = series.rateFormatter(sortedData[sortedData.length-1]);
+    series.stats.min = series.rateFormatter(sortedData[0]);
+    series.stats.median = series.rateFormatter(sortedData[Math.floor(sortedData.length / 2.0)]);
     var sum = 0;
     var i = 0;
 
     for (i = sortedData.length-1; i >=0; i--) {
       sum += sortedData[i];
     }
-    series.stats.mean = sum / sortedData.length;
+    series.stats.mean = series.rateFormatter(sum / sortedData.length);
 
     var pGap = packetGap(series.data.toArray());
     series.stats.maxZ = pGap.max;
@@ -277,14 +257,16 @@ JT = (function (my) {
     }
   };
 
-  var updateMainChartData = function(filteredData, chartSeries) {
+  var updateMainChartData = function(filteredData, formatter, chartSeries) {
     var chartPeriod = my.charts.getChartPeriod();
     var len = filteredData.length;
 
     chartSeries.length = 0;
 
     for (var i = 0; i < len; i++) {
-      chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
+      // convert to rate
+      var r = formatter(filteredData[i]);
+      chartSeries.push({x: i * chartPeriod, y: r});
     }
   };
 
@@ -350,6 +332,7 @@ JT = (function (my) {
 
         /* these look at windows the size of chart period */
         updateMainChartData(series.filteredData,
+                            series.rateFormatter,
                             JT.charts.getMainChartRef());
         updatePacketGapChartData(series.packetGapData,
                                  JT.charts.getPacketGapMeanRef(),
@@ -363,14 +346,10 @@ JT = (function (my) {
   };
 
   var updateData = function (d, sSeries) {
-    updateSeries(sBin.txDelta, d.txDelta, sSeries);
-    updateSeries(sBin.rxDelta, d.rxDelta, sSeries);
-    updateSeries(sBin.txRate, byteCountToKbpsRate(d.txDelta), sSeries);
-    updateSeries(sBin.rxRate, byteCountToKbpsRate(d.rxDelta), sSeries);
-    updateSeries(sBin.txPacketRate, packetDeltaToRate(d.txPktDelta), sSeries);
-    updateSeries(sBin.rxPacketRate, packetDeltaToRate(d.rxPktDelta), sSeries);
-    updateSeries(sBin.txPacketDelta, d.txPktDelta, sSeries);
-    updateSeries(sBin.rxPacketDelta, d.rxPktDelta, sSeries);
+    updateSeries(sBin.txRate, d.txDelta, sSeries);
+    updateSeries(sBin.rxRate, d.rxDelta, sSeries);
+    updateSeries(sBin.txPacketRate, d.txPktDelta, sSeries);
+    updateSeries(sBin.rxPacketRate, d.rxPktDelta, sSeries);
   };
 
   my.core.processDataMsg = function (stats) {
