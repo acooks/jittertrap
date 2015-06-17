@@ -146,6 +146,8 @@ JT = (function (my) {
           showInLegend: true,
           name: "range(min,max)",
           type: "rangeArea",
+          lineThickness: 1,
+          fillOpacity: .1,
           dataPoints: chartData.packetGapMinMax
         },
         {
