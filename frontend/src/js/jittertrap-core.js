@@ -242,7 +242,7 @@ JT = (function (my) {
     var minY = sortedData[0];
 
     var normBins = new Float32Array(binCnt);
-    var range = (maxY - minY) * 1.1;
+    var range = (maxY - minY);
 
     /* bins must use integer indexes, so we have to normalise the
      * data and then convert it back before display.
