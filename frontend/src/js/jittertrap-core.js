@@ -200,16 +200,16 @@ JT = (function (my) {
     var sortedData = series.filteredData.slice(0);
     sortedData.sort(numSort);
 
-    series.stats.max = series.rateFormatter(sortedData[sortedData.length-1]);
-    series.stats.min = series.rateFormatter(sortedData[0]);
-    series.stats.median = series.rateFormatter(sortedData[Math.floor(sortedData.length / 2.0)]);
+    series.stats.max = sortedData[sortedData.length-1];
+    series.stats.min = sortedData[0];
+    series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
     var sum = 0;
     var i = 0;
 
     for (i = sortedData.length-1; i >=0; i--) {
       sum += sortedData[i];
     }
-    series.stats.mean = series.rateFormatter(sum / sortedData.length);
+    series.stats.mean = sum / sortedData.length;
 
     var pGap = packetGap(series.data.toArray());
     series.stats.maxZ = pGap.max;
@@ -219,15 +219,7 @@ JT = (function (my) {
 
   var updateHistogram = function(series, chartSeries) {
     var binCnt = 25;
-
-    var rateData = series.filteredData.slice(0);
-
-    // convert to rate
-    for (var k = series.filteredData.length - 1; k >=0 ; k--) {
-      rateData[k] = series.rateFormatter(rateData[k]);
-    }
-
-    var sortedData = rateData.slice(0);
+    var sortedData = series.filteredData.slice(0);
     sortedData.sort(numSort);
 
     var maxY = sortedData[sortedData.length-1];
@@ -253,8 +245,8 @@ JT = (function (my) {
     }
 
     /* bin the normalized data */
-    for (j = 0; j < rateData.length; j++) {
-      var normY = (rateData[j] - minY) / range * (binCnt - 1);
+    for (j = 0; j < series.filteredData.length; j++) {
+      var normY = (series.filteredData[j] - minY) / range * (binCnt - 1);
       console.assert((normY >= 0) && (normY < binCnt));
       normBins[Math.round(normY)]++;
     }
@@ -283,9 +275,7 @@ JT = (function (my) {
     chartSeries.length = 0;
 
     for (var i = 0; i < len; i++) {
-      // convert to rate
-      var r = formatter(filteredData[i]);
-      chartSeries.push({x: i * chartPeriod, y: r});
+      chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
     }
   };
 
@@ -332,6 +322,7 @@ JT = (function (my) {
 
       // scale the value to the correct range.
       series.filteredData[i] *= scale;
+      series.filteredData[i] = series.rateFormatter(series.filteredData[i]);
     }
   };
 
