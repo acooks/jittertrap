@@ -120,6 +120,11 @@ JT = (function (my) {
     xVal = 0;
   };
 
+  var numSort = function(a,b) {
+    return (a - b)|0;
+  };
+
+
   /* Takes an Array and counts the consecutive 0 elements.
    * Returns an object with max and mean counts.
    */
@@ -151,7 +156,7 @@ JT = (function (my) {
 
 
     var s = runLengths.slice(0);
-    s.sort(function(a,b) {return (a - b);});
+    s.sort(numSort);
     minGap = s[0];
 
     return { max: maxGap, mean: meanGap, min: minGap } ;
@@ -193,7 +198,7 @@ JT = (function (my) {
     }
 
     var sortedData = series.filteredData.slice(0);
-    sortedData.sort(function(a,b) {return (a - b);});
+    sortedData.sort(numSort);
 
     series.stats.max = series.rateFormatter(sortedData[sortedData.length-1]);
     series.stats.min = series.rateFormatter(sortedData[0]);
@@ -223,7 +228,7 @@ JT = (function (my) {
     }
 
     var sortedData = rateData.slice(0);
-    sortedData.sort(function(a,b) {return (a - b);});
+    sortedData.sort(numSort);
 
     var maxY = sortedData[sortedData.length-1];
     var minY = sortedData[0];
