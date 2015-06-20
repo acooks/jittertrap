@@ -215,7 +215,14 @@ JT = (function (my) {
   var updateHistogram = function(series, chartSeries) {
     var binCnt = 25;
 
-    var sortedData = series.data.toArray();
+    var rateData = series.filteredData.slice(0);
+
+    // convert to rate
+    for (var k = series.filteredData.length - 1; k >=0 ; k--) {
+      rateData[k] = series.rateFormatter(rateData[k]);
+    }
+
+    var sortedData = rateData.slice(0);
     sortedData.sort(function(a,b) {return (a - b);});
 
     var maxY = sortedData[sortedData.length-1];
@@ -223,6 +230,11 @@ JT = (function (my) {
 
     var normBins = new Float32Array(binCnt);
     var range = (maxY - minY);
+
+    /* prevent division by zero */
+    range = (range > 0) ? range : 1;
+
+    //console.log("min: " + minY + " maxY: " + maxY + " range: " + range);
 
     /* bins must use integer indexes, so we have to normalise the
      * data and then convert it back before display.
@@ -236,10 +248,12 @@ JT = (function (my) {
     }
 
     /* bin the normalized data */
-    for (j = 0; j < series.data.size; j++) {
-      var normY = (series.data.get(j) - minY) / range * binCnt;
+    for (j = 0; j < rateData.length; j++) {
+      var normY = (rateData[j] - minY) / range * (binCnt - 1);
+      console.assert((normY >= 0) && (normY < binCnt));
       normBins[Math.round(normY)]++;
     }
+    console.assert(normBins.length == binCnt);
 
     /* convert to logarithmic scale */
     for (i = 0; i < normBins.length; i++) {
@@ -251,7 +265,7 @@ JT = (function (my) {
     /* write the histogram x,y data */
     chartSeries.length = 0;
     for (i = 0; i < binCnt; i++) {
-      var x = Math.round(i * (maxY / binCnt));
+      var x = Math.round(i * (range / (binCnt-1)));
       x += Math.round(minY);  /* shift x to match original y range */
       chartSeries.push({x: x, y: normBins[i], label: x});
     }
