@@ -27,7 +27,7 @@ JT = (function (my) {
     histogram: [],
     basicStats: [],
     packetGapMean: [],
-    packetGapMinMax: [],
+    packetGapMinMax: []
   };
 
   var clearChartData = function () {
@@ -81,7 +81,7 @@ JT = (function (my) {
       axisY: {
         title: selectedSeries.ylabel,
         includeZero: "false",
-        gridThickness: 1,
+        gridThickness: 1
       },
       axisX: {
         title: selectedSeries.xlabel,
@@ -139,7 +139,7 @@ JT = (function (my) {
       axisY: {
         includeZero: "false",
         title: "Packet Gap (ms, mean)",
-        gridThickness: 1,
+        gridThickness: 1
       },
       data: [
         {

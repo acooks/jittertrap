@@ -40,7 +40,7 @@ JT = (function (my) {
     min_rx_bitrate : { series: "rxRate", test: testTypes.minLessThan },
     min_tx_bitrate : { series: "txRate", test: testTypes.minLessThan },
     rx_pkt_gap     : { series: "rxRate", test: testTypes.maxPGapMoreThan },
-    tx_pkt_gap     : { series: "txRate", test: testTypes.maxPGapMoreThan },
+    tx_pkt_gap     : { series: "txRate", test: testTypes.maxPGapMoreThan }
   };
 
   var actionTypes = {};
