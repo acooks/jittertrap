@@ -148,16 +148,19 @@ JT = (function (my) {
         runLengths[j] = 0;
       }
     }
+    maxGap *= (my.core.samplePeriod() / 1000);
+
     if (runLengths.length === 1) {
       meanGap = runLengths[0];
     } else {
       meanGap /= runLengths.length;
     }
+    meanGap *= (my.core.samplePeriod() / 1000);
 
 
     var s = runLengths.slice(0);
     s.sort(numSort);
-    minGap = s[0];
+    minGap = s[0] * (my.core.samplePeriod() / 1000);
 
     return { max: maxGap, mean: meanGap, min: minGap } ;
   };
