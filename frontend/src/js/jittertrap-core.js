@@ -37,12 +37,12 @@ JT = (function (my) {
 
   /* count must be bytes, samplePeriod is microseconds */
   var byteCountToKbpsRate = function(count) {
-    var rate = count / my.core.samplePeriod() * 8000.0;
+    var rate = count / my.core.samplePeriod() * 8000.0 * (my.core.samplePeriod() / 1000);
     return rate;
   };
 
   var packetDeltaToRate = function(count) {
-    return count * (1000000.0 / my.core.samplePeriod());
+    return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
   };
 
   /* a prototype object to encapsulate timeseries data. */
