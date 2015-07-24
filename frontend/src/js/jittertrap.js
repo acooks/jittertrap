@@ -56,8 +56,5 @@ $(document).ready(function() {
     $trapTr.remove();
   });
 
-  $('#help_toggle').click(function() {
-    $('#help').toggle("fast");
-  });
 });
 
