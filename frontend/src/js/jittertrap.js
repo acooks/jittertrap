@@ -2,6 +2,12 @@
 
 $(document).ready(function() {
 
+  $("#jt-version-repo").html(JT.version.repo);
+  $("#jt-version-branch").html(JT.version.branch);
+  $("#jt-version-commit").html(JT.version.commit);
+  $("#jt-version-commit-time").html(new Date(JT.version.commitTime * 1000));
+  $("#jt-version-clean").html(JT.version.isClean);
+
   // Initialize Chart Options
   $("#jt-measure-datalength").html(JT.core.sampleCount());
   $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
