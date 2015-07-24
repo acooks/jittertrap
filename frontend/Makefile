@@ -13,7 +13,8 @@ createdirs:
 
 CONCAT = ${OUT}/js/jittertrap-concat.js
 concat:
-	cat src/js/jittertrap-core.js    > ${CONCAT}
+	cat src/js/jittertrap-welcome.js    > ${CONCAT}
+	cat src/js/jittertrap-core.js       >> ${CONCAT}
 	cat src/js/jittertrap-measure.js    >> ${CONCAT}
 	cat src/js/jittertrap-websocket.js  >> ${CONCAT}
 	cat src/js/jittertrap-charting.js   >> ${CONCAT}
