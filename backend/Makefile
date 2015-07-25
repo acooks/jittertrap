@@ -1,4 +1,4 @@
-include ../config.make
+include ../make.config
 
 PROG = jittertrap
 SOURCES = \

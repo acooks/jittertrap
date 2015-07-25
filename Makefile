@@ -1,5 +1,5 @@
 
-include config.make
+include make.config
 
 SUBDIRS = backend frontend docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
