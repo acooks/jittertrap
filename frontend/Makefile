@@ -1,3 +1,5 @@
+include ../config.make
+
 .PHONY: all
 
 # BE CAREFUL! Check the 'rm -rf' if you edit this!

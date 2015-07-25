@@ -1,3 +1,6 @@
+
+include config.make
+
 SUBDIRS = backend frontend docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
