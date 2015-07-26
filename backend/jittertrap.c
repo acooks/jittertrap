@@ -586,7 +586,7 @@ int main()
 	stats_thread_init(stats_event_handler);
 
 	for (;;) {
-		ns_mgr_poll(&mgr, 1);
+		ns_mgr_poll(&mgr, 10); // 10ms
 		stats_filter_and_send();
 	}
 	ns_mgr_free(&mgr);
