@@ -19,10 +19,6 @@
 #include "stats_thread.h"
 #include "sample_buf.h"
 
-/* 10ms of samples per message */
-static_assert((SAMPLES_PER_FRAME * SAMPLE_PERIOD_US) == 10000,
-	      "Message must contain exactly 10ms of data samples");
-
 /* globals */
 static pthread_t stats_thread;
 struct sigaction sa;
