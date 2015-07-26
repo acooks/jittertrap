@@ -18,6 +18,9 @@ struct iface_stats {
 	uint32_t 	sample_period_us;
 	char	 	iface[MAX_IFACE_LEN];
 	struct sample 	samples[SAMPLES_PER_FRAME];
+	uint64_t	whoosh_err_mean;
+	uint64_t	whoosh_err_max;
+	uint64_t	whoosh_err_sd;
 };
 
 int stats_thread_init(void (*stats_handler) (struct iface_stats * counts));
