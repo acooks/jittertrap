@@ -2,7 +2,6 @@
 
 /* global CBuffer */
 /* global JT:true */
-JT = {};
 
 JT = (function (my) {
   'use strict';
@@ -11,7 +10,7 @@ JT = (function (my) {
   my.core = {};
 
   var xVal = 0; //TODO: rename to indicate reductionFactor purpose.
-  var samplePeriod = 2000;
+  var samplePeriod = JT.coreconfig.samplePeriod;
 
   /* raw data sample period; microseconds; fixed. */
   my.core.samplePeriod = function(sp) {

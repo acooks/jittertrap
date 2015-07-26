@@ -5,7 +5,7 @@ include ../make.config
 # BE CAREFUL! Check the 'rm -rf' if you edit this!
 OUT = output
 
-all: clean createdirs version concat copydeps copyhtml copycss
+all: clean createdirs version coreconfig concat copydeps copyhtml copycss
 
 createdirs:
 	mkdir ${OUT}
@@ -16,6 +16,7 @@ createdirs:
 CONCAT = ${OUT}/js/jittertrap-concat.js
 concat:
 	cat src/js/jittertrap-welcome.js    > ${CONCAT}
+	cat src/js/jittertrap-coreconfig.js >> ${CONCAT}
 	cat src/js/jittertrap-core.js       >> ${CONCAT}
 	cat src/js/jittertrap-measure.js    >> ${CONCAT}
 	cat src/js/jittertrap-websocket.js  >> ${CONCAT}
@@ -59,3 +60,7 @@ version:
 	sed -i 's/##GIT-COMMIT##/${GIT_COMMIT}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-COMMIT-TS##/${GIT_COMMIT_TS}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-CLEAN##/${GIT_ISCLEAN}/g' src/js/jittertrap-version.js
+
+coreconfig:
+	cp src/js/jittertrap-coreconfig-template.js src/js/jittertrap-coreconfig.js
+	sed -i 's/##CORECONFIG-SAMPLEPERIOD##/${SAMPLE_PERIOD_US}/g' src/js/jittertrap-coreconfig.js
