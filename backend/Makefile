@@ -3,6 +3,7 @@ include ../make.config
 PROG = jittertrap
 SOURCES = \
  jittertrap.c \
+ timeywimey.c \
  stats_thread.c \
  sample_buf.c \
  netem.c \
@@ -11,6 +12,7 @@ SOURCES = \
 HEADERS = \
  jittertrap.h \
  netem.h \
+ timeywimey.h \
  stats_thread.h \
  sample_buf.h \
 
