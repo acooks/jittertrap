@@ -1,4 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
 #include <pthread.h>
 #include <signal.h>
 #include <sys/time.h>
@@ -9,6 +11,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <sched.h>
 #include <linux/types.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
@@ -166,12 +169,45 @@ static void update_stats(struct sample *sample_c,
 	pthread_mutex_unlock(&g_stats_mutex);
 }
 
+#define handle_error_en(en, msg) \
+        do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
+static void set_affinity()
+{
+	int s, j;
+	cpu_set_t cpuset;
+	pthread_t thread;
+	thread = pthread_self();
+	/* Set affinity mask to include CPUs 1 only */
+	CPU_ZERO(&cpuset);
+	CPU_SET(1, &cpuset);
+	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_setaffinity_np");
+	}
+
+	/* Check the actual affinity mask assigned to the thread */
+	s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_getaffinity_np");
+	}
+
+	printf("Set returned by pthread_getaffinity_np() contained:\n");
+	for (j = 0; j < CPU_SETSIZE; j++) {
+		if (CPU_ISSET(j, &cpuset)) {
+			printf("    CPU %d\n", j);
+		}
+	}
+}
+
 static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
 	schedparm.sched_priority = 1;	// lowest rt priority
-	return sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	set_affinity();
+	return 0;
 }
 
 /* microseconds */
