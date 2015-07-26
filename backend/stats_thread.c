@@ -18,6 +18,7 @@
 #include "jittertrap.h"
 #include "stats_thread.h"
 #include "sample_buf.h"
+#include "timeywimey.h"
 
 /* globals */
 static pthread_t stats_thread;
@@ -145,15 +146,20 @@ static void calc_deltas(struct sample *stats_o,
 	stats_c->tx_packets_delta = stats_c->tx_packets - stats_o->tx_packets;
 }
 
-static void update_stats(struct sample *sample_c, char *iface)
+static void update_stats(struct sample *sample_c,
+			 char *iface,
+			 struct timespec deadline)
 {
 	struct sample sample_o;
+	struct timespec whoosh_err; /* the sound of a missed deadline. */
 	pthread_mutex_lock(&g_stats_mutex);
 	/* FIXME: this smells funny */
 	memcpy(&sample_o, &g_stats_o, sizeof(struct sample));
 
 	if (0 == read_counters(iface, sample_c)) {
 		clock_gettime(CLOCK_MONOTONIC, &(sample_c->timestamp));
+		whoosh_err = ts_absdiff(sample_c->timestamp, deadline);
+		sample_c->whoosh_error_ns = whoosh_err.tv_nsec;
 		calc_deltas(&sample_o, sample_c);
 	}
 	memcpy(&g_stats_o, sample_c, sizeof(struct sample));
@@ -185,7 +191,6 @@ static void *run(void *data)
 	set_sample_period(SAMPLE_PERIOD_US);
 
 	struct timespec deadline;
-	struct timespec whoosh; /* the sound of a missed deadline. */
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
 	int sample_no = 0;
@@ -195,24 +200,9 @@ static void *run(void *data)
 	stats_frame->sample_period_us = sample_period_us;
 
 	for (;;) {
-		clock_gettime(CLOCK_MONOTONIC, &whoosh);
-#if 0
-/* TODO: put the whoosh in the sample */
-		printf("%ld.%09ld : %ld.%09ld\n",
-			deadline.tv_sec,
-			deadline.tv_nsec,
-			whoosh.tv_sec - deadline.tv_sec,
-			whoosh.tv_nsec - deadline.tv_nsec);
-#endif
-		deadline.tv_nsec += 1000 * sample_period_us;
-
-		/* Normalize the time to account for the second boundary */
-		if(deadline.tv_nsec >= 1000000000) {
-			deadline.tv_nsec -= 1000000000;
-			deadline.tv_sec++;
-		}
-
-		update_stats(&(stats_frame->samples[sample_no]), iface);
+		update_stats(&(stats_frame->samples[sample_no]),
+		             iface,
+		             deadline);
 
 		sample_no++;
 		sample_no %= SAMPLES_PER_FRAME;
@@ -228,6 +218,14 @@ static void *run(void *data)
 			pthread_mutex_unlock(&g_iface_mutex);
 			stats_frame->sample_period_us = sample_period_us;
 			stats_handler(raw_sample_buf_consume_next());
+		}
+
+		deadline.tv_nsec += 1000 * sample_period_us;
+
+		/* Normalize the time to account for the second boundary */
+		if(deadline.tv_nsec >= 1000000000) {
+			deadline.tv_nsec -= 1000000000;
+			deadline.tv_sec++;
 		}
 
 	        clock_nanosleep(CLOCK_MONOTONIC,

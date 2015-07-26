@@ -3,6 +3,7 @@
 
 struct sample {
 	struct timespec timestamp;
+	int64_t		whoosh_error_ns;
 	int64_t 	rx_bytes;
 	int64_t 	tx_bytes;
 	int64_t 	rx_bytes_delta;
