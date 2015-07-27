@@ -264,11 +264,8 @@ static void *run(void *data)
 			deadline.tv_sec++;
 		}
 
-		struct timespec fudge_short_sleep = deadline;
-		fudge_short_sleep.tv_nsec -= SLEEP_ACCURACY_OFFSET;
-
 	        clock_nanosleep(CLOCK_MONOTONIC,
-				TIMER_ABSTIME, &fudge_short_sleep, NULL);
+				TIMER_ABSTIME, &deadline, NULL);
 	}
 
 	return NULL;
