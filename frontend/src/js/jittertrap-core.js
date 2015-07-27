@@ -22,10 +22,10 @@ JT = (function (my) {
   };
 
   /* scaling factor for number of raw data points */
-  var dataLengthMultiplier = 300;
+  var dataLengthMultiplier = samplePeriod;
 
   /* number of raw data samples. */
-  var sampleCount = 18000;
+  var sampleCount = dataLengthMultiplier * 60;
 
   my.core.sampleCount = function (plotPeriod) {
     if (plotPeriod) {
@@ -284,7 +284,7 @@ JT = (function (my) {
   var updateFilteredSeries = function (series) {
 
     /* NB: float vs integer is important here! */
-    var decimationFactor = Math.floor(my.charts.getChartPeriod() / (my.core.samplePeriod() / 1000.0));
+    var decimationFactor = Math.floor(my.charts.getChartPeriod());
     var fseriesLength = Math.floor(series.data.size / decimationFactor);
 
     // the downsampled data has to be scaled.
