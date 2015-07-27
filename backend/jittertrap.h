@@ -16,6 +16,8 @@
 #define SAMPLES_PER_FRAME \
 	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
 
+#define SLEEP_ACCURACY_OFFSET 100000 /* nano seconds */
+
 #ifndef static_assert
 #define static_assert _Static_assert
 #endif
