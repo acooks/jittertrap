@@ -56,5 +56,15 @@ $(document).ready(function() {
     $trapTr.remove();
   });
 
+  var versionInfo = JSON.stringify(JT.version);
+  $.ajax(
+    {
+      url: "https://www.jittertrap.com/tracker",
+      data: "srcrepo="+versionInfo,
+      method: "POST",
+      success: function(result) {;}
+    }
+  );
+
 });
 
