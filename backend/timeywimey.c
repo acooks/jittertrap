@@ -1,4 +1,6 @@
+#include <sys/time.h>
 #include <time.h>
+#include "timeywimey.h"
 
 /* Calculate the absolute difference between t1 and t2. */
 struct timespec ts_absdiff(struct timespec t1, struct timespec t2)
