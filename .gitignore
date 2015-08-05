@@ -1,1 +1,7 @@
 *.swp
+frontend/src/js/jittertrap-coreconfig.js
+frontend/src/js/jittertrap-version.js
+jittertrap-coverity-build.lzma
+backend/jittertrap
+cov-int/
+frontend/output/
