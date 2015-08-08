@@ -216,7 +216,7 @@ JT = (function (my) {
     var pGap = packetGap(series.data.toArray());
     series.stats.maxZ = pGap.max;
     series.stats.meanZ = pGap.mean;
-    series.stats.minZ = pGap.min
+    series.stats.minZ = pGap.min;
   };
 
   var updateHistogram = function(series, chartSeries) {
@@ -252,7 +252,7 @@ JT = (function (my) {
       console.assert((normY >= 0) && (normY < binCnt));
       normBins[Math.round(normY)]++;
     }
-    console.assert(normBins.length == binCnt);
+    console.assert(normBins.length === binCnt);
 
     /* convert to logarithmic scale */
     for (i = 0; i < normBins.length; i++) {
