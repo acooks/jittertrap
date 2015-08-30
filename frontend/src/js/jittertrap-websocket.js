@@ -106,10 +106,19 @@ JT = (function (my) {
 
     sock.onclose = function(evt) {
       console.log("unhandled websocket onclose event: " + evt);
+      $("#error-msg").html($("#error-msg").html()
+                           + "<p>Websocket closed.</p>");
+      $("#error-modal").modal('show');
     };
 
     sock.onerror = function(evt) {
       console.log("unhandled websocket onerror event: " + evt);
+      $("#error-msg").html("<p>"
+                           + "Websocket error."
+                           + " (Sorry, that's all we know, but the javascript console might contain useful debug information.)"
+                           + "</p>"
+                           + "<p>Are you connecting through a proxy?</p>");
+      $("#error-modal").modal('show');
     };
 
     sock.onmessage = function(evt) {
