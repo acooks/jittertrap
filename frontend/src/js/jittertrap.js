@@ -9,6 +9,18 @@ $(document).ready(function() {
   $("#jt-version-commit-time").html(new Date(JT.version.commitTime * 1000));
   $("#jt-version-clean").html(JT.version.isClean);
 
+  // This is the Evil tracking code that phones home to tell the Evil vendor
+  //  that someone is using the software!
+  var versionInfo = JSON.stringify(JT.version);
+  $.ajax(
+    {
+      url: "https://www.jittertrap.com/tracker",
+      data: "srcrepo="+versionInfo,
+      method: "POST",
+      success: function(result) {;}
+    }
+  );
+
   // Initialize Chart Options
   $("#jt-measure-datalength").html(JT.core.sampleCount());
   $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
@@ -57,15 +69,6 @@ $(document).ready(function() {
     $trapTr.remove();
   });
 
-  var versionInfo = JSON.stringify(JT.version);
-  $.ajax(
-    {
-      url: "https://www.jittertrap.com/tracker",
-      data: "srcrepo="+versionInfo,
-      method: "POST",
-      success: function(result) {;}
-    }
-  );
 
 });
 
