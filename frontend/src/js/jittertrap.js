@@ -2,6 +2,7 @@
 
 $(document).ready(function() {
 
+  $("#jt-version-maintainer").html(JT.version.maintainerVersion);
   $("#jt-version-repo").html(JT.version.repo);
   $("#jt-version-branch").html(JT.version.branch);
   $("#jt-version-commit").html(JT.version.commit);

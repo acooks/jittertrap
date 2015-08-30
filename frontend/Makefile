@@ -52,6 +52,7 @@ GIT_BRANCH = $(shell git symbolic-ref --short -q HEAD)
 GIT_COMMIT = $(shell git rev-parse --short=12 HEAD)
 GIT_COMMIT_TS = $(shell git show -s --format=%ct HEAD)
 GIT_ISCLEAN = $(shell ../scripts/git_clean_test.sh)
+MAINTAINER_VERSION = $(shell cat ../VERSION)
 
 version:
 	cp src/js/jittertrap-version-template.js src/js/jittertrap-version.js
@@ -60,6 +61,7 @@ version:
 	sed -i 's/##GIT-COMMIT##/${GIT_COMMIT}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-COMMIT-TS##/${GIT_COMMIT_TS}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-CLEAN##/${GIT_ISCLEAN}/g' src/js/jittertrap-version.js
+	sed -i 's/##MAINTAINER-VERSION##/${MAINTAINER_VERSION}/g' src/js/jittertrap-version.js
 
 coreconfig:
 	cp src/js/jittertrap-coreconfig-template.js src/js/jittertrap-coreconfig.js

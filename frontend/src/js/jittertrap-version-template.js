@@ -5,6 +5,7 @@
 JT = (function (my) {
   'use strict';
   my.version = {};
+  my.version.maintainerVersion = '##MAINTAINER-VERSION##';
   my.version.repo = '##GIT-REPO##';
   my.version.branch = '##GIT-BRANCH##';
   my.version.commit = '##GIT-COMMIT##';
