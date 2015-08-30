@@ -7,14 +7,14 @@ OUT = output
 
 all: clean createdirs version coreconfig concat copydeps copyhtml copycss
 
-createdirs:
+createdirs: clean
 	mkdir ${OUT}
 	mkdir ${OUT}/js
 	mkdir ${OUT}/css
 	mkdir ${OUT}/fonts
 
 CONCAT = ${OUT}/js/jittertrap-concat.js
-concat:
+concat: createdirs
 	cat src/js/jittertrap-welcome.js    > ${CONCAT}
 	cat src/js/jittertrap-coreconfig.js >> ${CONCAT}
 	cat src/js/jittertrap-core.js       >> ${CONCAT}
@@ -25,7 +25,7 @@ concat:
 	cat src/js/jittertrap-version.js    >> ${CONCAT}
 	cat src/js/jittertrap.js            >> ${CONCAT}
 
-copydeps:
+copydeps: createdirs
 	cp deps/js/jquery-2.1.3.min.js ${OUT}/js/
 	cp deps/js/cbuffer.js ${OUT}/js/
 	cp deps/js/bootstrap.min.js ${OUT}/js/
@@ -37,11 +37,11 @@ copydeps:
 	cp deps/css/bootstrap-theme.css.map ${OUT}/css/
 	cp deps/fonts/glyphicons-halflings-regular.* ${OUT}/fonts/
 
-copyhtml:
+copyhtml: createdirs
 	cp src/html/index.html ${OUT}/
 	cp -r src/html/templates ${OUT}/
 
-copycss:
+copycss: createdirs
 	cp src/css/jittertrap.css ${OUT}/css/
 
 clean:
@@ -63,6 +63,6 @@ version:
 	sed -i 's/##GIT-CLEAN##/${GIT_ISCLEAN}/g' src/js/jittertrap-version.js
 	sed -i 's/##MAINTAINER-VERSION##/${MAINTAINER_VERSION}/g' src/js/jittertrap-version.js
 
-coreconfig:
+coreconfig: version
 	cp src/js/jittertrap-coreconfig-template.js src/js/jittertrap-coreconfig.js
 	sed -i 's/##CORECONFIG-SAMPLEPERIOD##/${SAMPLE_PERIOD_US}/g' src/js/jittertrap-coreconfig.js
