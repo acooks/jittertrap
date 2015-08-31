@@ -66,3 +66,15 @@ version:
 coreconfig: version
 	cp src/js/jittertrap-coreconfig-template.js src/js/jittertrap-coreconfig.js
 	sed -i 's/##CORECONFIG-SAMPLEPERIOD##/${SAMPLE_PERIOD_US}/g' src/js/jittertrap-coreconfig.js
+
+install:
+	install -d ${DESTDIR}/var/lib/jittertrap/
+	install -d ${DESTDIR}/var/lib/jittertrap/fonts
+	install -d ${DESTDIR}/var/lib/jittertrap/css
+	install -d ${DESTDIR}/var/lib/jittertrap/js
+	install -d ${DESTDIR}/var/lib/jittertrap/templates
+	install -m 0644 ${OUT}/fonts/* ${DESTDIR}/var/lib/jittertrap/fonts/
+	install -m 0644 ${OUT}/css/* ${DESTDIR}/var/lib/jittertrap/css/
+	install -m 0644 ${OUT}/js/* ${DESTDIR}/var/lib/jittertrap/js/
+	install -m 0644 ${OUT}/templates/* ${DESTDIR}/var/lib/jittertrap/templates/
+	install -m 0644 ${OUT}/index.html ${DESTDIR}/var/lib/jittertrap/
