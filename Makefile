@@ -44,5 +44,5 @@ $(CLEANDIRS):
 
 install: all
 	install -d ${DESTDIR}/usr/bin/
-	install -m 0744 backend/jittertrap ${DESTDIR}/usr/bin/
+	install -m 0755 backend/jittertrap ${DESTDIR}/usr/bin/
 	$(MAKE) -C frontend install
