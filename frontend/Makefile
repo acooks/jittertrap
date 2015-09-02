@@ -48,9 +48,9 @@ clean:
 	rm -rf ${OUT} || true
 
 GIT_REPO = $(shell ../scripts/git_remote_url.sh)
-GIT_BRANCH = $(shell git symbolic-ref --short -q HEAD)
-GIT_COMMIT = $(shell git rev-parse --short=12 HEAD)
-GIT_COMMIT_TS = $(shell git show -s --format=%ct HEAD)
+GIT_BRANCH = $(shell git symbolic-ref --short -q HEAD || true)
+GIT_COMMIT = $(shell git rev-parse --short=12 HEAD || true)
+GIT_COMMIT_TS = $(shell git show -s --format=%ct HEAD || true)
 GIT_ISCLEAN = $(shell ../scripts/git_clean_test.sh)
 MAINTAINER_VERSION = $(shell cat ../VERSION)
 
