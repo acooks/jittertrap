@@ -7,6 +7,7 @@ SOURCES = \
  stats_thread.c \
  sample_buf.c \
  netem.c \
+ mgmt_sock.c \
  ../deps/fossa/fossa.c \
 
 HEADERS = \
@@ -16,6 +17,7 @@ HEADERS = \
  iface_stats.h \
  stats_thread.h \
  sample_buf.h \
+ mgmt_sock.h
 
 INCLUDES = \
  -I ../deps/fossa/ \

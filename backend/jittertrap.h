@@ -28,4 +28,7 @@ static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
 /* for synchronization of netlink cache operations. */
 pthread_mutex_t nl_sock_mutex;
 
+int jt_get_sample_period();
+int jt_set_iface(const char *iface);
+
 #endif
