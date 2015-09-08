@@ -13,6 +13,7 @@ HEADERS = \
  jittertrap.h \
  netem.h \
  timeywimey.h \
+ iface_stats.h \
  stats_thread.h \
  sample_buf.h \
 

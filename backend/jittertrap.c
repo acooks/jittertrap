@@ -12,6 +12,7 @@
 #include "fossa.h"
 #include "frozen.h"
 #include "jittertrap.h"
+#include "iface_stats.h"
 #include "stats_thread.h"
 #include "netem.h"
 

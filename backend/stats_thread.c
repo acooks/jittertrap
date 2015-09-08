@@ -19,6 +19,7 @@
 #include <netlink/route/link.h>
 
 #include "jittertrap.h"
+#include "iface_stats.h"
 #include "stats_thread.h"
 #include "sample_buf.h"
 #include "timeywimey.h"

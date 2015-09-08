@@ -7,6 +7,7 @@
 #include <pthread.h>
 
 #include "jittertrap.h"
+#include "iface_stats.h"
 #include "stats_thread.h"
 #include "sample_buf.h"
 
