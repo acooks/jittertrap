@@ -4,9 +4,11 @@ PROG = jittertrap-cli
 DEFINES =
 
 SOURCES = \
- jittertrap-cli.c
+ proto.c \
+ main.c
 
-HEADERS = 
+HEADERS = \
+ proto.h
 
 INCLUDES = 
 

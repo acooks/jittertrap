@@ -7,80 +7,12 @@
 
 #include <libwebsockets.h>
 
-#include "lws_config.h"
+#include "proto.h"
 
-static int was_closed;
 static int deny_deflate;
 static int deny_mux;
 static volatile int force_exit = 0;
 static int longlived = 0;
-
-enum demo_protocols {
-
-	PROTOCOL_JITTERTRAP,
-
-	/* always last */
-	DEMO_PROTOCOL_COUNT
-};
-
-/* jittertrap protocol */
-static int callback_jittertrap(struct libwebsocket_context *context,
-                               struct libwebsocket *wsi,
-                               enum libwebsocket_callback_reasons reason,
-                               void *user __attribute__((unused)),
-                               void *in __attribute__((unused)), size_t len)
-{
-	switch (reason) {
-
-	case LWS_CALLBACK_CLIENT_ESTABLISHED:
-		fprintf(stderr, "callback_jittertrap:"
-		                " LWS_CALLBACK_CLIENT_ESTABLISHED\n");
-
-		/*
-		 * start the ball rolling,
-		 * LWS_CALLBACK_CLIENT_WRITEABLE will come next service
-		 */
-
-		libwebsocket_callback_on_writable(context, wsi);
-		break;
-
-	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		fprintf(stderr, "LWS_CALLBACK_CLIENT_CONNECTION_ERROR\n");
-		was_closed = 1;
-		break;
-
-	case LWS_CALLBACK_CLOSED:
-		fprintf(stderr, "LWS_CALLBACK_CLOSED\n");
-		was_closed = 1;
-		break;
-
-	case LWS_CALLBACK_CLIENT_RECEIVE:
-		fprintf(stderr, "rx %d '%s'\n", (int)len, (char *)in);
-		break;
-
-	case LWS_CALLBACK_CLIENT_WRITEABLE:
-		libwebsocket_callback_on_writable(context, wsi);
-		break;
-
-	default:
-		/* fprintf(stderr, "callback reason: %d\n", reason); */
-		break;
-	}
-
-	return 0;
-}
-
-/* list of supported protocols and callbacks */
-
-static struct libwebsocket_protocols protocols[] = {
-	{
-	  .name = "",
-	  .callback = callback_jittertrap,
-	  .per_session_data_size = 0,
-	  .rx_buffer_size = 512,
-	},
-	{ NULL, NULL, 0, 0, 0, NULL, NULL, 0 } /* end */
-};
 
 void sighandler(int sig __attribute__((unused))) { force_exit = 1; }
 
@@ -188,9 +120,9 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Waiting for connect...\n");
 
 	n = 0;
-	while (!was_closed && !force_exit) {
-		n = libwebsocket_service(context, 10);
-	}
+	do {
+		;
+	} while (!force_exit && (0 == libwebsocket_service(context, 10)));
 
 bail:
 	fprintf(stderr, "Exiting\n");
