@@ -27,7 +27,8 @@ int callback_jittertrap(struct libwebsocket_context *context,
                         struct libwebsocket *wsi,
                         enum libwebsocket_callback_reasons reason,
                         void *user __attribute__((unused)),
-                        void *in __attribute__((unused)), size_t len)
+                        void *in __attribute__((unused)),
+                        size_t len __attribute__((unused)))
 {
 	switch (reason) {
 
