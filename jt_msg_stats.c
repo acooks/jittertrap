@@ -12,7 +12,7 @@ int jt_stats_consumer(void *data)
 	double avgRx = 0, avgTx = 0;
 	double avgPktRx = 0, avgPktTx = 0;
 	int i;
-	for (i = stats->sample_count; i >= 0; --i) {
+	for (i = stats->sample_count -1; i > 0; i--) {
 		avgRx += stats->samples[i].rx;
 		avgTx += stats->samples[i].tx;
 		avgPktRx += stats->samples[i].rxPkt;
