@@ -4,23 +4,28 @@ PROG = jittertrap-cli
 DEFINES =
 
 SOURCES = \
+ jt_messages.c \
+ jt_msg_stats.c \
  proto.c \
- main.c
+ main.c \
 
 HEADERS = \
- proto.h
+ jt_message_types.h \
+ jt_messages.h \
+ jt_msg_stats.h \
+ proto.h \
 
 INCLUDES = 
 
-LFLAGS = -lwebsockets
-CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
+LFLAGS = -lwebsockets -ljansson
+CFLAGS = -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 $(PROG): $(SOURCES) $(HEADERS)
 	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES)
 	
 
 indent:
-	clang-format -style=file -i $(SOURCES)
+	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 clean:
 	rm $(PROG)

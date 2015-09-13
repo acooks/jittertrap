@@ -6,8 +6,21 @@
 #include <unistd.h>
 
 #include <libwebsockets.h>
+#include <jansson.h>
 
 #include "proto.h"
+#include "jt_messages.h"
+#include "jt_msg_stats.h"
+
+struct libwebsocket_protocols protocols[] = {
+	    [PROTOCOL_JITTERTRAP] = {
+		    .name = "",
+		    .callback = callback_jittertrap,
+		    .per_session_data_size = 0,
+		    .rx_buffer_size = 4096,
+	    },
+	    { NULL, NULL, 0, 0, 0, NULL, NULL, 0 } /* end */
+};
 
 /* jittertrap protocol */
 int callback_jittertrap(struct libwebsocket_context *context,
@@ -43,7 +56,8 @@ int callback_jittertrap(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_CLIENT_RECEIVE:
-		fprintf(stderr, "\rrx %d '%s'", (int)len, (char *)in);
+		// fprintf(stderr, "\rrx %d '%s'", (int)len, (char *)in);
+		jt_msg_handler(in);
 		break;
 
 	case LWS_CALLBACK_CLIENT_WRITEABLE:
