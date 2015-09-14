@@ -2,6 +2,7 @@
 
 #include "jt_messages.h"
 #include "jt_msg_stats.h"
+#include "jt_msg_select_iface.h"
 
 int jt_msg_handler(char *in)
 {

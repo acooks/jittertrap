@@ -7,6 +7,7 @@ SOURCES = \
  jt_messages.c \
  jt_msg_stats.c \
  jt_msg_list_ifaces.c \
+ jt_msg_select_iface.c \
  proto.c \
  main.c \
 
@@ -15,6 +16,7 @@ HEADERS = \
  jt_messages.h \
  jt_msg_stats.h \
  jt_msg_list_ifaces.h \
+ jt_msg_select_iface.h \
  proto.h \
 
 INCLUDES = 

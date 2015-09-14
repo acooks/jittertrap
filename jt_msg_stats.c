@@ -111,8 +111,6 @@ int jt_stats_unpacker(json_t *root, void **data)
 	}
 	stats->err.sd = json_integer_value(err_sd);
 
-	//printf("unpacked!\n");
-
 	*data = stats;
 	return 0;
 
