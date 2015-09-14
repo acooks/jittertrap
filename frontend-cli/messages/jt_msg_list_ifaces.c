@@ -35,7 +35,8 @@ int jt_iface_list_unpacker(json_t *root, void **data)
 		return err;
 	}
 
-	iface_array = json_object_get(root, "ifaces");
+	iface_array = json_object_get(root,
+	                              jt_messages[JT_MSG_IFACE_LIST_V1].key);
 	assert(JSON_ARRAY == json_typeof(iface_array));
 	assert(0 < json_array_size(iface_array));
 

@@ -45,7 +45,7 @@ int jt_stats_unpacker(json_t *root, void **data)
 		return err;
 	}
 
-	obj = json_object_get(root, "stats");
+	obj = json_object_get(root, jt_messages[JT_MSG_STATS_V1].key);
 
 	assert(JSON_OBJECT == json_typeof(obj));
 	assert(0 < json_object_size(obj));

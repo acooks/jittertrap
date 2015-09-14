@@ -31,7 +31,8 @@ int jt_select_iface_unpacker(json_t *root, void **data)
 		return err;
 	}
 
-	iface_token = json_object_get(root, "dev_select");
+	iface_token = json_object_get(root,
+	                              jt_messages[JT_MSG_SELECT_IFACE_V1].key);
 	assert(JSON_STRING == json_typeof(iface_token));
 	assert(0 < json_string_length(iface_token));
 
