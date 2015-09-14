@@ -34,4 +34,4 @@ indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 clean:
-	rm $(PROG)
+	rm $(PROG) || true
