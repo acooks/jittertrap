@@ -30,5 +30,6 @@ pthread_mutex_t nl_sock_mutex;
 
 int jt_get_sample_period();
 int jt_set_iface(const char *iface);
+char const * jt_get_iface();
 
 #endif

@@ -20,7 +20,6 @@
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
 static pthread_mutex_t fossa_mutex;
-char g_selected_iface[MAX_IFACE_LEN];
 
 static struct ns_serve_http_opts s_http_server_opts = {
 	.document_root = NULL,
@@ -28,8 +27,6 @@ static struct ns_serve_http_opts s_http_server_opts = {
 	.auth_domain = NULL,
 	.global_auth_file = NULL
 };
-
-
 
 struct ns_mgr mgr;
 struct ns_connection *nc;
@@ -162,14 +159,14 @@ static void ws_send_dev_select(struct ns_connection *nc)
 	struct ns_connection *c;
 	char msg[MAX_JSON_MSG_LEN] = { 0 };
 	char *template = "{\"dev_select\": \"%s\"}";
-	snprintf(msg, MAX_JSON_MSG_LEN, template, g_selected_iface);
+	snprintf(msg, MAX_JSON_MSG_LEN, template, jt_get_iface());
 
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
 		ns_send_websocket_frame(c, WEBSOCKET_OP_TEXT, msg, strlen(msg));
 	}
 }
 
-static void ws_send_netem(struct ns_connection *nc, char *iface)
+static void ws_send_netem(struct ns_connection *nc, char const *iface)
 {
 	struct ns_connection *c;
 	struct netem_params p;
@@ -217,7 +214,6 @@ static void handle_ws_dev_select(struct json_token *tok)
 	if (!jt_set_iface(iface)) {
 		return;
 	}
-	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
 	ws_send_dev_select(nc);
 	ws_send_netem(nc, iface);
 	ws_send_sample_period(nc);
@@ -401,7 +397,7 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data)
 		print_peer_name(nc);
 		ws_send_iface_list(nc);
 		ws_send_dev_select(nc);
-		ws_send_netem(nc, g_selected_iface);
+		ws_send_netem(nc, jt_get_iface());
 		ws_send_sample_period(nc);
 		break;
 	case NS_WEBSOCKET_FRAME:

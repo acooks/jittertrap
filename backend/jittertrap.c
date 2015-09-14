@@ -23,7 +23,7 @@ static pthread_mutex_t unsent_frame_count_mutex;
 
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
-
+char g_selected_iface[MAX_IFACE_LEN];
 
 int jt_get_sample_period()
 {
@@ -71,6 +71,11 @@ char ** jt_list_ifaces()
 	return netem_list_ifaces();
 }
 
+char const * jt_get_iface()
+{
+	return g_selected_iface;
+}
+
 int jt_set_iface(const char *iface)
 {
 	if (!is_iface_allowed(iface)) {
@@ -79,6 +84,7 @@ int jt_set_iface(const char *iface)
 		       iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
 		return -1;
 	}
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
 	printf("switching to iface: [%s]\n", iface);
 	stats_monitor_iface(iface);
 	return 0;
@@ -217,7 +223,7 @@ int main()
 
 	char iface[MAX_IFACE_LEN];
 	get_first_iface(iface);
-	stats_monitor_iface(iface);
+	jt_set_iface(iface);
 	stats_thread_init(stats_event_handler);
 
 	/* main loop in mgmt_sock.c */
