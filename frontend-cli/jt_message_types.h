@@ -6,6 +6,7 @@ typedef enum {
 	JT_MSG_STATS_V1,
 	JT_MSG_IFACE_LIST_V1,
 	JT_MSG_SELECT_IFACE_V1,
+	JT_MSG_NETEM_PARAMS_V1,
 
 	/* terminator */
 	JT_MSG_END

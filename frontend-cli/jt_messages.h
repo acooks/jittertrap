@@ -5,6 +5,7 @@
 #include "jt_msg_stats.h"
 #include "jt_msg_list_ifaces.h"
 #include "jt_msg_select_iface.h"
+#include "jt_msg_netem_params.h"
 
 static const struct jt_msg_type jt_messages[] =
     {[JT_MSG_STATS_V1] = {
@@ -21,6 +22,10 @@ static const struct jt_msg_type jt_messages[] =
                                   .key = "dev_select",
                                   .unpack = jt_select_iface_unpacker,
                                   .consume = jt_select_iface_consumer },
+     [JT_MSG_NETEM_PARAMS_V1] = { .type = JT_MSG_NETEM_PARAMS_V1,
+                               .key = "netem_params",
+                               .unpack = jt_netem_params_unpacker,
+                               .consume = jt_netem_params_consumer },
      [JT_MSG_END] = {
 	     .type = JT_MSG_END, .key = NULL, .unpack = NULL, .consume = NULL
      } };

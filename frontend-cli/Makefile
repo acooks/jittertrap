@@ -10,6 +10,7 @@ SOURCES = \
  messages/jt_msg_stats.c \
  messages/jt_msg_list_ifaces.c \
  messages/jt_msg_select_iface.c \
+ messages/jt_msg_netem_params.c \
 
 HEADERS = \
  jt_message_types.h \
@@ -18,6 +19,7 @@ HEADERS = \
  messages/jt_msg_stats.h \
  messages/jt_msg_list_ifaces.h \
  messages/jt_msg_select_iface.h \
+ messages/jt_msg_netem_params.h \
 
 INCLUDES = \
  -I . \
