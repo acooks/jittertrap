@@ -21,7 +21,7 @@ struct stats_err
 
 struct jt_msg_stats
 {
-	char iface[255];
+	char iface[MAX_IFACE_LEN];
 	struct stats_err err;
 	int sample_count;
 	struct stats_sample *samples;
