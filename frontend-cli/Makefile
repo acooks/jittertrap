@@ -5,21 +5,23 @@ DEFINES = -DMAX_IFACE_LEN=25
 
 SOURCES = \
  jt_messages.c \
- jt_msg_stats.c \
- jt_msg_list_ifaces.c \
- jt_msg_select_iface.c \
  proto.c \
  main.c \
+ messages/jt_msg_stats.c \
+ messages/jt_msg_list_ifaces.c \
+ messages/jt_msg_select_iface.c \
 
 HEADERS = \
  jt_message_types.h \
  jt_messages.h \
- jt_msg_stats.h \
- jt_msg_list_ifaces.h \
- jt_msg_select_iface.h \
  proto.h \
+ messages/jt_msg_stats.h \
+ messages/jt_msg_list_ifaces.h \
+ messages/jt_msg_select_iface.h \
 
-INCLUDES = 
+INCLUDES = \
+ -I . \
+ -I messages \
 
 LFLAGS = -lwebsockets -ljansson
 CFLAGS = -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS_EXTRA)
