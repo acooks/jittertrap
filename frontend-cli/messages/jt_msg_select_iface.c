@@ -10,7 +10,7 @@ int jt_select_iface_consumer(void *data)
 {
 	char (*iface)[MAX_IFACE_LEN] = data;
 
-	printf("Selected Iface %s:\n", *iface);
+	printf("Selected Iface %s\n", *iface);
 	free(iface);
 
 	return 0;

@@ -41,7 +41,6 @@ int jt_stats_unpacker(json_t *root, void **data)
 	err = json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
 	                     jt_messages[JT_MSG_STATS_V1].key, &obj);
 	if (err) {
-		printf("not a stats object\n");
 		return err;
 	}
 

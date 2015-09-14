@@ -25,7 +25,7 @@ int jt_msg_handler(char *in)
 			return 0;
 		}
 	}
-	printf("no unpacker could handle message\n");
+	printf("couldn't unpack message: %s\n", in);
 	json_decref(root);
 	return -1;
 }
