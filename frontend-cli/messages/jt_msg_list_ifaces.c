@@ -4,7 +4,7 @@
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
-#include "jt_msg_stats.h"
+#include "jt_msg_list_ifaces.h"
 
 int jt_iface_list_consumer(void *data)
 {
