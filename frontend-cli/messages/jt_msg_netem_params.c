@@ -15,7 +15,8 @@ int jt_netem_params_consumer(void *data)
 	       "\tInterface:  %s\n"
 	       "\tDelay:      %dms\n"
 	       "\tJitter:  +/-%dms\n"
-	       "\tLoss:       %d\n", p->iface, p->delay, p->jitter, p->loss);
+	       "\tLoss:       %d\n",
+	       p->iface, p->delay, p->jitter, p->loss);
 	free(iface);
 
 	return 0;
@@ -28,16 +29,15 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 	int err;
 	struct jt_msg_netem_params *params;
 
-	err =
-	    json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                   jt_messages[JT_MSG_NETEM_PARAMS_V1].key,
-	                   &params_token);
+	err = json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
+	                     jt_messages[JT_MSG_NETEM_PARAMS_V1].key,
+	                     &params_token);
 	if (err) {
 		return err;
 	}
 
-	params_token = json_object_get(root,
-	                         jt_messages[JT_MSG_NETEM_PARAMS_V1].key);
+	params_token =
+	    json_object_get(root, jt_messages[JT_MSG_NETEM_PARAMS_V1].key);
 	assert(JSON_OBJECT == json_typeof(params_token));
 	assert(0 < json_object_size(params_token));
 
@@ -48,8 +48,7 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 		assert(0);
 		goto cleanup_unpack_fail;
 	}
-	snprintf(params->iface, MAX_IFACE_LEN, "%s",
-	         json_string_value(token));
+	snprintf(params->iface, MAX_IFACE_LEN, "%s", json_string_value(token));
 
 	token = json_object_get(params_token, "delay");
 	if (!json_is_integer(token)) {
@@ -71,7 +70,6 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 		goto cleanup_unpack_fail;
 	}
 	params->loss = json_integer_value(token);
-
 
 	*data = params;
 	return 0;

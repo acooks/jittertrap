@@ -24,14 +24,13 @@ int jt_sample_period_unpacker(json_t *root, void **data)
 
 	err =
 	    json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                   jt_messages[JT_MSG_SAMPLE_PERIOD_V1].key,
-	                   &sp_token);
+	                   jt_messages[JT_MSG_SAMPLE_PERIOD_V1].key, &sp_token);
 	if (err) {
 		return err;
 	}
 
-	sp_token = json_object_get(root,
-	                           jt_messages[JT_MSG_SAMPLE_PERIOD_V1].key);
+	sp_token =
+	    json_object_get(root, jt_messages[JT_MSG_SAMPLE_PERIOD_V1].key);
 	assert(JSON_INTEGER == json_typeof(sp_token));
 
 	// yes, this is stupid, but the unpacker and consumer can only
