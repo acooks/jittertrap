@@ -24,16 +24,7 @@ int jt_iface_list_consumer(void *data)
 int jt_iface_list_unpacker(json_t *root, void **data)
 {
 	json_t *iface_array;
-	json_error_t error;
-	int err;
 	struct jt_iface_list *il;
-
-	err =
-	    json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                   jt_messages[JT_MSG_IFACE_LIST_V1].key, &iface_array);
-	if (err) {
-		return err;
-	}
 
 	iface_array =
 	    json_object_get(root, jt_messages[JT_MSG_IFACE_LIST_V1].key);

@@ -33,19 +33,10 @@ int jt_stats_consumer(void *data)
 int jt_stats_unpacker(json_t *root, void **data)
 {
 	json_t *obj;
-	json_error_t error;
 	json_t *iface, *samples, *err_mean, *err_max, *err_sd;
-	int err;
 	struct jt_msg_stats *stats;
 
-	err = json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                     jt_messages[JT_MSG_STATS_V1].key, &obj);
-	if (err) {
-		return err;
-	}
-
 	obj = json_object_get(root, jt_messages[JT_MSG_STATS_V1].key);
-
 	assert(JSON_OBJECT == json_typeof(obj));
 	assert(0 < json_object_size(obj));
 

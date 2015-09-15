@@ -25,16 +25,7 @@ int jt_netem_params_consumer(void *data)
 int jt_netem_params_unpacker(json_t *root, void **data)
 {
 	json_t *params_token;
-	json_error_t error;
-	int err;
 	struct jt_msg_netem_params *params;
-
-	err = json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                     jt_messages[JT_MSG_NETEM_PARAMS_V1].key,
-	                     &params_token);
-	if (err) {
-		return err;
-	}
 
 	params_token =
 	    json_object_get(root, jt_messages[JT_MSG_NETEM_PARAMS_V1].key);
