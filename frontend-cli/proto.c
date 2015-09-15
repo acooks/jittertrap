@@ -58,7 +58,7 @@ int callback_jittertrap(struct libwebsocket_context *context,
 
 	case LWS_CALLBACK_CLIENT_RECEIVE:
 		// fprintf(stderr, "\rrx %d '%s'", (int)len, (char *)in);
-		jt_msg_handler(in);
+		jt_client_msg_handler(in);
 		break;
 
 	case LWS_CALLBACK_CLIENT_WRITEABLE:

@@ -3,6 +3,21 @@
 
 /* A list of known messages types. */
 typedef enum {
+
+	/* Server to Client messages */
+	JT_MSG_STATS_V1 = 50,
+	JT_MSG_IFACE_LIST_V1 = 100,
+	JT_MSG_SELECT_IFACE_V1 = 110,
+	JT_MSG_NETEM_PARAMS_V1 = 120,
+	JT_MSG_SAMPLE_PERIOD_V1 = 130,
+
+	/* Client to Server messages */
+
+	/* terminator */
+	JT_MSG_END = 255
+} jt_msg_type_id_t;
+
+static const int jt_msg_types_s2c[] = {
 	JT_MSG_STATS_V1,
 	JT_MSG_IFACE_LIST_V1,
 	JT_MSG_SELECT_IFACE_V1,
@@ -11,7 +26,7 @@ typedef enum {
 
 	/* terminator */
 	JT_MSG_END
-} jt_msg_type_id_t;
+};
 
 /*
  * function pointer type for unpacker function types.

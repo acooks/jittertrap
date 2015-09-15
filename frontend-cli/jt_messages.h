@@ -36,6 +36,6 @@ static const struct jt_msg_type jt_messages[] =
      } };
 
 /* try to parse message and consume data if possible */
-int jt_msg_handler(char *input);
+int jt_client_msg_handler(char *input);
 
 #endif
