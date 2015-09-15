@@ -5,10 +5,10 @@
 typedef enum {
 
 	/* Server to Client messages */
-	JT_MSG_STATS_V1 = 50,
-	JT_MSG_IFACE_LIST_V1 = 100,
-	JT_MSG_SELECT_IFACE_V1 = 110,
-	JT_MSG_NETEM_PARAMS_V1 = 120,
+	JT_MSG_STATS_V1         = 50,
+	JT_MSG_IFACE_LIST_V1    = 100,
+	JT_MSG_SELECT_IFACE_V1  = 110, // used in both s2c and c2s directions
+	JT_MSG_NETEM_PARAMS_V1  = 120,
 	JT_MSG_SAMPLE_PERIOD_V1 = 130,
 
 	/* Client to Server messages */

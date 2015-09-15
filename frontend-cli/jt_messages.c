@@ -4,10 +4,10 @@
 
 static int match_msg_type(json_t *root, int type_id)
 {
-        json_t *t;
+	json_t *t;
 	json_error_t error;
 
-        return json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
+	return json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
 	                      jt_messages[type_id].key, &t);
 }
 
