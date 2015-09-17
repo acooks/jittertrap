@@ -21,14 +21,17 @@ JT = (function (my) {
     JT.core.processDataMsg(stats);
   };
 
-  var handleMsgDevSelect = function(iface) {
+  var handleMsgDevSelect = function(params) {
+    var iface = params.iface;
+    console.log("iface: " + iface);
     $('#dev_select').val(iface);
     selectedIface = $('#dev_select').val();
     JT.core.clearAllSeries();
     JT.charts.resetChart();
   };
 
-  var handleMsgIfaces = function(ifaces) {
+  var handleMsgIfaces = function(params) {
+    var ifaces = params.ifaces;
     $('#dev_select').empty();
     $.each(ifaces,
       function (ix, val) {
@@ -52,7 +55,8 @@ JT = (function (my) {
     }
   };
 
-  var handleMsgSamplePeriod = function(period) {
+  var handleMsgSamplePeriod = function(params) {
+    var period = params.period;
     my.core.samplePeriod(period);
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
@@ -66,23 +70,25 @@ JT = (function (my) {
    * Websocket Sending Functions
    */
   var list_ifaces = function() {
-    var msg = JSON.stringify({'msg':'list_ifaces'});
+    var msg = JSON.stringify({'msg':'list_ifaces', 'p':{}});
     sock.send(msg);
   };
 
   var dev_select = function() {
     var msg = JSON.stringify({'msg':'dev_select',
-                              'dev': $("#dev_select").val()});
+                              'p': { 'dev': $("#dev_select").val()}});
     sock.send(msg);
   };
 
   var set_netem = function() {
     var msg = JSON.stringify(
       {'msg': 'set_netem',
-       'dev': $("#dev_select").val(),
-       'delay': $("#delay").val(),
-       'jitter': $("#jitter").val(),
-       'loss': $("#loss").val()
+       'p': {
+         'dev': $("#dev_select").val(),
+         'delay': $("#delay").val(),
+         'jitter': $("#jitter").val(),
+         'loss': $("#loss").val()
+       }
       });
     sock.send(msg);
     return false;
@@ -122,18 +128,32 @@ JT = (function (my) {
     };
 
     sock.onmessage = function(evt) {
-      var msg = JSON.parse(evt.data);
+      var msg;
+      try {
+        msg = JSON.parse(evt.data);
+      }
+      catch (err) {
+        console.log("Error: " + err.message);
+      }
 
-      if (msg.stats && msg.stats.iface === selectedIface) {
-        handleMsgUpdateStats(msg.stats.s);
-      } else if (msg.dev_select) {
-        handleMsgDevSelect(msg.dev_select);
-      } else if (msg.ifaces) {
-        handleMsgIfaces(msg.ifaces);
-      } else if (msg.netem_params) {
-        handleMsgNetemParams(msg.netem_params);
-      } else if (msg.sample_period) {
-        handleMsgSamplePeriod(msg.sample_period);
+      if (!msg || !msg.msg) {
+        console.log("unrecognised message: " + evt.data);
+        return;
+      }
+      var msgType = msg.msg;
+
+      if ((msgType === "stats") && msg.p.iface === selectedIface) {
+        handleMsgUpdateStats(msg.p.s);
+      } else if (msgType === "dev_select") {
+        handleMsgDevSelect(msg.p);
+      } else if (msgType === "iface_list") {
+        handleMsgIfaces(msg.p);
+      } else if (msgType === "netem_params") {
+        handleMsgNetemParams(msg.p);
+      } else if (msgType === "sample_period") {
+        handleMsgSamplePeriod(msg.p);
+      } else {
+        console.log("unhandled message: " + evt.data);
       }
     };
   };

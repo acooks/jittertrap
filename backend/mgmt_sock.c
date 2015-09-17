@@ -130,8 +130,8 @@ static char *list_ifaces()
 	}
 	free(ifaces);
 
-	char *head = "{\"ifaces\":";
-	char *tail = "}";
+	char *head = "{\"msg\": \"iface_list\", \"p\":{\"ifaces\":";
+	char *tail = "}}";
 	char *msg =
 	    malloc(strlen(head) + strlen(json_ifaces) + strlen(tail) + 1);
 	assert(NULL != msg);
@@ -158,7 +158,7 @@ static void ws_send_dev_select(struct ns_connection *nc)
 {
 	struct ns_connection *c;
 	char msg[MAX_JSON_MSG_LEN] = { 0 };
-	char *template = "{\"dev_select\": \"%s\"}";
+	char *template = "{\"msg\":\"dev_select\", \"p\":{\"iface\":\"%s\"}}";
 	snprintf(msg, MAX_JSON_MSG_LEN, template, jt_get_iface());
 
 	for (c = ns_next(nc->mgr, NULL); c != NULL; c = ns_next(nc->mgr, c)) {
@@ -180,7 +180,7 @@ static void ws_send_netem(struct ns_connection *nc, char const *iface)
 		p.loss = -1;
 	}
 	char *template =
-	    "{\"netem_params\":"
+	    "{\"msg\":\"netem_params\", \"p\":"
 	    "{\"iface\":\"%.10s\", \"delay\":%d, \"jitter\":%d, \"loss\":%d}}";
 
 	char msg[MAX_JSON_MSG_LEN] = { 0 };
@@ -195,7 +195,7 @@ static void ws_send_netem(struct ns_connection *nc, char const *iface)
 static void ws_send_sample_period(struct ns_connection *nc)
 {
 	struct ns_connection *c;
-	char *template = "{\"sample_period\":%d}";
+	char *template = "{\"msg\": \"sample_period\", \"p\":{\"period\":%d}}";
 	char msg[200] = { 0 };
 	sprintf(msg, template, jt_get_sample_period());
 	printf("%s\n", msg);
@@ -321,7 +321,7 @@ static void handle_ws_message(struct ns_connection *nc,
 			      const struct websocket_message *m)
 {
 	print_websocket_message(m);
-	struct json_token *arr, *tok;
+	struct json_token *arr, *tok, *params;
 
 	arr = parse_json2((const char *)m->data, m->size);
 	if (NULL == arr) {
@@ -329,27 +329,35 @@ static void handle_ws_message(struct ns_connection *nc,
 	}
 
 /* expected json looks like:
- * {'msg':'list_ifaces'}
+ * {'msg':'list_ifaces', 'p':{}}
  *     OR
- * {'msg': 'get_netem', 'dev': 'eth0' }
+ * {'msg': 'get_netem', 'p':{'dev': 'eth0'}}
  */
 
 	const char *key = "msg";
 	tok = find_json_token(arr, key);
-	if (tok) {
-		if (match_msg_type(tok, "dev_select")) {
-			tok = find_json_token(arr, "dev");
-			handle_ws_dev_select(tok);
-		} else if (match_msg_type(tok, "get_netem")) {
-			tok = find_json_token(arr, "dev");
-			handle_ws_get_netem(nc, tok);
-		} else if (match_msg_type(tok, "set_netem")) {
-			handle_ws_set_netem(nc,
-					    find_json_token(arr, "dev"),
-					    find_json_token(arr, "delay"),
-					    find_json_token(arr, "jitter"),
-					    find_json_token(arr, "loss"));
-		}
+	params = find_json_token(arr, "p");
+	if (!tok || !params) {
+		char *foo = malloc(255);
+		snprintf(foo, 255, "%s", m->data);
+		fprintf(stderr, "Not a recognised message: %s\n", foo);
+		free(arr);
+		free(foo);
+		return;
+	}
+
+	if (match_msg_type(tok, "dev_select")) {
+		tok = find_json_token(arr, "p.dev");
+		handle_ws_dev_select(tok);
+	} else if (match_msg_type(tok, "get_netem")) {
+		tok = find_json_token(arr, "p.dev");
+		handle_ws_get_netem(nc, tok);
+	} else if (match_msg_type(tok, "set_netem")) {
+		handle_ws_set_netem(nc,
+				find_json_token(arr, "p.dev"),
+				find_json_token(arr, "p.delay"),
+				find_json_token(arr, "p.jitter"),
+				find_json_token(arr, "p.loss"));
 	}
 
 	free(arr);

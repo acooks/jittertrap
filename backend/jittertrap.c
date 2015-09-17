@@ -79,7 +79,7 @@ char const * jt_get_iface()
 int jt_set_iface(const char *iface)
 {
 	if (!is_iface_allowed(iface)) {
-		printf("ignoring request to switch to iface: [%s] - "
+		fprintf(stderr, "ignoring request to switch to iface: [%s] - "
 		       "iface not in allowed list: [%s]\n",
 		       iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
 		return -1;
@@ -136,7 +136,7 @@ static void stats_to_json(struct iface_stats *s, char json_msg[]) {
 
 	snprintf(json_msg,
 		 MAX_JSON_MSG_LEN,
-		 "{\"stats\": {\"iface\": \"%s\",\"s\": %s, \"whoosh_err_mean\": %"PRId64", \"whoosh_err_max\": %"PRId64", \"whoosh_err_sd\": %"PRId64"}}",
+		 "{\"msg\":\"stats\", \"p\": {\"iface\": \"%s\",\"s\": %s, \"whoosh_err_mean\": %"PRId64", \"whoosh_err_max\": %"PRId64", \"whoosh_err_sd\": %"PRId64"}}",
 		 s->iface,
 		 m,
 		 s->whoosh_err_mean,
