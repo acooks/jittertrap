@@ -211,7 +211,8 @@ static void handle_ws_dev_select(struct json_token *tok)
 	assert(tok->len < MAX_IFACE_LEN);
 	memset(iface, 0, MAX_IFACE_LEN);
 	memcpy(iface, tok->ptr, tok->len);
-	if (!jt_set_iface(iface)) {
+	if (0 != jt_set_iface(iface)) {
+		fprintf(stderr, "couldn't set iface to %s\n", iface);
 		return;
 	}
 	ws_send_dev_select(nc);
