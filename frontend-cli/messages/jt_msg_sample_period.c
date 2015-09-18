@@ -11,13 +11,18 @@ static const char *jt_sample_period_test_msg =
 
 const char *jt_sample_period_msg_get(void) { return jt_sample_period_test_msg; }
 
+int jt_sample_period_free(void *data)
+{
+	int *sp = data;
+	free(sp);
+	return 0;
+}
+
 int jt_sample_period_consumer(void *data)
 {
 	int *sp = data;
-
 	printf("Sampling period: %d\n", *sp);
-
-	return 0;
+	return jt_sample_period_free(data);
 }
 
 int jt_sample_period_unpacker(json_t *root, void **data)
@@ -50,5 +55,9 @@ int jt_sample_period_packer(void *data, char **out)
 	json_object_set_new(t, "period", json_integer(*sample_period));
 	json_object_set(msg, "p", t);
 	*out = json_dumps(msg, 0);
+	json_object_clear(t);
+	json_decref(t);
+	json_object_clear(msg);
+	json_decref(msg);
 	return 0;
 }

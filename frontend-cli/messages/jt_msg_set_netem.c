@@ -13,6 +13,13 @@ static const char *jt_set_netem_test_msg =
 
 const char *jt_set_netem_test_msg_get(void) { return jt_set_netem_test_msg; }
 
+int jt_set_netem_free(void *data)
+{
+	struct jt_msg_netem_params *p = data;
+	free(p);
+	return 0;
+}
+
 int jt_set_netem_consumer(void *data)
 {
 	struct jt_msg_netem_params *p = data;
@@ -23,9 +30,7 @@ int jt_set_netem_consumer(void *data)
 	       "\tJitter:  +/-%dms\n"
 	       "\tLoss:       %d\n",
 	       p->iface, p->delay, p->jitter, p->loss);
-	free(iface);
-
-	return 0;
+	return jt_set_netem_free(data);
 }
 
 int jt_set_netem_packer(void *data, char **out)
@@ -43,6 +48,10 @@ int jt_set_netem_packer(void *data, char **out)
 	    t, "msg", json_string(jt_messages[JT_MSG_NETEM_PARAMS_V1].key));
 	json_object_set(t, "p", p);
 	*out = json_dumps(t, 0);
+	json_object_clear(p);
+	json_decref(p);
+	json_object_clear(t);
+	json_decref(t);
 	return 0;
 }
 
@@ -87,9 +96,11 @@ int jt_set_netem_unpacker(json_t *root, void **data)
 	params->loss = json_integer_value(token);
 
 	*data = params;
+	json_object_clear(params_token);
 	return 0;
 
 cleanup_unpack_fail:
 	free(params);
+	json_object_clear(params_token);
 	return -1;
 }

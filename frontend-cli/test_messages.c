@@ -1,3 +1,4 @@
+#include <string.h>
 #include <assert.h>
 #include <jansson.h>
 
@@ -18,33 +19,63 @@ static int test_unpack_pack_unpack(int msg_id)
 	json_t *token;
 	void *data;
 	const struct jt_msg_type *msg_type;
+	int error;
 
 	msg_type = &jt_messages[msg_id];
 	assert(msg_type);
 	assert(msg_type->type);
+
 	const char *test_msg = msg_type->get_test_msg();
 	printf("key : %s\n", msg_type->key);
 	printf("testing message: \n\t%s\n", test_msg);
+
+	/* load it */
 	token = json_loads(test_msg, 0, &err);
+
 	if (!token) {
 		fprintf(stderr, "error: on line %d: %s\n", err.line, err.text);
 		return -1;
 	}
 
-	int error;
+	/* unpack it */
 	error = msg_type->unpack(token, &data);
+	json_decref(token);
+
 	if (error) {
 		fprintf(stderr, "error: unpacking failed\n");
 		return -1;
 	}
+
+	/* re-pack it */
 	char *s;
 	error = msg_type->pack(data, &s);
+	msg_type->free(data);
 	if (error) {
 		fprintf(stderr, "error: packing failed\n");
+		free(s);
 		return -1;
 	}
 
-	printf("\n%s message unpack/pack OK.\n\n\n", msg_type->key);
+	/* load it a second time */
+	token = json_loads(s, 0, &err);
+	free(s);
+
+	if (!token) {
+		fprintf(stderr, "error on second load: %s\n", err.text);
+		return -1;
+	}
+
+	/* unpack it a second time */
+	error = msg_type->unpack(token, &data);
+	json_decref(token);
+	if (error) {
+		fprintf(stderr, "error: second unpacking failed\n");
+		return -1;
+	}
+	msg_type->free(data);
+
+	printf("\n%s message load->unpack->pack->load->unpack OK.\n\n\n",
+	       msg_type->key);
 	return 0;
 }
 
@@ -80,5 +111,5 @@ int main()
 	err = test_c2s_messages();
 	assert(!err);
 
-	printf("Achievement unlocked: message packing tests passed.\n");
+	printf("Achievement unlocked: all message tests passed.\n");
 }

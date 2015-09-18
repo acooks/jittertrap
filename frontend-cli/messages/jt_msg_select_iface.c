@@ -14,14 +14,18 @@ const char *jt_select_iface_test_msg_get(void)
 	return jt_select_iface_test_msg;
 }
 
+int jt_select_iface_free(void *data)
+{
+	char(*iface)[MAX_IFACE_LEN] = data;
+	free(iface);
+	return 0;
+}
+
 int jt_select_iface_consumer(void *data)
 {
 	char(*iface)[MAX_IFACE_LEN] = data;
-
 	printf("Selected Iface %s\n", *iface);
-	free(iface);
-
-	return 0;
+	return jt_select_iface_free(data);
 }
 
 int jt_select_iface_unpacker(json_t *root, void **data)
@@ -53,5 +57,9 @@ int jt_select_iface_packer(void *data, char **out)
 	json_object_set_new(params, "dev", json_string(*iface));
 	json_object_set(t, "p", params);
 	*out = json_dumps(t, 0);
+	json_object_clear(params);
+	json_decref(params);
+	json_object_clear(t);
+	json_decref(t);
 	return 0;
 }

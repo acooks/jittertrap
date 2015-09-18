@@ -12,6 +12,14 @@ static const char *jt_iface_list_test_msg = "{\"msg\":\"iface_list\", \"p\": "
 
 const char *jt_iface_list_test_msg_get(void) { return jt_iface_list_test_msg; }
 
+int jt_iface_list_free(void *data)
+{
+	struct jt_iface_list *il = (struct jt_iface_list *)data;
+	free(il->ifaces);
+	free(il);
+	return 0;
+}
+
 int jt_iface_list_consumer(void *data)
 {
 	int i;
@@ -21,10 +29,7 @@ int jt_iface_list_consumer(void *data)
 	for (i = 0; i < il->count; i++) {
 		printf("\t%s\n", il->ifaces[i]);
 	}
-	free(il->ifaces);
-	free(il);
-
-	return 0;
+	return jt_iface_list_free(data);
 }
 
 int jt_iface_list_unpacker(json_t *root, void **data)
@@ -74,5 +79,10 @@ int jt_iface_list_packer(void *data, char **out)
 	                    json_string(jt_messages[JT_MSG_IFACE_LIST_V1].key));
 	json_object_set(msg, "p", params);
 	*out = json_dumps(msg, 0);
+	json_decref(iface_arr);
+	json_object_clear(params);
+	json_decref(params);
+	json_object_clear(msg);
+	json_decref(msg);
 	return 0;
 }

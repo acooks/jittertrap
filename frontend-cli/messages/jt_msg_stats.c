@@ -16,6 +16,14 @@ static const char *jt_stats_test_msg =
 
 const char *jt_stats_test_msg_get() { return jt_stats_test_msg; }
 
+int jt_stats_free(void *data)
+{
+	struct jt_msg_stats *stats = (struct jt_msg_stats *)data;
+	free(stats->samples);
+	free(stats);
+	return 0;
+}
+
 int jt_stats_consumer(void *data)
 {
 	struct jt_msg_stats *stats = (struct jt_msg_stats *)data;
@@ -35,9 +43,7 @@ int jt_stats_consumer(void *data)
 	printf("\rRx: %10.1f Tx: %10.1f PtkRx: %10.1f PktTx: %10.1f E: %10d",
 	       avgRx, avgTx, avgPktRx, avgPktTx, stats->err.mean);
 
-	free(stats->samples);
-	free(stats);
-	return 0;
+	return jt_stats_free(data);
 }
 
 int jt_stats_unpacker(json_t *root, void **data)
@@ -113,6 +119,7 @@ int jt_stats_unpacker(json_t *root, void **data)
 	stats->err.sd = json_integer_value(err_sd);
 
 	*data = stats;
+	json_object_clear(params);
 	return 0;
 
 unpack_fail_free_samples:
@@ -158,5 +165,14 @@ int jt_stats_packer(void *data, char **out)
 	json_object_set(params, "s", samples_arr);
 	json_object_set(t, "p", params);
 	*out = json_dumps(t, 0);
+	for (int i = 0; i < stats_msg->sample_count; i++) {
+		json_decref(sample[i]);
+	}
+	json_array_clear(samples_arr);
+	json_decref(samples_arr);
+	json_object_clear(params);
+	json_decref(params);
+	json_object_clear(t);
+	json_decref(t);
 	return 0;
 }

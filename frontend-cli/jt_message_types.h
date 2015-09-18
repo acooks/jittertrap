@@ -66,6 +66,7 @@ struct jt_msg_type
 	jt_packer_t pack;
 	jt_unpacker_t unpack;
 	jt_consumer_t consume;
+	jt_consumer_t free;
 	jt_test_msg_getter_t get_test_msg;
 };
 
