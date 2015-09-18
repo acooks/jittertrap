@@ -1,8 +1,10 @@
 #ifndef JT_MSG_STATS_H
 #define JT_MSG_STATS_H
 
+int jt_stats_packer(void *data, char **out);
 int jt_stats_unpacker(json_t *root, void **data);
 int jt_stats_consumer(void *data);
+const char *jt_stats_test_msg_get();
 
 struct stats_sample
 {

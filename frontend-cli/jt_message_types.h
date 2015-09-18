@@ -39,6 +39,13 @@ static const int jt_msg_types_c2s[] = {
 };
 
 /*
+ * function pointer type for packer (struct to string) function.
+ * Takes a struct in *data and creates a string and points *out to it.
+ * *out must be uninitialised and the caller must free it.
+ */
+typedef int (*jt_packer_t)(void *data, char **out);
+
+/*
  * function pointer type for unpacker function types.
  * Stores unpacked data in *data for consumption by jt_consumer_t.
  */
@@ -50,12 +57,16 @@ typedef int (*jt_unpacker_t)(json_t *root, void **data);
  */
 typedef int (*jt_consumer_t)(void *data);
 
+typedef const char *(*jt_test_msg_getter_t)(void);
+
 struct jt_msg_type
 {
 	jt_msg_type_id_t type;
 	const char *key;
+	jt_packer_t pack;
 	jt_unpacker_t unpack;
 	jt_consumer_t consume;
+	jt_test_msg_getter_t get_test_msg;
 };
 
 #endif

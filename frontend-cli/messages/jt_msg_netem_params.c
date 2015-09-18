@@ -7,6 +7,15 @@
 
 #include "jt_msg_netem_params.h"
 
+static const char *jt_netem_params_test_msg =
+    "{\"msg\":\"netem_params\", \"p\":{\"iface\":\"em1\", \"delay\":-1, "
+    "\"jitter\":-1, \"loss\":-1}}";
+
+const char *jt_netem_params_test_msg_get(void)
+{
+	return jt_netem_params_test_msg;
+}
+
 int jt_netem_params_consumer(void *data)
 {
 	struct jt_msg_netem_params *p = data;
@@ -27,8 +36,8 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 	json_t *params_token;
 	struct jt_msg_netem_params *params;
 
-	params_token =
-	    json_object_get(root, jt_messages[JT_MSG_NETEM_PARAMS_V1].key);
+	params_token = json_object_get(root, "p");
+
 	assert(JSON_OBJECT == json_typeof(params_token));
 	assert(0 < json_object_size(params_token));
 
@@ -68,4 +77,22 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 cleanup_unpack_fail:
 	free(params);
 	return -1;
+}
+
+int jt_netem_params_packer(void *data, char **out)
+{
+	struct jt_msg_netem_params *params = data;
+	json_t *t = json_object();
+	json_t *p = json_object();
+
+	json_object_set_new(p, "iface", json_string(params->iface));
+	json_object_set_new(p, "delay", json_integer(params->delay));
+	json_object_set_new(p, "jitter", json_integer(params->jitter));
+	json_object_set_new(p, "loss", json_integer(params->loss));
+
+	json_object_set_new(
+	    t, "msg", json_string(jt_messages[JT_MSG_NETEM_PARAMS_V1].key));
+	json_object_set(t, "p", p);
+	*out = json_dumps(t, 0);
+	return 0;
 }

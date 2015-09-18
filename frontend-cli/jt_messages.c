@@ -2,13 +2,19 @@
 
 #include "jt_messages.h"
 
+/*
+ * FIXME: This will break when another top-level key:value pair is present.
+ *
+ * All messages must have format:
+ * {'msg':'type', 'p':{}}
+ */
 static int match_msg_type(json_t *root, int type_id)
 {
 	json_t *t;
 	json_error_t error;
 
-	return json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:o}",
-	                      jt_messages[type_id].key, &t);
+	return json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:s, s:o}",
+	                      "msg", jt_messages[type_id].key, "p", &t);
 }
 
 static int jt_msg_handler(char *in, const int *msg_type_arr)
@@ -27,8 +33,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 	}
 
 	// iterate over array of msg types using pointer arithmetic.
-	for (msg_type = msg_type_arr; *msg_type != JT_MSG_END;
-	     msg_type++) {
+	for (msg_type = msg_type_arr; *msg_type != JT_MSG_END; msg_type++) {
 		// check if the message type matches.
 		err = match_msg_type(root, *msg_type);
 		if (err) {
@@ -51,7 +56,6 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 	json_decref(root);
 	return -1;
 }
-
 
 /* handle messages received from server in client */
 int jt_client_msg_handler(char *in)
