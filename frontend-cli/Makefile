@@ -3,10 +3,11 @@ PROG = jittertrap-cli
 
 DEFINES = -DMAX_IFACE_LEN=25
 
+MAIN = main.c
+
 SOURCES = \
  jt_messages.c \
  proto.c \
- main.c \
  messages/jt_msg_stats.c \
  messages/jt_msg_list_ifaces.c \
  messages/jt_msg_select_iface.c \
@@ -34,12 +35,17 @@ INCLUDES = \
 LFLAGS = -lwebsockets -ljansson
 CFLAGS = -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
-$(PROG): $(SOURCES) $(HEADERS)
-	$(CC) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES)
+$(PROG): $(SOURCES) $(HEADERS) test
+	$(CC) $(MAIN) $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES)
 	
 
 indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
+
+
+test: $(SOURCES) $(HEADERS) test_messages.c
+	$(CC) test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LFLAGS) $(DEFINES)
+
 
 clean:
 	rm $(PROG) || true
