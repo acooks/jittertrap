@@ -7,7 +7,7 @@
 #include "jt_msg_stats.h"
 
 static const char *jt_select_iface_test_msg =
-    "{\"msg\":\"dev_select\", \"p\":{\"dev\":\"em1\"}}";
+    "{\"msg\":\"dev_select\", \"p\":{\"iface\":\"em1\"}}";
 
 const char *jt_select_iface_test_msg_get(void)
 {
@@ -36,9 +36,13 @@ int jt_select_iface_unpacker(json_t *root, void **data)
 	params = json_object_get(root, "p");
 	assert(params);
 
-	iface_token = json_object_get(params, "dev");
-	assert(JSON_STRING == json_typeof(iface_token));
-	assert(0 < json_string_length(iface_token));
+	iface_token = json_object_get(params, "iface");
+	if (!iface_token
+	    || (JSON_STRING != json_typeof(iface_token))
+	    || (0 >= json_string_length(iface_token)))
+	{
+		return -1;
+	}
 
 	iface = malloc(MAX_IFACE_LEN);
 	snprintf(*iface, MAX_IFACE_LEN, "%s", json_string_value(iface_token));
@@ -54,7 +58,7 @@ int jt_select_iface_packer(void *data, char **out)
 	json_t *params = json_object();
 	json_object_set_new(
 	    t, "msg", json_string(jt_messages[JT_MSG_SELECT_IFACE_V1].key));
-	json_object_set_new(params, "dev", json_string(*iface));
+	json_object_set_new(params, "iface", json_string(*iface));
 	json_object_set(t, "p", params);
 	*out = json_dumps(t, 0);
 	json_object_clear(params);

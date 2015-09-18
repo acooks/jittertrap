@@ -66,7 +66,7 @@ int jt_stats_unpacker(json_t *root, void **data)
 	if (!json_is_string(iface)) {
 		goto unpack_fail;
 	}
-	snprintf(stats->iface, 255, "%s", json_string_value(iface));
+	snprintf(stats->iface, MAX_IFACE_LEN, "%s", json_string_value(iface));
 
 	samples = json_object_get(params, "s");
 	if (!json_is_array(samples)) {

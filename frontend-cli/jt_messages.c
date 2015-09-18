@@ -1,3 +1,4 @@
+#include <string.h>
 #include <jansson.h>
 
 #include "jt_messages.h"
@@ -10,11 +11,24 @@
  */
 static int match_msg_type(json_t *root, int type_id)
 {
-	json_t *t;
-	json_error_t error;
-
-	return json_unpack_ex(root, &error, JSON_VALIDATE_ONLY, "{s:s, s:o}",
-	                      "msg", jt_messages[type_id].key, "p", &t);
+	json_t *msg_type;
+	int cmp;
+	msg_type = json_object_get(root, "msg");
+	if (!msg_type || JSON_STRING != json_typeof(msg_type)) {
+		fprintf(stderr, "not a jt message\n");
+		return -1;
+	}
+	cmp = strncmp(jt_messages[type_id].key, json_string_value(msg_type),
+	               strlen(jt_messages[type_id].key));
+	if (cmp != 0) {
+#if DEBUG
+		fprintf(stderr, "[%s] type doesn't match [%s]\n",
+			        jt_messages[type_id].key,
+		                json_string_value(msg_type));
+#endif
+		return -1;
+	}
+	return 0;
 }
 
 static int jt_msg_handler(char *in, const int *msg_type_arr)
@@ -45,6 +59,8 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 		err = jt_messages[*msg_type].unpack(root, &data);
 		if (err) {
 			// type matched, but unpack failed.
+			fprintf(stderr, "[%s] type match, unpack failed.\n",
+			        jt_messages[*msg_type].key);
 			break;
 		}
 
