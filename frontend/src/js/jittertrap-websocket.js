@@ -69,10 +69,6 @@ JT = (function (my) {
   /**
    * Websocket Sending Functions
    */
-  var list_ifaces = function() {
-    var msg = JSON.stringify({'msg':'list_ifaces', 'p':{}});
-    sock.send(msg);
-  };
 
   var dev_select = function() {
     var msg = JSON.stringify({'msg':'dev_select',
