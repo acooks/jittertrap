@@ -1,5 +1,3 @@
-#include "lws_config.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -16,8 +14,7 @@
 #include <libwebsockets.h>
 
 #include "proto-http.h"
-#include "proto-mirror.h"
-#include "proto-dinc.h"
+#include "proto-jittertrap.h"
 #include "test.h"
 
 int max_poll_elements;
@@ -37,17 +34,10 @@ static struct libwebsocket_protocols protocols[] = {
 	  .rx_buffer_size = 0, /* max frame size / rx buffer */
 	},
 	{
-	  .name = "dumb-increment-protocol",
-	  .callback = callback_dumb_increment,
-	  .per_session_data_size =
-	      sizeof(struct per_session_data__dumb_increment),
+	  .name = "jittertrap-protocol",
+	  .callback = callback_jittertrap,
+	  .per_session_data_size = sizeof(struct per_session_data__jittertrap),
 	  .rx_buffer_size = 10,
-	},
-	{
-	  .name = "lws-mirror-protocol",
-	  .callback = callback_lws_mirror,
-	  .per_session_data_size = sizeof(struct per_session_data__lws_mirror),
-	  .rx_buffer_size = 128,
 	},
 
 	/* terminator */
@@ -134,8 +124,7 @@ int main(int argc, char **argv)
 		case 'c':
 			close_testing = 1;
 			fprintf(stderr, " Close testing mode -- closes on "
-			                "client after 50 dumb increments"
-			                "and suppresses lws_mirror spam\n");
+			                "client after 50 messages.\n");
 			break;
 		case 'r':
 			resource_path = optarg;
@@ -143,7 +132,7 @@ int main(int argc, char **argv)
 			       resource_path);
 			break;
 		case 'h':
-			fprintf(stderr, "Usage: test-server "
+			fprintf(stderr, "Usage: " PROGNAME
 			                "[--port=<p>] [--ssl] "
 			                "[-d <log bitfield>] "
 			                "[--resource_path <path>]\n");
@@ -172,9 +161,7 @@ int main(int argc, char **argv)
 	/* tell the library what debug level to emit and to send it to syslog */
 	lws_set_log_level(debug_level, lwsl_emit_syslog);
 
-	lwsl_notice("libwebsockets test server - "
-	            "(C) Copyright 2010-2015 Andy Green <andy@warmcat.com> - "
-	            "licensed under LGPL2.1\n");
+	lwsl_notice("jittertrap server\n");
 
 	printf("Using resource path \"%s\"\n", resource_path);
 
@@ -234,9 +221,8 @@ int main(int argc, char **argv)
 		}
 
 		/*
-		 * If libwebsockets sockets are all we care about,
-		 * you can use this api which takes care of the poll()
-		 * and looping through finding who needed service.
+		 * takes care of the poll() and looping through finding who
+		 * needs service.
 		 *
 		 * If no socket needs service, it'll return anyway after
 		 * the number of ms in the second argument.
@@ -247,7 +233,7 @@ int main(int argc, char **argv)
 
 	libwebsocket_context_destroy(context);
 
-	lwsl_notice("libwebsockets-test-server exited cleanly\n");
+	lwsl_notice("jittertrap server exited cleanly\n");
 
 	closelog();
 

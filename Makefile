@@ -2,6 +2,7 @@
 PROG = test-server
 
 DEFINES = \
+-DPROGNAME=\"$(PROG)\" \
 -DINSTALL_DATADIR=\"./\"
 
 SOURCES = \
@@ -9,12 +10,14 @@ SOURCES = \
  test.c \
  proto-http.c \
  proto-mirror.c \
+ proto-jittertrap.c \
  proto-dinc.c 
 
 HEADERS = \
  test.h \
  proto-http.h \
  proto-mirror.h \
+ proto-jittertrap.h \
  proto-dinc.h \
 
 INCLUDES = 
