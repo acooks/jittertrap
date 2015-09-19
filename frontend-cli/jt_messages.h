@@ -8,7 +8,6 @@
 #include "jt_msg_select_iface.h"
 #include "jt_msg_netem_params.h"
 #include "jt_msg_sample_period.h"
-#include "jt_msg_get_netem.h"
 #include "jt_msg_set_netem.h"
 
 static const struct jt_msg_type jt_messages[] =
@@ -53,14 +52,6 @@ static const struct jt_msg_type jt_messages[] =
 		                   .consume = jt_sample_period_consumer,
 		                   .free = jt_sample_period_free,
 		                   .get_test_msg = jt_sample_period_msg_get },
-
-     [JT_MSG_GET_NETEM_V1] = { .type = JT_MSG_GET_NETEM_V1,
-		               .key = "get_netem",
-		               .unpack = jt_get_netem_unpacker,
-		               .pack = jt_get_netem_packer,
-		               .consume = jt_get_netem_consumer,
-		               .free = jt_get_netem_free,
-		               .get_test_msg = jt_get_netem_test_msg_get },
 
      [JT_MSG_SET_NETEM_V1] = { .type = JT_MSG_SET_NETEM_V1,
 		               .key = "set_netem",

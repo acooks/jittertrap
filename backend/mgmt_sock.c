@@ -220,21 +220,6 @@ static void handle_ws_dev_select(struct json_token *tok)
 	ws_send_sample_period(nc);
 }
 
-static void handle_ws_get_netem(struct ns_connection *nc,
-				struct json_token *tok)
-{
-	char iface[MAX_IFACE_LEN];
-
-	if (tok->len >= MAX_IFACE_LEN) {
-		fprintf(stderr, "invalid iface name.");
-		return;
-	}
-	memcpy(iface, tok->ptr, tok->len);
-	iface[tok->len] = 0;
-
-	ws_send_netem(nc, iface);
-}
-
 static bool parse_int(char *str, long *l)
 {
 	char *endptr;
@@ -314,7 +299,7 @@ static void handle_ws_set_netem(struct ns_connection *nc,
 	printf("\n\n");
 
 	netem_set_params(p.iface, &p);
-	handle_ws_get_netem(nc, t_dev);
+	ws_send_netem(nc, p.iface);
 }
 
 static void handle_ws_message(struct ns_connection *nc,
@@ -331,7 +316,7 @@ static void handle_ws_message(struct ns_connection *nc,
 /* expected json looks like:
  * {'msg':'list_ifaces', 'p':{}}
  *     OR
- * {'msg': 'get_netem', 'p':{'dev': 'eth0'}}
+ * {"msg":"set_netem", "p":{"dev":"wlp3s0","delay":0,"jitter":0,"loss":0}}
  */
 
 	const char *key = "msg";
@@ -349,9 +334,6 @@ static void handle_ws_message(struct ns_connection *nc,
 	if (match_msg_type(tok, "dev_select")) {
 		tok = find_json_token(arr, "p.dev");
 		handle_ws_dev_select(tok);
-	} else if (match_msg_type(tok, "get_netem")) {
-		tok = find_json_token(arr, "p.dev");
-		handle_ws_get_netem(nc, tok);
 	} else if (match_msg_type(tok, "set_netem")) {
 		handle_ws_set_netem(nc,
 				find_json_token(arr, "p.dev"),

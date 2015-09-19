@@ -10,7 +10,6 @@
 #include "jt_msg_select_iface.h"
 #include "jt_msg_netem_params.h"
 #include "jt_msg_sample_period.h"
-#include "jt_msg_get_netem.h"
 #include "jt_msg_set_netem.h"
 
 static int test_unpack_pack_unpack(int msg_id)

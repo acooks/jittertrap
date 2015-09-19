@@ -12,8 +12,7 @@ typedef enum {
 	JT_MSG_SAMPLE_PERIOD_V1 = 130,
 
 	/* Client to Server messages */
-	JT_MSG_GET_NETEM_V1     = 140,
-	JT_MSG_SET_NETEM_V1     = 150,
+	JT_MSG_SET_NETEM_V1 = 140,
 
 	/* terminator */
 	JT_MSG_END = 255
@@ -21,17 +20,16 @@ typedef enum {
 
 static const int jt_msg_types_s2c[] = {
 	JT_MSG_STATS_V1,
-	JT_MSG_IFACE_LIST_V1,
-	JT_MSG_SELECT_IFACE_V1,
+        JT_MSG_IFACE_LIST_V1,
+        JT_MSG_SELECT_IFACE_V1,
 	JT_MSG_NETEM_PARAMS_V1,
-	JT_MSG_SAMPLE_PERIOD_V1,
+        JT_MSG_SAMPLE_PERIOD_V1,
 
 	/* terminator */
 	JT_MSG_END
 };
 
 static const int jt_msg_types_c2s[] = {
-	JT_MSG_GET_NETEM_V1,
 	JT_MSG_SET_NETEM_V1,
 
 	/* terminator */
