@@ -1,7 +1,7 @@
 
 include make.config
 
-SUBDIRS = backend frontend docs
+SUBDIRS = backend html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
@@ -45,4 +45,4 @@ $(CLEANDIRS):
 install: all
 	install -d ${DESTDIR}/usr/bin/
 	install -m 0755 backend/jittertrap ${DESTDIR}/usr/bin/
-	$(MAKE) -C frontend install
+	$(MAKE) -C html5-client install
