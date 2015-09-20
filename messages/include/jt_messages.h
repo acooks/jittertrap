@@ -65,10 +65,4 @@ static const struct jt_msg_type jt_messages[] =
 	     .type = JT_MSG_END, .key = NULL, .unpack = NULL, .consume = NULL
      } };
 
-/* handle messages received from server in client */
-int jt_client_msg_handler(char *input);
-
-/* handle messages received from client in server */
-int jt_server_msg_handler(char *in);
-
 #endif
