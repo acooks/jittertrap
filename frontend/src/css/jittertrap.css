@@ -1,0 +1,9 @@
+.trapContainer {
+  border: none;
+  display: block;
+}
+
+/* Trap */
+#traps_table tbody td {
+  vertical-align: middle;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "cbuffer",
+  "version": "1.1.0",
+  "author": "trevnorris",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/trevnorris/cbuffer.git"
+  },
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

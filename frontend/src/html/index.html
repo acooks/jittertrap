@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+    <!-- Bootstrap 3.2.2 -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="css/jittertrap.css">
+
+    <script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
+    <script type="text/javascript" src="js/jquery.canvasjs.min.js"></script>
+    <script type="text/javascript" src="js/mustache.min.js"></script>
+    <script type="text/javascript" src="js/cbuffer.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/jittertrap-concat.js"></script>
+
+  </head>
+  <body>
+    <div class="container">
+      <div class="navbar-text navbar-right">
+        <div class="dropdown">
+          <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+            Menu <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+            <li><a href="#" data-toggle="modal" data-target="#about">About</a></li>
+            <li><a href="#" data-toggle="modal" data-target="#help">Help!</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="page-header">
+        <h1 class="text-muted">JitterTrap</h1>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h2 class="panel-title">Interface Selection</h2>
+        </div>
+        <div class="panel-body">
+          <form class="form-inline">
+            <div class="form-group">
+              <label for="dev_select">Interface</label>
+              <select id="dev_select" class="form-control"></select>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <ul class="nav nav-tabs nav-justified">
+        <li class="active"><a data-toggle="tab" href="#chartsPanel"><span class="glyphicon glyphicon-stats" aria-hidden="true"></span>&nbsp;Charts</a></li>
+        <li><a data-toggle="tab" href="#impairmentsPanel"><span class="glyphicon glyphicon-hourglass" aria-hidden="true"></span>&nbsp;Impairments</a></li>
+        <li><a data-toggle="tab" href="#trapsPanel"><span class="glyphicon glyphicon-alert" aria-hidden="true"></span>&nbsp;Traps</a></li>
+        <li><a data-toggle="tab" href="#measurementsPanel"><span class="glyphicon glyphicon-scale" aria-hidden="true"></span>&nbsp;Measurements</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <div id="impairmentsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <form class="form-inline">
+                <div class="form-group">
+                  <label for="delay">Delay</label>
+                  <div class="input-group">
+                    <input id="delay" class="form-control" type="number" min="0" max="200" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="jitter">Delay variation</label>
+                  <div class="input-group">
+                    <input id="jitter" class="form-control" type="number" min="0" max="100" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="loss">Loss</label>
+                  <div class="input-group">
+                    <input id="loss" class="form-control" type="number" min="0" max="100" />
+                    <span class="input-group-addon">%</span>
+                  </div>
+                </div>
+                <div class="btn-group">
+                  <button id="set_netem_button" class="btn btn-primary">
+                    <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                  </button>
+                  <button id="clear_netem_button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Clear
+                  </button>
+                </div>
+                <br/>
+              </form>
+            </div>
+            <div class="panel-footer"><em>Status:</em> <span id="netem_status"></span></div>
+          </div>
+        </div> <!-- tab pane -->
+
+        <!-- Chart Parameters -->
+        <div id="chartsPanel" class="tab-pane fade in active">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <form class="form-inline">
+                <div class="form-group">
+                  <label for="chopts_chartPeriod">Chart Period</label>
+                  <div class="input-group">
+                    <input id="chopts_chartPeriod" class="form-control" type="number" min="1" max="200" />
+                    <span class="input-group-addon">ms</span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="chopts_series">Chart Series</label>
+                  <select id="chopts_series" class="form-control">
+                    <option value="rxRate" selected="selected">Rx Bitrate</option>
+                    <option value="txRate">Tx Bitrate</option>
+                    <option value="rxPacketRate">Rx Packet Rate</option>
+                    <option value="txPacketRate">Tx Packet Rate</option>
+                  </select>
+                </div>
+                <button id="chopts_stop_start" class="btn btn-primary"> Pause/Run</button>
+              </form>
+            </div>
+          </div> <!-- panel -->
+        </div> <!-- tab pane -->
+
+        <!-- Traps -->
+        <div id="trapsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <button id="trap_add" class="btn btn-default" data-toggle="modal" data-target="#add_trap_modal" type="button">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Add Trap
+              </button>
+
+              <!-- Trap Dialog viewed by clicking the Add Trap button -->
+              <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title" id="myModalLabel">Add a Trap</h4>
+                    </div>
+                    <div class="modal-body">
+                      <form>
+                        <!-- Traps and their measurement units -->
+                        <select id="trap_names">
+                          <option data-trap-id="mean_rx_bitrate" data-trap-units="Kbps">Mean Ingress Bitrate Exceeds</option>
+                          <option data-trap-id="mean_tx_bitrate" data-trap-units="Kbps">Mean Egress Bitrate Exceeds </option>
+                          <option data-trap-id="max_rx_bitrate" data-trap-units="Kbps">Max Ingress Bitrate Exceeds </option>
+                          <option data-trap-id="max_tx_bitrate" data-trap-units="Kbps">Max Egress Bitrate Exceeds </option>
+                          <option data-trap-id="min_rx_bitrate" data-trap-units="Kbps">Min Ingress Bitrate Below </option>
+                          <option data-trap-id="min_tx_bitrate" data-trap-units="Kbps">Min Egress Bitrate Below </option>
+                          <option data-trap-id="rx_pkt_gap" data-trap-units="ms">Max Ingress Packet Spacing Exceeds</option>
+                          <option data-trap-id="tx_pkt_gap" data-trap-units="ms">Max Egress Packet Spacing Exceeds</option>
+                        </select>
+                        <!-- Trap value and measurement units for that value -->
+                        <div class="input-group">
+                          <input id="trap_value" class="form-control" type="text" />
+                          <span class="input-group-addon">Kbps</span>
+                        </div>
+                      </form>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-primary">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <table id="traps_table" class="table">
+                <thead>
+                  <tr>
+                    <th>Trap</th>
+                    <th>Value</th>
+                    <th>Options</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example Trap after being added through the UI
+                  <tr data-trap-id="max_rx_bitrate" data-trap-value="123">
+                    <td>Exceeds RX Bitrate</td>
+                    <td>
+                      <div class="input-group">
+                        <span class="form-control">123</span>
+                        <span class="input-group-addon">kbps</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-default">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                      </button>
+                    </td>
+                  </tr>
+                  -->
+                </tbody>
+              </table>
+            </div> <!-- end panel body -->
+          </div> <!-- end panel -->
+        </div> <!-- end tab pane -->
+        <!-- End of Traps -->
+
+        <!-- More Chart Options -->
+        <div id="measurementsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <table class="table table-condensed">
+                <tr>
+                  <td></td>
+                  <td></td>
+                  <th>Rx</th>
+                  <th>Tx</th>
+                </tr>
+                <tr>
+                  <th>Throughput (kbps)</th>
+                  <th>Min</th>
+                  <td><span id="jt-measure-tput-min-rx"></span></td>
+                  <td><span id="jt-measure-tput-min-tx"></span></td>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Max</th>
+                  <td><span id="jt-measure-tput-max-rx"></span></td>
+                  <td><span id="jt-measure-tput-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Mean</th>
+                  <td><span id="jt-measure-tput-mean-rx"></span></td>
+                  <td><span id="jt-measure-tput-mean-tx"></span></td>
+                </tr>
+                <tr><td colspan=4>&nbsp;</td></tr>
+                <tr>
+                  <th>Packet Rate (pps)</th>
+                  <th>Min</th>
+                  <td><span id="jt-measure-pktRate-min-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-min-tx"></span></td>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Max</th>
+                  <td><span id="jt-measure-pktRate-max-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Mean</th>
+                  <td><span id="jt-measure-pktRate-mean-rx"></span></td>
+                  <td><span id="jt-measure-pktRate-mean-tx"></span></td>
+                </tr>
+                <tr><td colspan=4>&nbsp;</td></tr>
+                <tr>
+                  <th>Inter-packet Space (ms)</th>
+                  <th>Max</th>
+                  <td><span id="jt-measure-zRun-max-rx"></span></td>
+                  <td><span id="jt-measure-zRun-max-tx"></span></td>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Mean</th>
+                  <td><span id="jt-measure-zRun-mean-rx"></span></td>
+                  <td><span id="jt-measure-zRun-mean-tx"></span></td>
+                </tr>
+                <tr><td colspan=4>&nbsp;</td></tr>
+                <tr>
+                  <th>Sample Period</th>
+                  <td colspan=3><span id="jt-measure-sample-period"></span></td>
+                </tr><tr>
+                  <th>Data Samples</th>
+                  <td colspan=3><span id="jt-measure-datalength"></span></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- end tab-content -->
+
+
+      <div id="chartContainer" style="height: 300px; width:100%;"></div>
+      <div id="packetGapContainer" style="height: 300px; width: 100%;"></div>
+      <div id="subGraphs" style="display:flex;">
+        <div id="histogramContainer" style="height: 200px; width: 200px; margin: 2em;"></div>
+        <div id="basicStatsContainer" style="height: 200px; width: 200px; margin: 2em"></div>
+      </div>
+
+<!-- Modals -->
+      <div id="error-modal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">An error occured:</h4>
+            </div>
+            <div class="modal-body">
+              <div>
+                <p>
+                  <span id="error-msg"></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="about" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+          <div id="version" class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Version info:</h4>
+            </div>
+            <div class="modal-body">
+              <div>
+                <p>
+                  Version: <span id="jt-version-maintainer"></span>
+                </p><p>
+                  Repository: <span id="jt-version-repo"></span>
+                </p><p>
+                  Branch: <span id="jt-version-branch"></span> <span id="jt-version-clean"></span>
+                </p><p>
+                  Last commit: <span id="jt-version-commit"></span>, <span id="jt-version-commit-time"></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="help" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+          <div id="help" class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Help</h4>
+            </div>
+            <div class="modal-body">
+        <h3>Impairment Help</h3>
+        <p>Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.</p>
+
+        <h4>Delay:</h4>
+        <p>A basic time delay, specified in milliseconds.</p>
+        <h5>Example:</h5>
+        <p>42</p>
+
+        <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.</p>
+        <p>Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.</p>
+        <p>Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.</p>
+        <h5>Example:</h5>
+        <p>22</p>
+
+        <h4>Loss:</h4>
+        <p>A percentage of random packet loss. Each packet has X percent chance of being dropped.</p>
+        <h5>Example:</h5>
+        <p>7</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
