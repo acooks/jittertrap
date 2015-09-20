@@ -9,7 +9,7 @@ CLEANDIRS = $(SUBDIRS:%=clean-%)
 all: $(SUBDIRS)
 	@echo "Done."
 
-$(SUBDIRS): %:
+$(SUBDIRS): %: messages
 	@echo "Making $@"
 	@$(MAKE) --silent -C $@
 
