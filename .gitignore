@@ -1,9 +1,13 @@
 *.swp
 *~
 cscope*.out
-frontend/src/js/jittertrap-coreconfig.js
-frontend/src/js/jittertrap-version.js
+html5-client/src/js/jittertrap-coreconfig.js
+html5-client/src/js/jittertrap-version.js
+html5-client/output/
+cli-client/jittertrap-cli
 jittertrap-coverity-build.lzma
 backend/jittertrap
 cov-int/
-frontend/output/
+messages/jt-messages.a
+messages/jt_msg_*.o
+messages/test-packing
