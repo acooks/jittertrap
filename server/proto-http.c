@@ -14,7 +14,8 @@
 #include <unistd.h>
 
 #include <libwebsockets.h>
-#include "test.h"
+
+#include "proto.h"
 
 int max_poll_elements;
 

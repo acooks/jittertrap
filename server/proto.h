@@ -1,15 +1,14 @@
 #ifndef TEST_H
 #define TEST_H
 
-enum demo_protocols {
+enum protocol_ids {
 	/* always first */
 	PROTOCOL_HTTP = 0,
 
-	PROTOCOL_DUMB_INCREMENT,
-	PROTOCOL_LWS_MIRROR,
+	PROTOCOL_JITTERTRAP,
 
 	/* always last */
-	DEMO_PROTOCOL_COUNT
+	PROTOCOL_TERMINATOR
 };
 
 int close_testing;

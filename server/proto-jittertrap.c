@@ -4,8 +4,8 @@
 
 #include <libwebsockets.h>
 
+#include "proto.h"
 #include "proto-jittertrap.h"
-#include "test.h"
 
 int callback_jittertrap(struct libwebsocket_context *context
                         __attribute__((unused)),

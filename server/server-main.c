@@ -13,9 +13,9 @@
 
 #include <libwebsockets.h>
 
+#include "proto.h"
 #include "proto-http.h"
 #include "proto-jittertrap.h"
-#include "test.h"
 
 int max_poll_elements;
 char *resource_path = LOCAL_RESOURCE_PATH;

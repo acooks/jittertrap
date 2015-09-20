@@ -7,14 +7,14 @@ DEFINES = \
 
 SOURCES = \
  server-main.c \
- test.c \
+ proto.c \
  proto-http.c \
  proto-mirror.c \
  proto-jittertrap.c \
  proto-dinc.c 
 
 HEADERS = \
- test.h \
+ proto.h \
  proto-http.h \
  proto-mirror.h \
  proto-jittertrap.h \
