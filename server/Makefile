@@ -9,16 +9,12 @@ SOURCES = \
  server-main.c \
  proto.c \
  proto-http.c \
- proto-mirror.c \
  proto-jittertrap.c \
- proto-dinc.c 
 
 HEADERS = \
  proto.h \
  proto-http.h \
- proto-mirror.h \
  proto-jittertrap.h \
- proto-dinc.h \
 
 INCLUDES = 
 

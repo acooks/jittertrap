@@ -79,7 +79,6 @@ int main(int argc, char **argv)
 	char interface_name[128] = "";
 	const char *iface = NULL;
 	int syslog_options = LOG_PID | LOG_PERROR;
-	unsigned int ms, oldms = 0;
 	struct lws_context_creation_info info;
 
 	int debug_level = 7;
@@ -203,22 +202,8 @@ int main(int argc, char **argv)
 
 	n = 0;
 	while (n >= 0 && !force_exit) {
-		struct timeval tv;
-
-		gettimeofday(&tv, NULL);
-
-		/*
-		 * This provokes the LWS_CALLBACK_SERVER_WRITEABLE for every
-		 * live websocket connection using the DUMB_INCREMENT protocol,
-		 * as soon as it can take more packets (usually immediately)
-		 */
-
-		ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-		if ((ms - oldms) > 50) {
-			libwebsocket_callback_on_writable_all_protocol(
-			    &protocols[PROTOCOL_DUMB_INCREMENT]);
-			oldms = ms;
-		}
+		libwebsocket_callback_on_writable_all_protocol(
+				&protocols[PROTOCOL_JITTERTRAP]);
 
 		/*
 		 * takes care of the poll() and looping through finding who
