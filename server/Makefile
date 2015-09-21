@@ -1,9 +1,11 @@
+include ../make.config
 
 PROG = test-server
 
 DEFINES = \
 -DPROGNAME=\"$(PROG)\" \
--DINSTALL_DATADIR=\"./\"
+-DINSTALL_DATADIR=\"./\" \
+-DMAX_IFACE_LEN=$(MAX_IFACE_LEN)
 
 SOURCES = \
  server-main.c \

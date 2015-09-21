@@ -1,7 +1,8 @@
+include ../make.config
 
 LIB = jt-messages.a
 
-DEFINES = -DMAX_IFACE_LEN=25
+DEFINES = -DMAX_IFACE_LEN=$(MAX_IFACE_LEN)
 
 SOURCES = \
  src/jt_msg_stats.c \
