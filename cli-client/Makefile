@@ -1,15 +1,17 @@
+include ../make.config
 
 PROG = jittertrap-cli
 
 DEFINES = -DMAX_IFACE_LEN=25
 
 SOURCES = \
- jt_messages.c \
  main.c \
  proto.c \
+ jt_client_msg_handler.c \
 
 HEADERS = \
  proto.h \
+ jt_client_msg_handler.h \
 
 MESSAGEHEADERS = \
  ../messages/include/jt_message_types.h \

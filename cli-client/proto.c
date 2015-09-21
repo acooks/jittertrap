@@ -10,7 +10,7 @@
 
 #include "proto.h"
 #include "jt_messages.h"
-#include "jt_msg_stats.h"
+#include "jt_client_msg_handler.h"
 
 struct libwebsocket_protocols protocols[] = {
 	    [PROTOCOL_JITTERTRAP] = {
@@ -27,7 +27,7 @@ int callback_jittertrap(struct libwebsocket_context *context,
                         struct libwebsocket *wsi,
                         enum libwebsocket_callback_reasons reason,
                         void *user __attribute__((unused)),
-                        void *in __attribute__((unused)),
+                        void *in,
                         size_t len __attribute__((unused)))
 {
 	switch (reason) {

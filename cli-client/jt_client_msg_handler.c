@@ -79,8 +79,3 @@ int jt_client_msg_handler(char *in)
 	return jt_msg_handler(in, &jt_msg_types_s2c[0]);
 }
 
-/* handle messages received from client in server */
-int jt_server_msg_handler(char *in)
-{
-	return jt_msg_handler(in, &jt_msg_types_c2s[0]);
-}
