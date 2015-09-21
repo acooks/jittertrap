@@ -23,7 +23,7 @@ int jt_netem_params_free(void *data)
 	return 0;
 }
 
-int jt_netem_params_consumer(void *data)
+int jt_netem_params_printer(void *data)
 {
 	struct jt_msg_netem_params *p = data;
 

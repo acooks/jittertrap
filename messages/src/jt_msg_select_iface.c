@@ -21,7 +21,7 @@ int jt_select_iface_free(void *data)
 	return 0;
 }
 
-int jt_select_iface_consumer(void *data)
+int jt_select_iface_printer(void *data)
 {
 	char(*iface)[MAX_IFACE_LEN] = data;
 	printf("Selected Iface %s\n", *iface);

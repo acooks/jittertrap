@@ -20,7 +20,7 @@ int jt_iface_list_free(void *data)
 	return 0;
 }
 
-int jt_iface_list_consumer(void *data)
+int jt_iface_list_printer(void *data)
 {
 	int i;
 	struct jt_iface_list *il = (struct jt_iface_list *)data;

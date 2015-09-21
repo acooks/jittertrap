@@ -3,7 +3,7 @@
 
 int jt_sample_period_packer(void *data, char **out);
 int jt_sample_period_unpacker(json_t *root, void **data);
-int jt_sample_period_consumer(void *data);
+int jt_sample_period_printer(void *data);
 int jt_sample_period_free(void *data);
 const char *jt_sample_period_msg_get(void);
 

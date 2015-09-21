@@ -3,7 +3,7 @@
 
 int jt_iface_list_packer(void *data, char **out);
 int jt_iface_list_unpacker(json_t *root, void **data);
-int jt_iface_list_consumer(void *data);
+int jt_iface_list_printer(void *data);
 int jt_iface_list_free(void *data);
 const char *jt_iface_list_test_msg_get(void);
 

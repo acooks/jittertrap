@@ -63,7 +63,7 @@ struct jt_msg_type
 	const char *key;
 	jt_packer_t to_json_string;
 	jt_unpacker_t to_struct;
-	jt_consumer_t consume;
+	jt_consumer_t print;
 	jt_consumer_t free;
 	jt_test_msg_getter_t get_test_msg;
 };

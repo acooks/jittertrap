@@ -18,7 +18,7 @@ int jt_sample_period_free(void *data)
 	return 0;
 }
 
-int jt_sample_period_consumer(void *data)
+int jt_sample_period_printer(void *data)
 {
 	int *sp = data;
 	printf("Sampling period: %d\n", *sp);

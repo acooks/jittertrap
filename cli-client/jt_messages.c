@@ -64,7 +64,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 			break;
 		}
 
-		jt_messages[*msg_type].consume(data);
+		jt_messages[*msg_type].print(data);
 		json_decref(root);
 		return 0;
 	}

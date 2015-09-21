@@ -15,7 +15,7 @@ static const struct jt_msg_type jt_messages[] =
 		           .key = "stats",
 		           .to_struct = jt_stats_unpacker,
 		           .to_json_string = jt_stats_packer,
-		           .consume = jt_stats_consumer,
+		           .print = jt_stats_printer,
 		           .free = jt_stats_free,
 		           .get_test_msg = jt_stats_test_msg_get },
 
@@ -23,7 +23,7 @@ static const struct jt_msg_type jt_messages[] =
 		                .key = "iface_list",
 		                .to_struct = jt_iface_list_unpacker,
 		                .to_json_string = jt_iface_list_packer,
-		                .consume = jt_iface_list_consumer,
+		                .print = jt_iface_list_printer,
 		                .free = jt_iface_list_free,
 		                .get_test_msg = jt_iface_list_test_msg_get },
 
@@ -31,7 +31,7 @@ static const struct jt_msg_type jt_messages[] =
 		                  .key = "dev_select",
 		                  .to_struct = jt_select_iface_unpacker,
 		                  .to_json_string = jt_select_iface_packer,
-		                  .consume = jt_select_iface_consumer,
+		                  .print = jt_select_iface_printer,
 		                  .free = jt_select_iface_free,
 		                  .get_test_msg =
 		                      jt_select_iface_test_msg_get },
@@ -40,7 +40,7 @@ static const struct jt_msg_type jt_messages[] =
 		                  .key = "netem_params",
 		                  .to_struct = jt_netem_params_unpacker,
 		                  .to_json_string = jt_netem_params_packer,
-		                  .consume = jt_netem_params_consumer,
+		                  .print = jt_netem_params_printer,
 		                  .free = jt_netem_params_free,
 		                  .get_test_msg =
 		                      jt_netem_params_test_msg_get },
@@ -49,7 +49,7 @@ static const struct jt_msg_type jt_messages[] =
 		                   .key = "sample_period",
 		                   .to_struct = jt_sample_period_unpacker,
 		                   .to_json_string = jt_sample_period_packer,
-		                   .consume = jt_sample_period_consumer,
+		                   .print = jt_sample_period_printer,
 		                   .free = jt_sample_period_free,
 		                   .get_test_msg = jt_sample_period_msg_get },
 
@@ -57,12 +57,12 @@ static const struct jt_msg_type jt_messages[] =
 		               .key = "set_netem",
 		               .to_struct = jt_set_netem_unpacker,
 		               .to_json_string = jt_set_netem_packer,
-		               .consume = jt_set_netem_consumer,
+		               .print = jt_set_netem_printer,
 		               .free = jt_set_netem_free,
 		               .get_test_msg = jt_set_netem_test_msg_get },
 
      [JT_MSG_END] = {
-	     .type = JT_MSG_END, .key = NULL, .to_struct = NULL, .consume = NULL
+	     .type = JT_MSG_END, .key = NULL, .to_struct = NULL, .print = NULL
      } };
 
 #endif

@@ -24,7 +24,7 @@ int jt_stats_free(void *data)
 	return 0;
 }
 
-int jt_stats_consumer(void *data)
+int jt_stats_printer(void *data)
 {
 	struct jt_msg_stats *stats = (struct jt_msg_stats *)data;
 	double avgRx = 0, avgTx = 0;
