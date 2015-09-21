@@ -61,8 +61,8 @@ struct jt_msg_type
 {
 	jt_msg_type_id_t type;
 	const char *key;
-	jt_packer_t pack;
-	jt_unpacker_t unpack;
+	jt_packer_t to_json_string;
+	jt_unpacker_t to_struct;
 	jt_consumer_t consume;
 	jt_consumer_t free;
 	jt_test_msg_getter_t get_test_msg;

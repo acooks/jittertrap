@@ -56,7 +56,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 		}
 
 		// type matches, try to unpack it.
-		err = jt_messages[*msg_type].unpack(root, &data);
+		err = jt_messages[*msg_type].to_struct(root, &data);
 		if (err) {
 			// type matched, but unpack failed.
 			fprintf(stderr, "[%s] type match, unpack failed.\n",

@@ -36,24 +36,26 @@ static int test_unpack_pack_unpack(int msg_id)
 		return -1;
 	}
 
-	/* unpack it */
-	error = msg_type->unpack(token, &data);
+	/* unpack string to struct */
+	error = msg_type->to_struct(token, &data);
 	json_decref(token);
 
 	if (error) {
-		fprintf(stderr, "error: unpacking failed\n");
+		fprintf(stderr, "error: unpacking string to struct failed\n");
 		return -1;
 	}
 
-	/* re-pack it */
+	/* re-pack struct to json string */
 	char *s;
-	error = msg_type->pack(data, &s);
+	error = msg_type->to_json_string(data, &s);
 	msg_type->free(data);
 	if (error) {
-		fprintf(stderr, "error: packing failed\n");
+		fprintf(stderr, "error: packing struct into string failed\n");
 		free(s);
 		return -1;
 	}
+	printf("json_str: %s\n", s);
+
 
 	/* load it a second time */
 	token = json_loads(s, 0, &err);
@@ -64,11 +66,11 @@ static int test_unpack_pack_unpack(int msg_id)
 		return -1;
 	}
 
-	/* unpack it a second time */
-	error = msg_type->unpack(token, &data);
+	/* unpack string a second time */
+	error = msg_type->to_struct(token, &data);
 	json_decref(token);
 	if (error) {
-		fprintf(stderr, "error: second unpacking failed\n");
+		fprintf(stderr, "error: second unpacking string to struct failed\n");
 		return -1;
 	}
 	msg_type->free(data);
