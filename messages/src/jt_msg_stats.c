@@ -161,7 +161,7 @@ int jt_stats_packer(void *data, char **out)
 	}
 
 	json_object_set_new(
-	    t, "msg", json_string(jt_messages[JT_MSG_NETEM_PARAMS_V1].key));
+	    t, "msg", json_string(jt_messages[JT_MSG_STATS_V1].key));
 	json_object_set(params, "s", samples_arr);
 	json_object_set(t, "p", params);
 	*out = json_dumps(t, 0);

@@ -45,7 +45,7 @@ int jt_set_netem_packer(void *data, char **out)
 	json_object_set_new(p, "loss", json_integer(params->loss));
 
 	json_object_set_new(
-	    t, "msg", json_string(jt_messages[JT_MSG_NETEM_PARAMS_V1].key));
+	    t, "msg", json_string(jt_messages[JT_MSG_SET_NETEM_V1].key));
 	json_object_set(t, "p", p);
 	*out = json_dumps(t, 0);
 	json_object_clear(p);
