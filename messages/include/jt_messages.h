@@ -65,4 +65,6 @@ static const struct jt_msg_type jt_messages[] =
 	     .type = JT_MSG_END, .key = NULL, .to_struct = NULL, .print = NULL
      } };
 
+int jt_msg_match_type(json_t *root, int type_id);
+
 #endif

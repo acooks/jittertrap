@@ -11,6 +11,7 @@ SOURCES = \
  src/jt_msg_netem_params.c \
  src/jt_msg_sample_period.c \
  src/jt_msg_set_netem.c \
+ src/jt_messages.c \
 
 HEADERS = \
  include/jt_message_types.h \

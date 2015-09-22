@@ -65,6 +65,11 @@ static int test_unpack_pack_unpack(int msg_id)
 		fprintf(stderr, "error on second load: %s\n", err.text);
 		return -1;
 	}
+	error = jt_msg_match_type(token, msg_id);
+	if (error) {
+		fprintf(stderr, "error: message type doesn't match!\n");
+		return -1;
+	}
 
 	/* unpack string a second time */
 	error = msg_type->to_struct(token, &data);
