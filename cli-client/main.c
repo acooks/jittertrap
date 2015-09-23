@@ -119,7 +119,6 @@ int main(int argc, char **argv)
 
 	fprintf(stderr, "Waiting for connect...\n");
 
-	n = 0;
 	do {
 		;
 	} while (!force_exit && (0 == libwebsocket_service(context, 10)));
