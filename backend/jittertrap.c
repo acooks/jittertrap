@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <stdbool.h>
@@ -7,9 +8,10 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdio.h>
 #include <math.h>
+#include <assert.h>
 
-#include "fossa.h"
 #include "jittertrap.h"
 #include "iface_stats.h"
 #include "stats_thread.h"
