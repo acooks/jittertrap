@@ -49,4 +49,4 @@ test-packing: lib test/test_messages.c
 
 
 clean:
-	rm $(LIB) *.o test-packing || true
+	rm $(LIB) *.o *.a test-packing || true
