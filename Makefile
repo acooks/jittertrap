@@ -1,7 +1,7 @@
 
 include make.config
 
-SUBDIRS = backend html5-client docs
+SUBDIRS = messages backend server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
@@ -23,7 +23,7 @@ update-cbuffer:
 
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
-	cov-build --dir cov-int make backend
+	cov-build --dir cov-int make messages backend server cli-client
 	@tar caf jittertrap-coverity-build.lzma cov-int
 	@echo Coverity build archive: jittertrap-coverity-build.lzma
 
@@ -31,11 +31,11 @@ coverity-clean:
 	rm -rf cov-int jittertrap-coverity-build.lzma
 
 cppcheck:
-	cppcheck --enable=style,warning,performance,portability backend/
+	cppcheck --enable=style,warning,performance,portability messages/ backend/ server/ cli-client/
 	#cppcheck deps/fossa/fossa.c
 
 clang-analyze:
-	scan-build make backend
+	scan-build make messages backend server cli-client
 
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
