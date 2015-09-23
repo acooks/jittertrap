@@ -43,7 +43,7 @@ int jt_stats_printer(void *data)
 	printf("\rRx: %10.1f Tx: %10.1f PtkRx: %10.1f PktTx: %10.1f E: %10d",
 	       avgRx, avgTx, avgPktRx, avgPktTx, stats->err.mean);
 
-	return jt_stats_free(data);
+	return 0;
 }
 
 int jt_stats_unpacker(json_t *root, void **data)

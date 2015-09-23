@@ -25,7 +25,7 @@ int jt_select_iface_printer(void *data)
 {
 	char(*iface)[MAX_IFACE_LEN] = data;
 	printf("Selected Iface %s\n", *iface);
-	return jt_select_iface_free(data);
+	return 0;
 }
 
 int jt_select_iface_unpacker(json_t *root, void **data)
