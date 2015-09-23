@@ -150,13 +150,13 @@ int jt_stats_packer(void *data, char **out)
 	for (int i = 0; i < stats_msg->sample_count; i++) {
 		sample[i] = json_object();
 		json_object_set_new(sample[i], "rxDelta",
-		                    json_integer(stats_msg->samples->rx));
+		                    json_integer(stats_msg->samples[i].rx));
 		json_object_set_new(sample[i], "txDelta",
-		                    json_integer(stats_msg->samples->rx));
+		                    json_integer(stats_msg->samples[i].tx));
 		json_object_set_new(sample[i], "rxPktDelta",
-		                    json_integer(stats_msg->samples->rx));
+		                    json_integer(stats_msg->samples[i].rxPkt));
 		json_object_set_new(sample[i], "txPktDelta",
-		                    json_integer(stats_msg->samples->rx));
+		                    json_integer(stats_msg->samples[i].txPkt));
 		json_array_append(samples_arr, sample[i]);
 	}
 
