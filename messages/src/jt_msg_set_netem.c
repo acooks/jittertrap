@@ -30,7 +30,7 @@ int jt_set_netem_printer(void *data)
 	       "\tJitter:  +/-%dms\n"
 	       "\tLoss:       %d\n",
 	       p->iface, p->delay, p->jitter, p->loss);
-	return jt_set_netem_free(data);
+	return 0;
 }
 
 int jt_set_netem_packer(void *data, char **out)

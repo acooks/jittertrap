@@ -22,7 +22,7 @@ int jt_sample_period_printer(void *data)
 {
 	int *sp = data;
 	printf("Sampling period: %d\n", *sp);
-	return jt_sample_period_free(data);
+	return 0;
 }
 
 int jt_sample_period_unpacker(json_t *root, void **data)

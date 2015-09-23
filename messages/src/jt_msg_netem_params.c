@@ -33,7 +33,7 @@ int jt_netem_params_printer(void *data)
 	       "\tJitter:  +/-%dms\n"
 	       "\tLoss:       %d\n",
 	       p->iface, p->delay, p->jitter, p->loss);
-	return jt_netem_params_free(data);
+	return 0;
 }
 
 int jt_netem_params_unpacker(json_t *root, void **data)

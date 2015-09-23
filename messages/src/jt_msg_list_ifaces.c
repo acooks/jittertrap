@@ -29,7 +29,7 @@ int jt_iface_list_printer(void *data)
 	for (i = 0; i < il->count; i++) {
 		printf("\t%s\n", il->ifaces[i]);
 	}
-	return jt_iface_list_free(data);
+	return 0;
 }
 
 int jt_iface_list_unpacker(json_t *root, void **data)
