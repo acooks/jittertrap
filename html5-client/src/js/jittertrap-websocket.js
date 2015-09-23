@@ -100,7 +100,7 @@ JT = (function (my) {
 
   my.ws.init = function(uri) {
     // Initialize WebSocket
-    sock = new WebSocket(uri);
+    sock = new WebSocket(uri, "jittertrap");
 
     sock.onopen = function(evt) {
       sock.send("open!");

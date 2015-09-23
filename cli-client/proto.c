@@ -14,7 +14,7 @@
 
 struct libwebsocket_protocols protocols[] = {
 	    [PROTOCOL_JITTERTRAP] = {
-		    .name = "",
+		    .name = "jittertrap",
 		    .callback = callback_jittertrap,
 		    .per_session_data_size = 0,
 		    .rx_buffer_size = 4096,
