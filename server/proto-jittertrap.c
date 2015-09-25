@@ -1,6 +1,7 @@
 /* jittertrap protocol */
 
 #include <unistd.h>
+#include <stdio.h>
 
 #include <libwebsockets.h>
 
