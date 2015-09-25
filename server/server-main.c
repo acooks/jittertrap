@@ -60,7 +60,6 @@ static struct option options[] = {
 	{ "debug", required_argument, NULL, 'd' },
 	{ "port", required_argument, NULL, 'p' },
 	{ "ssl", no_argument, NULL, 's' },
-	{ "allow-non-ssl", no_argument, NULL, 'a' },
 	{ "interface", required_argument, NULL, 'i' },
 	{ "closetest", no_argument, NULL, 'c' },
 	{ "libev", no_argument, NULL, 'e' },
@@ -110,9 +109,6 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			use_ssl = 1;
-			break;
-		case 'a':
-			opts |= LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
 			break;
 		case 'p':
 			info.port = atoi(optarg);
