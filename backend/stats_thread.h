@@ -1,7 +1,7 @@
 #ifndef STATS_THREAD_H
 #define STATS_THREAD_H
 
-int stats_thread_init(void (*stats_handler) (struct iface_stats * counts));
+int stats_thread_init(void (*stats_handler)(struct iface_stats *counts));
 void stats_monitor_iface(const char *_iface);
 
 /* microseconds */

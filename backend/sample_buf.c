@@ -21,17 +21,19 @@ struct iface_stats *sample_buf;
 struct iface_stats *produce_ptr;
 struct iface_stats *consume_ptr;
 
-void raw_sample_buf_init() {
+void raw_sample_buf_init()
+{
 	sample_buf = malloc(BUF_BYTE_LEN);
 	assert(sample_buf);
 	produce_ptr = sample_buf;
 	consume_ptr = sample_buf;
 }
 
-struct iface_stats* raw_sample_buf_produce_next() {
+struct iface_stats *raw_sample_buf_produce_next()
+{
 	pthread_mutex_lock(&pc_mutex);
 	produce_ptr++;
-	if ((uint8_t*)produce_ptr == ((uint8_t*)sample_buf + BUF_BYTE_LEN)) {
+	if ((uint8_t *)produce_ptr == ((uint8_t *)sample_buf + BUF_BYTE_LEN)) {
 		/* end of buffer, wrap around */
 		produce_ptr = sample_buf;
 	}
@@ -40,14 +42,15 @@ struct iface_stats* raw_sample_buf_produce_next() {
 	/* FIXME: needs some kind of lock instead */
 	assert(produce_ptr != consume_ptr);
 	pthread_mutex_unlock(&pc_mutex);
-	assert((uint8_t *)produce_ptr < ((uint8_t*)sample_buf + BUF_BYTE_LEN));
+	assert((uint8_t *)produce_ptr < ((uint8_t *)sample_buf + BUF_BYTE_LEN));
 	return produce_ptr;
 }
 
-struct iface_stats* raw_sample_buf_consume_next() {
+struct iface_stats *raw_sample_buf_consume_next()
+{
 	pthread_mutex_lock(&pc_mutex);
 	consume_ptr++;
-	if ((uint8_t*)consume_ptr == ((uint8_t*)sample_buf + BUF_BYTE_LEN)) {
+	if ((uint8_t *)consume_ptr == ((uint8_t *)sample_buf + BUF_BYTE_LEN)) {
 		consume_ptr = sample_buf;
 	}
 

@@ -7,9 +7,7 @@ struct timespec ts_absdiff(struct timespec t1, struct timespec t2)
 {
 	struct timespec t;
 	if ((t1.tv_sec < t2.tv_sec) ||
-            ((t1.tv_sec == t2.tv_sec) &&
-	     (t1.tv_nsec <= t2.tv_nsec)))
-	{
+	    ((t1.tv_sec == t2.tv_sec) && (t1.tv_nsec <= t2.tv_nsec))) {
 		/* t1 <= t2 */
 		t.tv_sec = t2.tv_sec - t1.tv_sec;
 		if (t2.tv_nsec < t1.tv_nsec) {
@@ -23,7 +21,7 @@ struct timespec ts_absdiff(struct timespec t1, struct timespec t2)
 		t.tv_sec = t1.tv_sec - t2.tv_sec;
 		if (t1.tv_nsec < t2.tv_nsec) {
 			t.tv_nsec = t1.tv_nsec + 1000000000L - t2.tv_nsec;
-			t.tv_sec--;  /* Borrow a second. */
+			t.tv_sec--; /* Borrow a second. */
 		} else {
 			t.tv_nsec = t1.tv_nsec - t2.tv_nsec;
 		}
@@ -36,11 +34,10 @@ inline struct timespec ts_add(struct timespec t1, struct timespec t2)
 	struct timespec t;
 	t.tv_sec = t1.tv_sec + t2.tv_sec;
 	t.tv_nsec = t1.tv_nsec + t2.tv_nsec;
-        /* carry over seconds */
+	/* carry over seconds */
 	if (t.tv_nsec >= 1000000000L) {
 		t.tv_sec++;
 		t.tv_nsec -= 1000000000L;
 	}
 	return t;
 }
-

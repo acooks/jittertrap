@@ -94,17 +94,14 @@ char **netem_list_ifaces()
 	while (link) {
 		char *j = rtnl_link_get_name(link);
 
-		if ((strcmp("lo", j) != 0)
-		    && is_iface_allowed(j))
-		{
+		if ((strcmp("lo", j) != 0) && is_iface_allowed(j)) {
 			*i = malloc(strlen(j) + 1);
 			assert(NULL != *i);
 			sprintf(*i, "%s", j);
 			i++;
 		}
-		link =
-		    (struct rtnl_link *)nl_cache_get_next((struct nl_object *)
-							  link);
+		link = (struct rtnl_link *)nl_cache_get_next(
+		    (struct nl_object *)link);
 	}
 	*i = 0;
 
@@ -124,8 +121,9 @@ char **netem_list_ifaces()
 /* Callback used by nl_cache_foreach_filter in nl_cache_find.
  * Sets parameter p to point to parameter found
  */
-void cb_found_cache_obj(struct nl_object *found, void *p) {
-	struct nl_object **out = (struct nl_object**)p;
+void cb_found_cache_obj(struct nl_object *found, void *p)
+{
+	struct nl_object **out = (struct nl_object **)p;
 	nl_object_get(found);
 	*out = found;
 }
@@ -145,8 +143,8 @@ void cb_found_cache_obj(struct nl_object *found, void *p) {
  *
  * @return Reference to object or NULL if not found.
  */
-__attribute__((weak))struct nl_object *nl_cache_find(struct nl_cache *cache,
-						     struct nl_object *filter)
+__attribute__((weak)) struct nl_object
+    *nl_cache_find(struct nl_cache *cache, struct nl_object *filter)
 {
 	struct nl_object *obj = NULL;
 
@@ -170,13 +168,13 @@ int netem_get_params(char *iface, struct netem_params *params)
 	pthread_mutex_lock(&nl_sock_mutex);
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
-			nl_geterror(err));
+		        nl_geterror(err));
 		goto cleanup;
 	}
 
 	if ((err = nl_cache_refill(sock, qdisc_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
-			nl_geterror(err));
+		        nl_geterror(err));
 		goto cleanup;
 	}
 
@@ -196,11 +194,11 @@ int netem_get_params(char *iface, struct netem_params *params)
 	rtnl_tc_set_parent(TC_CAST(filter_qdisc), TC_H_ROOT);
 	rtnl_tc_set_kind(TC_CAST(filter_qdisc), "netem");
 
-	found_qdisc = (struct rtnl_qdisc *)
-			nl_cache_find(qdisc_cache, OBJ_CAST(filter_qdisc));
+	found_qdisc = (struct rtnl_qdisc *)nl_cache_find(
+	    qdisc_cache, OBJ_CAST(filter_qdisc));
 	if (!found_qdisc) {
 		fprintf(stderr, "could't find netem qdisc for iface: %s\n",
-			iface);
+		        iface);
 		goto cleanup_filter_qdisc;
 	}
 
@@ -229,7 +227,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 	return 0;
 
 cleanup_qdisc:
-        rtnl_qdisc_put(found_qdisc);
+	rtnl_qdisc_put(found_qdisc);
 cleanup_filter_qdisc:
 	rtnl_qdisc_put(filter_qdisc);
 cleanup_link:
@@ -265,7 +263,8 @@ int netem_set_params(const char *iface, struct netem_params *params)
 	rtnl_tc_set_parent(TC_CAST(qdisc), TC_H_ROOT);
 	rtnl_tc_set_kind(TC_CAST(qdisc), "netem");
 
-	rtnl_netem_set_delay(qdisc, params->delay * 1000); /* expects microseconds */
+	rtnl_netem_set_delay(qdisc,
+	                     params->delay * 1000); /* expects microseconds */
 	rtnl_netem_set_jitter(qdisc, params->jitter * 1000);
 	rtnl_netem_set_loss(qdisc, (params->loss * (UINT_MAX / 100)));
 
@@ -283,7 +282,7 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
 		fprintf(stderr, "Unable to resync link cache: %s\n",
-			nl_geterror(err));
+		        nl_geterror(err));
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}

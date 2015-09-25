@@ -49,7 +49,7 @@ int reset_stats = DISCARD_FIRST_N_READINGS;
 
 int sample_period_us;
 
-void (*stats_handler) (struct iface_stats * counts);
+void (*stats_handler)(struct iface_stats *counts);
 
 /* local prototypes */
 static void *run(void *data);
@@ -59,7 +59,7 @@ int get_sample_period()
 	return sample_period_us;
 }
 
-int stats_thread_init(void (*_stats_handler) (struct iface_stats * counts))
+int stats_thread_init(void (*_stats_handler)(struct iface_stats *counts))
 {
 	if (!g_iface || !_stats_handler) {
 		return -1;
@@ -134,8 +134,7 @@ static int read_counters(const char *iface, struct sample *stats)
 	return 0;
 }
 
-static void calc_deltas(struct sample *stats_o,
-			struct sample *stats_c)
+static void calc_deltas(struct sample *stats_o, struct sample *stats_c)
 {
 	if (reset_stats-- > 0 || stats_o->rx_bytes > stats_c->rx_bytes) {
 		stats_o->rx_bytes = stats_c->rx_bytes;
@@ -150,9 +149,8 @@ static void calc_deltas(struct sample *stats_o,
 	stats_c->tx_packets_delta = stats_c->tx_packets - stats_o->tx_packets;
 }
 
-static void update_stats(struct sample *sample_c,
-			 char *iface,
-			 struct timespec deadline)
+static void
+update_stats(struct sample *sample_c, char *iface, struct timespec deadline)
 {
 	struct sample sample_o;
 	struct timespec whoosh_err; /* the sound of a missed deadline. */
@@ -170,8 +168,12 @@ static void update_stats(struct sample *sample_c,
 	pthread_mutex_unlock(&g_stats_mutex);
 }
 
-#define handle_error_en(en, msg) \
-        do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+#define handle_error_en(en, msg)                                               \
+	do {                                                                   \
+		errno = en;                                                    \
+		perror(msg);                                                   \
+		exit(EXIT_FAILURE);                                            \
+	} while (0)
 
 static void set_affinity()
 {
@@ -205,7 +207,7 @@ static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
-	schedparm.sched_priority = 1;	// lowest rt priority
+	schedparm.sched_priority = 1; // lowest rt priority
 	sched_setscheduler(0, SCHED_FIFO, &schedparm);
 	set_affinity();
 	return 0;
@@ -237,8 +239,7 @@ static void *run(void *data)
 	stats_frame->sample_period_us = sample_period_us;
 
 	for (;;) {
-		update_stats(&(stats_frame->samples[sample_no]),
-		             iface,
+		update_stats(&(stats_frame->samples[sample_no]), iface,
 		             deadline);
 
 		sample_no++;
@@ -251,7 +252,8 @@ static void *run(void *data)
 			iface = strdup(g_iface);
 
 			stats_frame = raw_sample_buf_produce_next();
-			snprintf(stats_frame->iface, MAX_IFACE_LEN, "%s", iface);
+			snprintf(stats_frame->iface, MAX_IFACE_LEN, "%s",
+			         iface);
 			pthread_mutex_unlock(&g_iface_mutex);
 			stats_frame->sample_period_us = sample_period_us;
 			stats_handler(raw_sample_buf_consume_next());
@@ -260,13 +262,13 @@ static void *run(void *data)
 		deadline.tv_nsec += 1000 * sample_period_us;
 
 		/* Normalize the time to account for the second boundary */
-		if(deadline.tv_nsec >= 1000000000) {
+		if (deadline.tv_nsec >= 1000000000) {
 			deadline.tv_nsec -= 1000000000;
 			deadline.tv_sec++;
 		}
 
-	        clock_nanosleep(CLOCK_MONOTONIC,
-				TIMER_ABSTIME, &deadline, NULL);
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline,
+		                NULL);
 	}
 
 	return NULL;
