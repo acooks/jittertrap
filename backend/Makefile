@@ -44,7 +44,7 @@ FOSSA_DEFINES = \
  -D NS_DISABLE_HTTP_DIGEST_AUTH \
 
 
-all: $(PROG)
+all: $(PROG) Makefile ../make.config
 	@echo -----------------------------------
 	@echo Sample period: $(SAMPLE_PERIOD_US)us
 	@echo Web server port: $(WEB_SERVER_PORT)

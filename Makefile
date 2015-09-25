@@ -9,7 +9,7 @@ CLEANDIRS = $(SUBDIRS:%=clean-%)
 all: $(SUBDIRS)
 	@echo "Done."
 
-$(SUBDIRS): %: messages
+$(SUBDIRS): %: messages make.config
 	@echo "Making $@"
 	@$(MAKE) --silent -C $@
 

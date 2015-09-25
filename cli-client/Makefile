@@ -23,6 +23,8 @@ MESSAGEHEADERS = \
  ../messages/include/jt_msg_sample_period.h \
  ../messages/include/jt_msg_set_netem.h \
 
+MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
+
 INCLUDES = \
  -I . \
  -I ../messages/include/ \
@@ -32,7 +34,7 @@ CFLAGS = -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 MESSAGES = ../messages/jt-messages.a
 
-$(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MESSAGEHEADERS)
+$(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
 	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES)
 
 
