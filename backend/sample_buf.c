@@ -17,9 +17,9 @@
 
 pthread_mutex_t pc_mutex;
 
-struct iface_stats *sample_buf;
-struct iface_stats *produce_ptr;
-struct iface_stats *consume_ptr;
+static struct iface_stats *sample_buf;
+static struct iface_stats *produce_ptr;
+static struct iface_stats *consume_ptr;
 
 void raw_sample_buf_init()
 {

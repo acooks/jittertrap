@@ -30,5 +30,12 @@ $(PROG): $(SOURCES) $(HEADERS)
 indent:
 	clang-format -style=file -i $(SOURCES)
 
+
+MQ_TEST_SOURCES = test_mq.c websocket_message_queue.c
+MQ_TEST_HEADERS = websocket_message_queue.h
+
+test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS)
+	$(CC) -g -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS)
+
 clean:
 	rm $(PROG)
