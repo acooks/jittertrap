@@ -62,7 +62,6 @@ static struct option options[] = {
 	{ "ssl", no_argument, NULL, 's' },
 	{ "interface", required_argument, NULL, 'i' },
 	{ "closetest", no_argument, NULL, 'c' },
-	{ "libev", no_argument, NULL, 'e' },
 #ifndef LWS_NO_DAEMONIZE
 	{ "daemonize", no_argument, NULL, 'D' },
 #endif
@@ -95,9 +94,6 @@ int main(int argc, char **argv)
 		if (n < 0)
 			continue;
 		switch (n) {
-		case 'e':
-			opts |= LWS_SERVER_OPTION_LIBEV;
-			break;
 #ifndef LWS_NO_DAEMONIZE
 		case 'D':
 			daemonize = 1;
