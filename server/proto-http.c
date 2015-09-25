@@ -397,18 +397,6 @@ callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
 
 #endif
 
-	case LWS_CALLBACK_GET_THREAD_ID:
-		/*
-		 * if you will call "libwebsocket_callback_on_writable"
-		 * from a different thread, return the caller thread ID
-		 * here so lws can use this information to work out if it
-		 * should signal the poll() loop to exit and restart early
-		 */
-
-		/* return pthread_getthreadid_np(); */
-
-		break;
-
 	default:
 		break;
 	}
