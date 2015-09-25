@@ -37,9 +37,7 @@ int jt_select_iface_unpacker(json_t *root, void **data)
 	assert(params);
 
 	iface_token = json_object_get(params, "iface");
-	if (!iface_token
-	    || (JSON_STRING != json_typeof(iface_token))
-	    || (0 >= json_string_length(iface_token)))
+	if (!iface_token || (JSON_STRING != json_typeof(iface_token)))
 	{
 		return -1;
 	}
