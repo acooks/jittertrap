@@ -5,7 +5,32 @@
 #include <libwebsockets.h>
 
 #include "proto.h"
+#include "jt_server_message_handler.h"
+#include "websocket_message_queue.h"
 #include "proto-jittertrap.h"
+
+struct cb_data
+{
+	struct libwebsocket *wsi;
+	unsigned char *buf;
+};
+
+static int lws_writer(struct jt_ws_msg *m, void *data)
+{
+	int len, n;
+	struct cb_data *d = (struct cb_data *)data;
+	assert(d);
+	len = snprintf((char *)d->buf, MAX_JSON_MSG_LEN, "%s", m->m);
+	assert(len >= 0);
+	if (len > 0) {
+		n = libwebsocket_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
+		if (n < len) {
+			/* short write :( */
+			return -1;
+		}
+	}
+	return 0;
+}
 
 int callback_jittertrap(struct libwebsocket_context *context
                         __attribute__((unused)),
@@ -13,12 +38,17 @@ int callback_jittertrap(struct libwebsocket_context *context
                         enum libwebsocket_callback_reasons reason, void *user,
                         void *in, size_t len)
 {
-	int n, m;
-	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 +
+	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_JSON_MSG_LEN +
 	                  LWS_SEND_BUFFER_POST_PADDING];
 	unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
 	struct per_session_data__jittertrap *pss =
 	    (struct per_session_data__jittertrap *)user;
+
+	int err;
+	struct cb_data cbd = { wsi, p };
+
+	/* run jt init, stats producer, response handlers, etc. */
+	jt_server_tick();
 
 	switch (reason) {
 
@@ -29,31 +59,20 @@ int callback_jittertrap(struct libwebsocket_context *context
 		break;
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:
-		n = sprintf((char *)p, "%d", pss->number++);
-		m = libwebsocket_write(wsi, p, n, LWS_WRITE_TEXT);
-		if (m < n) {
-			lwsl_err("ERROR %d writing to di socket\n", n);
-			return -1;
-		}
-		if (close_testing && pss->number == 50) {
-			lwsl_info("close tesing limit, closing\n");
-			return -1;
-		}
+		do {
+			err = jt_ws_mq_consume(lws_writer, &cbd);
+		} while (!err);
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
-		//		fprintf(stderr, "rx %d\n", (int)len);
-		if (len < 6)
-			break;
-		if (strcmp((const char *)in, "reset\n") == 0)
-			pss->number = 0;
+		jt_server_msg_receive(in);
 		break;
+
 	/*
 	 * this just demonstrates how to use the protocol filter. If you won't
 	 * study and reject connections based on header content, you don't need
 	 * to handle this callback
 	 */
-
 	case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
 		dump_handshake_info(wsi);
 		/* you could return non-zero here and kill the connection */

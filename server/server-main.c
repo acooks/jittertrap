@@ -25,26 +25,28 @@ static struct libwebsocket_context *context;
 
 /* list of supported protocols and callbacks */
 static struct libwebsocket_protocols protocols[] = {
-	/* first protocol must always be HTTP handler */
+	    /* first protocol must always be HTTP handler */
 
-	{
-	  .name = "http-only",
-	  .callback = callback_http,
-	  .per_session_data_size = sizeof(struct per_session_data__http),
-	  .rx_buffer_size = 0, /* max frame size / rx buffer */
-	},
-	{
-	  .name = "jittertrap-protocol",
-	  .callback = callback_jittertrap,
-	  .per_session_data_size = sizeof(struct per_session_data__jittertrap),
-	  .rx_buffer_size = 10,
-	},
+	    [PROTOCOL_HTTP] = {
+		    .name = "http-only",
+		    .callback = callback_http,
+		    .per_session_data_size =
+		        sizeof(struct per_session_data__http),
+		    .rx_buffer_size = 0, /* max frame size / rx buffer */
+	    },
+	    [PROTOCOL_JITTERTRAP] = {
+		    .name = "jittertrap",
+		    .callback = callback_jittertrap,
+		    .per_session_data_size =
+		        sizeof(struct per_session_data__jittertrap),
+		    .rx_buffer_size = 1000,
+	    },
 
-	/* terminator */
-	{ .name = NULL,
-	  .callback = NULL,
-	  .per_session_data_size = 0,
-	  .rx_buffer_size = 0 }
+	    /* terminator */
+	    [PROTOCOL_TERMINATOR] = { .name = NULL,
+		                      .callback = NULL,
+		                      .per_session_data_size = 0,
+		                      .rx_buffer_size = 0 }
 };
 
 void sighandler(int sig __attribute__((unused)))
@@ -131,10 +133,10 @@ int main(int argc, char **argv)
 			       resource_path);
 			break;
 		case 'h':
-			fprintf(stderr, "Usage: " PROGNAME
-			                "[--port=<p>] [--ssl] "
-			                "[-d <log bitfield>] "
-			                "[--resource_path <path>]\n");
+			fprintf(stderr,
+			        "Usage: " PROGNAME "[--port=<p>] [--ssl] "
+			        "[-d <log bitfield>] "
+			        "[--resource_path <path>]\n");
 			exit(1);
 		}
 	}
@@ -203,7 +205,7 @@ int main(int argc, char **argv)
 	n = 0;
 	while (n >= 0 && !force_exit) {
 		libwebsocket_callback_on_writable_all_protocol(
-				&protocols[PROTOCOL_JITTERTRAP]);
+		    &protocols[PROTOCOL_JITTERTRAP]);
 
 		/*
 		 * takes care of the poll() and looping through finding who
@@ -213,7 +215,7 @@ int main(int argc, char **argv)
 		 * the number of ms in the second argument.
 		 */
 
-		n = libwebsocket_service(context, 50);
+		n = libwebsocket_service(context, 10);
 	}
 
 	libwebsocket_context_destroy(context);

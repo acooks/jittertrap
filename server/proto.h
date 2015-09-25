@@ -16,7 +16,6 @@ int close_testing;
 #define LOCAL_RESOURCE_PATH INSTALL_DATADIR "/libwebsockets-test-server"
 char *resource_path;
 
-
 void dump_handshake_info(struct libwebsocket *wsi);
 
 #endif
