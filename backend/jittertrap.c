@@ -21,7 +21,7 @@
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
-static pthread_mutex_t unsent_frame_count_mutex;
+static pthread_mutex_t unsent_frame_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;

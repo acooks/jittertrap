@@ -15,7 +15,7 @@
 #define CIRC_BUF_SIZE 3
 #define BUF_BYTE_LEN (CIRC_BUF_SIZE * sizeof(struct iface_stats))
 
-pthread_mutex_t pc_mutex;
+static pthread_mutex_t pc_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct iface_stats *sample_buf;
 static struct iface_stats *produce_ptr;

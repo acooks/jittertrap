@@ -10,7 +10,7 @@
 
 #define BUF_BYTE_LEN (MAX_Q_DEPTH * sizeof(struct jt_ws_msg))
 
-pthread_mutex_t mq_mutex;
+static pthread_mutex_t mq_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct jt_ws_msg *queue;
 static struct jt_ws_msg *produce_ptr;
