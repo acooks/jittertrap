@@ -88,12 +88,10 @@ static int test_unpack_pack_unpack(int msg_id)
 static int test_messages(const int *msg_type_arr)
 {
 	const int *msg_type_idx = msg_type_arr;
-	int error;
 
 	for (msg_type_idx = msg_type_arr; *msg_type_idx != JT_MSG_END;
 	     msg_type_idx++) {
-		error = test_unpack_pack_unpack(*msg_type_idx);
-		if (error) {
+		if (0 != test_unpack_pack_unpack(*msg_type_idx)) {
 			return -1;
 		}
 	}
