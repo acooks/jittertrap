@@ -19,18 +19,21 @@ The user interface is implemented as a web application.
 ## Building JitterTrap
 ### Dependencies
 * libnl >= 3.2.24
+* libwebsockets >= 1.4
+* libjansson >= 2.6
 
 #### Fedora  
-Build dependencies  
-`$ sudo yum install libnl3`  
+Build dependencies:  
+`$ sudo dnf install libnl3-devel jansson-devel`
+
 Run-time dependencies:  
-`$ sudo yum install libnl3-devel`
+`$ sudo yum install libnl3 jansson`  
 
 #### Ubuntu  
 Build dependencies:  
-`$ sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev`  
+`$ sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev`  
 Run-time dependencies:  
-`$ sudo apt-get install libnl-3-200 libnl-route-3-200 libnl-genl-3-200`
+`$ sudo apt-get install libnl-3-200 libnl-route-3-200 libnl-genl-3-200 libjansson4`
 
 #### Slackware  
 If you installed packages from 'l' series then libnl is already installed.  
