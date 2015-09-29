@@ -14,7 +14,8 @@
 
 #include <jansson.h>
 #include "jt_server_message_handler.h"
-#include "websocket_message_queue.h"
+#include "jt_ws_mq_config.h"
+#include "jt_ws_mq.h"
 
 #include "iface_stats.h"
 #include "stats_thread.h"

@@ -17,7 +17,7 @@ SOURCES = \
  proto.c \
  proto-http.c \
  proto-jittertrap.c \
- websocket_message_queue.c \
+ jt_ws_mq.c \
  jt_server_message_handler.c \
  ../backend/timeywimey.c \
  ../backend/stats_thread.c \
@@ -29,7 +29,8 @@ HEADERS = \
  proto.h \
  proto-http.h \
  proto-jittertrap.h \
- websocket_message_queue.h \
+ jt_ws_mq_config.h \
+ jt_ws_mq.h \
  jt_server_message_handler.h \
  ../backend/netem.h \
  ../backend/timeywimey.h \
@@ -73,11 +74,15 @@ indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
-MQ_TEST_SOURCES = test_mq.c websocket_message_queue.c
-MQ_TEST_HEADERS = websocket_message_queue.h
+MQ_TEST_SOURCES = test_mq.c jt_ws_mq.c
+MQ_MT_TEST_SOURCES = test_mq_mt.c jt_ws_mq.c
+MQ_TEST_HEADERS = jt_ws_mq_config.h jt_ws_mq.h
 
 test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS)
-	$(CC) -g -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS)
+	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0
+
+test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS)
+	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0
 
 clean:
 	rm $(PROG) || true
