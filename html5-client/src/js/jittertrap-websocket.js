@@ -72,7 +72,7 @@ JT = (function (my) {
 
   var dev_select = function() {
     var msg = JSON.stringify({'msg':'dev_select',
-                              'p': { 'dev': $("#dev_select").val()}});
+                              'p': { 'iface': $("#dev_select").val()}});
     sock.send(msg);
   };
 

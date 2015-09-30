@@ -332,7 +332,7 @@ static void handle_ws_message(struct ns_connection *nc,
 	}
 
 	if (match_msg_type(tok, "dev_select")) {
-		tok = find_json_token(arr, "p.dev");
+		tok = find_json_token(arr, "p.iface");
 		handle_ws_dev_select(tok);
 	} else if (match_msg_type(tok, "set_netem")) {
 		handle_ws_set_netem(nc,
