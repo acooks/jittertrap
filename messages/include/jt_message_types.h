@@ -30,6 +30,7 @@ static const int jt_msg_types_s2c[] = {
 };
 
 static const int jt_msg_types_c2s[] = {
+	JT_MSG_SELECT_IFACE_V1,
 	JT_MSG_SET_NETEM_V1,
 
 	/* terminator */
