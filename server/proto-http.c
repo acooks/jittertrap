@@ -25,6 +25,10 @@ int *fd_lookup;
 int count_pollfds;
 #endif
 
+#if 0
+
+FIXME: this is not used at the moment, but something like this is needed.
+
 /*
  * We take a strict whitelist approach to stop ../ attacks
  */
@@ -34,6 +38,8 @@ struct serveable
 	const char *urlpath;
 	const char *mimetype;
 };
+
+#endif
 
 struct per_session_data__http
 {
@@ -56,6 +62,27 @@ const char *get_mimetype(const char *file)
 	if (!strcmp(&file[n - 5], ".html"))
 		return "text/html";
 
+	if (!strcmp(&file[n - 4], ".css"))
+		return "text/css";
+
+	if (!strcmp(&file[n - 3], ".js"))
+		return "application/ecmascript";
+
+	if (!strcmp(&file[n - 5], ".woff"))
+		return "application/font-woff";
+
+	if (!strcmp(&file[n - 6], ".woff2"))
+		return "application/font-woff2";
+
+	if (!strcmp(&file[n - 4], ".ttf"))
+		return "application/x-font-ttf";
+
+	if (!strcmp(&file[n - 4], ".svg"))
+		return "image/svg+xml";
+
+	if (!strcmp(&file[n - 4], ".eot"))
+		return "application/vnd.ms-fontobject";
+
 	return NULL;
 }
 
@@ -74,14 +101,12 @@ callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
 	unsigned char *p;
 	char *other_headers;
 	static unsigned char buffer[4096];
-	struct stat stat_buf;
 	struct per_session_data__http *pss =
 	    (struct per_session_data__http *)user;
 	const char *mimetype;
 #ifdef EXTERNAL_POLL
 	struct libwebsocket_pollargs *pa = (struct libwebsocket_pollargs *)in;
 #endif
-	unsigned char *end;
 	switch (reason) {
 	case LWS_CALLBACK_HTTP:
 
@@ -93,99 +118,31 @@ callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
 			goto try_to_reuse;
 		}
 
+#if 0
+FIXME: this does not do what we need, but something like this is needed.
+
 		/* this example server has no concept of directories */
 		if (strchr((const char *)in + 1, '/')) {
 			libwebsockets_return_http_status(
 			    context, wsi, HTTP_STATUS_FORBIDDEN, NULL);
 			goto try_to_reuse;
 		}
+#endif
 
 		/* if a legal POST URL, let it continue and accept data */
 		if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI))
 			return 0;
 
-		/* check for the "send a big file by hand" example case */
-
-		if (!strcmp((const char *)in, "/leaf.jpg")) {
-			if (strlen(resource_path) > sizeof(leaf_path) - 10)
-				return -1;
-			sprintf(leaf_path, "%s/leaf.jpg", resource_path);
-
-			/* well, let's demonstrate how to send the hard way */
-
-			p = buffer + LWS_SEND_BUFFER_PRE_PADDING;
-			end = p + sizeof(buffer) - LWS_SEND_BUFFER_PRE_PADDING;
-			pss->fd = open(leaf_path, O_RDONLY);
-
-			if (pss->fd < 0)
-				return -1;
-
-			if (fstat(pss->fd, &stat_buf) < 0)
-				return -1;
-
-			/*
-			 * we will send a big jpeg file, but it could be
-			 * anything.  Set the Content-Type: appropriately
-			 * so the browser knows what to do with it.
-			 *
-			 * Notice we use the APIs to build the header, which
-			 * will do the right thing for HTTP 1/1.1 and HTTP2
-			 * depending on what connection it happens to be working
-			 * on
-			 */
-			if (lws_add_http_header_status(context, wsi, 200, &p,
-			                               end))
-				return 1;
-			if (lws_add_http_header_by_token(
-			        context, wsi, WSI_TOKEN_HTTP_SERVER,
-			        (unsigned char *)"libwebsockets", 13, &p, end))
-				return 1;
-			if (lws_add_http_header_by_token(
-			        context, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE,
-			        (unsigned char *)"image/jpeg", 10, &p, end))
-				return 1;
-			if (lws_add_http_header_content_length(
-			        context, wsi, stat_buf.st_size, &p, end))
-				return 1;
-			if (lws_finalize_http_header(context, wsi, &p, end))
-				return 1;
-
-			/*
-			 * send the http headers...
-			 * this won't block since it's the first payload sent
-			 * on the connection since it was established
-			 * (too small for partial)
-			 *
-			 * Notice they are sent using LWS_WRITE_HTTP_HEADERS
-			 * which also means you can't send body too in one step,
-			 * this is mandated by changes in HTTP2
-			 */
-
-			n = libwebsocket_write(
-			    wsi, buffer + LWS_SEND_BUFFER_PRE_PADDING,
-			    p - (buffer + LWS_SEND_BUFFER_PRE_PADDING),
-			    LWS_WRITE_HTTP_HEADERS);
-
-			if (n < 0) {
-				close(pss->fd);
-				return -1;
-			}
-			/*
-			 * book us a LWS_CALLBACK_HTTP_WRITEABLE callback
-			 */
-			libwebsocket_callback_on_writable(context, wsi);
-			break;
-		}
-
-		/* if not, send a file the easy way */
+		/* collect the file part of the url in buf */
 		strcpy(buf, resource_path);
 		if (strcmp(in, "/")) {
 			if (*((const char *)in) != '/')
 				strcat(buf, "/");
 			strncat(buf, in, sizeof(buf) - strlen(resource_path));
 		} else /* default file to serve */
-			strcat(buf, "/test.html");
+			strcat(buf, "/index.html");
 		buf[sizeof(buf) - 1] = '\0';
+		lwsl_info("get %s\n", buf);
 
 		/* refuse to serve files we don't understand */
 		mimetype = get_mimetype(buf);

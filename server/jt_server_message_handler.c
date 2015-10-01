@@ -40,26 +40,22 @@ struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
 char g_selected_iface[MAX_IFACE_LEN];
 
-/* prototypes */
-static int jt_init();
-
-int jt_get_sample_period() { return get_sample_period(); }
-
-char **jt_list_ifaces() { return netem_list_ifaces(); }
-
-char const *jt_get_iface() { return g_selected_iface; }
-
-int jt_set_iface(const char *iface)
+static int select_iface(void *data)
 {
-	if (!is_iface_allowed(iface)) {
+	char(*iface)[MAX_IFACE_LEN] = data;
+
+	if (!is_iface_allowed(*iface)) {
 		fprintf(stderr, "ignoring request to switch to iface: [%s] - "
 		                "iface not in allowed list: [%s]\n",
-		        iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		        *iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
 		return -1;
 	}
-	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
-	printf("switching to iface: [%s]\n", iface);
-	stats_monitor_iface(iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
+	printf("switching to iface: [%s]\n", *iface);
+	stats_monitor_iface(*iface);
+	jt_srv_send_select_iface();
+	jt_srv_send_netem_params();
+	jt_srv_send_sample_period();
 	return 0;
 }
 
@@ -83,13 +79,14 @@ static void get_first_iface(char *iface)
 	free(ifaces);
 }
 
-static void iface_stats_to_msg_stats(struct iface_stats *if_s, struct jt_msg_stats *msg_s)
+static void
+iface_stats_to_msg_stats(struct iface_stats *if_s, struct jt_msg_stats *msg_s)
 {
-        snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", if_s->iface);
+	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", if_s->iface);
 
 	msg_s->sample_count = FILTERED_SAMPLES_PER_MSG;
 	msg_s->samples =
-            malloc(FILTERED_SAMPLES_PER_MSG * sizeof(struct stats_sample));
+	    malloc(FILTERED_SAMPLES_PER_MSG * sizeof(struct stats_sample));
 
 	for (int i = 0; i < FILTERED_SAMPLES_PER_MSG; i++) {
 		msg_s->samples[i].rx = if_s->samples[i].rx_bytes_delta;
@@ -134,17 +131,118 @@ inline static void stats_filter(struct iface_stats *stats)
 	calc_whoosh_error(stats);
 }
 
-static int message_producer(struct jt_ws_msg *m, void *data)
+inline static int message_producer(struct jt_ws_msg *m, void *data)
 {
 	char *s = (char *)data;
 	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
 	return 0;
 }
 
+inline static int jt_srv_send(int msg_type, void *msg_data)
+{
+	char *tmpstr;
+	int err = 0;
+
+	/* convert from jt_msg_* to string */
+	err = jt_messages[msg_type].to_json_string(msg_data, &tmpstr);
+	if (err) {
+		return -1;
+	}
+
+	/* write the json string to a websocket message */
+	err = jt_ws_mq_produce(message_producer, tmpstr);
+	free(tmpstr);
+	return err;
+}
+
+int jt_srv_send_netem_params()
+{
+	struct jt_msg_netem_params *m =
+	    malloc(sizeof(struct jt_msg_netem_params));
+	struct netem_params p;
+
+	memcpy(p.iface, g_selected_iface, MAX_IFACE_LEN);
+	printf("get netem for iface: [%s]\n", p.iface);
+
+	if (0 != netem_get_params(p.iface, &p)) {
+		fprintf(stderr, "couldn't get netem parameters.\n");
+		p.delay = -1;
+		p.jitter = -1;
+		p.loss = -1;
+	}
+	/* fixme */
+	m->delay = p.delay;
+	m->jitter = p.jitter;
+	m->loss = p.loss;
+	snprintf(m->iface, MAX_IFACE_LEN, "%s", p.iface);
+
+	return jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);
+}
+
+int jt_srv_send_select_iface()
+{
+	char iface[MAX_IFACE_LEN];
+	memcpy(&iface, g_selected_iface, MAX_IFACE_LEN);
+
+	return jt_srv_send(JT_MSG_SELECT_IFACE_V1, &iface);
+}
+
+int jt_srv_send_iface_list()
+{
+	struct jt_iface_list *il;
+	char **iface;
+	int idx;
+	char **ifaces = netem_list_ifaces();
+
+	il = malloc(sizeof(struct jt_iface_list));
+	assert(il);
+
+	il->count = 0;
+	iface = ifaces;
+	assert(NULL != iface);
+	if (NULL == *iface) {
+		fprintf(stderr, "No interfaces available. "
+		                "Allowed interfaces (compile-time): %s\n",
+		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+	} else {
+		do {
+			printf("iface: %s\n", *iface);
+			(il->count)++;
+			iface++;
+		} while (*iface);
+	}
+
+	printf("%d ifaces\n", il->count);
+
+	il->ifaces = malloc(il->count * MAX_IFACE_LEN);
+
+	for (iface = ifaces, idx = 0; NULL != *iface && idx < il->count;
+	     idx++) {
+		printf("iface: %s\n", *iface);
+		strncpy(il->ifaces[idx], *iface, MAX_IFACE_LEN);
+		free(*iface);
+		iface++;
+	}
+
+	free(ifaces);
+	return jt_srv_send(JT_MSG_IFACE_LIST_V1, il);
+}
+
+int jt_srv_send_sample_period()
+{
+	int sp;
+	sp = get_sample_period();
+	return jt_srv_send(JT_MSG_SAMPLE_PERIOD_V1, &sp);
+}
+
+int jt_srv_send_stats(struct jt_msg_stats *s)
+{
+	return jt_srv_send(JT_MSG_STATS_V1, s);
+}
+
 /* returns number of chars written to out. */
 int stats_filter_and_write()
 {
-	char *tmpstr;
 	int err = 0;
 	struct jt_msg_stats *msg_stats;
 
@@ -157,19 +255,12 @@ int stats_filter_and_write()
 		msg_stats = malloc(sizeof(struct jt_msg_stats));
 		iface_stats_to_msg_stats(g_raw_samples, msg_stats);
 
-		/* convert from jt_msg_stats to string */
-		err = jt_messages[JT_MSG_STATS_V1].to_json_string(msg_stats,
-		                                                  &tmpstr);
-		assert(!err);
-
-		/* write the json string to a websocket message */
-		err = jt_ws_mq_produce(message_producer, tmpstr);
+		err = jt_srv_send(JT_MSG_STATS_V1, msg_stats);
 		if (!err) {
 			g_unsent_frame_count--;
 		}
 
 		/* cleanup */
-		free(tmpstr);
 		jt_messages[JT_MSG_STATS_V1].free(msg_stats);
 	}
 	pthread_mutex_unlock(&unsent_frame_count_mutex);
@@ -187,16 +278,25 @@ void stats_event_handler(struct iface_stats *raw_samples)
 
 static int jt_init()
 {
+	int err;
+	char iface[MAX_IFACE_LEN];
+
 	if (netem_init() < 0) {
 		fprintf(stderr,
 		        "Couldn't initialise netlink for netem module.\n");
 		return -1;
 	}
 
-	char iface[MAX_IFACE_LEN];
+	err = jt_ws_mq_init();
+	if (err) {
+		return -1;
+	}
+
 	get_first_iface(iface);
-	jt_set_iface(iface);
+	select_iface(&iface);
+
 	stats_thread_init(stats_event_handler);
+
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;
 }
@@ -205,12 +305,14 @@ int jt_server_tick()
 {
 	switch (g_jt_state) {
 	case JT_STATE_STARTING:
-		jt_ws_mq_init();
 		jt_init();
-		/* write the other stuff */
+		jt_srv_send_iface_list();
+		jt_srv_send_select_iface();
+		jt_srv_send_netem_params();
+		jt_srv_send_sample_period();
 		break;
 	case JT_STATE_RUNNING:
-		/* try to send a stats msg */
+		/* queue a stats msg (if there is one) */
 		stats_filter_and_write();
 		break;
 	}
@@ -243,6 +345,8 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 
 		// type matches, try to unpack it.
 		err = jt_messages[*msg_type].to_struct(root, &data);
+		json_decref(root);
+
 		if (err) {
 			// type matched, but unpack failed.
 			fprintf(stderr, "[%s] type match, unpack failed.\n",
@@ -251,7 +355,20 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 		}
 
 		jt_messages[*msg_type].print(data);
-		json_decref(root);
+
+		switch (*msg_type) {
+		case JT_MSG_SELECT_IFACE_V1:
+			err = select_iface(data);
+			break;
+		case JT_MSG_SET_NETEM_V1:
+			/* TODO: handle new netem params. */
+			break;
+		default:
+			/* no way to get here, right? */
+			assert(0);
+		}
+		jt_messages[*msg_type].free(data);
+
 		return 0;
 	}
 	fprintf(stderr, "couldn't unpack message: %s\n", in);

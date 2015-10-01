@@ -23,11 +23,12 @@ static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
               "Decimation requires SAMPLES_PER_FRAME to be an integer "
               "multiple of FILTERED_SAMPLES_PER_MSG");
 
-int jt_get_sample_period();
-int jt_set_iface(const char *iface);
-char const *jt_get_iface();
-
 int jt_server_tick();
 int jt_server_msg_receive(char *in);
+
+int jt_srv_send_iface_list();
+int jt_srv_send_select_iface();
+int jt_srv_send_netem_params();
+int jt_srv_send_sample_period();
 
 #endif

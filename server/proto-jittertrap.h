@@ -11,7 +11,7 @@
 
 struct per_session_data__jittertrap
 {
-	int number;
+	unsigned long consumer_id;
 };
 
 int callback_jittertrap(struct libwebsocket_context *context,
