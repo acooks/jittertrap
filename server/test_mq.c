@@ -12,7 +12,7 @@ int message_producer(struct jt_ws_msg *m, void *data)
 }
 
 /* a callback for consuming messages. */
-int message_printer(struct jt_ws_msg *m, void *data  __attribute__((unused)))
+int message_printer(struct jt_ws_msg *m, void *data __attribute__((unused)))
 {
 	assert(m);
 	printf("m: %s\n", m->m);
@@ -36,7 +36,6 @@ int test_consume_from_empty()
 	char msg[MAX_JSON_MSG_LEN];
 	int err;
 	unsigned long id;
-
 
 	printf("test for consume-from-empty case\n");
 	err = jt_ws_mq_init();
@@ -72,7 +71,7 @@ int test_produce_overflow()
 	err = jt_ws_mq_consumer_subscribe(&id);
 	assert(!err);
 
-	for (i = 0 ; i < MAX_Q_DEPTH -1; i++) {
+	for (i = 0; i < MAX_Q_DEPTH - 1; i++) {
 		snprintf(msg, MAX_JSON_MSG_LEN, "Message %d", i);
 		printf("msg: %s\n", msg);
 		err = jt_ws_mq_produce(message_producer, msg);
@@ -111,7 +110,9 @@ int test_produce_consume()
 	do {
 		snprintf(s, MAX_JSON_MSG_LEN, "message number %d", i);
 		err = jt_ws_mq_produce(message_producer, s);
-		if (!err) { i++; }
+		if (!err) {
+			i++;
+		}
 	} while (!err);
 	printf("queue max length: %d\n", i);
 
@@ -259,8 +260,6 @@ int test_pccpcc()
 	printf("OK.\n");
 	return 0;
 }
-
-
 
 int main()
 {
