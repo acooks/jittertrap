@@ -66,6 +66,8 @@ LFLAGS = -lwebsockets -ljansson -lm
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 
+all: $(PROG) Makefile ../make.config
+
 $(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
 	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
 
@@ -83,6 +85,9 @@ test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS)
 
 test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS)
 	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0
+
+test: test-mq test-mq-mt
+
 
 clean:
 	rm $(PROG) || true
