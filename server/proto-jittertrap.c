@@ -72,7 +72,6 @@ int callback_jittertrap(struct libwebsocket_context *context
 		jt_srv_send_select_iface();
 		jt_srv_send_netem_params();
 		jt_srv_send_sample_period();
-		libwebsocket_callback_on_writable(context, wsi);
 		break;
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:
@@ -80,12 +79,10 @@ int callback_jittertrap(struct libwebsocket_context *context
 			err = jt_ws_mq_consume(pss->consumer_id, lws_writer,
 			                       &cbd);
 		} while (!err);
-		libwebsocket_callback_on_writable(context, wsi);
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
 		jt_server_msg_receive(in);
-		libwebsocket_callback_on_writable(context, wsi);
 		break;
 
 	/*

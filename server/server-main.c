@@ -199,6 +199,11 @@ int main(int argc, char **argv)
 		libwebsocket_callback_on_writable_all_protocol(
 		    &protocols[PROTOCOL_JITTERTRAP]);
 
+                /* FIXME: something is causing us to spin. This helps to
+		 * slow things down, but it's not a proper solution.
+		 */
+                usleep(1);
+
 		/*
 		 * takes care of the poll() and looping through finding who
 		 * needs service.
