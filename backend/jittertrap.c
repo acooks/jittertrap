@@ -214,8 +214,11 @@ int main()
 	       EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT));
 	printf("Binding to port: %s\n", s_http_port);
 
-	mgmt_sock_init(s_http_port,
-	               EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT));
+	if (mgmt_sock_init(s_http_port,
+	               EXPAND_AND_QUOTE(WEB_SERVER_DOCUMENT_ROOT)) < 0) {
+		fprintf(stderr, "Couldn't init management socket.\n");
+		return -1;
+	}
 
 	if (netem_init() < 0) {
 		fprintf(stderr,
