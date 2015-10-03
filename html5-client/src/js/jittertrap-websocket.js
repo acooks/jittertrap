@@ -81,9 +81,9 @@ JT = (function (my) {
       {'msg': 'set_netem',
        'p': {
          'dev': $("#dev_select").val(),
-         'delay': $("#delay").val(),
-         'jitter': $("#jitter").val(),
-         'loss': $("#loss").val()
+         'delay': parseInt($("#delay").val()),
+         'jitter': parseInt($("#jitter").val()),
+         'loss': parseInt($("#loss").val())
        }
       });
     sock.send(msg);
