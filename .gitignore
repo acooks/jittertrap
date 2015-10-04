@@ -7,7 +7,12 @@ html5-client/output/
 cli-client/jittertrap-cli
 jittertrap-coverity-build.lzma
 backend/jittertrap
+backend/old-jt-server
 cov-int/
 messages/jt-messages.a
 messages/jt_msg_*.o
+messages/jt_messages.o
 messages/test-packing
+server/jt-server
+server/test-mq
+server/test-mq-mt
