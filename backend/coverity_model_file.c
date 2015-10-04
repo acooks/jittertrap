@@ -1,1 +1,0 @@
-/* coverity model file is empty atm. */
