@@ -28,7 +28,6 @@ coverity-clean:
 
 cppcheck:
 	cppcheck --enable=style,warning,performance,portability messages/ server/ cli-client/
-	#cppcheck deps/fossa/fossa.c
 
 clang-analyze:
 	scan-build make messages server cli-client
