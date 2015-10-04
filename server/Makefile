@@ -1,6 +1,6 @@
 include ../make.config
 
-PROG = test-server
+PROG = jt-server
 
 DEFINES = \
  -DPROGNAME=\"$(PROG)\" \
@@ -19,10 +19,10 @@ SOURCES = \
  proto-jittertrap.c \
  jt_ws_mq.c \
  jt_server_message_handler.c \
- ../backend/timeywimey.c \
- ../backend/stats_thread.c \
- ../backend/sample_buf.c \
- ../backend/netem.c \
+ timeywimey.c \
+ stats_thread.c \
+ sample_buf.c \
+ netem.c \
 
 
 HEADERS = \
@@ -32,11 +32,11 @@ HEADERS = \
  jt_ws_mq_config.h \
  jt_ws_mq.h \
  jt_server_message_handler.h \
- ../backend/netem.h \
- ../backend/timeywimey.h \
- ../backend/iface_stats.h \
- ../backend/stats_thread.h \
- ../backend/sample_buf.h \
+ netem.h \
+ timeywimey.h \
+ iface_stats.h \
+ stats_thread.h \
+ sample_buf.h \
 
 
 MESSAGEHEADERS = \
@@ -67,6 +67,12 @@ CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 
 all: $(PROG) Makefile ../make.config
+	@echo -----------------------------------
+	@echo Sample period: $(SAMPLE_PERIOD_US)us
+	@echo Web server port: $(WEB_SERVER_PORT)
+	@echo Web server document root: $(WEB_SERVER_DOCUMENT_ROOT)
+	@echo Allowed Interfaces: $(ALLOWED_IFACES)
+	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
 	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)

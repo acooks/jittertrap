@@ -1,27 +1,30 @@
 include ../make.config
 
-PROG = jittertrap
+PROG = old-jt-server
+
 SOURCES = \
  jittertrap.c \
- timeywimey.c \
- stats_thread.c \
- sample_buf.c \
- netem.c \
  mgmt_sock.c \
+ ../server/timeywimey.c \
+ ../server/stats_thread.c \
+ ../server/sample_buf.c \
+ ../server/netem.c \
  ../deps/fossa/fossa.c \
 
 HEADERS = \
  jittertrap.h \
- netem.h \
- timeywimey.h \
- iface_stats.h \
- stats_thread.h \
- sample_buf.h \
- mgmt_sock.h
+ mgmt_sock.h \
+ ../server/netem.h \
+ ../server/timeywimey.h \
+ ../server/iface_stats.h \
+ ../server/stats_thread.h \
+ ../server/sample_buf.h \
 
 INCLUDES = \
  -I ../deps/fossa/ \
- -I ../deps/fossa/deps/frozen
+ -I ../deps/fossa/deps/frozen \
+ -I ../server \
+ -I . \
 
 PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
