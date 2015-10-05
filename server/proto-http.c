@@ -134,7 +134,7 @@ FIXME: this does not do what we need, but something like this is needed.
 			return 0;
 
 		/* collect the file part of the url in buf */
-		strcpy(buf, resource_path);
+		strncpy(buf, resource_path, 255);
 		if (strcmp(in, "/")) {
 			if (*((const char *)in) != '/')
 				strcat(buf, "/");

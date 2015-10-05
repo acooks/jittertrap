@@ -39,7 +39,7 @@ int callback_jittertrap(struct libwebsocket_context *context
                         __attribute__((unused)),
                         struct libwebsocket *wsi,
                         enum libwebsocket_callback_reasons reason, void *user,
-                        void *in, size_t len)
+                        void *in, size_t len __attribute__((unused)))
 {
 	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_JSON_MSG_LEN +
 	                  LWS_SEND_BUFFER_POST_PADDING];

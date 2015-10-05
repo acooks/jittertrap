@@ -93,18 +93,13 @@ int jt_ws_mq_consumer_unsubscribe(unsigned long subscriber_id)
 {
 	int real_id = subscriber_id - consumer_id_start;
 
-	/* check for bogus subscriber id parameter. */
-	if ((real_id < 0) || (real_id > MAX_CONSUMERS)) {
-		return -1;
-	}
+	assert(real_id >= 0);
+	assert(real_id < MAX_CONSUMERS);
 
 	pthread_mutex_lock(&mq_mutex);
 
-	/* check if there are any consumers and if this one is valid. */
-	if (!consumer_count || !consumer_ptrs[real_id]) {
-		pthread_mutex_unlock(&mq_mutex);
-		return -1;
-	}
+	assert(consumer_count);
+	assert(consumer_ptrs[real_id]);
 
 	consumer_ptrs[real_id] = NULL;
 	consumer_count--;
@@ -167,11 +162,6 @@ int jt_ws_mq_consume(unsigned long id, jt_ws_mq_callback cb, void *data)
 
 	assert(real_id >= 0);
 	assert(real_id < MAX_CONSUMERS);
-
-	/* check for bogus subscriber id parameter. */
-	if ((real_id < 0) || (real_id > MAX_CONSUMERS)) {
-		return -1;
-	}
 
 	pthread_mutex_lock(&mq_mutex);
 

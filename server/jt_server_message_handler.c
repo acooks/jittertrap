@@ -103,6 +103,7 @@ iface_stats_to_msg_stats(struct iface_stats *if_s, struct jt_msg_stats *msg_s)
 	msg_s->sample_count = FILTERED_SAMPLES_PER_MSG;
 	msg_s->samples =
 	    malloc(FILTERED_SAMPLES_PER_MSG * sizeof(struct stats_sample));
+	assert(msg_s->samples);
 
 	for (int i = 0; i < FILTERED_SAMPLES_PER_MSG; i++) {
 		msg_s->samples[i].rx = if_s->samples[i].rx_bytes_delta;
@@ -173,9 +174,10 @@ inline static int jt_srv_send(int msg_type, void *msg_data)
 
 int jt_srv_send_netem_params()
 {
+	struct netem_params p;
 	struct jt_msg_netem_params *m =
 	    malloc(sizeof(struct jt_msg_netem_params));
-	struct netem_params p;
+	assert(m);
 
 	memcpy(p.iface, g_selected_iface, MAX_IFACE_LEN);
 	printf("get netem for iface: [%s]\n", p.iface);
@@ -230,7 +232,11 @@ int jt_srv_send_iface_list()
 
 	printf("%d ifaces\n", il->count);
 
+	assert(il->count);
+	assert(MAX_IFACE_LEN);
+
 	il->ifaces = malloc(il->count * MAX_IFACE_LEN);
+	assert(il->ifaces);
 
 	for (iface = ifaces, idx = 0; NULL != *iface && idx < il->count;
 	     idx++) {
@@ -256,10 +262,8 @@ int jt_srv_send_stats(struct jt_msg_stats *s)
 	return jt_srv_send(JT_MSG_STATS_V1, s);
 }
 
-/* returns number of chars written to out. */
-int stats_filter_and_write()
+void stats_filter_and_write()
 {
-	int err = 0;
 	struct jt_msg_stats *msg_stats;
 
 	pthread_mutex_lock(&unsent_frame_count_mutex);
@@ -269,10 +273,10 @@ int stats_filter_and_write()
 
 		/* convert from struct iface_stats to struct jt_msg_stats */
 		msg_stats = malloc(sizeof(struct jt_msg_stats));
+		assert(msg_stats);
 		iface_stats_to_msg_stats(g_raw_samples, msg_stats);
 
-		err = jt_srv_send(JT_MSG_STATS_V1, msg_stats);
-		if (!err) {
+		if (0 == jt_srv_send(JT_MSG_STATS_V1, msg_stats)) {
 			g_unsent_frame_count--;
 		}
 
@@ -280,7 +284,6 @@ int stats_filter_and_write()
 		jt_messages[JT_MSG_STATS_V1].free(msg_stats);
 	}
 	pthread_mutex_unlock(&unsent_frame_count_mutex);
-	return 0;
 }
 
 /* callback for the real-time stats thread. */
@@ -385,7 +388,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 		}
 		jt_messages[*msg_type].free(data);
 
-		return 0;
+		return err;
 	}
 	fprintf(stderr, "couldn't unpack message: %s\n", in);
 	json_decref(root);
