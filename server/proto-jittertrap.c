@@ -78,7 +78,13 @@ int callback_jittertrap(struct libwebsocket_context *context
 		do {
 			err = jt_ws_mq_consume(pss->consumer_id, lws_writer,
 			                       &cbd);
+			if (lws_partial_buffered(wsi) ||
+			    lws_send_pipe_choked(wsi)) {
+				libwebsocket_callback_on_writable(context, wsi);
+				break;
+			}
 		} while (!err);
+
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
