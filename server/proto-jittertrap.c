@@ -29,6 +29,7 @@ static int lws_writer(struct jt_ws_msg *m, void *data)
 		n = libwebsocket_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
 		if (n < len) {
 			/* short write :( */
+			fprintf(stderr, "Short write :(\n");
 			return -1;
 		}
 	}
