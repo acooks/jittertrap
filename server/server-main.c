@@ -39,7 +39,7 @@ static struct libwebsocket_protocols protocols[] = {
 		    .callback = callback_jittertrap,
 		    .per_session_data_size =
 		        sizeof(struct per_session_data__jittertrap),
-		    .rx_buffer_size = 1000,
+		    .rx_buffer_size = 4000,
 	    },
 
 	    /* terminator */
