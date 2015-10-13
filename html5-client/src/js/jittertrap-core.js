@@ -358,10 +358,10 @@ JT = (function (my) {
   };
 
   var updateData = function (d, sSeries) {
-    updateSeries(sBin.txRate, d.txDelta, sSeries);
-    updateSeries(sBin.rxRate, d.rxDelta, sSeries);
-    updateSeries(sBin.txPacketRate, d.txPktDelta, sSeries);
-    updateSeries(sBin.rxPacketRate, d.rxPktDelta, sSeries);
+    updateSeries(sBin.txRate, d.tx, sSeries);
+    updateSeries(sBin.rxRate, d.rx, sSeries);
+    updateSeries(sBin.txPacketRate, d.txP, sSeries);
+    updateSeries(sBin.rxPacketRate, d.rxP, sSeries);
   };
 
   my.core.processDataMsg = function (stats) {

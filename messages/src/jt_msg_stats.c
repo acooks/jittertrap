@@ -8,9 +8,9 @@
 
 static const char *jt_stats_test_msg =
     "{\"msg\":\"stats\", \"p\":{\"iface\": \"em1\",\"s\": "
-    "[{\"rxDelta\":0,\"txDelta\":0,\"rxPktDelta\":0,\"txPktDelta\":0}, "
-    "{\"rxDelta\":0,\"txDelta\":0,\"rxPktDelta\":0,\"txPktDelta\":0},{"
-    "\"rxDelta\":0,\"txDelta\":0,\"rxPktDelta\":0,\"txPktDelta\":0}], "
+    "[{\"rx\":0,\"tx\":0,\"rxP\":0,\"txP\":0}, "
+    "{\"rx\":0,\"tx\":0,\"rxP\":0,\"txP\":0}, "
+    "{\"rx\":0,\"tx\":0,\"rxP\":0,\"txP\":0}], "
     "\"whoosh_err_mean\": 42809, \"whoosh_err_max\": 54759, \"whoosh_err_sd\": "
     "43249}}";
 
@@ -83,19 +83,19 @@ int jt_stats_unpacker(json_t *root, void **data)
 		assert(json_is_object(s));
 		json_t *t;
 
-		t = json_object_get(s, "rxDelta");
+		t = json_object_get(s, "rx");
 		assert(json_is_integer(t));
 		stats->samples[i].rx = json_integer_value(t);
 
-		t = json_object_get(s, "txDelta");
+		t = json_object_get(s, "tx");
 		assert(json_is_integer(t));
 		stats->samples[i].tx = json_integer_value(t);
 
-		t = json_object_get(s, "rxPktDelta");
+		t = json_object_get(s, "rxP");
 		assert(json_is_integer(t));
 		stats->samples[i].rxPkt = json_integer_value(t);
 
-		t = json_object_get(s, "txPktDelta");
+		t = json_object_get(s, "txP");
 		assert(json_is_integer(t));
 		stats->samples[i].txPkt = json_integer_value(t);
 	}
@@ -149,13 +149,13 @@ int jt_stats_packer(void *data, char **out)
 	// order matters!
 	for (int i = 0; i < stats_msg->sample_count; i++) {
 		sample[i] = json_object();
-		json_object_set_new(sample[i], "rxDelta",
+		json_object_set_new(sample[i], "rx",
 		                    json_integer(stats_msg->samples[i].rx));
-		json_object_set_new(sample[i], "txDelta",
+		json_object_set_new(sample[i], "tx",
 		                    json_integer(stats_msg->samples[i].tx));
-		json_object_set_new(sample[i], "rxPktDelta",
+		json_object_set_new(sample[i], "rxP",
 		                    json_integer(stats_msg->samples[i].rxPkt));
-		json_object_set_new(sample[i], "txPktDelta",
+		json_object_set_new(sample[i], "txP",
 		                    json_integer(stats_msg->samples[i].txPkt));
 		json_array_append(samples_arr, sample[i]);
 	}
