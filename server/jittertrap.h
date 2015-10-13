@@ -18,6 +18,16 @@
 #define static_assert _Static_assert
 #endif
 
+#define xstr(s) str(s)
+#define str(s) #s
+
+/* SAMPLES_PER_FRAME must be an integer */
+static_assert((SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND) == USECS_PER_SECOND,
+	      "SAMPLES_PER_FRAME must be an integer, therefore"
+	      " SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND "
+	      " must equal USECS_PER_SECOND. "
+	      " (int)" xstr(SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND) );
+
 /* raw samples must be an integer multiple of filtered samples */
 static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
 	      "Decimation requires SAMPLES_PER_FRAME to be an integer "
