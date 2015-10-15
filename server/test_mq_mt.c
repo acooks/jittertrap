@@ -121,9 +121,8 @@ void *produce(void *d __attribute__((unused)))
 			i--;
 		}
 	}
-
 	assert(!err);
-
+	printf("producer done.\n");
 	return NULL;
 }
 
@@ -148,8 +147,8 @@ void *consume(void *_tid)
 	int i = TEST_ITERATIONS;
 	while (i) {
 #if DO_CONSUMER_SLEEP
-		int r = rand() % 1000;
-		nsleep(10000 + r);
+		int r = rand() % 100;
+		nsleep(100 + r);
 #endif
 
 		err = jt_ws_mq_consume(id, string_copier, msg, &cb_err);
