@@ -86,6 +86,9 @@ int callback_jittertrap(struct libwebsocket_context *context
 			}
 		} while (!err);
 
+		if (-JT_WS_MQ_EMPTY != err) {
+			return err;
+		}
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
