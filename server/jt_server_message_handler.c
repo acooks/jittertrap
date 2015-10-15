@@ -158,7 +158,7 @@ inline static int message_producer(struct jt_ws_msg *m, void *data)
 inline static int jt_srv_send(int msg_type, void *msg_data)
 {
 	char *tmpstr;
-	int err = 0;
+	int cb_err, err = 0;
 
 	/* convert from jt_msg_* to string */
 	err = jt_messages[msg_type].to_json_string(msg_data, &tmpstr);
@@ -167,7 +167,7 @@ inline static int jt_srv_send(int msg_type, void *msg_data)
 	}
 
 	/* write the json string to a websocket message */
-	err = jt_ws_mq_produce(message_producer, tmpstr);
+	err = jt_ws_mq_produce(message_producer, tmpstr, &cb_err);
 	free(tmpstr);
 	return err;
 }

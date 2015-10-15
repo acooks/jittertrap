@@ -95,7 +95,7 @@ double ts_to_seconds(struct timespec t)
 void *produce(void *d __attribute__((unused)))
 {
 	char msg[MAX_JSON_MSG_LEN];
-	int err;
+	int err, cb_err;
 	struct timespec deadline;
 
 	printf("new producer for %d messages.\n", TEST_ITERATIONS);
@@ -105,13 +105,13 @@ void *produce(void *d __attribute__((unused)))
 	int i = TEST_ITERATIONS;
 	while (i) {
 #if DO_PRODUCER_SLEEP
-		int r = rand() % 10000;
-		nsleep(100000 + r);
+		int r = rand() % 100;
+		nsleep(100 + r);
 #endif
 
 		sprintf(msg, "%d", i);
 
-		err = jt_ws_mq_produce(message_producer, msg);
+		err = jt_ws_mq_produce(message_producer, msg, &cb_err);
 		if (!err) {
 #if PRINT_TAIL
 			if (i < PRINT_TAIL) {
@@ -130,7 +130,7 @@ void *produce(void *d __attribute__((unused)))
 void *consume(void *_tid)
 {
 	char msg[MAX_JSON_MSG_LEN];
-	int err;
+	int err, cb_err;
 	unsigned long id;
 	struct timespec deadline;
 	int tid = *(int *)_tid;
@@ -152,7 +152,7 @@ void *consume(void *_tid)
 		nsleep(10000 + r);
 #endif
 
-		err = jt_ws_mq_consume(id, string_copier, msg);
+		err = jt_ws_mq_consume(id, string_copier, msg, &cb_err);
 		if (!err) {
 #if PRINT_TAIL
 			if (i < PRINT_TAIL) {

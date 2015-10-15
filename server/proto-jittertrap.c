@@ -48,7 +48,7 @@ int callback_jittertrap(struct libwebsocket_context *context
 	struct per_session_data__jittertrap *pss =
 	    (struct per_session_data__jittertrap *)user;
 
-	int err;
+	int err, cb_err;
 	struct cb_data cbd = { wsi, p };
 
 	/* run jt init, stats producer, etc. */
@@ -78,7 +78,7 @@ int callback_jittertrap(struct libwebsocket_context *context
 	case LWS_CALLBACK_SERVER_WRITEABLE:
 		do {
 			err = jt_ws_mq_consume(pss->consumer_id, lws_writer,
-			                       &cbd);
+			                       &cbd, &cb_err);
 			if (lws_partial_buffered(wsi) ||
 			    lws_send_pipe_choked(wsi)) {
 				libwebsocket_callback_on_writable(context, wsi);

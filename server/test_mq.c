@@ -81,7 +81,7 @@ double ts_to_seconds(struct timespec t)
 int test_consume_from_empty()
 {
 	char msg[MAX_JSON_MSG_LEN];
-	int err;
+	int err, cb_err;
 	unsigned long id;
 
 	printf("test for consume-from-empty case\n");
@@ -91,8 +91,8 @@ int test_consume_from_empty()
 	err = jt_ws_mq_consumer_subscribe(&id);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, message_printer, msg);
-	assert(err);
+	err = jt_ws_mq_consume(id, message_printer, msg, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -106,7 +106,7 @@ int test_consume_from_empty()
 
 int test_produce_overflow()
 {
-	int i, err;
+	int i, err, cb_err;
 	unsigned long id;
 
 	printf("test for produce overflow handling.\n");
@@ -118,12 +118,12 @@ int test_produce_overflow()
 	assert(!err);
 
 	for (i = 0; i < MAX_Q_DEPTH - 1; i++) {
-		err = jt_ws_mq_produce(message_producer, &i);
+		err = jt_ws_mq_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}
 	printf("queue full: %d messages\n", i+1);
-	err = jt_ws_mq_produce(message_producer, &i);
-	assert(err);
+	err = jt_ws_mq_produce(message_producer, &i, &cb_err);
+	assert(-JT_WS_MQ_FULL == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -137,7 +137,7 @@ int test_produce_overflow()
 /* test for filling up the queue, then emptying it */
 int test_produce_consume()
 {
-	int i, err;
+	int i, err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 
@@ -152,7 +152,7 @@ int test_produce_consume()
 	/* fill up the queue */
 	i = 0;
 	do {
-		err = jt_ws_mq_produce(message_producer, &i);
+		err = jt_ws_mq_produce(message_producer, &i, &cb_err);
 		if (!err) {
 			i++;
 		}
@@ -161,13 +161,13 @@ int test_produce_consume()
 
 	/* we hava a full message queue, now consume it all */
 	for (; i > 0; i--) {
-		err = jt_ws_mq_consume(id, message_printer, s);
+		err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 		assert(!err);
 	}
 
-	/* consuming from an empty queue must return error */
-	err = jt_ws_mq_consume(id, message_printer, s);
-	assert(err);
+	/* consuming from an empty queue must return error  */
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -181,7 +181,7 @@ int test_produce_consume()
 
 int test_ppcc()
 {
-	int err;
+	int err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 	int msg_id;
@@ -195,24 +195,24 @@ int test_ppcc()
 	assert(!err);
 
 	msg_id = 1;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
 	msg_id = 2;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, string_copier, s);
+	err = jt_ws_mq_consume(id, string_copier, s, &cb_err);
 	assert(!err);
 	printf("consumed 1: %s\n", s);
 
-	err = jt_ws_mq_consume(id, string_copier, s);
+	err = jt_ws_mq_consume(id, string_copier, s, &cb_err);
 	assert(!err);
 	printf("consumed 2: %s\n", s);
 
 	/* consuming from an empty queue must return error */
-	err = jt_ws_mq_consume(id, message_printer, s);
-	assert(err);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -226,7 +226,7 @@ int test_ppcc()
 
 int test_pcpc()
 {
-	int err;
+	int err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 	int msg_id;
@@ -240,22 +240,22 @@ int test_pcpc()
 	assert(!err);
 
 	msg_id = 1;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, message_printer, s);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	msg_id = 2;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, message_printer, s);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = jt_ws_mq_consume(id, message_printer, s);
-	assert(err);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -269,7 +269,7 @@ int test_pcpc()
 
 int test_pccpcc()
 {
-	int err;
+	int err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 	int msg_id;
@@ -282,26 +282,26 @@ int test_pccpcc()
 	err = jt_ws_mq_consumer_subscribe(&id);
 
 	msg_id = 1;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, message_printer, s);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = jt_ws_mq_consume(id, message_printer, s);
-	assert(err);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	msg_id = 2;
-	err = jt_ws_mq_produce(message_producer, &msg_id);
+	err = jt_ws_mq_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = jt_ws_mq_consume(id, message_printer, s);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = jt_ws_mq_consume(id, message_printer, s);
-	assert(err);
+	err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+	assert(-JT_WS_MQ_EMPTY == err);
 
 	err = jt_ws_mq_consumer_unsubscribe(id);
 	assert(!err);
@@ -315,7 +315,7 @@ int test_pccpcc()
 
 int benchmark()
 {
-	int i,j, err;
+	int i,j, err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 	struct timespec start;
@@ -342,7 +342,7 @@ int benchmark()
 		i = 0;
 		do {
 			int msg_id = j * i;
-			err = jt_ws_mq_produce(benchmark_produce, &msg_id);
+			err = jt_ws_mq_produce(benchmark_produce, &msg_id, &cb_err);
 			if (!err) {
 				i++;
 			}
@@ -350,9 +350,15 @@ int benchmark()
 
 		/* we hava a full message queue, now consume it all */
 		for (; i > 0; i--) {
-			err = jt_ws_mq_consume(id, benchmark_consumer, s);
+			err = jt_ws_mq_consume(id, benchmark_consumer, s, &cb_err);
 			assert(!err);
 		}
+
+		/* queue must be empty and consuming from an empty queue
+ 		 *  must return error */
+		err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
+		assert(-JT_WS_MQ_EMPTY == err);
+
 	}
 	clock_gettime(CLOCK_MONOTONIC, &end);
 

@@ -111,10 +111,11 @@ int jt_ws_mq_consumer_unsubscribe(unsigned long subscriber_id)
 	return 0;
 }
 
-int jt_ws_mq_produce(jt_ws_mq_callback cb, void *data)
+int jt_ws_mq_produce(jt_ws_mq_callback cb, void *cb_data, int *cb_err)
 {
-	int err;
 	struct jt_ws_msg *next;
+
+	assert(cb_err);
 
 	pthread_mutex_lock(&mq_mutex);
 	assert(NULL != produce_ptr);
@@ -124,7 +125,7 @@ int jt_ws_mq_produce(jt_ws_mq_callback cb, void *data)
 	 * of messages. */
 	if (0 == consumer_count) {
 		pthread_mutex_unlock(&mq_mutex);
-		return -1;
+		return -JT_WS_MQ_NO_CONSUMERS;
 	}
 
 	next = produce_ptr + 1;
@@ -140,28 +141,31 @@ int jt_ws_mq_produce(jt_ws_mq_callback cb, void *data)
 			/* full; one of the consumers haven't consumed this. */
 			/* FIXME: must implement purge on disconnect! */
 			pthread_mutex_unlock(&mq_mutex);
-			return -1;
+			return -JT_WS_MQ_FULL;
 		}
 	}
 
-	err = cb(next, data);
-	if (!err) {
-		produce_ptr = next;
+	*cb_err = cb(next, cb_data);
+	if (*cb_err) {
+		pthread_mutex_unlock(&mq_mutex);
+		return -JT_WS_MQ_CB_ERR;
 	}
 
-	pthread_mutex_unlock(&mq_mutex);
+	produce_ptr = next;
 	assert((uint8_t *)produce_ptr < ((uint8_t *)queue + BUF_BYTE_LEN));
-	return err;
+	pthread_mutex_unlock(&mq_mutex);
+	return 0;
 }
 
-int jt_ws_mq_consume(unsigned long id, jt_ws_mq_callback cb, void *data)
+int jt_ws_mq_consume(unsigned long id, jt_ws_mq_callback cb, void *cb_data,
+                     int *cb_err)
 {
-	int err;
 	struct jt_ws_msg *next;
 	int real_id = id - consumer_id_start;
 
 	assert(real_id >= 0);
 	assert(real_id < MAX_CONSUMERS);
+	assert(cb_err);
 
 	pthread_mutex_lock(&mq_mutex);
 
@@ -170,7 +174,7 @@ int jt_ws_mq_consume(unsigned long id, jt_ws_mq_callback cb, void *data)
 	/* check if queue is empty */
 	if (consumer_ptrs[real_id] == produce_ptr) {
 		pthread_mutex_unlock(&mq_mutex);
-		return -1;
+		return -JT_WS_MQ_EMPTY;
 	}
 
 	next = consumer_ptrs[real_id] + 1;
@@ -179,12 +183,14 @@ int jt_ws_mq_consume(unsigned long id, jt_ws_mq_callback cb, void *data)
 	}
 
 	/* call the callback */
-	err = cb(next, data);
-	if (!err) {
-		/* callback success, message consumed. */
-		consumer_ptrs[real_id] = next;
+	*cb_err = cb(next, cb_data);
+	if (*cb_err) {
+		pthread_mutex_unlock(&mq_mutex);
+		return -JT_WS_MQ_CB_ERR;
 	}
 
+	/* callback success, message consumed. */
+	consumer_ptrs[real_id] = next;
 	pthread_mutex_unlock(&mq_mutex);
-	return err;
+	return 0;
 }
