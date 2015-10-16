@@ -120,8 +120,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Waiting for connect...\n");
 
 	do {
-		;
-	} while (!force_exit && (0 == libwebsocket_service(context, 10)));
+		usleep(1000);
+	} while (!force_exit && (0 == libwebsocket_service(context, 0)));
 
 bail:
 	fprintf(stderr, "Exiting\n");

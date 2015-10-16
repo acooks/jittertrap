@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 		 * the number of ms in the second argument.
 		 */
 
-		n = libwebsocket_service(context, 10);
+		n = libwebsocket_service(context, 0);
 	}
 
 	libwebsocket_context_destroy(context);
