@@ -22,10 +22,17 @@ struct stats_err
 	int sd;
 };
 
+struct timestamp
+{
+	long tv_sec;
+	long tv_nsec;
+};
+
 struct jt_msg_stats
 {
 	char iface[MAX_IFACE_LEN];
 	struct stats_err err;
+	struct timestamp mts;
 	int sample_count;
 	struct stats_sample *samples;
 };
