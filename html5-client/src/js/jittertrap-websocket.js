@@ -51,7 +51,8 @@ JT = (function (my) {
       $("#netem_status").html("Ready");
       $("#delay").val(params.delay);
       $("#jitter").val(params.jitter);
-      $("#loss").val(params.loss);
+      /* params.loss is a 10th of a percent (integer). convert it to float */
+      $("#loss").val(0.1 * params.loss);
     }
   };
 
@@ -83,7 +84,8 @@ JT = (function (my) {
          'dev': $("#dev_select").val(),
          'delay': parseInt($("#delay").val()),
          'jitter': parseInt($("#jitter").val()),
-         'loss': parseInt($("#loss").val())
+         /* convert the float to an integer representing 10ths of percent. */
+         'loss': parseInt(Math.round(10 * $("#loss").val()))
        }
       });
     sock.send(msg);

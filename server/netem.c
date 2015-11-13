@@ -218,7 +218,8 @@ int netem_get_params(char *iface, struct netem_params *params)
 		fprintf(stderr, "couldn't get loss for iface: %s\n", iface);
 		goto cleanup_qdisc;
 	}
-	params->loss = (int)(loss / (UINT_MAX / 100));
+	/* loss is specified in 10ths of a percent, ie. 1 ==> 0.1% */
+	params->loss = (int)(loss / (UINT_MAX / 1000));
 
 	rtnl_qdisc_put(found_qdisc);
 	rtnl_qdisc_put(filter_qdisc);
@@ -266,7 +267,8 @@ int netem_set_params(const char *iface, struct netem_params *params)
 	rtnl_netem_set_delay(qdisc,
 	                     params->delay * 1000); /* expects microseconds */
 	rtnl_netem_set_jitter(qdisc, params->jitter * 1000);
-	rtnl_netem_set_loss(qdisc, (params->loss * (UINT_MAX / 100)));
+	/* params->loss is given in 10ths of a percent */
+	rtnl_netem_set_loss(qdisc, (params->loss * (UINT_MAX / 1000)));
 
 	/* Submit request to kernel and wait for response */
 	err = rtnl_qdisc_add(sock, qdisc, NLM_F_CREATE | NLM_F_REPLACE);
