@@ -13,20 +13,19 @@
 #include "jt_client_msg_handler.h"
 
 struct lws_protocols protocols[] = {
-	    [PROTOCOL_JITTERTRAP] = {
-		    .name = "jittertrap",
-		    .callback = callback_jittertrap,
-		    .per_session_data_size = 0,
-		    .rx_buffer_size = 4096,
-	    },
+	    [PROTOCOL_JITTERTRAP] =
+	        {
+	            .name = "jittertrap",
+	            .callback = callback_jittertrap,
+	            .per_session_data_size = 0,
+	            .rx_buffer_size = 4096,
+	        },
 	    { NULL, NULL, 0, 0, 0, NULL, NULL } /* end */
 };
 
 /* jittertrap protocol */
-int callback_jittertrap(struct lws *wsi,
-                        enum lws_callback_reasons reason,
-                        void *user __attribute__((unused)),
-                        void *in,
+int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
+                        void *user __attribute__((unused)), void *in,
                         size_t len __attribute__((unused)))
 {
 	switch (reason) {

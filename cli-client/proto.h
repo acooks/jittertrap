@@ -10,8 +10,7 @@ enum protocol_ids {
 };
 
 /* jittertrap protocol */
-int callback_jittertrap(struct lws *wsi,
-                        enum lws_callback_reasons reason,
+int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user __attribute__((unused)),
                         void *in __attribute__((unused)), size_t len);
 

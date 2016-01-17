@@ -14,7 +14,10 @@ static int deny_mux;
 static volatile int force_exit = 0;
 static int longlived = 0;
 
-void sighandler(int sig __attribute__((unused))) { force_exit = 1; }
+void sighandler(int sig __attribute__((unused)))
+{
+	force_exit = 1;
+}
 
 static struct option options[] = { { "help", no_argument, NULL, 'h' },
 	                           { "debug", required_argument, NULL, 'd' },
