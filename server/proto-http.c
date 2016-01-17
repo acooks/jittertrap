@@ -89,8 +89,8 @@ const char *get_mimetype(const char *file)
 /* this protocol server (always the first one) just knows how to do HTTP */
 
 int
-callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
-              enum libwebsocket_callback_reasons reason, void *user, void *in,
+callback_http(struct lws *wsi,
+              enum lws_callback_reasons reason, void *user, void *in,
               size_t len)
 {
 	char buf[256];
@@ -105,7 +105,7 @@ callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
 	    (struct per_session_data__http *)user;
 	const char *mimetype;
 #ifdef EXTERNAL_POLL
-	struct libwebsocket_pollargs *pa = (struct libwebsocket_pollargs *)in;
+	struct lws_pollargs *pa = (struct lws_pollargs *)in;
 #endif
 	switch (reason) {
 	case LWS_CALLBACK_HTTP:
@@ -113,8 +113,8 @@ callback_http(struct libwebsocket_context *context, struct libwebsocket *wsi,
 		dump_handshake_info(wsi);
 
 		if (len < 1) {
-			libwebsockets_return_http_status(
-			    context, wsi, HTTP_STATUS_BAD_REQUEST, NULL);
+			lws_return_http_status(
+			    wsi, HTTP_STATUS_BAD_REQUEST, NULL);
 			goto try_to_reuse;
 		}
 
@@ -123,7 +123,7 @@ FIXME: this does not do what we need, but something like this is needed.
 
 		/* this example server has no concept of directories */
 		if (strchr((const char *)in + 1, '/')) {
-			libwebsockets_return_http_status(
+			lws_return_http_status(
 			    context, wsi, HTTP_STATUS_FORBIDDEN, NULL);
 			goto try_to_reuse;
 		}
@@ -148,8 +148,8 @@ FIXME: this does not do what we need, but something like this is needed.
 		mimetype = get_mimetype(buf);
 		if (!mimetype) {
 			lwsl_err("Unknown mimetype for %s\n", buf);
-			libwebsockets_return_http_status(
-			    context, wsi, HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE,
+			lws_return_http_status(
+			    wsi, HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE,
 			    NULL);
 			return -1;
 		}
@@ -169,7 +169,7 @@ FIXME: this does not do what we need, but something like this is needed.
 			p = (unsigned char *)leaf_path;
 
 			if (lws_add_http_header_by_name(
-			        context, wsi, (unsigned char *)"set-cookie:",
+			        wsi, (unsigned char *)"set-cookie:",
 			        (unsigned char *)b64, n, &p,
 			        (unsigned char *)leaf_path + sizeof(leaf_path)))
 				return 1;
@@ -177,7 +177,7 @@ FIXME: this does not do what we need, but something like this is needed.
 			other_headers = leaf_path;
 		}
 
-		n = libwebsockets_serve_http_file(context, wsi, buf, mimetype,
+		n = lws_serve_http_file(wsi, buf, mimetype,
 		                                  other_headers, n);
 		if (n < 0 || ((n > 0) && lws_http_transaction_completed(wsi))) {
 			/* error or can't reuse connection: close the socket */
@@ -207,7 +207,7 @@ FIXME: this does not do what we need, but something like this is needed.
 		lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
 		/* the whole of the sent body arrived,
 		 * close or reuse the connection */
-		libwebsockets_return_http_status(context, wsi, HTTP_STATUS_OK,
+		lws_return_http_status(wsi, HTTP_STATUS_OK,
 		                                 NULL);
 		goto try_to_reuse;
 
@@ -251,7 +251,7 @@ FIXME: this does not do what we need, but something like this is needed.
 			 * Handled by the library itself if you sent a
 			 * content-length header.
 			 */
-			m = libwebsocket_write(
+			m = lws_write(
 			    wsi, buffer + LWS_SEND_BUFFER_PRE_PADDING, n,
 			    LWS_WRITE_HTTP);
 			if (m < 0)
@@ -267,7 +267,7 @@ FIXME: this does not do what we need, but something like this is needed.
 					goto bail;
 
 			if (m) /* while still active, extend timeout */
-				libwebsocket_set_timeout(
+				lws_set_timeout(
 				    wsi, PENDING_TIMEOUT_HTTP_CONTENT, 5);
 
 			/* if we have indigestion, let him clear it,
@@ -278,12 +278,12 @@ FIXME: this does not do what we need, but something like this is needed.
 		} while (!lws_send_pipe_choked(wsi));
 
 	later:
-		libwebsocket_callback_on_writable(context, wsi);
+		lws_callback_on_writable(wsi);
 		break;
 	flush_bail:
 		/* true if still partial pending */
 		if (lws_partial_buffered(wsi)) {
-			libwebsocket_callback_on_writable(context, wsi);
+			lws_callback_on_writable(wsi);
 			break;
 		}
 		close(pss->fd);

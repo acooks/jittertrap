@@ -8,7 +8,7 @@
  * content
  */
 
-void dump_handshake_info(struct libwebsocket *wsi)
+void dump_handshake_info(struct lws *wsi)
 {
 	int n = 0;
 	char buf[256];

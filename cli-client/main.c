@@ -32,9 +32,9 @@ int main(int argc, char **argv)
 	int ret = 0;
 	int port = 80;
 	int use_ssl = 0;
-	struct libwebsocket_context *context;
+	struct lws_context *context;
 	const char *address;
-	struct libwebsocket *wsi_jt;
+	struct lws *wsi_jt;
 	int ietf_version = -1; /* latest */
 	struct lws_context_creation_info info;
 
@@ -94,12 +94,12 @@ int main(int argc, char **argv)
 	info.port = CONTEXT_PORT_NO_LISTEN;
 	info.protocols = protocols;
 #ifndef LWS_NO_EXTENSIONS
-	info.extensions = libwebsocket_get_internal_extensions();
+	info.extensions = lws_get_internal_extensions();
 #endif
 	info.gid = -1;
 	info.uid = -1;
 
-	context = libwebsocket_create_context(&info);
+	context = lws_create_context(&info);
 	if (context == NULL) {
 		fprintf(stderr, "Creating libwebsocket context failed\n");
 		return 1;
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
 	/* create a client websocket */
 
-	wsi_jt = libwebsocket_client_connect(
+	wsi_jt = lws_client_connect(
 	    context, address, port, use_ssl, "/", argv[optind], argv[optind],
 	    protocols[PROTOCOL_JITTERTRAP].name, ietf_version);
 
@@ -121,12 +121,12 @@ int main(int argc, char **argv)
 
 	do {
 		usleep(1000);
-	} while (!force_exit && (0 == libwebsocket_service(context, 0)));
+	} while (!force_exit && (0 == lws_service(context, 0)));
 
 bail:
 	fprintf(stderr, "Exiting\n");
 
-	libwebsocket_context_destroy(context);
+	lws_context_destroy(context);
 
 	return ret;
 

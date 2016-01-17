@@ -21,10 +21,10 @@ int max_poll_elements;
 char *resource_path = LOCAL_RESOURCE_PATH;
 
 static volatile int force_exit = 0;
-static struct libwebsocket_context *context;
+static struct lws_context *context;
 
 /* list of supported protocols and callbacks */
-static struct libwebsocket_protocols protocols[] = {
+static struct lws_protocols protocols[] = {
 	    /* first protocol must always be HTTP handler */
 
 	    [PROTOCOL_HTTP] = {
@@ -52,7 +52,7 @@ static struct libwebsocket_protocols protocols[] = {
 void sighandler(int sig __attribute__((unused)))
 {
 	force_exit = 1;
-	libwebsocket_cancel_service(context);
+	lws_cancel_service(context);
 }
 
 static struct option options[] = {
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 	info.iface = iface;
 	info.protocols = protocols;
 #ifndef LWS_NO_EXTENSIONS
-	info.extensions = libwebsocket_get_internal_extensions();
+	info.extensions = lws_get_internal_extensions();
 #endif
 	if (!use_ssl) {
 		info.ssl_cert_filepath = NULL;
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 	info.uid = -1;
 	info.options = opts;
 
-	context = libwebsocket_create_context(&info);
+	context = lws_create_context(&info);
 	if (context == NULL) {
 		lwsl_err("libwebsocket init failed\n");
 		return -1;
@@ -196,7 +196,8 @@ int main(int argc, char **argv)
 
 	n = 0;
 	while (n >= 0 && !force_exit) {
-		libwebsocket_callback_on_writable_all_protocol(
+		lws_callback_on_writable_all_protocol(
+		    context,
 		    &protocols[PROTOCOL_JITTERTRAP]);
 
                 /* FIXME: something is causing us to spin. This helps to
@@ -212,10 +213,10 @@ int main(int argc, char **argv)
 		 * the number of ms in the second argument.
 		 */
 
-		n = libwebsocket_service(context, 0);
+		n = lws_service(context, 1);
 	}
 
-	libwebsocket_context_destroy(context);
+	lws_context_destroy(context);
 
 	lwsl_notice("jittertrap server exited cleanly\n");
 

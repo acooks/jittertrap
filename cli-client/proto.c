@@ -12,20 +12,19 @@
 #include "jt_messages.h"
 #include "jt_client_msg_handler.h"
 
-struct libwebsocket_protocols protocols[] = {
+struct lws_protocols protocols[] = {
 	    [PROTOCOL_JITTERTRAP] = {
 		    .name = "jittertrap",
 		    .callback = callback_jittertrap,
 		    .per_session_data_size = 0,
 		    .rx_buffer_size = 4096,
 	    },
-	    { NULL, NULL, 0, 0, 0, NULL, NULL, 0 } /* end */
+	    { NULL, NULL, 0, 0, 0, NULL, NULL } /* end */
 };
 
 /* jittertrap protocol */
-int callback_jittertrap(struct libwebsocket_context *context,
-                        struct libwebsocket *wsi,
-                        enum libwebsocket_callback_reasons reason,
+int callback_jittertrap(struct lws *wsi,
+                        enum lws_callback_reasons reason,
                         void *user __attribute__((unused)),
                         void *in,
                         size_t len __attribute__((unused)))
@@ -41,7 +40,7 @@ int callback_jittertrap(struct libwebsocket_context *context,
 		 * LWS_CALLBACK_CLIENT_WRITEABLE will come next service
 		 */
 
-		libwebsocket_callback_on_writable(context, wsi);
+		lws_callback_on_writable(wsi);
 		break;
 
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -62,7 +61,7 @@ int callback_jittertrap(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_CLIENT_WRITEABLE:
-		libwebsocket_callback_on_writable(context, wsi);
+		lws_callback_on_writable(wsi);
 		break;
 
 	default:

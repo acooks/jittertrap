@@ -14,7 +14,7 @@
 
 struct cb_data
 {
-	struct libwebsocket *wsi;
+	struct lws *wsi;
 	unsigned char *buf;
 };
 
@@ -26,7 +26,7 @@ static int lws_writer(struct jt_ws_msg *m, void *data)
 	len = snprintf((char *)d->buf, MAX_JSON_MSG_LEN, "%s", m->m);
 	assert(len >= 0);
 	if (len > 0) {
-		n = libwebsocket_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
+		n = lws_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
 		if (n < len) {
 			/* short write :( */
 			fprintf(stderr, "Short write :(\n");
@@ -36,10 +36,8 @@ static int lws_writer(struct jt_ws_msg *m, void *data)
 	return 0;
 }
 
-int callback_jittertrap(struct libwebsocket_context *context
-                        __attribute__((unused)),
-                        struct libwebsocket *wsi,
-                        enum libwebsocket_callback_reasons reason, void *user,
+int callback_jittertrap(struct lws *wsi,
+                        enum lws_callback_reasons reason, void *user,
                         void *in, size_t len __attribute__((unused)))
 {
 	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_JSON_MSG_LEN +
@@ -81,7 +79,7 @@ int callback_jittertrap(struct libwebsocket_context *context
 			                       &cbd, &cb_err);
 			if (lws_partial_buffered(wsi) ||
 			    lws_send_pipe_choked(wsi)) {
-				libwebsocket_callback_on_writable(context, wsi);
+				lws_callback_on_writable(wsi);
 				break;
 			}
 		} while (!err);
