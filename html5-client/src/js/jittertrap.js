@@ -53,6 +53,12 @@ $(document).ready(function() {
     return false;
   });
 
+  // Disable form submit
+  $('#chartsForm').submit(function(e){ e.preventDefault(); });
+  $('#devSelectForm').submit(function(e){ e.preventDefault(); });
+  $('#impairmentsForm').submit(false);
+
+
   // Changing traps from the list of traps in the trap modal
   $('#trap_names').bind('change', JT.trapModule.trapSelectionHandler);
   // Add a trap
