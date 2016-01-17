@@ -13,8 +13,7 @@
 #include "jt_ws_mq.h"
 #include "proto-jittertrap.h"
 
-struct cb_data
-{
+struct cb_data {
 	struct lws *wsi;
 	unsigned char *buf;
 };
@@ -37,9 +36,9 @@ static int lws_writer(struct jt_ws_msg *m, void *data)
 	return 0;
 }
 
-int callback_jittertrap(struct lws *wsi,
-                        enum lws_callback_reasons reason, void *user,
-                        void *in, size_t len __attribute__((unused)))
+int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
+                        void *user, void *in,
+                        size_t len __attribute__((unused)))
 {
 	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_JSON_MSG_LEN +
 	                  LWS_SEND_BUFFER_POST_PADDING];

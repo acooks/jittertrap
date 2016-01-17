@@ -44,9 +44,7 @@ static int set_netem(void *data)
 {
 	struct jt_msg_netem_params *p1 = data;
 	struct netem_params p2 = {
-		.delay = p1->delay,
-		.jitter = p1->jitter,
-		.loss = p1->loss,
+		.delay = p1->delay, .jitter = p1->jitter, .loss = p1->loss,
 	};
 
 	netem_set_params(p1->iface, &p2);

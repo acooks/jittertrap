@@ -1,8 +1,7 @@
 #ifndef NETEM_H
 #define NETEM_H
 
-struct netem_params
-{
+struct netem_params {
 	uint32_t delay;  /* milliseconds */
 	uint32_t jitter; /* milliseconds */
 	uint32_t loss;   /* percentage, [0-100] */

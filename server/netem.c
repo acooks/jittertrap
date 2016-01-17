@@ -143,8 +143,8 @@ void cb_found_cache_obj(struct nl_object *found, void *p)
  *
  * @return Reference to object or NULL if not found.
  */
-__attribute__((weak)) struct nl_object
-    *nl_cache_find(struct nl_cache *cache, struct nl_object *filter)
+__attribute__((weak)) struct nl_object *
+nl_cache_find(struct nl_cache *cache, struct nl_object *filter)
 {
 	struct nl_object *obj = NULL;
 

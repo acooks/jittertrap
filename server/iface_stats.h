@@ -1,8 +1,7 @@
 #ifndef IFACE_STATS_H
 #define IFACE_STATS_H
 
-struct sample
-{
+struct sample {
 	struct timespec timestamp;
 	int64_t whoosh_error_ns;
 	int64_t rx_bytes;
@@ -15,8 +14,7 @@ struct sample
 	int64_t tx_packets_delta;
 };
 
-struct iface_stats
-{
+struct iface_stats {
 	uint32_t sample_period_us;
 	char iface[MAX_IFACE_LEN];
 	struct sample samples[SAMPLES_PER_FRAME];

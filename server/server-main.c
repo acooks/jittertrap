@@ -27,26 +27,28 @@ static struct lws_context *context;
 static struct lws_protocols protocols[] = {
 	    /* first protocol must always be HTTP handler */
 
-	    [PROTOCOL_HTTP] = {
-		    .name = "http-only",
-		    .callback = callback_http,
-		    .per_session_data_size =
-		        sizeof(struct per_session_data__http),
-		    .rx_buffer_size = 0, /* max frame size / rx buffer */
-	    },
-	    [PROTOCOL_JITTERTRAP] = {
-		    .name = "jittertrap",
-		    .callback = callback_jittertrap,
-		    .per_session_data_size =
-		        sizeof(struct per_session_data__jittertrap),
-		    .rx_buffer_size = 4000,
-	    },
+	    [PROTOCOL_HTTP] =
+	        {
+	            .name = "http-only",
+	            .callback = callback_http,
+	            .per_session_data_size =
+	                sizeof(struct per_session_data__http),
+	            .rx_buffer_size = 0, /* max frame size / rx buffer */
+	        },
+	    [PROTOCOL_JITTERTRAP] =
+	        {
+	            .name = "jittertrap",
+	            .callback = callback_jittertrap,
+	            .per_session_data_size =
+	                sizeof(struct per_session_data__jittertrap),
+	            .rx_buffer_size = 4000,
+	        },
 
 	    /* terminator */
-	    [PROTOCOL_TERMINATOR] = { .name = NULL,
-		                      .callback = NULL,
-		                      .per_session_data_size = 0,
-		                      .rx_buffer_size = 0 }
+	    [PROTOCOL_TERMINATOR] = {.name = NULL,
+	                             .callback = NULL,
+	                             .per_session_data_size = 0,
+	                             .rx_buffer_size = 0 }
 };
 
 void sighandler(int sig __attribute__((unused)))
@@ -197,13 +199,12 @@ int main(int argc, char **argv)
 	n = 0;
 	while (n >= 0 && !force_exit) {
 		lws_callback_on_writable_all_protocol(
-		    context,
-		    &protocols[PROTOCOL_JITTERTRAP]);
+		    context, &protocols[PROTOCOL_JITTERTRAP]);
 
-                /* FIXME: something is causing us to spin. This helps to
+		/* FIXME: something is causing us to spin. This helps to
 		 * slow things down, but it's not a proper solution.
 		 */
-                usleep(1);
+		usleep(1);
 
 		/*
 		 * takes care of the poll() and looping through finding who

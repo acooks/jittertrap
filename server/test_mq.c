@@ -40,7 +40,8 @@ int benchmark_produce(struct jt_ws_msg *m, void *data __attribute__((unused)))
 	return 0;
 }
 
-int benchmark_consumer(struct jt_ws_msg *m __attribute__((unused)), void *data __attribute__((unused)))
+int benchmark_consumer(struct jt_ws_msg *m __attribute__((unused)),
+                       void *data __attribute__((unused)))
 {
 	return 0;
 }
@@ -48,35 +49,34 @@ int benchmark_consumer(struct jt_ws_msg *m __attribute__((unused)), void *data _
 /* Calculate the absolute difference between t1 and t2. */
 struct timespec ts_absdiff(struct timespec t1, struct timespec t2)
 {
-        struct timespec t;
-        if ((t1.tv_sec < t2.tv_sec) ||
-            ((t1.tv_sec == t2.tv_sec) && (t1.tv_nsec <= t2.tv_nsec))) {
-                /* t1 <= t2 */
-                t.tv_sec = t2.tv_sec - t1.tv_sec;
-                if (t2.tv_nsec < t1.tv_nsec) {
-                        t.tv_nsec = t2.tv_nsec + 1E9 - t1.tv_nsec;
-                        t.tv_sec--;
-                } else {
-                        t.tv_nsec = t2.tv_nsec - t1.tv_nsec;
-                }
-        } else {
-                /* t1 > t2 */
-                t.tv_sec = t1.tv_sec - t2.tv_sec;
-                if (t1.tv_nsec < t2.tv_nsec) {
-                        t.tv_nsec = t1.tv_nsec + 1E9 - t2.tv_nsec;
-                        t.tv_sec--; /* Borrow a second. */
-                } else {
-                        t.tv_nsec = t1.tv_nsec - t2.tv_nsec;
-                }
-        }
-        return t;
+	struct timespec t;
+	if ((t1.tv_sec < t2.tv_sec) ||
+	    ((t1.tv_sec == t2.tv_sec) && (t1.tv_nsec <= t2.tv_nsec))) {
+		/* t1 <= t2 */
+		t.tv_sec = t2.tv_sec - t1.tv_sec;
+		if (t2.tv_nsec < t1.tv_nsec) {
+			t.tv_nsec = t2.tv_nsec + 1E9 - t1.tv_nsec;
+			t.tv_sec--;
+		} else {
+			t.tv_nsec = t2.tv_nsec - t1.tv_nsec;
+		}
+	} else {
+		/* t1 > t2 */
+		t.tv_sec = t1.tv_sec - t2.tv_sec;
+		if (t1.tv_nsec < t2.tv_nsec) {
+			t.tv_nsec = t1.tv_nsec + 1E9 - t2.tv_nsec;
+			t.tv_sec--; /* Borrow a second. */
+		} else {
+			t.tv_nsec = t1.tv_nsec - t2.tv_nsec;
+		}
+	}
+	return t;
 }
 
 double ts_to_seconds(struct timespec t)
 {
-        return t.tv_sec + t.tv_nsec / 1E9;
+	return t.tv_sec + t.tv_nsec / 1E9;
 }
-
 
 int test_consume_from_empty()
 {
@@ -121,7 +121,7 @@ int test_produce_overflow()
 		err = jt_ws_mq_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}
-	printf("queue full: %d messages\n", i+1);
+	printf("queue full: %d messages\n", i + 1);
 	err = jt_ws_mq_produce(message_producer, &i, &cb_err);
 	assert(-JT_WS_MQ_FULL == err);
 
@@ -315,7 +315,7 @@ int test_pccpcc()
 
 int benchmark()
 {
-	int i,j, err, cb_err;
+	int i, j, err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
 	struct timespec start;
@@ -342,7 +342,8 @@ int benchmark()
 		i = 0;
 		do {
 			int msg_id = j * i;
-			err = jt_ws_mq_produce(benchmark_produce, &msg_id, &cb_err);
+			err = jt_ws_mq_produce(benchmark_produce, &msg_id,
+			                       &cb_err);
 			if (!err) {
 				i++;
 			}
@@ -350,15 +351,15 @@ int benchmark()
 
 		/* we hava a full message queue, now consume it all */
 		for (; i > 0; i--) {
-			err = jt_ws_mq_consume(id, benchmark_consumer, s, &cb_err);
+			err = jt_ws_mq_consume(id, benchmark_consumer, s,
+			                       &cb_err);
 			assert(!err);
 		}
 
 		/* queue must be empty and consuming from an empty queue
- 		 *  must return error */
+		 *  must return error */
 		err = jt_ws_mq_consume(id, message_printer, s, &cb_err);
 		assert(-JT_WS_MQ_EMPTY == err);
-
 	}
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -376,7 +377,6 @@ int benchmark()
 	printf("OK.\n");
 	return 0;
 }
-
 
 int main()
 {

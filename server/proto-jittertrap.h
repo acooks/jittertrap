@@ -9,12 +9,10 @@
  *
  */
 
-struct per_session_data__jittertrap
-{
+struct per_session_data__jittertrap {
 	unsigned long consumer_id;
 };
 
-int callback_jittertrap(struct lws *wsi,
-                        enum lws_callback_reasons reason, void *user,
-                        void *in, size_t len);
+int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
+                        void *user, void *in, size_t len);
 #endif

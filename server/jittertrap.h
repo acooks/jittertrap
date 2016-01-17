@@ -8,10 +8,10 @@
 #define MESSAGES_PER_SECOND 50
 
 #define USECS_PER_SECOND 1000000
-#define FILTERED_SAMPLES_PER_MSG \
+#define FILTERED_SAMPLES_PER_MSG                                               \
 	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
 
-#define SAMPLES_PER_FRAME \
+#define SAMPLES_PER_FRAME                                                      \
 	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
 
 #ifndef static_assert
@@ -22,22 +22,25 @@
 #define str(s) #s
 
 /* SAMPLES_PER_FRAME must be an integer */
-static_assert((SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND) == USECS_PER_SECOND,
-	      "SAMPLES_PER_FRAME must be an integer, therefore"
-	      " SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND "
-	      " must equal USECS_PER_SECOND. "
-	      " (int)" xstr(SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND) );
+static_assert(
+    (SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND) ==
+        USECS_PER_SECOND,
+    "SAMPLES_PER_FRAME must be an integer, therefore"
+    " SAMPLES_PER_FRAME * SAMPLE_PERIOD_US * MESSAGES_PER_SECOND "
+    " must equal USECS_PER_SECOND. "
+    " (int)" xstr(SAMPLES_PER_FRAME *SAMPLE_PERIOD_US
+                      *MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND));
 
 /* raw samples must be an integer multiple of filtered samples */
 static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
-	      "Decimation requires SAMPLES_PER_FRAME to be an integer "
-	      "multiple of FILTERED_SAMPLES_PER_MSG");
+              "Decimation requires SAMPLES_PER_FRAME to be an integer "
+              "multiple of FILTERED_SAMPLES_PER_MSG");
 
 /* for synchronization of netlink cache operations. */
 pthread_mutex_t nl_sock_mutex;
 
 int jt_get_sample_period();
 int jt_set_iface(const char *iface);
-char const * jt_get_iface();
+char const *jt_get_iface();
 
 #endif

@@ -41,8 +41,7 @@ struct serveable
 
 #endif
 
-struct per_session_data__http
-{
+struct per_session_data__http {
 	int fd;
 };
 
@@ -88,10 +87,8 @@ const char *get_mimetype(const char *file)
 
 /* this protocol server (always the first one) just knows how to do HTTP */
 
-int
-callback_http(struct lws *wsi,
-              enum lws_callback_reasons reason, void *user, void *in,
-              size_t len)
+int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
+                  void *in, size_t len)
 {
 	char buf[256];
 	char leaf_path[1024];
@@ -113,8 +110,8 @@ callback_http(struct lws *wsi,
 		dump_handshake_info(wsi);
 
 		if (len < 1) {
-			lws_return_http_status(
-			    wsi, HTTP_STATUS_BAD_REQUEST, NULL);
+			lws_return_http_status(wsi, HTTP_STATUS_BAD_REQUEST,
+			                       NULL);
 			goto try_to_reuse;
 		}
 
@@ -149,8 +146,7 @@ FIXME: this does not do what we need, but something like this is needed.
 		if (!mimetype) {
 			lwsl_err("Unknown mimetype for %s\n", buf);
 			lws_return_http_status(
-			    wsi, HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE,
-			    NULL);
+			    wsi, HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE, NULL);
 			return -1;
 		}
 
@@ -177,8 +173,7 @@ FIXME: this does not do what we need, but something like this is needed.
 			other_headers = leaf_path;
 		}
 
-		n = lws_serve_http_file(wsi, buf, mimetype,
-		                                  other_headers, n);
+		n = lws_serve_http_file(wsi, buf, mimetype, other_headers, n);
 		if (n < 0 || ((n > 0) && lws_http_transaction_completed(wsi))) {
 			/* error or can't reuse connection: close the socket */
 			return -1;
@@ -207,8 +202,7 @@ FIXME: this does not do what we need, but something like this is needed.
 		lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
 		/* the whole of the sent body arrived,
 		 * close or reuse the connection */
-		lws_return_http_status(wsi, HTTP_STATUS_OK,
-		                                 NULL);
+		lws_return_http_status(wsi, HTTP_STATUS_OK, NULL);
 		goto try_to_reuse;
 
 	case LWS_CALLBACK_HTTP_FILE_COMPLETION:
@@ -251,9 +245,8 @@ FIXME: this does not do what we need, but something like this is needed.
 			 * Handled by the library itself if you sent a
 			 * content-length header.
 			 */
-			m = lws_write(
-			    wsi, buffer + LWS_SEND_BUFFER_PRE_PADDING, n,
-			    LWS_WRITE_HTTP);
+			m = lws_write(wsi, buffer + LWS_SEND_BUFFER_PRE_PADDING,
+			              n, LWS_WRITE_HTTP);
 			if (m < 0)
 				/* write failed, close conn */
 				goto bail;
