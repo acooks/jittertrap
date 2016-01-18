@@ -1,6 +1,6 @@
 
-fossa http://cesanta.com/docs/fossa (GPLv2)
-frozen https://github.com/cesanta/frozen (GPLv2)
+libwebsockets 1.4 (LGPL)
+jansson 2.7 (MIT License)
 libnl (LGPL)
 libpcap (BSD)
 

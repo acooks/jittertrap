@@ -1,7 +1,7 @@
 
 include make.config
 
-SUBDIRS = backend frontend docs
+SUBDIRS = messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
@@ -9,13 +9,9 @@ CLEANDIRS = $(SUBDIRS:%=clean-%)
 all: $(SUBDIRS)
 	@echo "Done."
 
-$(SUBDIRS): %:
+$(SUBDIRS): %: messages make.config
 	@echo "Making $@"
 	@$(MAKE) --silent -C $@
-
-update-fossa:
-	git subtree split --prefix deps/fossa --annotate='split ' --rejoin
-	git subtree pull --prefix deps/fossa https://github.com/cesanta/fossa master --squash
 
 update-cbuffer:
 	git subtree split --prefix deps/cbuffer --annotate='split ' --rejoin
@@ -23,7 +19,7 @@ update-cbuffer:
 
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
-	cov-build --dir cov-int make backend
+	cov-build --dir cov-int make messages server cli-client
 	@tar caf jittertrap-coverity-build.lzma cov-int
 	@echo Coverity build archive: jittertrap-coverity-build.lzma
 
@@ -31,11 +27,10 @@ coverity-clean:
 	rm -rf cov-int jittertrap-coverity-build.lzma
 
 cppcheck:
-	cppcheck --enable=style,warning,performance,portability backend/
-	#cppcheck deps/fossa/fossa.c
+	cppcheck --enable=style,warning,performance,portability messages/ server/ cli-client/
 
 clang-analyze:
-	scan-build make backend
+	scan-build make messages server cli-client
 
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
@@ -44,5 +39,5 @@ $(CLEANDIRS):
 
 install: all
 	install -d ${DESTDIR}/usr/bin/
-	install -m 0744 backend/jittertrap ${DESTDIR}/usr/bin/
-	$(MAKE) -C frontend install
+	install -m 0755 server/jt-server ${DESTDIR}/usr/bin/
+	$(MAKE) -C html5-client install
