@@ -15,6 +15,7 @@ It has two broad areas of use:
 
 The user interface is implemented as a web application.  
 ![JitterTrap UI](/docs/screenshots/jittertrap-20150527.png?raw=true "JitterTrap Interface")
+![Demo Video](https://youtu.be/7u6xBxz6bFY "Demo video")
 
 ## Building JitterTrap
 ### Dependencies
@@ -30,28 +31,34 @@ __libwebsockets has not yet been packaged for fedora. Packaging is in progress, 
 
     sudo dnf install libnl3-devel jansson-devel
 
-Run-time dependencies:  
+Run-time dependencies:
+
     sudo yum install libnl3 jansson
 
 
 #### Ubuntu  
-Build dependencies:  
+Build dependencies:
+
     sudo apt-add-repository ppa:acooks/libwebsockets6
     sudo apt-get update
     sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev
 
 
-Run-time dependencies:  
+Run-time dependencies:
+
     sudo apt-get install libnl-3-200 libnl-route-3-200 libnl-genl-3-200 libjansson4 libwebsockets6
 
 ### Compiling JitterTrap
 
-Fetch:  
+Fetch:
+
     git clone https://github.com/acooks/jittertrap.git
 
-Build:  
+Build:
+
     cd jittertrap
     make
 
-Run:  
-`$ sudo ./server/jt-server --resource_path html5-client/output/`
+Run:
+
+    sudo ./server/jt-server --resource_path html5-client/output/
