@@ -15,7 +15,7 @@ It has two broad areas of use:
 
 The user interface is implemented as a web application.  
 ![JitterTrap UI](/docs/screenshots/jittertrap-20150527.png?raw=true "JitterTrap Interface")
-![Demo Video](https://youtu.be/7u6xBxz6bFY "Demo video")
+[![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
 
 ## Building JitterTrap
 ### Dependencies
