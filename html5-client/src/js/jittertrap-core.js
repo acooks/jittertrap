@@ -22,10 +22,10 @@ JT = (function (my) {
   };
 
   /* scaling factor for number of raw data points */
-  var dataLengthMultiplier = samplePeriod;
+  var dataLengthMultiplier = Math.floor(samplePeriod * 0.5);
 
   /* number of raw data samples. */
-  var sampleCount = dataLengthMultiplier * 60;
+  var sampleCount = dataLengthMultiplier * 50;
 
   my.core.sampleCount = function (plotPeriod) {
     if (plotPeriod) {
