@@ -1,3 +1,6 @@
+sudo: required
+dist: trusty
+
 script: make
 
 before_install:
