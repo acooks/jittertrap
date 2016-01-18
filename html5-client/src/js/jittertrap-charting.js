@@ -91,7 +91,7 @@ JT = (function (my) {
       },
       data: [{
         name: selectedSeries.name,
-        type: "stepLine",
+        type: "spline",
         dataPoints: chartData.mainChart
       }]
     });
@@ -153,7 +153,7 @@ JT = (function (my) {
         {
           showInLegend: true,
           name: "mean",
-          type: "stepLine",
+          type: "line",
           dataPoints: chartData.packetGapMean
         }
       ]
