@@ -17,8 +17,11 @@
 #include "proto-http.h"
 #include "proto-jittertrap.h"
 
+#define xstr(s) str(s)
+#define str(s) #s
+
+char *resource_path = xstr(WEB_SERVER_DOCUMENT_ROOT);
 int max_poll_elements;
-char *resource_path = LOCAL_RESOURCE_PATH;
 
 static volatile int force_exit = 0;
 static struct lws_context *context;
