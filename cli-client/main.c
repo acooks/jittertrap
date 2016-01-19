@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -123,7 +124,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Waiting for connect...\n");
 
 	do {
-		usleep(1000);
+		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 1E5 };
+		nanosleep(&rqtp, NULL);
 	} while (!force_exit && (0 == lws_service(context, 0)));
 
 bail:

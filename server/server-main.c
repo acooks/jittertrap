@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -8,7 +9,6 @@
 #include <assert.h>
 
 #include <syslog.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 #include <libwebsockets.h>
@@ -204,7 +204,8 @@ int main(int argc, char **argv)
 		/* FIXME: something is causing us to spin. This helps to
 		 * slow things down, but it's not a proper solution.
 		 */
-		usleep(1);
+		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 1E5 };
+		nanosleep(&rqtp, NULL);
 
 		/*
 		 * takes care of the poll() and looping through finding who
