@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 #endif
 
 	memset(&info, 0, sizeof info);
-	info.port = 7681;
+	info.port = WEB_SERVER_PORT;
 
 	while (n >= 0) {
 		n = getopt_long(argc, argv, "eci:hsap:d:Dr:", options, NULL);
