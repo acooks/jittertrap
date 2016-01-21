@@ -5,5 +5,5 @@ languages:
     PHP: false
 
 exclude_paths:
- - frontend/deps/*
+ - html5-client/deps/*
  
