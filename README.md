@@ -14,35 +14,41 @@ It has two broad areas of use:
 * introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, characterising the behaviour of the destination, with respect to delay, jitter and loss.
 
 The user interface is implemented as a web application.  
-![JitterTrap UI](/docs/screenshots/jittertrap-20150527.png?raw=true "JitterTrap Interface")
 [![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
+
+## Installing JitterTrap
+
+We're working on packaging JitterTrap and its dependencies for Fedora and Ubuntu. If you'd like to help, send email to packaging@jittertrap.net.
 
 ## Building JitterTrap
 ### Dependencies
-* libnl >= 3.2.24
-* libwebsockets >= 1.6
-* libjansson >= 2.6
+* [libnl](https://www.infradead.org/~tgr/libnl/) >= 3.2.24
+* [libwebsockets](https://libwebsockets.org/index.html) >= 1.6
+* [libjansson](http://www.digip.org/jansson/) >= 2.6
 
 #### Fedora  
+libwebsockets packaging is in progress, but in the mean time you can get it from [this copr repo](https://copr.fedoraproject.org/coprs/acooks/libwebsockets/)
+
+    sudo dnf copr enable acooks/libwebsockets
+
 Build dependencies:  
 
-__libwebsockets has not yet been packaged for fedora. Packaging is in progress, but for now you'll have to build your own.__
-
-
-    sudo dnf install libnl3-devel jansson-devel
+    sudo dnf install libnl3-devel jansson-devel libwebsockets-devel
 
 Run-time dependencies:
 
-    sudo yum install libnl3 jansson
+    sudo yum install libnl3 jansson libwebsockets
 
 
 #### Ubuntu  
-Build dependencies:
+libwebsockets packaging is in progress, but in the mean time you can get it from[this ppa](https://launchpad.net/~acooks/+archive/ubuntu/libwebsockets6)
 
     sudo apt-add-repository ppa:acooks/libwebsockets6
     sudo apt-get update
-    sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev
 
+Build dependencies:
+
+    sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev
 
 Run-time dependencies:
 
