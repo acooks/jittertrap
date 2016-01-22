@@ -276,9 +276,15 @@ JT = (function (my) {
 
     chartSeries.length = 0;
 
+    var d3Data = JT.charts.getD3DataRef();
+    d3Data.length = 0;
+
     for (var i = 0; i < len; i++) {
       chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
+      d3Data.push({timestamp: i*chartPeriod, value: filteredData[i]});
     }
+
+
   };
 
   var updateFilteredSeries = function (series) {
@@ -305,6 +311,8 @@ JT = (function (my) {
       filteredDataCount--;
     }
 
+    var d = new Date();
+
     // calculate any/all missing Y values from raw data
     for (var i = filteredDataCount; i < fseriesLength; i++) {
       series.filteredData[i] = 0.0;
@@ -325,6 +333,7 @@ JT = (function (my) {
       // scale the value to the correct range.
       series.filteredData[i] *= scale;
       series.filteredData[i] = series.rateFormatter(series.filteredData[i]);
+
     }
   };
 

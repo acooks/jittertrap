@@ -27,10 +27,12 @@ JT = (function (my) {
     histogram: [],
     basicStats: [],
     packetGapMean: [],
-    packetGapMinMax: []
+    packetGapMinMax: [],
+    d3TP: []
   };
 
   var clearChartData = function () {
+    chartData.d3TP.length = 0;
     chartData.mainChart.length = 0;
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
@@ -61,11 +63,161 @@ JT = (function (my) {
     return chartData.packetGapMinMax;
   };
 
+  my.charts.getD3DataRef = function () {
+    return chartData.d3TP;
+  };
+
+  my.charts.d3Chart = (function (m) {
+    var margin = {
+      top: 20,
+      right: 20,
+      bottom: 30,
+      left: 50
+    };
+
+    var width = 960 - margin.left - margin.right;
+    var height = 300 - margin.top - margin.bottom;
+    var width1 = $("#chartThroughput").width() - margin.left - margin.right;
+    var height1 = $("#chartThroughput").height() - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, width]);
+    var yScale = d3.scale.linear().range([height, 0]);
+    var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .ticks(10)
+                .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .ticks(5)
+                .orient("left");
+
+    var line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+    
+    var svg = {}
+   
+    m.reset = function() {
+      svg = d3.select("#chartThroughput")
+            .append("svg");
+
+      width = $("#chartThroughput").width() - margin.left - margin.right;
+      height = $("#chartThroughput").height() - margin.top - margin.bottom;
+
+      xScale = d3.scale.linear().range([0, width]);
+      yScale = d3.scale.linear().range([height, 0]);
+      xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(10)
+              .orient("bottom");
+
+      yAxis = d3.svg.axis()
+              .scale(yScale)
+              .ticks(5)
+              .orient("left");
+
+      line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+
+      svg.attr("width", width + margin.left + margin.right)
+         .attr("height", height + margin.top + margin.bottom);
+
+      var graph = svg.append("g")
+         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+      graph.append("g")
+         .attr("class", "x axis")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis);
+
+      graph.append("g")
+         .attr("class", "y axis")
+         .call(yAxis)
+         .append("text")
+         .attr("transform", "rotate(-90)")
+         .attr("y", 6)
+         .attr("dy", ".71em")
+         .style("text-anchor", "end")
+         .text("mean kbps");
+
+      graph.selectAll("line.verticalGrid").data(xScale.ticks(10)).enter()
+         .append("line")
+         .attr(
+        {
+            "class":"verticalGrid",
+            "y1" : margin.top,
+            "y2" : height,
+            "x1" : function(d){ return xScale(d);},
+            "x2" : function(d){ return xScale(d);},
+            "fill" : "none",
+            "shape-rendering" : "crispEdges",
+            "stroke" : "grey",
+            "opacity": 0.4,
+            "stroke-width" : "1px"
+        });
+ 
+      graph.selectAll("line.horizontalGrid").data(yScale.ticks(4)).enter()
+         .append("line")
+         .attr(
+        {
+            "class":"horizontalGrid",
+            "x1" : margin.right,
+            "x2" : width,
+            "y1" : function(d){ return yScale(d);},
+            "y2" : function(d){ return yScale(d);},
+            "fill" : "none",
+            "shape-rendering" : "crispEdges",
+            "stroke" : "grey",
+            "opacity": 0.4,
+            "stroke-width" : "1px"
+        });
+
+      graph.append("path")
+         .datum(chartData.d3TP)
+         .attr("class", "line")
+         .attr("d", line);
+
+    };
+
+    m.redraw = function() {
+
+      width = $("#chartThroughput").width();
+      height = $("#chartThroughput").height();
+      width = $("#chartThroughput").width() - margin.left - margin.right;
+      height = $("#chartThroughput").height() - margin.top - margin.bottom;
+
+      /* Scale the range of the data again */
+      xScale.domain(d3.extent(chartData.d3TP, function(d) {
+        return d.timestamp;
+      }));
+
+      yScale.domain([0, d3.max(chartData.d3TP, function(d) {
+        return d.value;
+      })]);
+
+      svg = d3.select("#chartThroughput");
+      svg.select(".line").attr("d", line(chartData.d3TP));
+      svg.select(".x.axis").call(xAxis);
+      svg.select(".y.axis").call(yAxis);
+    };
+
+
+    return m;
+
+  }({}));
+
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
     var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
 
     clearChartData();
+
+    my.charts.d3Chart.reset();
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
       height: 300,
@@ -192,12 +344,15 @@ JT = (function (my) {
     renderTime = 0;
   };
 
+
   var renderGraphs = function() {
     var d1 = Date.now();
-    my.charts.histogram.render();
-    my.charts.basicStats.render();
+    //my.charts.histogram.render();
+    //my.charts.basicStats.render();
     my.charts.mainChart.render();
-    my.charts.packetGap.render();
+    //my.charts.packetGap.render();
+    my.charts.d3Chart.redraw();
+
     var d2 = Date.now();
     renderCount++;
     renderTime += d2 - d1;
