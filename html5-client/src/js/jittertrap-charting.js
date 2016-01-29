@@ -278,11 +278,16 @@ JT = (function (my) {
                 .ticks(5)
                 .orient("left");
 
-    var line = d3.svg
-          .line()
+    var line = d3.svg.line()
           .x(function(d) { return xScale(d.timestamp); })
           .y(function(d) { return yScale(d.value); })
           .interpolate("basis");
+
+    var minMaxArea = d3.svg.area()
+        .x (function (d) { return xScale(d.x) || 1; })
+        .y0(function (d) { return yScale(d.y[0]); })
+        .y1(function (d) { return yScale(d.y[1]); })
+        .interpolate("basis");
 
     var svg = {}
 
@@ -323,15 +328,20 @@ JT = (function (my) {
               .ticks(5)
               .orient("left");
 
-      line = d3.svg
-          .line()
-          .x(function(d) { return xScale(d.timestamp); })
-          .y(function(d) { return yScale(d.value); })
-          .interpolate("basis");
+      line = d3.svg.line()
+        .x(function(d) { return xScale(d.timestamp); })
+        .y(function(d) { return yScale(d.value); })
+        .interpolate("basis");
+
+
+      minMaxArea = d3.svg.area()
+        .x (function (d) { return xScale(d.x) || 1; })
+        .y0(function (d) { return yScale(d.y[0]) || 0; })
+        .y1(function (d) { return yScale(d.y[1]) || 0; })
+        .interpolate("basis");
 
       svg.attr("width", width + margin.left + margin.right)
          .attr("height", height + margin.top + margin.bottom);
-
 
       var graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
@@ -391,6 +401,12 @@ JT = (function (my) {
                "stroke-width" : "1px"
              });
 
+      graph.append('path')
+        .datum(chartData.packetGapMinMax)
+        .attr('class', 'minMaxArea')
+        .attr('d', minMaxArea)
+        .attr({"fill": "pink", "opacity": 0.8});
+
       graph.append("path")
          .datum(chartData.packetGapMeanNew)
          .attr("class", "line")
@@ -436,6 +452,7 @@ JT = (function (my) {
       svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid());
       svg.select(".yGrid").call(yGrid());
+      svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
 
     };
 
