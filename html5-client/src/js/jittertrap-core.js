@@ -219,57 +219,6 @@ JT = (function (my) {
     series.stats.minZ = pGap.min;
   };
 
-  var updateHistogram = function(series, chartSeries) {
-    var binCnt = 25;
-    var sortedData = series.filteredData.slice(0);
-    sortedData.sort(numSort);
-
-    var maxY = sortedData[sortedData.length-1];
-    var minY = sortedData[0];
-
-    var normBins = new Float32Array(binCnt);
-    var range = (maxY - minY);
-
-    /* prevent division by zero */
-    range = (range > 0) ? range : 1;
-
-    //console.log("min: " + minY + " maxY: " + maxY + " range: " + range);
-
-    /* bins must use integer indexes, so we have to normalise the
-     * data and then convert it back before display.
-     * [0,1) falls into bin[0] */
-    var i = 0;
-    var j = 0;
-
-    /* initialise the bins */
-    for (; i < binCnt; i++) {
-      normBins[i] = 0;
-    }
-
-    /* bin the normalized data */
-    for (j = 0; j < series.filteredData.length; j++) {
-      var normY = (series.filteredData[j] - minY) / range * (binCnt - 1);
-      console.assert((normY >= 0) && (normY < binCnt));
-      normBins[Math.round(normY)]++;
-    }
-    console.assert(normBins.length === binCnt);
-
-    /* convert to logarithmic scale */
-    for (i = 0; i < normBins.length; i++) {
-      if (normBins[i] > 0) {
-        normBins[i] = Math.log(normBins[i]);
-      }
-    }
-
-    /* write the histogram x,y data */
-    chartSeries.length = 0;
-    for (i = 0; i < binCnt; i++) {
-      var x = Math.round(i * (range / (binCnt-1)));
-      x += Math.round(minY);  /* shift x to match original y range */
-      chartSeries.push({x: x, y: normBins[i], label: x});
-    }
-  };
-
   var updateMainChartData = function(filteredData, formatter, chartSeries) {
     var chartPeriod = my.charts.getChartPeriod();
     var len = filteredData.length;
@@ -277,8 +226,10 @@ JT = (function (my) {
     chartSeries.length = 0;
 
     for (var i = 0; i < len; i++) {
-      chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
+      chartSeries.push({timestamp: i*chartPeriod, value: filteredData[i]});
     }
+
+
   };
 
   var updateFilteredSeries = function (series) {
@@ -305,6 +256,8 @@ JT = (function (my) {
       filteredDataCount--;
     }
 
+    var d = new Date();
+
     // calculate any/all missing Y values from raw data
     for (var i = filteredDataCount; i < fseriesLength; i++) {
       series.filteredData[i] = 0.0;
@@ -325,6 +278,7 @@ JT = (function (my) {
       // scale the value to the correct range.
       series.filteredData[i] *= scale;
       series.filteredData[i] = series.rateFormatter(series.filteredData[i]);
+
     }
   };
 
@@ -349,10 +303,6 @@ JT = (function (my) {
         updatePacketGapChartData(series.packetGapData,
                                  JT.charts.getPacketGapMeanRef(),
                                  JT.charts.getPacketGapMinMaxRef());
-
-        /* these look at the whole series */
-        updateHistogram(series, JT.charts.getHistogramRef());
-        updateBasicStatsChartData(series.stats, JT.charts.getBasicStatsRef());
       }
     }
   };

@@ -16,6 +16,12 @@ It has two broad areas of use:
 The user interface is implemented as a web application.  
 [![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
 
+## Talk to us
+[![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/jittertrap.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=CuriousCat|?&theme=cli#jittertrap)
+
+Help is available at #jittertrap on irc.freenode.net or help@jittertrap.net
+
+
 ## Installing JitterTrap
 
 We're working on packaging JitterTrap and its dependencies for Fedora and Ubuntu. If you'd like to help, send email to packaging@jittertrap.net.
