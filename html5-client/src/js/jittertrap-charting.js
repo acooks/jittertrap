@@ -71,8 +71,8 @@ JT = (function (my) {
     var margin = {
       top: 20,
       right: 20,
-      bottom: 30,
-      left: 50
+      bottom: 40,
+      left: 75
     };
 
     var width = 960 - margin.left - margin.right;
@@ -98,8 +98,25 @@ JT = (function (my) {
           .interpolate("basis");
     
     var svg = {}
+
+    var xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .ticks(0);
+      };
+
+    var yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .ticks(0);
+      };
    
-    m.reset = function() {
+    m.reset = function(selectedSeries) {
+
+      d3.select("#chartThroughput").selectAll("svg").remove();
+
       svg = d3.select("#chartThroughput")
             .append("svg");
 
@@ -108,6 +125,7 @@ JT = (function (my) {
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
+
       xAxis = d3.svg.axis()
               .scale(xScale)
               .ticks(10)
@@ -127,55 +145,64 @@ JT = (function (my) {
       svg.attr("width", width + margin.left + margin.right)
          .attr("height", height + margin.top + margin.bottom);
 
+
       var graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+      graph.append("text")
+         .attr("class", "title")
+         .attr("text-anchor", "middle")
+         .attr("x", width/2)
+         .attr("y", -margin.top/2)
+         .text(selectedSeries.title);
 
       graph.append("g")
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
 
+      graph.append("text")
+           .attr("class", "x label")
+           .attr("text-anchor", "middle")
+           .attr("x", width/2)
+           .attr("y", height + 15 + 0.5 * margin.bottom)
+           .text(selectedSeries.xlabel);
+
       graph.append("g")
          .attr("class", "y axis")
          .call(yAxis)
          .append("text")
+         .attr("x", -margin.left)
          .attr("transform", "rotate(-90)")
-         .attr("y", 6)
+         .attr("y", -margin.left)
          .attr("dy", ".71em")
          .style("text-anchor", "end")
-         .text("mean kbps");
+         .text(selectedSeries.ylabel);
 
-      graph.selectAll("line.verticalGrid").data(xScale.ticks(10)).enter()
-         .append("line")
-         .attr(
-        {
-            "class":"verticalGrid",
-            "y1" : margin.top,
-            "y2" : height,
-            "x1" : function(d){ return xScale(d);},
-            "x2" : function(d){ return xScale(d);},
-            "fill" : "none",
-            "shape-rendering" : "crispEdges",
-            "stroke" : "grey",
-            "opacity": 0.4,
-            "stroke-width" : "1px"
-        });
- 
-      graph.selectAll("line.horizontalGrid").data(yScale.ticks(4)).enter()
-         .append("line")
-         .attr(
-        {
-            "class":"horizontalGrid",
-            "x1" : margin.right,
-            "x2" : width,
-            "y1" : function(d){ return yScale(d);},
-            "y2" : function(d){ return yScale(d);},
-            "fill" : "none",
-            "shape-rendering" : "crispEdges",
-            "stroke" : "grey",
-            "opacity": 0.4,
-            "stroke-width" : "1px"
-        });
+      graph.append("g")
+        .attr("class", "xGrid")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
+
+      graph.append("g")
+        .attr("class", "yGrid")
+        .call(yGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
 
       graph.append("path")
          .datum(chartData.d3TP)
@@ -186,8 +213,6 @@ JT = (function (my) {
 
     m.redraw = function() {
 
-      width = $("#chartThroughput").width();
-      height = $("#chartThroughput").height();
       width = $("#chartThroughput").width() - margin.left - margin.right;
       height = $("#chartThroughput").height() - margin.top - margin.bottom;
 
@@ -200,10 +225,31 @@ JT = (function (my) {
         return d.value;
       })]);
 
+      xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .tickSize(-height)
+           .ticks(10)
+           .tickFormat("")
+      };
+
+      yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .tickSize(-width)
+           .ticks(5)
+           .tickFormat("")
+      };
+
       svg = d3.select("#chartThroughput");
       svg.select(".line").attr("d", line(chartData.d3TP));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
+      svg.select(".xGrid").call(xGrid());
+      svg.select(".yGrid").call(yGrid());
+
     };
 
 
@@ -217,7 +263,7 @@ JT = (function (my) {
 
     clearChartData();
 
-    my.charts.d3Chart.reset();
+    my.charts.d3Chart.reset(selectedSeries);
 
     my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
       height: 300,
