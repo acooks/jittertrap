@@ -1,6 +1,6 @@
 /* jittertrap-charting.js */
 
-/* global CanvasJS */
+/* global d3 */
 /* global JT:true */
 
 JT = (function (my) {
@@ -75,7 +75,7 @@ JT = (function (my) {
           .y(function(d) { return yScale(d.value); })
           .interpolate("basis");
     
-    var svg = {}
+    var svg = {};
 
     var xGrid = function() {
         return d3.svg.axis()
@@ -125,7 +125,7 @@ JT = (function (my) {
 
 
       var graph = svg.append("g")
-         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
          .attr("class", "title")
@@ -209,7 +209,7 @@ JT = (function (my) {
            .orient("bottom")
            .tickSize(-height)
            .ticks(10)
-           .tickFormat("")
+           .tickFormat("");
       };
 
       yGrid = function() {
@@ -218,7 +218,7 @@ JT = (function (my) {
            .orient("left")
            .tickSize(-width)
            .ticks(5)
-           .tickFormat("")
+           .tickFormat("");
       };
 
       svg = d3.select("#chartThroughput");
@@ -269,7 +269,7 @@ JT = (function (my) {
         .y1(function (d) { return yScale(d.y[1]); })
         .interpolate("basis");
 
-    var svg = {}
+    var svg = {};
 
     var xGrid = function() {
         return d3.svg.axis()
@@ -285,7 +285,7 @@ JT = (function (my) {
            .ticks(0);
       };
 
-    m.reset = function(selectedSeries) {
+    m.reset = function() {
 
       d3.select("#packetGapContainer").selectAll("svg").remove();
 
@@ -324,7 +324,7 @@ JT = (function (my) {
          .attr("height", height + margin.top + margin.bottom);
 
       var graph = svg.append("g")
-         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
          .attr("class", "title")
@@ -414,7 +414,7 @@ JT = (function (my) {
            .orient("bottom")
            .tickSize(-height)
            .ticks(10)
-           .tickFormat("")
+           .tickFormat("");
       };
 
       yGrid = function() {
@@ -423,7 +423,7 @@ JT = (function (my) {
            .orient("left")
            .tickSize(-width)
            .ticks(5)
-           .tickFormat("")
+           .tickFormat("");
       };
 
       svg = d3.select("#packetGapContainer");
@@ -448,7 +448,7 @@ JT = (function (my) {
     clearChartData();
 
     my.charts.mainChart.reset(selectedSeries);
-    my.charts.packetGapChart.reset(selectedSeries);
+    my.charts.packetGapChart.reset();
 
   };
 
