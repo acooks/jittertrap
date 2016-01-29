@@ -27,6 +27,7 @@ JT = (function (my) {
     histogram: [],
     basicStats: [],
     packetGapMean: [],
+    packetGapMeanNew: [],
     packetGapMinMax: [],
   };
 
@@ -35,6 +36,7 @@ JT = (function (my) {
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
     chartData.packetGapMean.length = 0;
+    chartData.packetGapMeanNew.length = 0;
     chartData.packetGapMinMax.length = 0;
   };
 
@@ -57,6 +59,10 @@ JT = (function (my) {
     return chartData.packetGapMean;
   };
 
+  my.charts.getPacketGapMeanRefNew = function() {
+    return chartData.packetGapMeanNew;
+  };
+
   my.charts.getPacketGapMinMaxRef = function () {
     return chartData.packetGapMinMax;
   };
@@ -71,8 +77,6 @@ JT = (function (my) {
 
     var width = 960 - margin.left - margin.right;
     var height = 300 - margin.top - margin.bottom;
-    var width1 = $("#chartThroughput").width() - margin.left - margin.right;
-    var height1 = $("#chartThroughput").height() - margin.top - margin.bottom;
     var xScale = d3.scale.linear().range([0, width]);
     var yScale = d3.scale.linear().range([height, 0]);
     var xAxis = d3.svg.axis()
@@ -251,6 +255,195 @@ JT = (function (my) {
 
   }({}));
 
+
+  my.charts.packetGapChart = (function (m) {
+    var margin = {
+      top: 20,
+      right: 20,
+      bottom: 40,
+      left: 75
+    };
+
+    var width = 960 - margin.left - margin.right;
+    var height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, width]);
+    var yScale = d3.scale.linear().range([height, 0]);
+    var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .ticks(10)
+                .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .ticks(5)
+                .orient("left");
+
+    var line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+
+    var svg = {}
+
+    var xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .ticks(0);
+      };
+
+    var yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .ticks(0);
+      };
+
+    m.reset = function(selectedSeries) {
+
+      d3.select("#NewPacketGapContainer").selectAll("svg").remove();
+
+      svg = d3.select("#NewPacketGapContainer")
+            .append("svg");
+
+      width = $("#NewPacketGapContainer").width() - margin.left - margin.right;
+      height = $("#NewPacketGapContainer").height() - margin.top - margin.bottom;
+
+      xScale = d3.scale.linear().range([0, width]);
+      yScale = d3.scale.linear().range([height, 0]);
+
+      xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(10)
+              .orient("bottom");
+
+      yAxis = d3.svg.axis()
+              .scale(yScale)
+              .ticks(5)
+              .orient("left");
+
+      line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+
+      svg.attr("width", width + margin.left + margin.right)
+         .attr("height", height + margin.top + margin.bottom);
+
+
+      var graph = svg.append("g")
+         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+      graph.append("text")
+         .attr("class", "title")
+         .attr("text-anchor", "middle")
+         .attr("x", width/2)
+         .attr("y", -margin.top/2)
+         .text("Inter Packet Gap");
+
+      graph.append("g")
+         .attr("class", "x axis")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis);
+
+      graph.append("text")
+           .attr("class", "x label")
+           .attr("text-anchor", "middle")
+           .attr("x", width/2)
+           .attr("y", height + 15 + 0.5 * margin.bottom)
+           .text("Time (ms)");
+
+      graph.append("g")
+         .attr("class", "y axis")
+         .call(yAxis)
+         .append("text")
+         .attr("x", -margin.left)
+         .attr("transform", "rotate(-90)")
+         .attr("y", -margin.left)
+         .attr("dy", ".71em")
+         .style("text-anchor", "end")
+         .text("Packet Gap (ms, mean)");
+
+      graph.append("g")
+        .attr("class", "xGrid")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
+
+      graph.append("g")
+        .attr("class", "yGrid")
+        .call(yGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
+
+      graph.append("path")
+         .datum(chartData.packetGapMeanNew)
+         .attr("class", "line")
+         .attr("d", line);
+
+    };
+
+    m.redraw = function() {
+
+      width = $("#NewPacketGapContainer").width() - margin.left - margin.right;
+      height = $("#NewPacketGapContainer").height() - margin.top - margin.bottom;
+
+      /* Scale the range of the data again */
+      xScale.domain(d3.extent(chartData.packetGapMeanNew, function(d) {
+        return d.timestamp;
+      }));
+
+      yScale.domain([0, d3.max(chartData.packetGapMeanNew, function(d) {
+        return d.value;
+      })]);
+
+      xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .tickSize(-height)
+           .ticks(10)
+           .tickFormat("")
+      };
+
+      yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .tickSize(-width)
+           .ticks(5)
+           .tickFormat("")
+      };
+
+      svg = d3.select("#NewPacketGapContainer");
+      svg.select(".line").attr("d", line(chartData.packetGapMeanNew));
+      svg.select(".x.axis").call(xAxis);
+      svg.select(".y.axis").call(yAxis);
+      svg.select(".xGrid").call(xGrid());
+      svg.select(".yGrid").call(yGrid());
+
+    };
+
+
+    return m;
+
+  }({}));
+
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
     var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
@@ -258,6 +451,7 @@ JT = (function (my) {
     clearChartData();
 
     my.charts.mainChart.reset(selectedSeries);
+    my.charts.packetGapChart.reset(selectedSeries);
 
     my.charts.histogram = new CanvasJS.Chart("histogramContainer", {
       title: {text: "Distribution" },
@@ -359,8 +553,9 @@ JT = (function (my) {
     var d1 = Date.now();
     //my.charts.histogram.render();
     //my.charts.basicStats.render();
-    //my.charts.packetGap.render();
+    my.charts.packetGap.render();
     my.charts.mainChart.redraw();
+    my.charts.packetGapChart.redraw();
 
     var d2 = Date.now();
     renderCount++;
