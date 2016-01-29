@@ -24,28 +24,14 @@ JT = (function (my) {
 
   var chartData = {
     mainChart: [],
-    histogram: [],
-    basicStats: [],
     packetGapMean: [],
     packetGapMinMax: [],
   };
 
   var clearChartData = function () {
     chartData.mainChart.length = 0;
-    chartData.histogram.length = 0;
-    chartData.basicStats.length = 0;
     chartData.packetGapMean.length = 0;
     chartData.packetGapMinMax.length = 0;
-  };
-
-  /* must return a reference to an array of {x:x, y:y, label:l} */
-  my.charts.getHistogramRef = function () {
-    return chartData.histogram;
-  };
-
-  /* must return a reference to an array of {x:x, y:y, label:l} */
-  my.charts.getBasicStatsRef = function () {
-    return chartData.basicStats;
   };
 
   /* must return a reference to an array of {x:x, y:y} */
@@ -464,38 +450,6 @@ JT = (function (my) {
     my.charts.mainChart.reset(selectedSeries);
     my.charts.packetGapChart.reset(selectedSeries);
 
-    my.charts.histogram = new CanvasJS.Chart("histogramContainer", {
-      title: {text: "Distribution" },
-      axisY: {
-        title: "log(Count)",
-        includeZero: "false"
-      },
-      axisX: {
-        title: "Bin",
-        includeZero: "false"
-      },
-      data: [{
-        name: selectedSeries.name + "_hist",
-        type: "column",
-        dataPoints: chartData.histogram
-      }]
-    });
-    my.charts.histogram.render();
-
-    my.charts.basicStats = new CanvasJS.Chart("basicStatsContainer", {
-      title: { text: "Basic Stats" },
-      axisY: {
-        includeZero: "false",
-        title: selectedSeries.ylabel
-      },
-      data: [{
-        name: selectedSeries.name + "_stats",
-        type: "column",
-        dataPoints: chartData.basicStats
-      }]
-    });
-    my.charts.basicStats.render();
-
   };
 
   var renderCount = 0;
@@ -531,8 +485,6 @@ JT = (function (my) {
 
   var renderGraphs = function() {
     var d1 = Date.now();
-    //my.charts.histogram.render();
-    //my.charts.basicStats.render();
     my.charts.mainChart.redraw();
     my.charts.packetGapChart.redraw();
 
