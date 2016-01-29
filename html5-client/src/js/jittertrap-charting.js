@@ -27,7 +27,6 @@ JT = (function (my) {
     histogram: [],
     basicStats: [],
     packetGapMean: [],
-    packetGapMeanNew: [],
     packetGapMinMax: [],
   };
 
@@ -36,7 +35,6 @@ JT = (function (my) {
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
     chartData.packetGapMean.length = 0;
-    chartData.packetGapMeanNew.length = 0;
     chartData.packetGapMinMax.length = 0;
   };
 
@@ -57,10 +55,6 @@ JT = (function (my) {
 
   my.charts.getPacketGapMeanRef = function () {
     return chartData.packetGapMean;
-  };
-
-  my.charts.getPacketGapMeanRefNew = function() {
-    return chartData.packetGapMeanNew;
   };
 
   my.charts.getPacketGapMinMaxRef = function () {
@@ -329,8 +323,8 @@ JT = (function (my) {
               .orient("left");
 
       line = d3.svg.line()
-        .x(function(d) { return xScale(d.timestamp); })
-        .y(function(d) { return yScale(d.value); })
+        .x(function(d) { return xScale(d.x); })
+        .y(function(d) { return yScale(d.y); })
         .interpolate("basis");
 
 
@@ -408,7 +402,7 @@ JT = (function (my) {
         .attr({"fill": "pink", "opacity": 0.8});
 
       graph.append("path")
-         .datum(chartData.packetGapMeanNew)
+         .datum(chartData.packetGapMean)
          .attr("class", "line")
          .attr("d", line);
 
@@ -420,12 +414,12 @@ JT = (function (my) {
       height = $("#packetGapContainer").height() - margin.top - margin.bottom;
 
       /* Scale the range of the data again */
-      xScale.domain(d3.extent(chartData.packetGapMeanNew, function(d) {
-        return d.timestamp;
+      xScale.domain(d3.extent(chartData.packetGapMean, function(d) {
+        return d.x;
       }));
 
-      yScale.domain([0, d3.max(chartData.packetGapMeanNew, function(d) {
-        return d.value;
+      yScale.domain([0, d3.max(chartData.packetGapMean, function(d) {
+        return d.y;
       })]);
 
       xGrid = function() {
@@ -447,7 +441,7 @@ JT = (function (my) {
       };
 
       svg = d3.select("#packetGapContainer");
-      svg.select(".line").attr("d", line(chartData.packetGapMeanNew));
+      svg.select(".line").attr("d", line(chartData.packetGapMean));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid());

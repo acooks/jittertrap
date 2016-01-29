@@ -186,13 +186,9 @@ JT = (function (my) {
     mean.length = 0;
     minMax.length = 0;
 
-    var newMean = JT.charts.getPacketGapMeanRefNew();
-    newMean.length = 0;
-
     for (var i = 0; i < len; i++) {
       var x = i * chartPeriod;
       mean.push({x: x, y: packetGapData[i].mean});
-      newMean.push({timestamp: x, value: packetGapData[i].mean});
       minMax.push({x: x, y: [packetGapData[i].min, packetGapData[i].max]});
     }
   };
