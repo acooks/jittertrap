@@ -307,13 +307,13 @@ JT = (function (my) {
 
     m.reset = function(selectedSeries) {
 
-      d3.select("#NewPacketGapContainer").selectAll("svg").remove();
+      d3.select("#packetGapContainer").selectAll("svg").remove();
 
-      svg = d3.select("#NewPacketGapContainer")
+      svg = d3.select("#packetGapContainer")
             .append("svg");
 
-      width = $("#NewPacketGapContainer").width() - margin.left - margin.right;
-      height = $("#NewPacketGapContainer").height() - margin.top - margin.bottom;
+      width = $("#packetGapContainer").width() - margin.left - margin.right;
+      height = $("#packetGapContainer").height() - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -416,8 +416,8 @@ JT = (function (my) {
 
     m.redraw = function() {
 
-      width = $("#NewPacketGapContainer").width() - margin.left - margin.right;
-      height = $("#NewPacketGapContainer").height() - margin.top - margin.bottom;
+      width = $("#packetGapContainer").width() - margin.left - margin.right;
+      height = $("#packetGapContainer").height() - margin.top - margin.bottom;
 
       /* Scale the range of the data again */
       xScale.domain(d3.extent(chartData.packetGapMeanNew, function(d) {
@@ -446,7 +446,7 @@ JT = (function (my) {
            .tickFormat("")
       };
 
-      svg = d3.select("#NewPacketGapContainer");
+      svg = d3.select("#packetGapContainer");
       svg.select(".line").attr("d", line(chartData.packetGapMeanNew));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
@@ -502,37 +502,6 @@ JT = (function (my) {
     });
     my.charts.basicStats.render();
 
-    my.charts.packetGap = new CanvasJS.Chart("packetGapContainer", {
-      title: { text: "Inter Packet Gap" },
-      axisX: {
-        gridDashType: "dash",
-        gridThickness: 1,
-        gridColor: "#EEEEEE"
-      },
-      axisY: {
-        includeZero: "false",
-        title: "Packet Gap (ms, mean)",
-        gridThickness: 1
-      },
-      data: [
-        {
-          showInLegend: true,
-          name: "range(min,max)",
-          type: "rangeArea",
-          lineThickness: 1,
-          fillOpacity: .1,
-          dataPoints: chartData.packetGapMinMax
-        },
-        {
-          showInLegend: true,
-          name: "mean",
-          type: "line",
-          dataPoints: chartData.packetGapMean
-        }
-      ]
-    });
-    my.charts.packetGap.render();
-
   };
 
   var renderCount = 0;
@@ -570,7 +539,6 @@ JT = (function (my) {
     var d1 = Date.now();
     //my.charts.histogram.render();
     //my.charts.basicStats.render();
-    my.charts.packetGap.render();
     my.charts.mainChart.redraw();
     my.charts.packetGapChart.redraw();
 
