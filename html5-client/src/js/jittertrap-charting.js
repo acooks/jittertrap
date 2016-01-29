@@ -28,11 +28,9 @@ JT = (function (my) {
     basicStats: [],
     packetGapMean: [],
     packetGapMinMax: [],
-    d3TP: []
   };
 
   var clearChartData = function () {
-    chartData.d3TP.length = 0;
     chartData.mainChart.length = 0;
     chartData.histogram.length = 0;
     chartData.basicStats.length = 0;
@@ -63,11 +61,7 @@ JT = (function (my) {
     return chartData.packetGapMinMax;
   };
 
-  my.charts.getD3DataRef = function () {
-    return chartData.d3TP;
-  };
-
-  my.charts.d3Chart = (function (m) {
+  my.charts.mainChart = (function (m) {
     var margin = {
       top: 20,
       right: 20,
@@ -205,7 +199,7 @@ JT = (function (my) {
              });
 
       graph.append("path")
-         .datum(chartData.d3TP)
+         .datum(chartData.mainChart)
          .attr("class", "line")
          .attr("d", line);
 
@@ -217,11 +211,11 @@ JT = (function (my) {
       height = $("#chartThroughput").height() - margin.top - margin.bottom;
 
       /* Scale the range of the data again */
-      xScale.domain(d3.extent(chartData.d3TP, function(d) {
+      xScale.domain(d3.extent(chartData.mainChart, function(d) {
         return d.timestamp;
       }));
 
-      yScale.domain([0, d3.max(chartData.d3TP, function(d) {
+      yScale.domain([0, d3.max(chartData.mainChart, function(d) {
         return d.value;
       })]);
 
@@ -244,7 +238,7 @@ JT = (function (my) {
       };
 
       svg = d3.select("#chartThroughput");
-      svg.select(".line").attr("d", line(chartData.d3TP));
+      svg.select(".line").attr("d", line(chartData.mainChart));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid());
@@ -263,37 +257,7 @@ JT = (function (my) {
 
     clearChartData();
 
-    my.charts.d3Chart.reset(selectedSeries);
-
-    my.charts.mainChart = new CanvasJS.Chart("chartContainer", {
-      height: 300,
-      animationEnabled: false,
-      exportEnabled: false,
-      toolTip:{
-        enabled: true
-      },
-      interactivityEnabled: true,
-      zoomEnabled: "true",
-      panEnabled: "true",
-      title: { text: selectedSeries.title },
-      axisY: {
-        title: selectedSeries.ylabel,
-        includeZero: "false",
-        gridThickness: 1
-      },
-      axisX: {
-        title: selectedSeries.xlabel,
-        gridDashType: "dash",
-        gridThickness: 1,
-        gridColor: "#EEEEEE"
-      },
-      data: [{
-        name: selectedSeries.name,
-        type: "spline",
-        dataPoints: chartData.mainChart
-      }]
-    });
-    my.charts.mainChart.render();
+    my.charts.mainChart.reset(selectedSeries);
 
     my.charts.histogram = new CanvasJS.Chart("histogramContainer", {
       title: {text: "Distribution" },
@@ -395,9 +359,8 @@ JT = (function (my) {
     var d1 = Date.now();
     //my.charts.histogram.render();
     //my.charts.basicStats.render();
-    my.charts.mainChart.render();
     //my.charts.packetGap.render();
-    my.charts.d3Chart.redraw();
+    my.charts.mainChart.redraw();
 
     var d2 = Date.now();
     renderCount++;

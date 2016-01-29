@@ -276,12 +276,8 @@ JT = (function (my) {
 
     chartSeries.length = 0;
 
-    var d3Data = JT.charts.getD3DataRef();
-    d3Data.length = 0;
-
     for (var i = 0; i < len; i++) {
-      chartSeries.push({x: i * chartPeriod, y: filteredData[i]});
-      d3Data.push({timestamp: i*chartPeriod, value: filteredData[i]});
+      chartSeries.push({timestamp: i*chartPeriod, value: filteredData[i]});
     }
 
 
