@@ -404,8 +404,8 @@ JT = (function (my) {
         return d.x;
       }));
 
-      yScale.domain([0, d3.max(chartData.packetGapMean, function(d) {
-        return d.y;
+      yScale.domain([0, d3.max(chartData.packetGapMinMax, function(d) {
+        return d.y[0];
       })]);
 
       xGrid = function() {
