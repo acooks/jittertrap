@@ -46,6 +46,7 @@ cppcheck:
 clang-analyze:
 	scan-build make messages server cli-client
 
+.PHONY: clean $(CLEANDIRS)
 clean: $(CLEANDIRS)
 $(CLEANDIRS):
 	@echo "Cleaning $@"

@@ -98,8 +98,14 @@ PKGCONFIG_LIBNL = \
 TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
-LDFLAGS = -lwebsockets -ljansson -lm -lpcap
-CFLAGS := -pthread $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
+CFLAGS_HARDENED = \
+ -fPIC \
+ -fstack-protector \
+ --param ssp-buffer-size=4 \
+ -fPIE -pie -Wl,-z,relro,-z,now
+
+CFLAGS :=  -W -Wall -pedantic -Wformat-security -std=c11 -g -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
+LDFLAGS := -lwebsockets -ljansson -lm -lpcap -lrt $(LDFLAGS)
 
 .PHONY: all
 all: $(PROG) Makefile ../make.config
@@ -117,6 +123,7 @@ $(PROG): $(OBJECTS) $(TOPTALK_LIB) $(MESSAGES)
 	$(CC) $(OBJECTS) $(INCLUDES) $(TOPTALK_LIB) $(MESSAGES) -o $(PROG) $(CFLAGS) $(LDFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
 
 
+.PHONY: indent
 indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
@@ -141,6 +148,7 @@ test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEP
 test-slist: test_slist.c slist.c slist.h
 	$(CC) -o test-slist test_slist.c slist.c slist.h
 
+.PHONY: test
 test: test-mq test-mq-mt test-multi-mq test-slist
 	./test-mq >/dev/null
 	./test-mq-mt >/dev/null
@@ -153,6 +161,7 @@ TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
 test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 	$(CC) -o test-toptalk $(TOPTALK_TEST_SOURCES) $(TOPTALK_LIB) $(INCLUDES) $(CFLAGS) -O0 $(DEFINES) -lpcap
 
+.PHONY: clean
 clean:
 	rm $(PROG) *.o || true
 	rm test-mq test-mq-mt test-multi-mq || true

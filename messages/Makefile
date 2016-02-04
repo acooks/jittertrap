@@ -38,8 +38,15 @@ INCLUDES = \
  -I include \
  -I ../deps/toptalk
 
-LFLAGS = -ljansson
-CFLAGS := -pthread $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
+CFLAGS_HARDENED = \
+ -fPIC \
+ -fstack-protector \
+ --param ssp-buffer-size=4 \
+ -fPIE -pie -Wl,-z,relro,-z,now
+
+CFLAGS := -Wall -Wpedantic -std=c11 -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
+LDLIBS := -ljansson $(LDLIBS)
+
 
 .PHONY: all
 all: $(LIB) test-packing
@@ -49,19 +56,23 @@ $(OBJECTS): %.o: src/%.c include/%.h Makefile ../make.config
 
 
 $(LIB): $(OBJECTS) Makefile
-	gcc-ar cr $(LIB) *.o
+	ar cr $(LIB) *.o
 
 
+.PHONY: indent
 indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
+.PHONY: test-packing
 test-packing: $(LIB) test/test_messages.c
-	$(CC) test/test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LFLAGS) $(DEFINES)
+	$(CC) test/test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LDLIBS) $(LDFLAGS) $(DEFINES)
 
 
+.PHONY: test
 test: test-packing
 	@./test-packing >/dev/null && echo -e "Test OK\n"
 
+.PHONY: clean
 clean:
 	rm $(LIB) *.o *.a test-packing || true

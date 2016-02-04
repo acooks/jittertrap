@@ -32,21 +32,24 @@ INCLUDES = \
  -I . \
  -I ../messages/include/ \
 
-LFLAGS = -lwebsockets -ljansson
+LDLIBS := -lwebsockets -ljansson -lrt $(LDLIBS)
 CFLAGS := -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS)
 
 MESSAGES = ../messages/jt-messages.a
 
 $(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
-	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES)
+	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LDLIBS) $(LDFLAGS) $(DEFINES)
 
 
+.PHONY: indent
 indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
+.PHONY: clean
 clean:
 	rm $(PROG) || true
 
+.PHONY: test
 test:
 	true
