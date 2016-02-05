@@ -182,7 +182,7 @@ static void set_affinity()
 	thread = pthread_self();
 	/* Set affinity mask to include CPUs 1 only */
 	CPU_ZERO(&cpuset);
-	CPU_SET(1, &cpuset);
+	CPU_SET(RT_CPU, &cpuset);
 	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 	if (s != 0) {
 		handle_error_en(s, "pthread_setaffinity_np");
@@ -194,12 +194,13 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("Set returned by pthread_getaffinity_np() contained:\n");
+	printf("RT thread CPU affinity: ");
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			printf("    CPU %d\n", j);
+			printf(" CPU%d", j);
 		}
 	}
+	printf("\n");
 }
 
 static int init_realtime(void)
