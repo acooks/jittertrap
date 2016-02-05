@@ -197,8 +197,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 	found_qdisc = (struct rtnl_qdisc *)nl_cache_find(
 	    qdisc_cache, OBJ_CAST(filter_qdisc));
 	if (!found_qdisc) {
-		fprintf(stderr, "could't find netem qdisc for iface: %s\n",
-		        iface);
+		/* The iface probably doesn't have a netem qdisc at startup. */
 		goto cleanup_filter_qdisc;
 	}
 

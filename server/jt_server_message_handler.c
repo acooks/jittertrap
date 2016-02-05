@@ -178,10 +178,9 @@ int jt_srv_send_netem_params()
 	assert(m);
 
 	memcpy(p.iface, g_selected_iface, MAX_IFACE_LEN);
-	printf("get netem for iface: [%s]\n", p.iface);
 
 	if (0 != netem_get_params(p.iface, &p)) {
-		fprintf(stderr, "couldn't get netem parameters.\n");
+		/* There need not be a netem qdisc on the interface */
 		p.delay = -1;
 		p.jitter = -1;
 		p.loss = -1;
@@ -221,24 +220,20 @@ int jt_srv_send_iface_list()
 		                "Allowed interfaces (compile-time): %s\n",
 		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
 	} else {
+		printf("available ifaces: ");
 		do {
-			printf("iface: %s\n", *iface);
+			printf(" %s", *iface);
 			(il->count)++;
 			iface++;
 		} while (*iface);
+		printf("\n");
 	}
-
-	printf("%d ifaces\n", il->count);
-
-	assert(il->count);
-	assert(MAX_IFACE_LEN);
 
 	il->ifaces = malloc(il->count * MAX_IFACE_LEN);
 	assert(il->ifaces);
 
 	for (iface = ifaces, idx = 0; NULL != *iface && idx < il->count;
 	     idx++) {
-		printf("iface: %s\n", *iface);
 		strncpy(il->ifaces[idx], *iface, MAX_IFACE_LEN);
 		free(*iface);
 		iface++;

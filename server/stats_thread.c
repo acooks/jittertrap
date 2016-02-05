@@ -87,7 +87,6 @@ void stats_monitor_iface(const char *_iface)
 		free(g_iface);
 	}
 	g_iface = strdup(_iface);
-	printf("monitoring iface: [%s]\n", g_iface);
 	pthread_mutex_unlock(&g_iface_mutex);
 }
 
