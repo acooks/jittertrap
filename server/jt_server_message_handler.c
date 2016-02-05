@@ -219,6 +219,9 @@ int jt_srv_send_iface_list()
 		fprintf(stderr, "No interfaces available. "
 		                "Allowed interfaces (compile-time): %s\n",
 		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		free(ifaces);
+		free(il);
+		return -1;
 	} else {
 		printf("available ifaces: ");
 		do {
