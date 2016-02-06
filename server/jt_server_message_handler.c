@@ -190,7 +190,7 @@ int jt_srv_send_netem_params()
 		p.jitter = -1;
 		p.loss = -1;
 	}
-	/* fixme */
+
 	m->delay = p.delay;
 	m->jitter = p.jitter;
 	m->loss = p.loss;
