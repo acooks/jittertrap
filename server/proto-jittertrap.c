@@ -20,13 +20,13 @@ struct cb_data {
 
 static int lws_writer(struct jt_ws_msg *m, void *data)
 {
-	int len;
+	int len, n;
 	struct cb_data *d = (struct cb_data *)data;
 	assert(d);
 	len = snprintf((char *)d->buf, MAX_JSON_MSG_LEN, "%s", m->m);
 	assert(len >= 0);
 	if (len > 0) {
-		int n = lws_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
+		n = lws_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
 		if (n < len) {
 			/* short write :( */
 			fprintf(stderr, "Short write :(\n");

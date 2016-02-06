@@ -12,7 +12,7 @@
 #include <netlink/cache.h>
 #include <netlink/route/link.h>
 #include <netlink/route/qdisc.h>
-#include <netlink/route/sch/netem.h>
+#include <netlink/route/qdisc/netem.h>
 
 #include "jittertrap.h"
 #include "netem.h"

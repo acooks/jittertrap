@@ -44,19 +44,14 @@ static int set_netem(void *data)
 {
 	struct jt_msg_netem_params *p1 = data;
 	struct netem_params p2 = {
-		.delay = p1->delay,
-		.jitter = p1->jitter,
-		.loss = p1->loss,
-		.iface = "" /* .iface not used for setting params, only gets. */
+		.delay = p1->delay, .jitter = p1->jitter, .loss = p1->loss,
 	};
 
-	if (0 == netem_set_params(p1->iface, &p2) &&
-	    (0 == jt_srv_send_select_iface()) &&
-	    (0 == jt_srv_send_netem_params()) &&
-	    (0 == jt_srv_send_sample_period())) {
-		return 0;
-	}
-	return -1;
+	netem_set_params(p1->iface, &p2);
+	jt_srv_send_select_iface();
+	jt_srv_send_netem_params();
+	jt_srv_send_sample_period();
+	return 0;
 }
 
 static int select_iface(void *data)
