@@ -14,9 +14,8 @@
 
 #include <jansson.h>
 #include "jt_server_message_handler.h"
-#include "jt_ws_mq_config.h"
-#include "jt_ws_mq.h"
-
+#include "mq_generic.h"
+#include "mq_msg_ws.h"
 #include "iface_stats.h"
 #include "sampling_thread.h"
 #include "netem.h"
@@ -146,7 +145,7 @@ inline static void stats_filter(struct iface_stats *stats)
 	calc_whoosh_error(stats);
 }
 
-inline static int message_producer(struct jt_ws_msg *m, void *data)
+inline static int message_producer(struct jtmq_msg *m, void *data)
 {
 	char *s = (char *)data;
 	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
@@ -165,7 +164,7 @@ inline static int jt_srv_send(int msg_type, void *msg_data)
 	}
 
 	/* write the json string to a websocket message */
-	err = jt_ws_mq_produce(message_producer, tmpstr, &cb_err);
+	err = jtmq_produce(message_producer, tmpstr, &cb_err);
 	free(tmpstr);
 	return err;
 }
@@ -302,7 +301,7 @@ static int jt_init()
 		return -1;
 	}
 
-	err = jt_ws_mq_init();
+	err = jtmq_init();
 	if (err) {
 		return -1;
 	}
