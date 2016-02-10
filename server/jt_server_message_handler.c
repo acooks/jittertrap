@@ -18,7 +18,7 @@
 #include "jt_ws_mq.h"
 
 #include "iface_stats.h"
-#include "stats_thread.h"
+#include "sampling_thread.h"
 #include "netem.h"
 
 #include "jt_message_types.h"
@@ -66,7 +66,7 @@ static int select_iface(void *data)
 	}
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
 	printf("switching to iface: [%s]\n", *iface);
-	stats_monitor_iface(*iface);
+	sample_iface(*iface);
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
 	jt_srv_send_sample_period();
@@ -310,7 +310,7 @@ static int jt_init()
 	get_first_iface(iface);
 	select_iface(&iface);
 
-	stats_thread_init(stats_event_handler);
+	sample_thread_init(stats_event_handler);
 
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;

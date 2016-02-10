@@ -8,7 +8,6 @@
 
 #include "jittertrap.h"
 #include "iface_stats.h"
-#include "stats_thread.h"
 #include "sample_buf.h"
 
 /* a circular buffer with one element of separation */

@@ -21,7 +21,7 @@ SOURCES = \
  jt_ws_mq.c \
  jt_server_message_handler.c \
  timeywimey.c \
- stats_thread.c \
+ sampling_thread.c \
  sample_buf.c \
  netem.c \
 
@@ -36,7 +36,7 @@ HEADERS = \
  netem.h \
  timeywimey.h \
  iface_stats.h \
- stats_thread.h \
+ sampling_thread.h \
  sample_buf.h \
 
 
