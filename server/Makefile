@@ -19,6 +19,7 @@ SOURCES = \
  proto-http.c \
  proto-jittertrap.c \
  mq_msg_ws.c \
+ mq_msg_stats.c \
  jt_server_message_handler.c \
  timeywimey.c \
  sampling_thread.c \
@@ -32,6 +33,7 @@ HEADERS = \
  proto-jittertrap.h \
  mq_generic.h \
  mq_msg_ws.h \
+ mq_msg_stats.h \
  jt_server_message_handler.h \
  netem.h \
  timeywimey.h \
@@ -83,18 +85,26 @@ indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
-MQ_TEST_SOURCES = test_mq.c mq_msg_ws.c
-MQ_MT_TEST_SOURCES = test_mq_mt.c mq_msg_ws.c
+MQ_DEPENDS = mq_generic.c mq_generic.h
+MQ_SOURCES = mq_msg_ws.c mq_msg_stats.c
+MQ_HEADERS = mq_msg_ws.h mq_msg_stats.h
+MQ_TEST_SOURCES = test_mq.c $(MQ_SOURCES)
+MQ_MT_TEST_SOURCES = test_mq_mt.c $(MQ_SOURCES)
+MQ_MULTI_TEST_SOURCES = test_multi_mq.c $(MQ_SOURCES)
 MQ_TEST_HEADERS = mq_msg_ws.h mq_generic.h
 
-test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS) mq_generic.c
+test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_DEPENDS) $(MQ_HEADERS)
 	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0
 
-test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) mq_generic.c
+test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
 	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0
 
-test: test-mq test-mq-mt
+test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
+	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0
+
+test: test-mq test-mq-mt test-multi-mq
 
 
 clean:
 	rm $(PROG) || true
+	rm test-mq test-mq-mt test-multi-mq || true
