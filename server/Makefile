@@ -23,6 +23,7 @@ SOURCES = \
  jt_server_message_handler.c \
  timeywimey.c \
  sampling_thread.c \
+ compute_thread.c \
  sample_buf.c \
  netem.c \
 
@@ -39,6 +40,7 @@ HEADERS = \
  timeywimey.h \
  iface_stats.h \
  sampling_thread.h \
+ compute_thread.h \
  sample_buf.h \
 
 

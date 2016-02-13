@@ -211,7 +211,7 @@ static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
-	schedparm.sched_priority = 1; // lowest rt priority
+	schedparm.sched_priority = 2;
 	sched_setscheduler(0, SCHED_FIFO, &schedparm);
 	set_affinity();
 	return 0;

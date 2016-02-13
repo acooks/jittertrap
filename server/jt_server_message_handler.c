@@ -19,6 +19,7 @@
 
 #include "iface_stats.h"
 #include "sampling_thread.h"
+#include "compute_thread.h"
 #include "netem.h"
 
 #include "jt_message_types.h"
@@ -310,6 +311,7 @@ static int jt_init()
 	get_first_iface(iface);
 	select_iface(&iface);
 
+	compute_thread_init(NULL);
 	sample_thread_init(stats_event_handler);
 
 	g_jt_state = JT_STATE_RUNNING;
