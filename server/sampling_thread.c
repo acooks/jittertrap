@@ -71,7 +71,6 @@ int sample_thread_init(void (*_stats_handler)(struct iface_stats *counts))
 		err = pthread_create(&sampling_thread, NULL, run, NULL);
 		assert(!err);
 		pthread_setname_np(sampling_thread, "jt-sample");
-
 	}
 	return 0;
 }

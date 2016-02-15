@@ -75,8 +75,8 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:
 		do {
-			err = mq_ws_consume(pss->consumer_id, lws_writer,
-			                       &cbd, &cb_err);
+			err = mq_ws_consume(pss->consumer_id, lws_writer, &cbd,
+			                    &cb_err);
 			if (lws_partial_buffered(wsi) ||
 			    lws_send_pipe_choked(wsi)) {
 				lws_callback_on_writable(wsi);

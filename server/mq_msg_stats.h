@@ -2,7 +2,7 @@
 #define MQ_MSG_STATS_H
 
 #define NS(name) PRIMITIVE_CAT(mq_stats_, name)
-#define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
+#define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 
 #define MAX_CONSUMERS 32
 #define MAX_Q_DEPTH 32

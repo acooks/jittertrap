@@ -341,8 +341,8 @@ int benchmark()
 		i = 0;
 		do {
 			int msg_id = j * i;
-			err = mq_ws_produce(benchmark_produce, &msg_id,
-			                       &cb_err);
+			err =
+			    mq_ws_produce(benchmark_produce, &msg_id, &cb_err);
 			if (!err) {
 				i++;
 			}
@@ -350,8 +350,7 @@ int benchmark()
 
 		/* we hava a full message queue, now consume it all */
 		for (; i > 0; i--) {
-			err = mq_ws_consume(id, benchmark_consumer, s,
-			                       &cb_err);
+			err = mq_ws_consume(id, benchmark_consumer, s, &cb_err);
 			assert(!err);
 		}
 

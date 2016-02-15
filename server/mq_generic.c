@@ -26,9 +26,9 @@
 static pthread_mutex_t mq_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct NS(msg) *queue = NULL;
-static struct NS(msg) *produce_ptr;
+static struct NS(msg) * produce_ptr;
 
-static struct NS(msg) *consumer_ptrs[MAX_CONSUMERS] = { 0 };
+static struct NS(msg) * consumer_ptrs[MAX_CONSUMERS] = { 0 };
 static int consumer_count = 0;
 
 /* lets start at non-zero to make sure our array indices are correct. */
@@ -125,7 +125,7 @@ int NS(consumer_unsubscribe)(unsigned long subscriber_id)
 
 int NS(produce)(NS(callback) cb, void *cb_data, int *cb_err)
 {
-	struct NS(msg) *next;
+	struct NS(msg) * next;
 
 	assert(cb_err);
 
@@ -169,10 +169,9 @@ int NS(produce)(NS(callback) cb, void *cb_data, int *cb_err)
 	return 0;
 }
 
-int NS(consume)(unsigned long id, NS(callback) cb, void *cb_data,
-                            int *cb_err)
+int NS(consume)(unsigned long id, NS(callback) cb, void *cb_data, int *cb_err)
 {
-	struct NS(msg) *next;
+	struct NS(msg) * next;
 	int real_id = id - consumer_id_start;
 
 	assert(real_id >= 0);

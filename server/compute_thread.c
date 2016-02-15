@@ -40,41 +40,41 @@ int compute_thread_init(int (*compute_thread_cb)(struct somestats *stats))
 
 static void set_affinity()
 {
-        int s, j;
-        cpu_set_t cpuset;
-        pthread_t thread;
-        thread = pthread_self();
-        /* Set affinity mask to include CPUs 1 only */
-        CPU_ZERO(&cpuset);
-        CPU_SET(RT_CPU, &cpuset);
-        s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-        if (s != 0) {
-                handle_error_en(s, "pthread_setaffinity_np");
-        }
+	int s, j;
+	cpu_set_t cpuset;
+	pthread_t thread;
+	thread = pthread_self();
+	/* Set affinity mask to include CPUs 1 only */
+	CPU_ZERO(&cpuset);
+	CPU_SET(RT_CPU, &cpuset);
+	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_setaffinity_np");
+	}
 
-        /* Check the actual affinity mask assigned to the thread */
-        s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-        if (s != 0) {
-                handle_error_en(s, "pthread_getaffinity_np");
-        }
+	/* Check the actual affinity mask assigned to the thread */
+	s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_getaffinity_np");
+	}
 
-        printf("RT thread CPU affinity: ");
-        for (j = 0; j < CPU_SETSIZE; j++) {
-                if (CPU_ISSET(j, &cpuset)) {
-                        printf(" CPU%d", j);
-                }
-        }
-        printf("\n");
+	printf("RT thread CPU affinity: ");
+	for (j = 0; j < CPU_SETSIZE; j++) {
+		if (CPU_ISSET(j, &cpuset)) {
+			printf(" CPU%d", j);
+		}
+	}
+	printf("\n");
 }
 
 static int init_realtime(void)
 {
-        struct sched_param schedparm;
-        memset(&schedparm, 0, sizeof(schedparm));
-        schedparm.sched_priority = 1; // lowest rt priority
-        sched_setscheduler(0, SCHED_FIFO, &schedparm);
-        set_affinity();
-        return 0;
+	struct sched_param schedparm;
+	memset(&schedparm, 0, sizeof(schedparm));
+	schedparm.sched_priority = 1; // lowest rt priority
+	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	set_affinity();
+	return 0;
 }
 
 static void *run()
@@ -87,13 +87,13 @@ static void *run()
 	for (;;) {
 		deadline.tv_nsec += 1E6;
 
-                /* Normalize the time to account for the second boundary */
-                if (deadline.tv_nsec >= 1000000000) {
-                        deadline.tv_nsec -= 1000000000;
-                        deadline.tv_sec++;
-                }
+		/* Normalize the time to account for the second boundary */
+		if (deadline.tv_nsec >= 1000000000) {
+			deadline.tv_nsec -= 1000000000;
+			deadline.tv_sec++;
+		}
 
-                clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline,
-                                NULL);
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline,
+		                NULL);
 	}
 }
