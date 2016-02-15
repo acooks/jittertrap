@@ -1,4 +1,5 @@
 include ../make.config
+include make.config
 
 PROG = jt-server
 
@@ -11,6 +12,8 @@ DEFINES = \
  -DWEB_SERVER_DOCUMENT_ROOT=$(WEB_SERVER_DOCUMENT_ROOT) \
  -DALLOWED_IFACES=$(ALLOWED_IFACES) \
  -DRT_CPU=$(RT_CPU) \
+ -DMAX_JSON_MSG_LEN=$(MAX_JSON_MSG_LEN) \
+ -DMAX_JSON_TOKEN_LEN=$(MAX_JSON_TOKEN_LEN) \
 
 
 SOURCES = \
@@ -96,13 +99,13 @@ MQ_MULTI_TEST_SOURCES = test_multi_mq.c $(MQ_SOURCES)
 MQ_TEST_HEADERS = mq_msg_ws.h mq_generic.h
 
 test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_DEPENDS) $(MQ_HEADERS)
-	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0
+	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
-	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0
+	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
-	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0
+	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test: test-mq test-mq-mt test-multi-mq
 

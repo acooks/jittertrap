@@ -1,9 +1,13 @@
 #ifndef JITTERTRAP_H
 #define JITTERTRAP_H
 
+#ifndef MAX_JSON_TOKEN_LEN
 #define MAX_JSON_TOKEN_LEN 256
+#endif
 
+#ifndef MAX_JSON_MSG_LEN
 #define MAX_JSON_MSG_LEN 4096
+#endif
 
 /* FIXME: find out where this is assumed to be 50 and where the
  * time warp happens when this magic value is changed. */
