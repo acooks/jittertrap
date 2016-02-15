@@ -18,9 +18,9 @@ int ws_message_printer(struct mq_ws_msg *m, void *data __attribute__((unused)))
 int stats_message_printer(struct mq_stats_msg *m,
                           void *data __attribute__((unused)))
 {
-        assert(m);
-        printf("m: %"PRId64 "\n", m->window);
-        return 0;
+	assert(m);
+	printf("m: %" PRId64 "\n", m->whoosh_err_mean);
+	return 0;
 }
 
 int test_mq_msg_ws(void)

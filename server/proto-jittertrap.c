@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
-
 #include <libwebsockets.h>
 
 #include "proto.h"
