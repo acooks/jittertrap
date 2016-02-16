@@ -61,15 +61,63 @@ inline static void calc_whoosh_error(struct iface_stats *stats)
 	}
 }
 
-inline static void stats_filter(struct iface_stats *stats)
+inline static void stats_filter(struct iface_stats *ifs, struct mq_stats_msg *m)
 {
-	calc_whoosh_error(stats);
+	uint64_t rxb_sum = 0, txb_sum = 0, rxp_sum = 0, txp_sum = 0;
+	uint64_t rxb_max = 0, txb_max = 0;
+	uint32_t rxp_max = 0, txp_max = 0;
+	uint64_t rxb_min = UINT64_MAX, txb_min = UINT64_MAX;
+	uint32_t rxp_min = UINT32_MAX, txp_min = UINT32_MAX;
+	uint32_t whoosh_sum = 0, whoosh_max = 0, whoosh_sum2 = 0;
+
+	//calc_whoosh_error(ifs);
+
+	for (int i = 0; i < SAMPLES_PER_FRAME; i++) {
+		struct sample *s = &(ifs->samples[i]);
+		rxb_sum += s->rx_bytes_delta;
+		txb_sum += s->tx_bytes_delta;
+		rxp_sum += s->rx_packets_delta;
+		txp_sum += s->tx_packets_delta;
+		whoosh_sum += s->whoosh_error_ns;
+
+		rxb_max = (rxb_max > s->rx_bytes_delta) ? rxb_max : s->rx_bytes_delta;
+		txb_max = (txb_max > s->tx_bytes_delta) ? txb_max : s->tx_bytes_delta;
+		rxp_max = (rxp_max > s->rx_packets_delta) ? rxp_max : s->rx_packets_delta;
+		txp_max = (txp_max > s->tx_packets_delta) ? txp_max : s->tx_packets_delta;
+		whoosh_max = (whoosh_max > s->whoosh_error_ns) ? whoosh_max : s->whoosh_error_ns;
+		rxb_min = (rxb_min < s->rx_bytes_delta) ? rxb_min : s->rx_bytes_delta;
+		txb_min = (txb_min < s->tx_bytes_delta) ? txb_min : s->tx_bytes_delta;
+		rxp_min = (rxp_min < s->rx_packets_delta) ? rxp_min : s->rx_packets_delta;
+		txp_min = (txp_min < s->tx_packets_delta) ? txp_min : s->tx_packets_delta;
+
+	}
+	m->min_rx_bytes = rxb_min;
+	m->max_rx_bytes = rxb_max;
+	m->mean_rx_bytes = rxb_sum / SAMPLES_PER_FRAME;
+
+	m->min_tx_bytes = txb_min;
+	m->max_tx_bytes = txb_max;
+	m->mean_tx_bytes = txb_sum / SAMPLES_PER_FRAME;
+
+	m->min_rx_packets = rxp_min;
+	m->max_rx_packets = rxp_max;
+	m->mean_rx_packets = rxp_sum / SAMPLES_PER_FRAME;
+
+	m->min_tx_packets = txp_min;
+	m->max_tx_packets = txp_max;
+	m->mean_tx_packets = txp_sum / SAMPLES_PER_FRAME;
+
+	m->max_whoosh = whoosh_max;
+	m->mean_whoosh = whoosh_sum / SAMPLES_PER_FRAME;
+
+	sprintf(m->iface, "%s", ifs->iface);
+	m->interval_ns = 1E7;
 }
 
 inline static int message_producer(struct mq_stats_msg *m, void *data)
 {
 	struct iface_stats *ifs = (struct iface_stats *)data;
-	memcpy(m, ifs, sizeof(struct mq_stats_msg));
+	stats_filter(ifs, m);
 	return 0;
 }
 
@@ -79,9 +127,6 @@ void stats_filter_and_write()
 
 	pthread_mutex_lock(&unsent_frame_count_mutex);
 	if (g_unsent_frame_count > 0) {
-
-		stats_filter(g_raw_samples);
-
 		err =
 		    mq_stats_produce(message_producer, g_raw_samples, &cb_err);
 		if (!err) {
@@ -168,6 +213,8 @@ static void *run(void *data)
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
 	for (;;) {
+		stats_filter_and_write();
+
 		deadline.tv_nsec += 1E6;
 
 		/* Normalize the time to account for the second boundary */

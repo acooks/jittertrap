@@ -14,9 +14,6 @@
 #define MESSAGES_PER_SECOND 50
 
 #define USECS_PER_SECOND 1000000
-#define FILTERED_SAMPLES_PER_MSG                                               \
-	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
-
 #define SAMPLES_PER_FRAME                                                      \
 	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
 
@@ -36,11 +33,6 @@ static_assert(
     " must equal USECS_PER_SECOND. "
     " (int)" xstr(SAMPLES_PER_FRAME *SAMPLE_PERIOD_US
                       *MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND));
-
-/* raw samples must be an integer multiple of filtered samples */
-static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
-              "Decimation requires SAMPLES_PER_FRAME to be an integer "
-              "multiple of FILTERED_SAMPLES_PER_MSG");
 
 /* for synchronization of netlink cache operations. */
 pthread_mutex_t nl_sock_mutex;

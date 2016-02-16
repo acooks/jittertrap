@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include <jansson.h>
+#include "jittertrap.h"
 #include "jt_server_message_handler.h"
 
 #include "iface_stats.h"
@@ -93,24 +94,20 @@ static void get_first_iface(char *iface)
 }
 
 static void
-iface_stats_to_msg_stats(struct iface_stats *if_s, struct jt_msg_stats *msg_s)
+mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s, struct jt_msg_stats *msg_s)
 {
-	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", if_s->iface);
+	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", mq_s->iface);
 
-	msg_s->sample_count = FILTERED_SAMPLES_PER_MSG;
-	msg_s->samples =
-	    malloc(FILTERED_SAMPLES_PER_MSG * sizeof(struct stats_sample));
-	assert(msg_s->samples);
+	msg_s->mean_rx_bytes = mq_s->mean_rx_bytes;
+	msg_s->mean_tx_bytes = mq_s->mean_tx_bytes;
+	msg_s->mean_rx_packets = mq_s->mean_rx_packets;
+	msg_s->mean_tx_packets = mq_s->mean_tx_packets;
 
-	for (int i = 0; i < FILTERED_SAMPLES_PER_MSG; i++) {
-		msg_s->samples[i].rx = if_s->samples[i].rx_bytes_delta;
-		msg_s->samples[i].tx = if_s->samples[i].tx_bytes_delta;
-		msg_s->samples[i].rxPkt = if_s->samples[i].rx_packets_delta;
-		msg_s->samples[i].txPkt = if_s->samples[i].tx_packets_delta;
-	}
-	msg_s->err.mean = if_s->whoosh_err_mean;
-	msg_s->err.max = if_s->whoosh_err_max;
-	msg_s->err.sd = if_s->whoosh_err_sd;
+	msg_s->mean_whoosh = mq_s->mean_whoosh;
+	msg_s->max_whoosh = mq_s->max_whoosh;
+	msg_s->sd_whoosh = mq_s->sd_whoosh;
+
+	msg_s->interval_ns = mq_s->interval_ns;
 }
 
 inline static int message_producer(struct mq_ws_msg *m, void *data)
@@ -223,7 +220,7 @@ int jt_srv_send_sample_period()
 static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
 	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
-	iface_stats_to_msg_stats((struct iface_stats *)m, s);
+	mq_stats_msg_to_jt_msg_stats(m, s);
 	if (0 == jt_srv_send(JT_MSG_STATS_V1, s)) {
 		return 0;
 	}

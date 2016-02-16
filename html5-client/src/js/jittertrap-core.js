@@ -233,6 +233,29 @@ JT = (function (my) {
   };
 
   var updateFilteredSeries = function (series) {
+    /* NB: float vs integer is important here! */
+    var decimationFactor = Math.floor(my.charts.getChartPeriod());
+    var fseriesLength = Math.floor(series.data.size / decimationFactor);
+
+    // how many filtered data points have been collected already?
+    var filteredDataCount = series.filteredData.length;
+
+    // if there isn't enough data for one filtered sample, return.
+    if (fseriesLength === 0) {
+      return;
+    }
+
+    // if the series is complete, expire the first value.
+    if (filteredDataCount === fseriesLength) {
+      series.filteredData.shift();
+      series.packetGapData.shift();
+      filteredDataCount--;
+    }
+
+    series.filteredData.push(series.data.get(series.data.size - 1));
+  };
+
+  var updateFilteredSeries_old = function (series) {
 
     /* NB: float vs integer is important here! */
     var decimationFactor = Math.floor(my.charts.getChartPeriod());
@@ -318,12 +341,10 @@ JT = (function (my) {
     var visibleSeries = $("#chopts_series option:selected").val();
     var selectedSeries = sBin[visibleSeries];
 
-    var len = stats.length;
-    for (var i = 0; i < len; i++) {
-      updateData(stats[i], selectedSeries);
-      xVal++;
-      xVal = xVal % my.core.sampleCount();
-    }
+    updateData(stats, selectedSeries);
+    xVal++;
+    xVal = xVal % my.core.sampleCount();
+
   };
 
   return my;

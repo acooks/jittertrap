@@ -7,34 +7,36 @@ int jt_stats_printer(void *data);
 int jt_stats_free(void *data);
 const char *jt_stats_test_msg_get();
 
-struct stats_sample
-{
-	int rx;
-	int tx;
-	int rxPkt;
-	int txPkt;
-};
-
-struct stats_err
-{
-	int mean;
-	int max;
-	int sd;
-};
-
-struct timestamp
-{
-	long tv_sec;
-	long tv_nsec;
-};
-
 struct jt_msg_stats
 {
+	struct timespec timestamp;
+	uint64_t interval_ns;
+
+	uint64_t min_rx_bytes;
+	uint64_t max_rx_bytes;
+	uint64_t mean_rx_bytes;
+	uint32_t sd_rx_bytes;
+
+	uint64_t min_tx_bytes;
+	uint64_t max_tx_bytes;
+	uint64_t mean_tx_bytes;
+	uint32_t sd_tx_bytes;
+
+	uint32_t min_rx_packets;
+	uint32_t max_rx_packets;
+	uint32_t mean_rx_packets;
+	uint32_t sd_rx_packets;
+
+	uint32_t min_tx_packets;
+	uint32_t max_tx_packets;
+	uint32_t mean_tx_packets;
+	uint32_t sd_tx_packets;
+
+	uint32_t max_whoosh;
+	uint32_t mean_whoosh;
+	uint32_t sd_whoosh;
+
 	char iface[MAX_IFACE_LEN];
-	struct stats_err err;
-	struct timestamp mts;
-	int sample_count;
-	struct stats_sample *samples;
 };
 
 #endif
