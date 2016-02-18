@@ -23,6 +23,7 @@
 #include "sampling_thread.h"
 
 #include "mq_msg_stats.h"
+#include "slist.h"
 
 static pthread_mutex_t unsent_frame_count_mutex;
 
@@ -31,109 +32,279 @@ struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
 char g_selected_iface[MAX_IFACE_LEN];
 
+struct slist *sample_list;
+int g_sample_count;
+
 /* local prototypes */
 static void *run(void *data);
 
-inline static void calc_whoosh_error(struct iface_stats *stats)
+#define MAX_LIST_LEN 200
+#define DECIMATIONS_COUNT 6
+int decs[DECIMATIONS_COUNT] = { 5, 10, 20, 50, 100, 200 };
+
+/* TODO: check all integer divisions and consider using FP */
+
+struct minmaxmean {
+	uint32_t min;
+	uint32_t max;
+	uint32_t mean;
+};
+
+enum {
+	RX = 0,
+	TX = 1
+};
+
+inline static struct minmaxmean
+calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 {
-	long double variance;
-	double max = 0;
-	uint64_t sum = 0;
-	uint64_t sum_squares = 0;
+	struct slist *ln;
+	int32_t size = slist_size(list);
+	int32_t gap_lengths[MAX_LIST_LEN] = { 0 };
+	int32_t gap_idx = 0;
+	int32_t min_gap = MAX_LIST_LEN;
+	int32_t max_gap = 0;
+	int32_t sum_gap = 0;
+	int32_t mean_gap = 0;
 
-	for (int i = 0; i < SAMPLES_PER_FRAME; i++) {
-		struct sample s = stats->samples[i];
-		max = (s.whoosh_error_ns > max) ? s.whoosh_error_ns : max;
-		sum += s.whoosh_error_ns;
-		sum_squares += (s.whoosh_error_ns * s.whoosh_error_ns);
-	}
-	stats->whoosh_err_max = max;
-	stats->whoosh_err_mean = sum / SAMPLES_PER_FRAME;
-	variance = (long double)sum_squares / (double)SAMPLES_PER_FRAME;
-	stats->whoosh_err_sd = (uint64_t)ceill(sqrtl(variance));
+	assert(size >= decim8);
+	assert(decim8 > 0);
 
-	if ((max >= 500 * SAMPLE_PERIOD_US) ||
-	    (stats->whoosh_err_sd >= 200 * SAMPLE_PERIOD_US)) {
-		fprintf(stderr, "sampling jitter! mean: %10" PRId64
-		                " max: %10" PRId64 " sd: %10" PRId64 "\n",
-		        stats->whoosh_err_mean, stats->whoosh_err_max,
-		        stats->whoosh_err_sd);
+	ln = slist_idx(list, size - decim8);
+	for (int i = decim8; i > 0; i--) {
+		struct sample *s = ln->s;
+		if (((RX == rxtx) && (0 == s->rx_packets_delta))
+		   || ((TX == rxtx) && (0 == s->tx_packets_delta))) {
+			gap_lengths[gap_idx]++;
+			max_gap = (max_gap > gap_lengths[gap_idx])
+			              ? max_gap
+			              : gap_lengths[gap_idx];
+		} else {
+			gap_idx++;
+		}
+		ln = ln->next;
 	}
+
+	assert(gap_idx <= decim8);
+	assert(max_gap <= decim8);
+
+	/* gap_lengths[] may contain 0 values for unused array slots, so
+	 * look for shortest non-zero gap. */
+	for (int i = 0; i < decim8; i++) {
+		sum_gap += gap_lengths[i];
+		if ((gap_lengths[i] > 0) && (min_gap > gap_lengths[i])) {
+			min_gap = gap_lengths[i];
+		}
+	}
+	assert(sum_gap <= decim8);
+
+        /* gap is the last index into the gap_lengths, so +1 for count. */
+	mean_gap = sum_gap / (gap_idx + 1);
+
+	/* if no non-zero gaps were found, then they must all be zero. */
+	if (min_gap > max_gap) {
+		min_gap = 0;
+	}
+
+	assert(min_gap <= decim8);
+
+	return (struct minmaxmean){min_gap, max_gap, mean_gap};
 }
 
-inline static void stats_filter(struct iface_stats *ifs, struct mq_stats_msg *m)
+inline static int
+calc_packet_gap(struct slist *list, struct mq_stats_msg *m, int decim8)
+{
+	struct minmaxmean rx, tx;
+	rx = calc_min_max_mean_gap(list, decim8, RX);
+	m->max_rx_packet_gap = rx.max;
+	m->min_rx_packet_gap = rx.min;
+	m->mean_rx_packet_gap = rx.mean;
+
+	tx = calc_min_max_mean_gap(list, decim8, TX);
+	m->max_tx_packet_gap = tx.max;
+	m->min_tx_packet_gap = tx.min;
+	m->mean_tx_packet_gap = tx.mean;
+
+	return 0;
+}
+
+
+inline static int
+calc_whoosh_err(struct slist *list, struct mq_stats_msg *m, int decim8)
+{
+	uint32_t whoosh_sum = 0, whoosh_max = 0, whoosh_sum2 = 0;
+	struct slist *ln;
+	int size = slist_size(list);
+
+	ln = slist_idx(list, size - decim8);
+	for (int i = decim8; i > 0; i--) {
+		struct sample *s = ln->s;
+		whoosh_sum += s->whoosh_error_ns;
+		whoosh_sum2 += (s->whoosh_error_ns * s->whoosh_error_ns);
+		whoosh_max = (whoosh_max > s->whoosh_error_ns)
+		                 ? whoosh_max
+		                 : s->whoosh_error_ns;
+		ln = ln->next;
+	}
+
+	m->max_whoosh = whoosh_max;
+	m->mean_whoosh = whoosh_sum / decim8;
+
+	double variance = (long double)whoosh_sum2 / (double)decim8;
+	m->sd_whoosh = (uint64_t)ceill(sqrtl(variance));
+
+	if ((whoosh_max >= 0.1 * m->interval_ns) ||
+	    (m->sd_whoosh >= m->interval_ns)) {
+		fprintf(stderr, "sampling jitter! mean: %10" PRId32
+		                " max: %10" PRId32 " sd: %10" PRId32 "\n",
+		        m->mean_whoosh, m->max_whoosh, m->sd_whoosh);
+	}
+
+	return 0;
+}
+
+inline static int
+calc_txrx_minmaxmean(struct slist *list, struct mq_stats_msg *m, int decim8)
 {
 	uint64_t rxb_sum = 0, txb_sum = 0, rxp_sum = 0, txp_sum = 0;
 	uint64_t rxb_max = 0, txb_max = 0;
 	uint32_t rxp_max = 0, txp_max = 0;
 	uint64_t rxb_min = UINT64_MAX, txb_min = UINT64_MAX;
 	uint32_t rxp_min = UINT32_MAX, txp_min = UINT32_MAX;
-	uint32_t whoosh_sum = 0, whoosh_max = 0, whoosh_sum2 = 0;
 
-	//calc_whoosh_error(ifs);
+	struct slist *ln;
+	int size = slist_size(list);
 
-	for (int i = 0; i < SAMPLES_PER_FRAME; i++) {
-		struct sample *s = &(ifs->samples[i]);
+	ln = slist_idx(list, size - decim8);
+	for (int i = decim8; i > 0; i--) {
+		struct sample *s = ln->s;
 		rxb_sum += s->rx_bytes_delta;
 		txb_sum += s->tx_bytes_delta;
 		rxp_sum += s->rx_packets_delta;
 		txp_sum += s->tx_packets_delta;
-		whoosh_sum += s->whoosh_error_ns;
 
-		rxb_max = (rxb_max > s->rx_bytes_delta) ? rxb_max : s->rx_bytes_delta;
-		txb_max = (txb_max > s->tx_bytes_delta) ? txb_max : s->tx_bytes_delta;
-		rxp_max = (rxp_max > s->rx_packets_delta) ? rxp_max : s->rx_packets_delta;
-		txp_max = (txp_max > s->tx_packets_delta) ? txp_max : s->tx_packets_delta;
-		whoosh_max = (whoosh_max > s->whoosh_error_ns) ? whoosh_max : s->whoosh_error_ns;
-		rxb_min = (rxb_min < s->rx_bytes_delta) ? rxb_min : s->rx_bytes_delta;
-		txb_min = (txb_min < s->tx_bytes_delta) ? txb_min : s->tx_bytes_delta;
-		rxp_min = (rxp_min < s->rx_packets_delta) ? rxp_min : s->rx_packets_delta;
-		txp_min = (txp_min < s->tx_packets_delta) ? txp_min : s->tx_packets_delta;
+		rxb_max =
+		    (rxb_max > s->rx_bytes_delta) ? rxb_max : s->rx_bytes_delta;
+		txb_max =
+		    (txb_max > s->tx_bytes_delta) ? txb_max : s->tx_bytes_delta;
+		rxp_max = (rxp_max > s->rx_packets_delta) ? rxp_max
+		                                          : s->rx_packets_delta;
+		txp_max = (txp_max > s->tx_packets_delta) ? txp_max
+		                                          : s->tx_packets_delta;
+		rxb_min =
+		    (rxb_min < s->rx_bytes_delta) ? rxb_min : s->rx_bytes_delta;
+		txb_min =
+		    (txb_min < s->tx_bytes_delta) ? txb_min : s->tx_bytes_delta;
+		rxp_min = (rxp_min < s->rx_packets_delta) ? rxp_min
+		                                          : s->rx_packets_delta;
+		txp_min = (txp_min < s->tx_packets_delta) ? txp_min
+		                                          : s->tx_packets_delta;
 
+		ln = ln->next;
 	}
+
 	m->min_rx_bytes = rxb_min;
 	m->max_rx_bytes = rxb_max;
-	m->mean_rx_bytes = rxb_sum / SAMPLES_PER_FRAME;
+	m->mean_rx_bytes = rxb_sum / decim8;
 
 	m->min_tx_bytes = txb_min;
 	m->max_tx_bytes = txb_max;
-	m->mean_tx_bytes = txb_sum / SAMPLES_PER_FRAME;
+	m->mean_tx_bytes = txb_sum / decim8;
 
 	m->min_rx_packets = rxp_min;
 	m->max_rx_packets = rxp_max;
-	m->mean_rx_packets = rxp_sum / SAMPLES_PER_FRAME;
+	m->mean_rx_packets = 100 * rxp_sum / decim8;
 
 	m->min_tx_packets = txp_min;
 	m->max_tx_packets = txp_max;
-	m->mean_tx_packets = txp_sum / SAMPLES_PER_FRAME;
+	m->mean_tx_packets = 100* txp_sum / decim8;
 
-	m->max_whoosh = whoosh_max;
-	m->mean_whoosh = whoosh_sum / SAMPLES_PER_FRAME;
+	return 0;
+}
 
-	sprintf(m->iface, "%s", ifs->iface);
-	m->interval_ns = 1E7;
+inline static int
+stats_filter(struct slist *list, struct mq_stats_msg *m, int decim8)
+{
+	int size = slist_size(list);
+	int smod = size % decim8;
+
+	if (!size || smod) {
+		/* */
+		return 1;
+	}
+
+	m->interval_ns = 1E6 * decim8;
+
+	/* FIXME - get this from mq_stats_msg ? */
+	sprintf(m->iface, "%s", g_selected_iface);
+
+	calc_txrx_minmaxmean(list, m, decim8);
+	calc_whoosh_err(list, m, decim8);
+	calc_packet_gap(list, m, decim8);
+
+
+	return 0;
 }
 
 inline static int message_producer(struct mq_stats_msg *m, void *data)
 {
-	struct iface_stats *ifs = (struct iface_stats *)data;
-	stats_filter(ifs, m);
-	return 0;
+	int *decimation_factor = (int *)data;
+	return stats_filter(sample_list, m, *decimation_factor);
 }
 
-void stats_filter_and_write()
+void send_decimations()
 {
-	int cb_err, err = 0;
+	int cb_err;
 
-	pthread_mutex_lock(&unsent_frame_count_mutex);
-	if (g_unsent_frame_count > 0) {
-		err =
-		    mq_stats_produce(message_producer, g_raw_samples, &cb_err);
-		if (!err) {
-			g_unsent_frame_count--;
+	assert(SAMPLES_PER_FRAME <= decs[0]);
+
+	for (int i = 0; i < DECIMATIONS_COUNT; i++) {
+
+		if (0 == g_sample_count % decs[i]) {
+			mq_stats_produce(message_producer, &decs[i], &cb_err);
 		}
 	}
+}
+
+
+static int frames_to_sample_list()
+{
+	int new_samples = 0;
+
+	pthread_mutex_lock(&unsent_frame_count_mutex);
+	while (g_unsent_frame_count > 0) {
+		for (int i = 0; i < SAMPLES_PER_FRAME; i++) {
+			struct sample *s = malloc(sizeof(struct sample));
+			assert(s);
+			memcpy(s, &(g_raw_samples->samples[i]),
+			       sizeof(struct sample));
+			struct slist *ln = malloc(sizeof(struct slist));
+			assert(ln);
+			ln->s = s;
+			slist_push(sample_list, ln);
+			g_sample_count++;
+			new_samples++;
+		}
+		g_unsent_frame_count--;
+	}
 	pthread_mutex_unlock(&unsent_frame_count_mutex);
+
+	int overflow = (slist_size(sample_list) > MAX_LIST_LEN)
+	                   ? slist_size(sample_list) - MAX_LIST_LEN
+	                   : 0;
+
+	while (overflow--) {
+		struct slist *ln = slist_pop(sample_list);
+		assert(ln);
+		assert(ln->s);
+		free(ln->s);
+		free(ln);
+	}
+
+	if (g_sample_count > MAX_LIST_LEN) {
+		g_sample_count -= MAX_LIST_LEN;
+	}
+	return new_samples;
 }
 
 /* callback for the sampling thread. */
@@ -148,6 +319,10 @@ void sample_thread_event_handler(struct iface_stats *raw_samples)
 int compute_thread_init(void)
 {
 	int err;
+
+	sample_list = slist_new();
+	assert(sample_list);
+
 	assert(!compute_thread);
 	err = pthread_create(&compute_thread, NULL, run, NULL);
 	assert(!err);
@@ -212,8 +387,11 @@ static void *run(void *data)
 
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
+
 	for (;;) {
-		stats_filter_and_write();
+		if (0 < frames_to_sample_list()) {
+			send_decimations();
+		}
 
 		deadline.tv_nsec += 1E6;
 

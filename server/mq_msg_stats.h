@@ -4,8 +4,8 @@
 #define NS(name) PRIMITIVE_CAT(mq_stats_, name)
 #define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 
-#define MAX_CONSUMERS 32
-#define MAX_Q_DEPTH 32
+#define MAX_CONSUMERS 1
+#define MAX_Q_DEPTH 8
 
 struct NS(msg) {
 	struct timespec timestamp;
@@ -34,6 +34,16 @@ struct NS(msg) {
 	uint32_t max_whoosh;
 	uint32_t mean_whoosh;
 	uint32_t sd_whoosh;
+
+	uint32_t min_rx_packet_gap;
+	uint32_t max_rx_packet_gap;
+	uint32_t mean_rx_packet_gap;
+	uint32_t sd_rx_packet_gap;
+
+	uint32_t min_tx_packet_gap;
+	uint32_t max_tx_packet_gap;
+	uint32_t mean_tx_packet_gap;
+	uint32_t sd_tx_packet_gap;
 
 	char iface[MAX_IFACE_LEN];
 };

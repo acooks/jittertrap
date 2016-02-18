@@ -11,12 +11,15 @@
 #include "jt_messages.h"
 #include "jt_msg_stats.h"
 
+/* FIXME: incomplete. needs min, max, mean for bytes, packets, pgaps */
 static const char *jt_stats_test_msg =
     "{\"msg\":\"stats\", \"p\":{\"iface\": \"em1\","
     "\"t\": {\"tv_sec\":0, \"tv_nsec\":0}, "
     "\"ival_ns\": 0, "
     "\"s\": "
-    "{\"rx\":0,\"tx\":0,\"rxP\":0,\"txP\":0}, "
+    "{\"rx\":0,\"tx\":0,\"rxP\":0,\"txP\":0, "
+    "\"min_rx_pgap\":0,\"max_rx_pgap\":0,\"mean_rx_pgap\":0, "
+    "\"min_tx_pgap\":0,\"max_tx_pgap\":0,\"mean_tx_pgap\":0}, "
     "\"whoosh_err_mean\": 42809, \"whoosh_err_max\": 54759, \"whoosh_err_sd\": "
     "43249}}";
 
@@ -98,6 +101,42 @@ int jt_stats_unpacker(json_t *root, void **data)
 	}
 	stats->mean_tx_packets = json_integer_value(t);
 
+	t = json_object_get(json_stats, "min_rx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->min_rx_packet_gap = json_integer_value(t);
+
+	t = json_object_get(json_stats, "max_rx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->max_rx_packet_gap = json_integer_value(t);
+
+	t = json_object_get(json_stats, "mean_rx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->mean_rx_packet_gap = json_integer_value(t);
+
+	t = json_object_get(json_stats, "min_tx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->min_tx_packet_gap = json_integer_value(t);
+
+	t = json_object_get(json_stats, "max_tx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->max_tx_packet_gap = json_integer_value(t);
+
+	t = json_object_get(json_stats, "mean_tx_pgap");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	stats->mean_tx_packet_gap = json_integer_value(t);
+
 	/* get the stats sampling time error */
 	t = json_object_get(params, "whoosh_err_mean");
 	if (!json_is_integer(t)) {
@@ -160,6 +199,8 @@ int jt_stats_packer(void *data, char **out)
 	json_t *jmts = json_object();
 
 	json_object_set_new(params, "iface", json_string(stats_msg->iface));
+	json_object_set_new(params, "ival_ns",
+	                    json_integer(stats_msg->interval_ns));
 
 	json_object_set_new(params, "whoosh_err_mean",
 	                    json_integer(stats_msg->mean_whoosh));
@@ -177,13 +218,24 @@ int jt_stats_packer(void *data, char **out)
 	json_object_set_new(stats, "txP",
 	                    json_integer(stats_msg->mean_tx_packets));
 
+	json_object_set_new(stats, "min_rx_pgap",
+	                    json_integer(stats_msg->min_rx_packet_gap));
+	json_object_set_new(stats, "max_rx_pgap",
+	                    json_integer(stats_msg->max_rx_packet_gap));
+	json_object_set_new(stats, "mean_rx_pgap",
+	                    json_integer(stats_msg->mean_rx_packet_gap));
+
+	json_object_set_new(stats, "min_tx_pgap",
+	                    json_integer(stats_msg->min_tx_packet_gap));
+	json_object_set_new(stats, "max_tx_pgap",
+	                    json_integer(stats_msg->max_tx_packet_gap));
+	json_object_set_new(stats, "mean_tx_pgap",
+	                    json_integer(stats_msg->mean_tx_packet_gap));
+
+	json_object_set(params, "s", stats);
 	json_object_set_new(t, "msg",
 	                    json_string(jt_messages[JT_MSG_STATS_V1].key));
-	json_object_set(params, "s", stats);
 	json_object_set(t, "p", params);
-
-	json_object_set_new(params, "ival_ns",
-	                    json_integer(stats_msg->interval_ns));
 
 	/* timestamp the new message */
 	clock_gettime(CLOCK_MONOTONIC, &mts);
@@ -192,6 +244,8 @@ int jt_stats_packer(void *data, char **out)
 	json_object_set_new(params, "t", jmts);
 
 	*out = json_dumps(t, 0);
+	json_object_clear(stats);
+	json_decref(stats);
 	json_object_clear(params);
 	json_decref(params);
 	json_object_clear(t);

@@ -93,8 +93,8 @@ static void get_first_iface(char *iface)
 	free(ifaces);
 }
 
-static void
-mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s, struct jt_msg_stats *msg_s)
+static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
+                                         struct jt_msg_stats *msg_s)
 {
 	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", mq_s->iface);
 
@@ -106,6 +106,14 @@ mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s, struct jt_msg_stats *msg
 	msg_s->mean_whoosh = mq_s->mean_whoosh;
 	msg_s->max_whoosh = mq_s->max_whoosh;
 	msg_s->sd_whoosh = mq_s->sd_whoosh;
+
+	msg_s->min_rx_packet_gap = mq_s->min_rx_packet_gap;
+	msg_s->max_rx_packet_gap = mq_s->max_rx_packet_gap;
+	msg_s->mean_rx_packet_gap = mq_s->mean_rx_packet_gap;
+
+	msg_s->min_tx_packet_gap = mq_s->min_tx_packet_gap;
+	msg_s->max_tx_packet_gap = mq_s->max_tx_packet_gap;
+	msg_s->mean_tx_packet_gap = mq_s->mean_tx_packet_gap;
 
 	msg_s->interval_ns = mq_s->interval_ns;
 }
@@ -155,7 +163,9 @@ int jt_srv_send_netem_params()
 	m->loss = p.loss;
 	snprintf(m->iface, MAX_IFACE_LEN, "%s", p.iface);
 
-	return jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);
+	int err = jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);
+	free(m);
+	return err;
 }
 
 int jt_srv_send_select_iface()
@@ -207,7 +217,9 @@ int jt_srv_send_iface_list()
 	}
 
 	free(ifaces);
-	return jt_srv_send(JT_MSG_IFACE_LIST_V1, il);
+	int err = jt_srv_send(JT_MSG_IFACE_LIST_V1, il);
+	jt_messages[JT_MSG_IFACE_LIST_V1].free(il);
+	return err;
 }
 
 int jt_srv_send_sample_period()

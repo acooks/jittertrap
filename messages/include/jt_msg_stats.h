@@ -36,6 +36,16 @@ struct jt_msg_stats
 	uint32_t mean_whoosh;
 	uint32_t sd_whoosh;
 
+	uint32_t min_rx_packet_gap;
+	uint32_t max_rx_packet_gap;
+	uint32_t mean_rx_packet_gap;
+	uint32_t sd_rx_packet_gap;
+
+	uint32_t min_tx_packet_gap;
+	uint32_t max_tx_packet_gap;
+	uint32_t mean_tx_packet_gap;
+	uint32_t sd_tx_packet_gap;
+
 	char iface[MAX_IFACE_LEN];
 };
 

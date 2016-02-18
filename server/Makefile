@@ -29,6 +29,7 @@ SOURCES = \
  compute_thread.c \
  sample_buf.c \
  netem.c \
+ slist.c \
 
 
 HEADERS = \
@@ -45,6 +46,7 @@ HEADERS = \
  sampling_thread.h \
  compute_thread.h \
  sample_buf.h \
+ slist.h \
 
 
 MESSAGEHEADERS = \

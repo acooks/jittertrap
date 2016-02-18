@@ -11,7 +11,7 @@
 
 /* FIXME: find out where this is assumed to be 50 and where the
  * time warp happens when this magic value is changed. */
-#define MESSAGES_PER_SECOND 50
+#define MESSAGES_PER_SECOND 200
 
 #define USECS_PER_SECOND 1000000
 #define SAMPLES_PER_FRAME                                                      \
