@@ -83,7 +83,7 @@ JT = (function (my) {
 
   var resizeCBuf = function(series, len) {
 
-    if (len ==  sampleCount) {
+    if (len === sampleCount) {
       return;
     }
 
@@ -180,7 +180,7 @@ JT = (function (my) {
 
     /* mean of a mean - yuk! */
     var mean = 0;
-    for (var i in pgSorted) { mean += pgSorted[i].mean; }
+    for (i in pgSorted) { mean += pgSorted[i].mean; }
     series.stats.meanPG = mean / pgSorted.length;
   };
 
@@ -204,9 +204,7 @@ JT = (function (my) {
       JT.trapModule.checkTriggers(series.name, series.stats);
 
       /* update the charts data */
-      if ((series.name === selectedSeries.name) &&
-         (my.charts.getChartPeriod() == timeScaleTable[timeScale]))
-      {
+      if (series.name === selectedSeries.name) {
         updateMainChartData(series.samples[timeScale],
                             series.rateFormatter,
                             JT.charts.getMainChartRef());
