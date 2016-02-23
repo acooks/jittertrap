@@ -128,47 +128,6 @@ JT = (function (my) {
     return (a - b)|0;
   };
 
-
-  /* Takes an Array and counts the consecutive 0 elements.
-   * Returns an object with max and mean counts.
-   */
-  var old_packetGap = function (data) {
-    if (data.size === 0) {
-      return;
-    }
-    var maxGap = 0;
-    var meanGap = 0;
-    var minGap = 99;
-    var runLengths = [ 0 ];
-    var i, j = 0;
-
-    for (i = data.size - 1; i >= 0 ; i--) {
-      if (data.get(i) === 0) {
-        runLengths[j]++;
-        maxGap = (maxGap > runLengths[j]) ? maxGap : runLengths[j];
-      } else if (runLengths[j] > 0) {
-        meanGap += runLengths[j];
-        j++;
-        runLengths[j] = 0;
-      }
-    }
-    maxGap *= (my.core.samplePeriod() / 1000);
-
-    if (runLengths.length === 1) {
-      meanGap = runLengths[0];
-    } else {
-      meanGap /= runLengths.length;
-    }
-    meanGap *= (my.core.samplePeriod() / 1000);
-
-
-    var s = runLengths.slice(0);
-    s.sort(numSort);
-    minGap = s[0] * (my.core.samplePeriod() / 1000);
-
-    return { max: maxGap, mean: meanGap, min: minGap } ;
-  };
-
   var updateBasicStatsChartData = function (stats, chartSeries) {
     if (chartSeries[0]) {
       chartSeries[0].y = stats.min;
@@ -200,13 +159,8 @@ JT = (function (my) {
     }
   };
 
-  var updateStats = function (series) {
-
-    if (! series.samples["10ms"] || series.samples["10ms"].size === 0) {
-      return;
-    }
-
-    var sortedData = series.samples["10ms"].slice(0);
+  var updateStats = function (series, timeScale) {
+    var sortedData = series.samples[timeScale].slice(0);
     sortedData.sort(numSort);
 
     series.stats.max = sortedData[sortedData.length-1];
@@ -220,6 +174,14 @@ JT = (function (my) {
     }
     series.stats.mean = sum / sortedData.length;
 
+    var pgSorted = newPacketGapData[timeScale].slice(0);
+    pgSorted.sort(function(a,b) { return (a.max - b.max)|0; });
+    series.stats.maxPG = 1.0 * pgSorted[pgSorted.length - 1].max;
+
+    /* mean of a mean - yuk! */
+    var mean = 0;
+    for (var i in pgSorted) { mean += pgSorted[i].mean; }
+    series.stats.meanPG = mean / pgSorted.length;
   };
 
   var updateMainChartData = function(samples, formatter, chartSeries) {
@@ -236,31 +198,25 @@ JT = (function (my) {
   var updateSeries = function (series, yVal, selectedSeries, timeScale) {
     series.samples[timeScale].push(yVal);
 
-    if (series.samples[timeScale].length > 500) {
-      series.samples[timeScale].shift();
+    if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
+      updateStats(series, timeScale);
+      JT.measurementsModule.updateSeries(series.name, series.stats);
+      JT.trapModule.checkTriggers(series.name, series.stats);
+
+      /* update the charts data */
+      if ((series.name === selectedSeries.name) &&
+         (my.charts.getChartPeriod() == timeScaleTable[timeScale]))
+      {
+        updateMainChartData(series.samples[timeScale],
+                            series.rateFormatter,
+                            JT.charts.getMainChartRef());
+
+        updatePacketGapChartData(newPacketGapData[timeScale],
+                                 JT.charts.getPacketGapMeanRef(),
+                                 JT.charts.getPacketGapMinMaxRef());
+      }
     }
 
-    if (series.samples[timeScale].size < 10) {
-      return;
-    }
-
-    updateStats(series);
-
-    JT.measurementsModule.updateSeries(series.name, series.stats);
-    JT.trapModule.checkTriggers(series.name, series.stats);
-
-    /* update the charts data */
-    if ((series === selectedSeries) &&
-       (my.charts.getChartPeriod() == timeScaleTable[timeScale]))
-    {
-      updateMainChartData(series.samples[timeScale],
-                          series.rateFormatter,
-                          JT.charts.getMainChartRef());
-
-      updatePacketGapChartData(newPacketGapData[timeScale],
-                               JT.charts.getPacketGapMeanRef(),
-                               JT.charts.getPacketGapMinMaxRef());
-    }
   };
 
   var updateData = function (d, sSeries, timeScale) {
