@@ -9,10 +9,9 @@ JT = (function (my) {
   /* module namespace */
   my.core = {};
 
-  var xVal = 0; //TODO: rename to indicate reductionFactor purpose.
   var samplePeriod = JT.coreconfig.samplePeriod;
 
-  /* raw data sample period; microseconds; fixed. */
+  /* data sample period; microseconds; fixed. */
   my.core.samplePeriod = function(sp) {
     if (sp) {
       console.log("sample period set to " + sp + " microseconds");
@@ -21,16 +20,10 @@ JT = (function (my) {
     return samplePeriod;
   };
 
-  /* scaling factor for number of raw data points */
-  var dataLengthMultiplier = Math.floor(samplePeriod * 0.5);
+  /* number of data samples. */
+  var sampleCount = 200;
 
-  /* number of raw data samples. */
-  var sampleCount = dataLengthMultiplier * 50;
-
-  my.core.sampleCount = function (plotPeriod) {
-    if (plotPeriod) {
-      sampleCount = Math.floor(dataLengthMultiplier * plotPeriod);
-    }
+  my.core.sampleCount = function () {
     return sampleCount;
   };
 
@@ -44,6 +37,8 @@ JT = (function (my) {
     return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
   };
 
+  var timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200};
+
   /* a prototype object to encapsulate timeseries data. */
   var Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
@@ -51,11 +46,14 @@ JT = (function (my) {
     this.ylabel = ylabel;
     this.rateFormatter = rateFormatter;
     this.xlabel = "Time (ms)";
-    this.data = []; // raw samples
-    this.filteredData = []; // filtered & decimated to chartingPeriod
-    this.packetGapData = [];
     this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
-  };
+    this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[]};
+    this.pgaps = {};
+    for (var ts in timeScaleTable) {
+      this.pgaps[ts] = new CBuffer(200);
+    }
+ };
+
 
   var sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
@@ -84,15 +82,20 @@ JT = (function (my) {
   };
 
   var resizeCBuf = function(series, len) {
-    series.filteredData = [];
-    series.packetGapData = [];
-    var b = new CBuffer(len);
 
-    var l = (len < series.data.size) ? len : series.data.size;
-    while (l--) {
-      b.push(series.data.shift());
+    if (len === sampleCount) {
+      return;
     }
-    series.data = b;
+
+    for (var key in timeScaleTable) {
+      var b = new CBuffer(len);
+      var l = (len < series.samples[key].size) ? len : series.samples[key].size;
+      while (l--) {
+        b.push(series.samples[key].shift());
+      }
+      series.samples[key] = b;
+      series.pgaps[key] = new CBuffer(len);
+    }
   };
 
   my.core.resizeDataBufs = function(newlen) {
@@ -106,9 +109,12 @@ JT = (function (my) {
   };
 
   var clearSeries = function (s) {
-    s.data = new CBuffer(my.core.sampleCount());
-    s.filteredData = [];
-    s.packetGapData = [];
+
+    for (var key in timeScaleTable) {
+      s.samples[key] = new CBuffer(200);
+      s.pgaps[key].empty();
+    }
+
   };
 
   my.core.clearAllSeries = function () {
@@ -116,52 +122,10 @@ JT = (function (my) {
     clearSeries(sBin.rxRate);
     clearSeries(sBin.txPacketRate);
     clearSeries(sBin.rxPacketRate);
-    xVal = 0;
   };
 
   var numSort = function(a,b) {
     return (a - b)|0;
-  };
-
-
-  /* Takes an Array and counts the consecutive 0 elements.
-   * Returns an object with max and mean counts.
-   */
-  var packetGap = function (data) {
-    if (data.length === 0) {
-      return;
-    }
-    var maxGap = 0;
-    var meanGap = 0;
-    var minGap = 99;
-    var runLengths = [ 0 ];
-    var i, j = 0;
-
-    for (i = data.length - 1; i >= 0 ; i--) {
-      if (data[i] === 0) {
-        runLengths[j]++;
-        maxGap = (maxGap > runLengths[j]) ? maxGap : runLengths[j];
-      } else if (runLengths[j] > 0) {
-        meanGap += runLengths[j];
-        j++;
-        runLengths[j] = 0;
-      }
-    }
-    maxGap *= (my.core.samplePeriod() / 1000);
-
-    if (runLengths.length === 1) {
-      meanGap = runLengths[0];
-    } else {
-      meanGap /= runLengths.length;
-    }
-    meanGap *= (my.core.samplePeriod() / 1000);
-
-
-    var s = runLengths.slice(0);
-    s.sort(numSort);
-    minGap = s[0] * (my.core.samplePeriod() / 1000);
-
-    return { max: maxGap, mean: meanGap, min: minGap } ;
   };
 
   var updateBasicStatsChartData = function (stats, chartSeries) {
@@ -178,28 +142,25 @@ JT = (function (my) {
     }
   };
 
-  var updatePacketGapChartData = function (packetGapData, mean, minMax) {
+  var updatePacketGapChartData = function (data, mean, minMax) {
 
     var chartPeriod = my.charts.getChartPeriod();
-    var len = packetGapData.length;
+    var len = data.size;
 
     mean.length = 0;
     minMax.length = 0;
 
     for (var i = 0; i < len; i++) {
       var x = i * chartPeriod;
-      mean.push({x: x, y: packetGapData[i].mean});
-      minMax.push({x: x, y: [packetGapData[i].min, packetGapData[i].max]});
+      var pg = data.get(i);
+      mean.push({x: x, y: pg.mean});
+      minMax.push({x: x, y: [pg.min, pg.max]});
+      //console.log(x + " " + pg.min + " " + pg.max);
     }
   };
 
-  var updateStats = function (series) {
-
-    if (! series.filteredData || series.filteredData.length === 0) {
-      return;
-    }
-
-    var sortedData = series.filteredData.slice(0);
+  var updateStats = function (series, timeScale) {
+    var sortedData = series.samples[timeScale].slice(0);
     sortedData.sort(numSort);
 
     series.stats.max = sortedData[sortedData.length-1];
@@ -213,116 +174,109 @@ JT = (function (my) {
     }
     series.stats.mean = sum / sortedData.length;
 
-    var pGap = packetGap(series.data.toArray());
-    series.stats.maxZ = pGap.max;
-    series.stats.meanZ = pGap.mean;
-    series.stats.minZ = pGap.min;
+    var pg = series.pgaps[timeScale].last();
+    series.stats.maxPG = 1.0 * pg.max;
+    series.stats.meanPG = 1.0 * pg.mean;
+
   };
 
-  var updateMainChartData = function(filteredData, formatter, chartSeries) {
+  var updateMainChartData = function(samples, formatter, chartSeries) {
     var chartPeriod = my.charts.getChartPeriod();
-    var len = filteredData.length;
+    var len = samples.size;
 
     chartSeries.length = 0;
 
     for (var i = 0; i < len; i++) {
-      chartSeries.push({timestamp: i*chartPeriod, value: filteredData[i]});
-    }
-
-
-  };
-
-  var updateFilteredSeries = function (series) {
-
-    /* NB: float vs integer is important here! */
-    var decimationFactor = Math.floor(my.charts.getChartPeriod());
-    var fseriesLength = Math.floor(series.data.size / decimationFactor);
-
-    // the downsampled data has to be scaled.
-    var scale = 1 / my.charts.getChartPeriod();
-
-    // how many filtered data points have been collected already?
-    var filteredDataCount = series.filteredData.length;
-
-    // if there isn't enough data for one filtered sample, return.
-    if (fseriesLength === 0) {
-      return;
-    }
-
-    // if the series is complete, expire the first value.
-    if (filteredDataCount === fseriesLength) {
-      series.filteredData.shift();
-      series.packetGapData.shift();
-      filteredDataCount--;
-    }
-
-    var d = new Date();
-
-    // calculate any/all missing Y values from raw data
-    for (var i = filteredDataCount; i < fseriesLength; i++) {
-      series.filteredData[i] = 0.0;
-      var subSeriesStartIdx = i * decimationFactor;
-      var subSeriesEndIdx = i * decimationFactor + decimationFactor;
-      var subSeries = series.data.slice(subSeriesStartIdx, subSeriesEndIdx);
-      var pgd = packetGap(subSeries);
-      series.packetGapData.push(pgd);
-
-      for (var j = 0; j < decimationFactor; j++) {
-        var idx = i * decimationFactor + j;
-        if (idx >= series.data.size) {
-          break;
-        }
-        series.filteredData[i] += series.data.get(idx);
-      }
-
-      // scale the value to the correct range.
-      series.filteredData[i] *= scale;
-      series.filteredData[i] = series.rateFormatter(series.filteredData[i]);
-
+      chartSeries.push({timestamp: i*chartPeriod, value: samples.get(i)});
     }
   };
 
-  var updateSeries = function (series, yVal, selectedSeries) {
-    series.data.push(yVal);
+  var updateSeries = function (series, yVal, selectedSeries, timeScale) {
+    series.samples[timeScale].push(yVal);
 
-    /* do expensive operations once per charted data point. */
-    if ((xVal % my.charts.getChartPeriod() === 0) ) {
-      updateFilteredSeries(series);
-      updateStats(series);
-
+    if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
+      updateStats(series, timeScale);
       JT.measurementsModule.updateSeries(series.name, series.stats);
       JT.trapModule.checkTriggers(series.name, series.stats);
 
       /* update the charts data */
-      if (series === selectedSeries) {
-
-        /* these look at windows the size of chart period */
-        updateMainChartData(series.filteredData,
+      if (series.name === selectedSeries.name) {
+        updateMainChartData(series.samples[timeScale],
                             series.rateFormatter,
                             JT.charts.getMainChartRef());
-        updatePacketGapChartData(series.packetGapData,
+
+        updatePacketGapChartData(series.pgaps[timeScale],
                                  JT.charts.getPacketGapMeanRef(),
                                  JT.charts.getPacketGapMinMaxRef());
       }
     }
+
   };
 
-  var updateData = function (d, sSeries) {
-    updateSeries(sBin.txRate, d.tx, sSeries);
-    updateSeries(sBin.rxRate, d.rx, sSeries);
-    updateSeries(sBin.txPacketRate, d.txP, sSeries);
-    updateSeries(sBin.rxPacketRate, d.rxP, sSeries);
+  var updateData = function (d, sSeries, timeScale) {
+    sBin.rxRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_rx_pgap,
+        "max"  : d.max_rx_pgap,
+        "mean" : d.mean_rx_pgap / 1000.0
+      }
+    );
+
+    sBin.txRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_tx_pgap,
+        "max"  : d.max_tx_pgap,
+        "mean" : d.mean_tx_pgap / 1000.0
+      }
+    );
+
+    sBin.rxPacketRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_rx_pgap,
+        "max"  : d.max_rx_pgap,
+        "mean" : d.mean_rx_pgap / 1000.0
+      }
+    );
+
+    sBin.txPacketRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_tx_pgap,
+        "max"  : d.max_tx_pgap,
+        "mean" : d.mean_tx_pgap / 1000.0
+      }
+    );
+
+    updateSeries(sBin.txRate, byteCountToKbpsRate(d.tx / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.rxRate, byteCountToKbpsRate(d.rx / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.txPacketRate, packetDeltaToRate(d.txP / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.rxPacketRate, packetDeltaToRate(d.rxP / 1000.0), sSeries, timeScale);
   };
 
-  my.core.processDataMsg = function (stats) {
+  my.core.processDataMsg = function (stats, interval) {
     var visibleSeries = $("#chopts_series option:selected").val();
     var selectedSeries = sBin[visibleSeries];
 
-    var len = stats.length;
-    for (var i = 0; i < len; i++) {
-      updateData(stats[i], selectedSeries);
-      xVal++;
-      xVal = xVal % my.core.sampleCount();
+    switch (interval) {
+      case 5000000:
+           updateData(stats, selectedSeries, '5ms');
+           break;
+      case 10000000:
+           updateData(stats, selectedSeries, '10ms');
+           break;
+      case 20000000:
+           updateData(stats, selectedSeries, '20ms');
+           break;
+      case 50000000:
+           updateData(stats, selectedSeries, '50ms');
+           break;
+      case 100000000:
+           updateData(stats, selectedSeries, '100ms');
+           break;
+      case 200000000:
+           updateData(stats, selectedSeries, '200ms');
+           break;
+      default:
+           console.log("unknown interval: " + interval);
     }
   };
 

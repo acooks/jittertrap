@@ -1,18 +1,17 @@
 #ifndef JITTERTRAP_H
 #define JITTERTRAP_H
 
+#ifndef MAX_JSON_TOKEN_LEN
 #define MAX_JSON_TOKEN_LEN 256
+#endif
 
+#ifndef MAX_JSON_MSG_LEN
 #define MAX_JSON_MSG_LEN 4096
+#endif
 
-/* FIXME: find out where this is assumed to be 50 and where the
- * time warp happens when this magic value is changed. */
-#define MESSAGES_PER_SECOND 50
+#define MESSAGES_PER_SECOND 200
 
 #define USECS_PER_SECOND 1000000
-#define FILTERED_SAMPLES_PER_MSG                                               \
-	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
-
 #define SAMPLES_PER_FRAME                                                      \
 	(USECS_PER_SECOND / SAMPLE_PERIOD_US / MESSAGES_PER_SECOND)
 
@@ -32,11 +31,6 @@ static_assert(
     " must equal USECS_PER_SECOND. "
     " (int)" xstr(SAMPLES_PER_FRAME *SAMPLE_PERIOD_US
                       *MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND));
-
-/* raw samples must be an integer multiple of filtered samples */
-static_assert((SAMPLES_PER_FRAME % FILTERED_SAMPLES_PER_MSG) == 0,
-              "Decimation requires SAMPLES_PER_FRAME to be an integer "
-              "multiple of FILTERED_SAMPLES_PER_MSG");
 
 /* for synchronization of netlink cache operations. */
 pthread_mutex_t nl_sock_mutex;

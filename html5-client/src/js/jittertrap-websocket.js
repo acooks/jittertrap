@@ -17,8 +17,8 @@ JT = (function (my) {
    * i.e. Referred to in websocket.onmessage
    */
 
-  var handleMsgUpdateStats = function (stats) {
-    JT.core.processDataMsg(stats);
+  var handleMsgUpdateStats = function (params) {
+    JT.core.processDataMsg(params.s, params.ival_ns);
   };
 
   var handleMsgDevSelect = function(params) {
@@ -141,7 +141,7 @@ JT = (function (my) {
       var msgType = msg.msg;
 
       if ((msgType === "stats") && msg.p.iface === selectedIface) {
-        handleMsgUpdateStats(msg.p.s);
+        handleMsgUpdateStats(msg.p);
       } else if (msgType === "dev_select") {
         handleMsgDevSelect(msg.p);
       } else if (msgType === "iface_list") {

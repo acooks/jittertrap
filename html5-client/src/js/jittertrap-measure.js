@@ -56,8 +56,8 @@ JT = (function (my) {
     measurements[series].min = stats.min.toFixed(2);
     measurements[series].max = stats.max.toFixed(2);
     measurements[series].mean = stats.mean.toFixed(2);
-    measurements[series].maxZ = stats.maxZ;
-    measurements[series].meanZ = stats.meanZ.toFixed(2);
+    measurements[series].maxZ = stats.maxPG;
+    measurements[series].meanZ = stats.meanPG.toFixed(2);
   };
 
   return my;

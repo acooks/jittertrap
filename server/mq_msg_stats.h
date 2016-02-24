@@ -1,14 +1,13 @@
-#ifndef JT_MSG_STATS_H
-#define JT_MSG_STATS_H
+#ifndef MQ_MSG_STATS_H
+#define MQ_MSG_STATS_H
 
-int jt_stats_packer(void *data, char **out);
-int jt_stats_unpacker(json_t *root, void **data);
-int jt_stats_printer(void *data);
-int jt_stats_free(void *data);
-const char *jt_stats_test_msg_get();
+#define NS(name) PRIMITIVE_CAT(mq_stats_, name)
+#define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 
-struct jt_msg_stats
-{
+#define MAX_CONSUMERS 1
+#define MAX_Q_DEPTH 8
+
+struct NS(msg) {
 	struct timespec timestamp;
 	uint64_t interval_ns;
 
@@ -49,4 +48,7 @@ struct jt_msg_stats
 	char iface[MAX_IFACE_LEN];
 };
 
+#include "mq_generic.h"
+
+#undef NS
 #endif

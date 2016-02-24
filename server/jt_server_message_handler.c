@@ -13,21 +13,22 @@
 #include <assert.h>
 
 #include <jansson.h>
+#include "jittertrap.h"
 #include "jt_server_message_handler.h"
-#include "jt_ws_mq_config.h"
-#include "jt_ws_mq.h"
 
 #include "iface_stats.h"
-#include "stats_thread.h"
+#include "sampling_thread.h"
+#include "compute_thread.h"
 #include "netem.h"
+
+#include "mq_msg_stats.h"
+#include "mq_msg_ws.h"
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
-
-static pthread_mutex_t unsent_frame_count_mutex;
 
 enum { JT_STATE_STOPPING,
        JT_STATE_STOPPED,
@@ -36,9 +37,8 @@ enum { JT_STATE_STOPPING,
 };
 
 int g_jt_state = JT_STATE_STARTING;
-struct iface_stats *g_raw_samples;
-int g_unsent_frame_count = 0;
 char g_selected_iface[MAX_IFACE_LEN];
+unsigned long stats_consumer_id;
 
 static int set_netem(void *data)
 {
@@ -66,7 +66,7 @@ static int select_iface(void *data)
 	}
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
 	printf("switching to iface: [%s]\n", *iface);
-	stats_monitor_iface(*iface);
+	sample_iface(*iface);
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
 	jt_srv_send_sample_period();
@@ -93,60 +93,32 @@ static void get_first_iface(char *iface)
 	free(ifaces);
 }
 
-static void
-iface_stats_to_msg_stats(struct iface_stats *if_s, struct jt_msg_stats *msg_s)
+static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
+                                         struct jt_msg_stats *msg_s)
 {
-	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", if_s->iface);
+	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", mq_s->iface);
 
-	msg_s->sample_count = FILTERED_SAMPLES_PER_MSG;
-	msg_s->samples =
-	    malloc(FILTERED_SAMPLES_PER_MSG * sizeof(struct stats_sample));
-	assert(msg_s->samples);
+	msg_s->mean_rx_bytes = mq_s->mean_rx_bytes;
+	msg_s->mean_tx_bytes = mq_s->mean_tx_bytes;
+	msg_s->mean_rx_packets = mq_s->mean_rx_packets;
+	msg_s->mean_tx_packets = mq_s->mean_tx_packets;
 
-	for (int i = 0; i < FILTERED_SAMPLES_PER_MSG; i++) {
-		msg_s->samples[i].rx = if_s->samples[i].rx_bytes_delta;
-		msg_s->samples[i].tx = if_s->samples[i].tx_bytes_delta;
-		msg_s->samples[i].rxPkt = if_s->samples[i].rx_packets_delta;
-		msg_s->samples[i].txPkt = if_s->samples[i].tx_packets_delta;
-	}
-	msg_s->err.mean = if_s->whoosh_err_mean;
-	msg_s->err.max = if_s->whoosh_err_max;
-	msg_s->err.sd = if_s->whoosh_err_sd;
+	msg_s->mean_whoosh = mq_s->mean_whoosh;
+	msg_s->max_whoosh = mq_s->max_whoosh;
+	msg_s->sd_whoosh = mq_s->sd_whoosh;
+
+	msg_s->min_rx_packet_gap = mq_s->min_rx_packet_gap;
+	msg_s->max_rx_packet_gap = mq_s->max_rx_packet_gap;
+	msg_s->mean_rx_packet_gap = mq_s->mean_rx_packet_gap;
+
+	msg_s->min_tx_packet_gap = mq_s->min_tx_packet_gap;
+	msg_s->max_tx_packet_gap = mq_s->max_tx_packet_gap;
+	msg_s->mean_tx_packet_gap = mq_s->mean_tx_packet_gap;
+
+	msg_s->interval_ns = mq_s->interval_ns;
 }
 
-inline static void calc_whoosh_error(struct iface_stats *stats)
-{
-	long double variance;
-	double max = 0;
-	uint64_t sum = 0;
-	uint64_t sum_squares = 0;
-
-	for (int i = 0; i < SAMPLES_PER_FRAME; i++) {
-		struct sample s = stats->samples[i];
-		max = (s.whoosh_error_ns > max) ? s.whoosh_error_ns : max;
-		sum += s.whoosh_error_ns;
-		sum_squares += (s.whoosh_error_ns * s.whoosh_error_ns);
-	}
-	stats->whoosh_err_max = max;
-	stats->whoosh_err_mean = sum / SAMPLES_PER_FRAME;
-	variance = (long double)sum_squares / (double)SAMPLES_PER_FRAME;
-	stats->whoosh_err_sd = (uint64_t)ceill(sqrtl(variance));
-
-	if ((max >= 500 * SAMPLE_PERIOD_US) ||
-	    (stats->whoosh_err_sd >= 200 * SAMPLE_PERIOD_US)) {
-		fprintf(stderr, "sampling jitter! mean: %10" PRId64
-		                " max: %10" PRId64 " sd: %10" PRId64 "\n",
-		        stats->whoosh_err_mean, stats->whoosh_err_max,
-		        stats->whoosh_err_sd);
-	}
-}
-
-inline static void stats_filter(struct iface_stats *stats)
-{
-	calc_whoosh_error(stats);
-}
-
-inline static int message_producer(struct jt_ws_msg *m, void *data)
+inline static int message_producer(struct mq_ws_msg *m, void *data)
 {
 	char *s = (char *)data;
 	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
@@ -165,7 +137,7 @@ inline static int jt_srv_send(int msg_type, void *msg_data)
 	}
 
 	/* write the json string to a websocket message */
-	err = jt_ws_mq_produce(message_producer, tmpstr, &cb_err);
+	err = mq_ws_produce(message_producer, tmpstr, &cb_err);
 	free(tmpstr);
 	return err;
 }
@@ -191,7 +163,9 @@ int jt_srv_send_netem_params()
 	m->loss = p.loss;
 	snprintf(m->iface, MAX_IFACE_LEN, "%s", p.iface);
 
-	return jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);
+	int err = jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);
+	free(m);
+	return err;
 }
 
 int jt_srv_send_select_iface()
@@ -243,7 +217,9 @@ int jt_srv_send_iface_list()
 	}
 
 	free(ifaces);
-	return jt_srv_send(JT_MSG_IFACE_LIST_V1, il);
+	int err = jt_srv_send(JT_MSG_IFACE_LIST_V1, il);
+	jt_messages[JT_MSG_IFACE_LIST_V1].free(il);
+	return err;
 }
 
 int jt_srv_send_sample_period()
@@ -253,42 +229,32 @@ int jt_srv_send_sample_period()
 	return jt_srv_send(JT_MSG_SAMPLE_PERIOD_V1, &sp);
 }
 
-int jt_srv_send_stats(struct jt_msg_stats *s)
+static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
-	return jt_srv_send(JT_MSG_STATS_V1, s);
+	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
+	mq_stats_msg_to_jt_msg_stats(m, s);
+	if (0 == jt_srv_send(JT_MSG_STATS_V1, s)) {
+		return 0;
+	}
+	return 1;
 }
 
-void stats_filter_and_write()
+int jt_srv_send_stats()
 {
 	struct jt_msg_stats *msg_stats;
+	int err, cb_err;
 
-	pthread_mutex_lock(&unsent_frame_count_mutex);
-	if (g_unsent_frame_count > 0) {
-
-		stats_filter(g_raw_samples);
-
+	do {
 		/* convert from struct iface_stats to struct jt_msg_stats */
 		msg_stats = malloc(sizeof(struct jt_msg_stats));
 		assert(msg_stats);
-		iface_stats_to_msg_stats(g_raw_samples, msg_stats);
-
-		if (0 == jt_srv_send(JT_MSG_STATS_V1, msg_stats)) {
-			g_unsent_frame_count--;
-		}
-
+		err = mq_stats_consume(stats_consumer_id, stats_consumer,
+		                       msg_stats, &cb_err);
 		/* cleanup */
 		jt_messages[JT_MSG_STATS_V1].free(msg_stats);
-	}
-	pthread_mutex_unlock(&unsent_frame_count_mutex);
-}
+	} while (JT_WS_MQ_OK == err);
 
-/* callback for the real-time stats thread. */
-void stats_event_handler(struct iface_stats *raw_samples)
-{
-	pthread_mutex_lock(&unsent_frame_count_mutex);
-	g_raw_samples = raw_samples;
-	g_unsent_frame_count++;
-	pthread_mutex_unlock(&unsent_frame_count_mutex);
+	return 0;
 }
 
 static int jt_init()
@@ -302,7 +268,7 @@ static int jt_init()
 		return -1;
 	}
 
-	err = jt_ws_mq_init();
+	err = mq_ws_init();
 	if (err) {
 		return -1;
 	}
@@ -310,7 +276,11 @@ static int jt_init()
 	get_first_iface(iface);
 	select_iface(&iface);
 
-	stats_thread_init(stats_event_handler);
+	mq_stats_init();
+	compute_thread_init();
+
+	err = mq_stats_consumer_subscribe(&stats_consumer_id);
+	assert(!err);
 
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;
@@ -328,7 +298,7 @@ int jt_server_tick()
 		break;
 	case JT_STATE_RUNNING:
 		/* queue a stats msg (if there is one) */
-		stats_filter_and_write();
+		jt_srv_send_stats();
 		break;
 	}
 	return 0;

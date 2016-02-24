@@ -1,6 +1,9 @@
 #ifndef JT_MESSAGES_H
 #define JT_MESSAGES_H
 
+#include <stdint.h>
+#include <time.h>
+
 #include "jt_message_types.h"
 
 #include "jt_msg_stats.h"

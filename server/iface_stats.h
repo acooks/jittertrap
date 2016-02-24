@@ -3,15 +3,15 @@
 
 struct sample {
 	struct timespec timestamp;
-	int64_t whoosh_error_ns;
-	int64_t rx_bytes;
-	int64_t tx_bytes;
-	int64_t rx_bytes_delta;
-	int64_t tx_bytes_delta;
-	int64_t rx_packets;
-	int64_t rx_packets_delta;
-	int64_t tx_packets;
-	int64_t tx_packets_delta;
+	uint64_t whoosh_error_ns;
+	uint64_t rx_bytes;
+	uint64_t tx_bytes;
+	uint64_t rx_bytes_delta;
+	uint64_t tx_bytes_delta;
+	uint64_t rx_packets;
+	uint64_t rx_packets_delta;
+	uint64_t tx_packets;
+	uint64_t tx_packets_delta;
 };
 
 struct iface_stats {

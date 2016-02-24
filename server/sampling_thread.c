@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <sched.h>
 #include <linux/types.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
@@ -20,12 +19,12 @@
 
 #include "jittertrap.h"
 #include "iface_stats.h"
-#include "stats_thread.h"
+#include "sampling_thread.h"
 #include "sample_buf.h"
 #include "timeywimey.h"
 
 /* globals */
-static pthread_t stats_thread;
+static pthread_t sampling_thread;
 struct sigaction sa;
 
 struct nl_sock *nl_sock;
@@ -59,21 +58,25 @@ int get_sample_period()
 	return sample_period_us;
 }
 
-int stats_thread_init(void (*_stats_handler)(struct iface_stats *counts))
+int sample_thread_init(void (*_stats_handler)(struct iface_stats *counts))
 {
+	int err;
+
 	if (!g_iface || !_stats_handler) {
 		return -1;
 	}
 	stats_handler = _stats_handler;
 
-	if (!stats_thread) {
-		return pthread_create(&stats_thread, NULL, run, NULL);
+	if (!sampling_thread) {
+		err = pthread_create(&sampling_thread, NULL, run, NULL);
+		assert(!err);
+		pthread_setname_np(sampling_thread, "jt-sample");
 	}
 	return 0;
 }
 
 /* update g_iface and reset the old stats. */
-void stats_monitor_iface(const char *_iface)
+void sample_iface(const char *_iface)
 {
 	pthread_mutex_lock(&g_iface_mutex);
 	pthread_mutex_lock(&g_stats_mutex);
@@ -207,7 +210,7 @@ static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
-	schedparm.sched_priority = 1; // lowest rt priority
+	schedparm.sched_priority = 2;
 	sched_setscheduler(0, SCHED_FIFO, &schedparm);
 	set_affinity();
 	return 0;

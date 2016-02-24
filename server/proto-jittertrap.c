@@ -3,14 +3,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
-
 #include <libwebsockets.h>
 
 #include "proto.h"
 #include "jt_server_message_handler.h"
 
-#include "jt_ws_mq_config.h"
-#include "jt_ws_mq.h"
+#include "mq_msg_ws.h"
+
 #include "proto-jittertrap.h"
 
 struct cb_data {
@@ -18,7 +17,7 @@ struct cb_data {
 	unsigned char *buf;
 };
 
-static int lws_writer(struct jt_ws_msg *m, void *data)
+static int lws_writer(struct mq_ws_msg *m, void *data)
 {
 	int len, n;
 	struct cb_data *d = (struct cb_data *)data;
@@ -54,7 +53,7 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 
 	switch (reason) {
 	case LWS_CALLBACK_CLOSED:
-		err = jt_ws_mq_consumer_unsubscribe(pss->consumer_id);
+		err = mq_ws_consumer_unsubscribe(pss->consumer_id);
 		if (err) {
 			lwsl_err("mq consumer unsubscribe failed.\n");
 		}
@@ -63,7 +62,7 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_ESTABLISHED:
 		lwsl_info("callback_jt: "
 		          "LWS_CALLBACK_ESTABLISHED\n");
-		err = jt_ws_mq_consumer_subscribe(&(pss->consumer_id));
+		err = mq_ws_consumer_subscribe(&(pss->consumer_id));
 		if (err) {
 			lwsl_err("mq consumer subscription failed.\n");
 		}
@@ -75,8 +74,8 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:
 		do {
-			err = jt_ws_mq_consume(pss->consumer_id, lws_writer,
-			                       &cbd, &cb_err);
+			err = mq_ws_consume(pss->consumer_id, lws_writer, &cbd,
+			                    &cb_err);
 			if (lws_partial_buffered(wsi) ||
 			    lws_send_pipe_choked(wsi)) {
 				lws_callback_on_writable(wsi);

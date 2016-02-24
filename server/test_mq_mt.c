@@ -6,8 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "jt_ws_mq_config.h"
-#include "jt_ws_mq.h"
+#include "mq_msg_ws.h"
 
 #define TEST_ITERATIONS 1000000
 
@@ -16,7 +15,7 @@
 
 #define PRINT_TAIL 0
 
-int message_producer(struct jt_ws_msg *m, void *data)
+int message_producer(struct mq_ws_msg *m, void *data)
 {
 	char *s = (char *)data;
 	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
@@ -24,14 +23,14 @@ int message_producer(struct jt_ws_msg *m, void *data)
 }
 
 /* a callback for consuming messages. */
-int message_printer(struct jt_ws_msg *m, void *data __attribute__((unused)))
+int message_printer(struct mq_ws_msg *m, void *data __attribute__((unused)))
 {
 	assert(m);
 	printf("m: %s\n", m->m);
 	return 0;
 }
 
-int string_copier(struct jt_ws_msg *m, void *data)
+int string_copier(struct mq_ws_msg *m, void *data)
 {
 	char *s;
 
@@ -111,7 +110,7 @@ void *produce(void *d __attribute__((unused)))
 
 		sprintf(msg, "%d", i);
 
-		err = jt_ws_mq_produce(message_producer, msg, &cb_err);
+		err = mq_ws_produce(message_producer, msg, &cb_err);
 		if (!err) {
 #if PRINT_TAIL
 			if (i < PRINT_TAIL) {
@@ -136,7 +135,7 @@ void *consume(void *_tid)
 	char space[MAX_JSON_MSG_LEN];
 	memset(space, ' ', 20 * tid);
 
-	err = jt_ws_mq_consumer_subscribe(&id);
+	err = mq_ws_consumer_subscribe(&id);
 	assert(!err);
 
 	printf("consumer: %d mq id: %lu for %d messages\n", tid, id,
@@ -151,7 +150,7 @@ void *consume(void *_tid)
 		nsleep(100 + r);
 #endif
 
-		err = jt_ws_mq_consume(id, string_copier, msg, &cb_err);
+		err = mq_ws_consume(id, string_copier, msg, &cb_err);
 		if (!err) {
 #if PRINT_TAIL
 			if (i < PRINT_TAIL) {
@@ -164,7 +163,7 @@ void *consume(void *_tid)
 
 	assert(!err);
 
-	err = jt_ws_mq_consumer_unsubscribe(id);
+	err = mq_ws_consumer_unsubscribe(id);
 	assert(!err);
 
 	return NULL;
@@ -182,7 +181,7 @@ int main()
 	pthread_t consumer_thread1;
 	pthread_t consumer_thread2;
 
-	err = jt_ws_mq_init();
+	err = mq_ws_init();
 	assert(!err);
 
 	x = 1;
@@ -236,7 +235,7 @@ int main()
 
 	printf("message queue OK. %f msgs/s\n", rate);
 
-	err = jt_ws_mq_destroy();
+	err = mq_ws_destroy();
 	assert(!err);
 
 	return 0;

@@ -405,7 +405,7 @@ JT = (function (my) {
       }));
 
       yScale.domain([0, d3.max(chartData.packetGapMinMax, function(d) {
-        return d.y[0];
+        return d.y[1];
       })]);
 
       xGrid = function() {

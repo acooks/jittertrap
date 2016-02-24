@@ -1,4 +1,5 @@
 include ../make.config
+include make.config
 
 PROG = jt-server
 
@@ -11,6 +12,8 @@ DEFINES = \
  -DWEB_SERVER_DOCUMENT_ROOT=$(WEB_SERVER_DOCUMENT_ROOT) \
  -DALLOWED_IFACES=$(ALLOWED_IFACES) \
  -DRT_CPU=$(RT_CPU) \
+ -DMAX_JSON_MSG_LEN=$(MAX_JSON_MSG_LEN) \
+ -DMAX_JSON_TOKEN_LEN=$(MAX_JSON_TOKEN_LEN) \
 
 
 SOURCES = \
@@ -18,26 +21,32 @@ SOURCES = \
  proto.c \
  proto-http.c \
  proto-jittertrap.c \
- jt_ws_mq.c \
+ mq_msg_ws.c \
+ mq_msg_stats.c \
  jt_server_message_handler.c \
  timeywimey.c \
- stats_thread.c \
+ sampling_thread.c \
+ compute_thread.c \
  sample_buf.c \
  netem.c \
+ slist.c \
 
 
 HEADERS = \
  proto.h \
  proto-http.h \
  proto-jittertrap.h \
- jt_ws_mq_config.h \
- jt_ws_mq.h \
+ mq_generic.h \
+ mq_msg_ws.h \
+ mq_msg_stats.h \
  jt_server_message_handler.h \
  netem.h \
  timeywimey.h \
  iface_stats.h \
- stats_thread.h \
+ sampling_thread.h \
+ compute_thread.h \
  sample_buf.h \
+ slist.h \
 
 
 MESSAGEHEADERS = \
@@ -83,18 +92,26 @@ indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
-MQ_TEST_SOURCES = test_mq.c jt_ws_mq.c
-MQ_MT_TEST_SOURCES = test_mq_mt.c jt_ws_mq.c
-MQ_TEST_HEADERS = jt_ws_mq_config.h jt_ws_mq.h
+MQ_DEPENDS = mq_generic.c mq_generic.h
+MQ_SOURCES = mq_msg_ws.c mq_msg_stats.c
+MQ_HEADERS = mq_msg_ws.h mq_msg_stats.h
+MQ_TEST_SOURCES = test_mq.c $(MQ_SOURCES)
+MQ_MT_TEST_SOURCES = test_mq_mt.c $(MQ_SOURCES)
+MQ_MULTI_TEST_SOURCES = test_multi_mq.c $(MQ_SOURCES)
+MQ_TEST_HEADERS = mq_msg_ws.h mq_generic.h
 
-test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS)
-	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0
+test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_DEPENDS) $(MQ_HEADERS)
+	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
-test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS)
-	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0
+test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
+	$(CC) -o test-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
-test: test-mq test-mq-mt
+test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
+	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
+
+test: test-mq test-mq-mt test-multi-mq
 
 
 clean:
 	rm $(PROG) || true
+	rm test-mq test-mq-mt test-multi-mq || true
