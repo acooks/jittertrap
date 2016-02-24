@@ -218,7 +218,7 @@ JT = (function (my) {
       {
         "min"  : d.min_rx_pgap,
         "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap
+        "mean" : d.mean_rx_pgap / 1000.0
       }
     );
 
@@ -226,7 +226,7 @@ JT = (function (my) {
       {
         "min"  : d.min_tx_pgap,
         "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap
+        "mean" : d.mean_tx_pgap / 1000.0
       }
     );
 
@@ -234,7 +234,7 @@ JT = (function (my) {
       {
         "min"  : d.min_rx_pgap,
         "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap
+        "mean" : d.mean_rx_pgap / 1000.0
       }
     );
 
@@ -242,14 +242,14 @@ JT = (function (my) {
       {
         "min"  : d.min_tx_pgap,
         "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap
+        "mean" : d.mean_tx_pgap / 1000.0
       }
     );
 
-    updateSeries(sBin.txRate, d.tx, sSeries, timeScale);
-    updateSeries(sBin.rxRate, d.rx, sSeries, timeScale);
-    updateSeries(sBin.txPacketRate, d.txP / 100.0, sSeries, timeScale);
-    updateSeries(sBin.rxPacketRate, d.rxP / 100.0, sSeries, timeScale);
+    updateSeries(sBin.txRate, byteCountToKbpsRate(d.tx / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.rxRate, byteCountToKbpsRate(d.rx / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.txPacketRate, packetDeltaToRate(d.txP / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.rxPacketRate, packetDeltaToRate(d.rxP / 1000.0), sSeries, timeScale);
   };
 
   my.core.processDataMsg = function (stats, interval) {

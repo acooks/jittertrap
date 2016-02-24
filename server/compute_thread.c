@@ -99,7 +99,7 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	assert(sum_gap <= decim8);
 
         /* gap is the last index into the gap_lengths, so +1 for count. */
-	mean_gap = sum_gap / (gap_idx + 1);
+	mean_gap = 1000 * sum_gap / (gap_idx + 1);
 
 	/* if no non-zero gaps were found, then they must all be zero. */
 	if (min_gap > max_gap) {
@@ -148,7 +148,7 @@ calc_whoosh_err(struct slist *list, struct mq_stats_msg *m, int decim8)
 	}
 
 	m->max_whoosh = whoosh_max;
-	m->mean_whoosh = whoosh_sum / decim8;
+	m->mean_whoosh = (uint64_t)ceill((double)whoosh_sum / (double)decim8);
 
 	double variance = (long double)whoosh_sum2 / (double)decim8;
 	m->sd_whoosh = (uint64_t)ceill(sqrtl(variance));
@@ -205,19 +205,19 @@ calc_txrx_minmaxmean(struct slist *list, struct mq_stats_msg *m, int decim8)
 
 	m->min_rx_bytes = rxb_min;
 	m->max_rx_bytes = rxb_max;
-	m->mean_rx_bytes = rxb_sum / decim8;
+	m->mean_rx_bytes = 1000 * rxb_sum / decim8;
 
 	m->min_tx_bytes = txb_min;
 	m->max_tx_bytes = txb_max;
-	m->mean_tx_bytes = txb_sum / decim8;
+	m->mean_tx_bytes = 1000 * txb_sum / decim8;
 
 	m->min_rx_packets = rxp_min;
 	m->max_rx_packets = rxp_max;
-	m->mean_rx_packets = 100 * rxp_sum / decim8;
+	m->mean_rx_packets = 1000 * rxp_sum / decim8;
 
 	m->min_tx_packets = txp_min;
 	m->max_tx_packets = txp_max;
-	m->mean_tx_packets = 100* txp_sum / decim8;
+	m->mean_tx_packets = 1000 * txp_sum / decim8;
 
 	return 0;
 }
