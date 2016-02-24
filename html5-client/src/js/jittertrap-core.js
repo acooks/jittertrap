@@ -48,12 +48,12 @@ JT = (function (my) {
     this.xlabel = "Time (ms)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
     this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[]};
-  };
+    this.pgaps = {};
+    for (var ts in timeScaleTable) {
+      this.pgaps[ts] = new CBuffer(200);
+    }
+ };
 
-  var newPacketGapData = {};
-  for (var ts in timeScaleTable) {
-    newPacketGapData[ts] = new CBuffer(200);
-  }
 
   var sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
@@ -94,7 +94,7 @@ JT = (function (my) {
         b.push(series.samples[key].shift());
       }
       series.samples[key] = b;
-      newPacketGapData[key] = new CBuffer(len);
+      series.pgaps[key] = new CBuffer(len);
     }
   };
 
@@ -112,7 +112,7 @@ JT = (function (my) {
 
     for (var key in timeScaleTable) {
       s.samples[key] = new CBuffer(200);
-      newPacketGapData[key].empty();
+      s.pgaps[key].empty();
     }
 
   };
@@ -174,14 +174,10 @@ JT = (function (my) {
     }
     series.stats.mean = sum / sortedData.length;
 
-    var pgSorted = newPacketGapData[timeScale].slice(0);
-    pgSorted.sort(function(a,b) { return (a.max - b.max)|0; });
-    series.stats.maxPG = 1.0 * pgSorted[pgSorted.length - 1].max;
+    var pg = series.pgaps[timeScale].last();
+    series.stats.maxPG = 1.0 * pg.max;
+    series.stats.meanPG = 1.0 * pg.mean;
 
-    /* mean of a mean - yuk! */
-    var mean = 0;
-    for (i in pgSorted) { mean += pgSorted[i].mean; }
-    series.stats.meanPG = mean / pgSorted.length;
   };
 
   var updateMainChartData = function(samples, formatter, chartSeries) {
@@ -209,7 +205,7 @@ JT = (function (my) {
                             series.rateFormatter,
                             JT.charts.getMainChartRef());
 
-        updatePacketGapChartData(newPacketGapData[timeScale],
+        updatePacketGapChartData(series.pgaps[timeScale],
                                  JT.charts.getPacketGapMeanRef(),
                                  JT.charts.getPacketGapMinMaxRef());
       }
@@ -218,12 +214,35 @@ JT = (function (my) {
   };
 
   var updateData = function (d, sSeries, timeScale) {
-    /* FIXME: wouldn't it be nice to use TX also? */
-    newPacketGapData[timeScale].push(
+    sBin.rxRate.pgaps[timeScale].push(
       {
         "min"  : d.min_rx_pgap,
         "max"  : d.max_rx_pgap,
         "mean" : d.mean_rx_pgap
+      }
+    );
+
+    sBin.txRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_tx_pgap,
+        "max"  : d.max_tx_pgap,
+        "mean" : d.mean_tx_pgap
+      }
+    );
+
+    sBin.rxPacketRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_rx_pgap,
+        "max"  : d.max_rx_pgap,
+        "mean" : d.mean_rx_pgap
+      }
+    );
+
+    sBin.txPacketRate.pgaps[timeScale].push(
+      {
+        "min"  : d.min_tx_pgap,
+        "max"  : d.max_tx_pgap,
+        "mean" : d.mean_tx_pgap
       }
     );
 
