@@ -50,10 +50,7 @@ struct minmaxmean {
 	uint32_t mean;
 };
 
-enum {
-	RX = 0,
-	TX = 1
-};
+enum { RX = 0, TX = 1 };
 
 inline static struct minmaxmean
 calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
@@ -74,14 +71,14 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	ln = slist_idx(list, size - decim8);
 	for (int i = decim8; i > 0; i--) {
 		struct sample *s = ln->s;
-		if (((RX == rxtx) && (0 == s->rx_packets_delta))
-		   || ((TX == rxtx) && (0 == s->tx_packets_delta))) {
+		if (((RX == rxtx) && (0 == s->rx_packets_delta)) ||
+		    ((TX == rxtx) && (0 == s->tx_packets_delta))) {
 			found_gap = 1;
 			gap_lengths[gap_idx]++;
 			max_gap = (max_gap > gap_lengths[gap_idx])
 			              ? max_gap
 			              : gap_lengths[gap_idx];
-		} else if (found_gap){
+		} else if (found_gap) {
 			found_gap = 0;
 			gap_idx++;
 		}
@@ -100,7 +97,7 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	assert(sum_gap <= decim8);
 	assert((min_gap <= decim8) || (sum_gap == 0));
 
-        /* gap is the last index into the gap_lengths, so +1 for count. */
+	/* gap is the last index into the gap_lengths, so +1 for count. */
 	mean_gap = roundl((1000.0 * sum_gap) / (gap_idx + 1));
 	assert(1000 * min_gap <= mean_gap);
 
@@ -123,7 +120,6 @@ calc_packet_gap(struct slist *list, struct mq_stats_msg *m, int decim8)
 
 	return 0;
 }
-
 
 inline static int
 calc_whoosh_err(struct slist *list, struct mq_stats_msg *m, int decim8)
@@ -262,7 +258,6 @@ void send_decimations()
 	}
 }
 
-
 static int frames_to_sample_list()
 {
 	int new_samples = 0;
@@ -382,7 +377,6 @@ static void *run(void *data)
 	struct timespec deadline;
 
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
-
 
 	for (;;) {
 		if (0 < frames_to_sample_list()) {
