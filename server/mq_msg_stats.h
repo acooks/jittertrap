@@ -4,8 +4,6 @@
 #define NS(name) PRIMITIVE_CAT(mq_stats_, name)
 #define PRIMITIVE_CAT(a, ...) a##__VA_ARGS__
 
-#define MAX_CONSUMERS 1
-#define MAX_Q_DEPTH 8
 
 struct NS(msg) {
 	struct timespec timestamp;
