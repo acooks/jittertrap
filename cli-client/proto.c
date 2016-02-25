@@ -20,7 +20,10 @@ struct lws_protocols protocols[] = {
 	            .per_session_data_size = 0,
 	            .rx_buffer_size = 4096,
 	        },
-	    { NULL, NULL, 0, 0, 0, NULL, NULL } /* end */
+	    {.name = NULL,
+	     .callback = NULL,
+	     .per_session_data_size = 0,
+	     .rx_buffer_size = 0 } /* end */
 };
 
 /* jittertrap protocol */
