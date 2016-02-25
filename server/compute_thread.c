@@ -62,7 +62,8 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	int32_t size = slist_size(list);
 	int32_t gap_lengths[MAX_LIST_LEN] = { 0 };
 	int32_t gap_idx = 0;
-	int32_t min_gap = MAX_LIST_LEN;
+	int found_gap = 0;
+	int32_t min_gap = decim8 + 1;
 	int32_t max_gap = 0;
 	int32_t sum_gap = 0;
 	int32_t mean_gap = 0;
@@ -75,11 +76,13 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 		struct sample *s = ln->s;
 		if (((RX == rxtx) && (0 == s->rx_packets_delta))
 		   || ((TX == rxtx) && (0 == s->tx_packets_delta))) {
+			found_gap = 1;
 			gap_lengths[gap_idx]++;
 			max_gap = (max_gap > gap_lengths[gap_idx])
 			              ? max_gap
 			              : gap_lengths[gap_idx];
-		} else {
+		} else if (found_gap){
+			found_gap = 0;
 			gap_idx++;
 		}
 		ln = ln->next;
@@ -88,25 +91,18 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	assert(gap_idx <= decim8);
 	assert(max_gap <= decim8);
 
-	/* gap_lengths[] may contain 0 values for unused array slots, so
-	 * look for shortest non-zero gap. */
-	for (int i = 0; i < decim8; i++) {
+	for (int i = 0; i <= gap_idx; i++) {
 		sum_gap += gap_lengths[i];
-		if ((gap_lengths[i] > 0) && (min_gap > gap_lengths[i])) {
+		if (min_gap > gap_lengths[i]) {
 			min_gap = gap_lengths[i];
 		}
 	}
 	assert(sum_gap <= decim8);
+	assert((min_gap <= decim8) || (sum_gap == 0));
 
         /* gap is the last index into the gap_lengths, so +1 for count. */
-	mean_gap = 1000 * sum_gap / (gap_idx + 1);
-
-	/* if no non-zero gaps were found, then they must all be zero. */
-	if (min_gap > max_gap) {
-		min_gap = 0;
-	}
-
-	assert(min_gap <= decim8);
+	mean_gap = roundl((1000.0 * sum_gap) / (gap_idx + 1));
+	assert(1000 * min_gap <= mean_gap);
 
 	return (struct minmaxmean){min_gap, max_gap, mean_gap};
 }
