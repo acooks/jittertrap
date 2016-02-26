@@ -118,6 +118,16 @@ static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
 	msg_s->interval_ns = mq_s->interval_ns;
 }
 
+static void mq_stats_distr_to_jt_msg_distr(struct mq_stats_msg *mq_s,
+                                           struct jt_msg_pgap_distr *msg_s)
+{
+	snprintf(msg_s->iface, MAX_IFACE_LEN, "%s", mq_s->iface);
+	msg_s->interval_ns = mq_s->interval_ns;
+	static_assert((sizeof(msg_s->pgap_distr) == sizeof(mq_s->pgap_distr)),
+	              "sizeof pgap distributions don't match.");
+	memcpy(msg_s->pgap_distr, mq_s->pgap_distr, sizeof(mq_s->pgap_distr));
+}
+
 inline static int message_producer(struct mq_ws_msg *m, void *data)
 {
 	char *s = (char *)data;
@@ -229,29 +239,57 @@ int jt_srv_send_sample_period()
 	return jt_srv_send(JT_MSG_SAMPLE_PERIOD_V1, &sp);
 }
 
-static int stats_consumer(struct mq_stats_msg *m, void *data)
+struct jt_msg_ptrs {
+	union {
+		struct jt_msg_stats *stats;
+		struct jt_msg_pgap_distr *distr;
+	};
+};
+
+static int msg_consumer(struct mq_stats_msg *mqs_m, void *data)
 {
-	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
-	mq_stats_msg_to_jt_msg_stats(m, s);
-	if (0 == jt_srv_send(JT_MSG_STATS_V1, s)) {
-		return 0;
+	struct jt_msg_ptrs jtm;
+
+	switch (mqs_m->msg_type) {
+	case MQ_STATS_MSG_STATS:
+		jtm.stats = (struct jt_msg_stats *)data;
+		mq_stats_msg_to_jt_msg_stats(mqs_m, jtm.stats);
+		if (0 == jt_srv_send(JT_MSG_STATS_V1, jtm.stats)) {
+			return 0;
+		}
+		break;
+	case MQ_STATS_MSG_DISTR:
+		jtm.distr = (struct jt_msg_pgap_distr *)data;
+		mq_stats_distr_to_jt_msg_distr(mqs_m, jtm.distr);
+		if (0 == jt_srv_send(JT_MSG_PGAP_DISTR_V1, jtm.distr)) {
+			return 0;
+		}
+		break;
+	default:
+		fprintf(stderr, "unknown message type: %d\n", mqs_m->msg_type);
+		assert(false);
 	}
 	return 1;
 }
 
 int jt_srv_send_stats()
 {
-	struct jt_msg_stats *msg_stats;
+	struct jt_msg *msg;
 	int err, cb_err;
 
+	struct jt_msg_data {
+		union {
+			struct jt_msg_stats s;
+			struct jt_msg_pgap_distr d;
+		};
+	};
+
 	do {
-		/* convert from struct iface_stats to struct jt_msg_stats */
-		msg_stats = malloc(sizeof(struct jt_msg_stats));
-		assert(msg_stats);
-		err = mq_stats_consume(stats_consumer_id, stats_consumer,
-		                       msg_stats, &cb_err);
-		/* cleanup */
-		jt_messages[JT_MSG_STATS_V1].free(msg_stats);
+		msg = malloc(sizeof(struct jt_msg_data));
+		assert(msg);
+		err = mq_stats_consume(stats_consumer_id, msg_consumer,
+		                       msg, &cb_err);
+		free(msg);
 	} while (JT_WS_MQ_OK == err);
 
 	return 0;

@@ -53,11 +53,11 @@ struct minmaxmean {
 enum { RX = 0, TX = 1 };
 
 inline static struct minmaxmean
-calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
+calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx,
+                      uint8_t gap_lengths[MAX_LIST_LEN])
 {
 	struct slist *ln;
 	int32_t size = slist_size(list);
-	int32_t gap_lengths[MAX_LIST_LEN] = { 0 };
 	int32_t gap_idx = 0;
 	int found_gap = 0;
 	int32_t min_gap = decim8 + 1;
@@ -101,22 +101,41 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	mean_gap = roundl((1000.0 * sum_gap) / (gap_idx + 1));
 	assert(1000 * min_gap <= mean_gap);
 
-	return (struct minmaxmean){min_gap, max_gap, mean_gap};
+	return (struct minmaxmean){ min_gap, max_gap, mean_gap };
 }
 
 inline static int
 calc_packet_gap(struct slist *list, struct mq_stats_msg *m, int decim8)
 {
+	uint8_t gap_lengths[MAX_LIST_LEN];
 	struct minmaxmean rx, tx;
-	rx = calc_min_max_mean_gap(list, decim8, RX);
+
+	memset(gap_lengths, 0, sizeof(gap_lengths));
+	rx = calc_min_max_mean_gap(list, decim8, RX, gap_lengths);
 	m->max_rx_packet_gap = rx.max;
 	m->min_rx_packet_gap = rx.min;
 	m->mean_rx_packet_gap = rx.mean;
 
-	tx = calc_min_max_mean_gap(list, decim8, TX);
+	memset(gap_lengths, 0, sizeof(gap_lengths));
+	tx = calc_min_max_mean_gap(list, decim8, TX, gap_lengths);
 	m->max_tx_packet_gap = tx.max;
 	m->min_tx_packet_gap = tx.min;
 	m->mean_tx_packet_gap = tx.mean;
+
+	return 0;
+}
+
+inline static int
+calc_pgap_distr(struct slist *list, struct mq_stats_msg *m, int decim8)
+{
+	uint8_t gap_lengths[MAX_LIST_LEN];
+
+	memset(gap_lengths, 0, sizeof(gap_lengths));
+	calc_min_max_mean_gap(list, decim8, RX, gap_lengths);
+	memset(m->pgap_distr, 0, sizeof(m->pgap_distr));
+	for (int j = 0; j < MAX_LIST_LEN; j++) {
+		m->pgap_distr[gap_lengths[j]] += 1;
+	}
 
 	return 0;
 }
@@ -222,10 +241,10 @@ stats_filter(struct slist *list, struct mq_stats_msg *m, int decim8)
 	int smod = size % decim8;
 
 	if (!size || smod) {
-		/* */
 		return 1;
 	}
 
+	m->msg_type = MQ_STATS_MSG_STATS;
 	m->interval_ns = 1E6 * decim8;
 
 	/* FIXME - get this from mq_stats_msg ? */
@@ -244,6 +263,19 @@ inline static int message_producer(struct mq_stats_msg *m, void *data)
 	return stats_filter(sample_list, m, *decimation_factor);
 }
 
+inline static int pgap_distr_prod(struct mq_stats_msg *m, void *data)
+{
+	int *decim8 = (int *)data;
+
+	m->msg_type = MQ_STATS_MSG_DISTR;
+	m->interval_ns = 1E6 * (*decim8);
+
+	/* FIXME - get this from mq_stats_msg ? */
+	sprintf(m->iface, "%s", g_selected_iface);
+
+	return calc_pgap_distr(sample_list, m, *decim8);
+}
+
 void send_decimations()
 {
 	int cb_err;
@@ -254,6 +286,9 @@ void send_decimations()
 
 		if (0 == g_sample_count % decs[i]) {
 			mq_stats_produce(message_producer, &decs[i], &cb_err);
+			if (200 == decs[i]) {
+				mq_stats_produce(pgap_distr_prod, &decs[i], &cb_err);
+			}
 		}
 	}
 }
