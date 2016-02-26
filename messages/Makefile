@@ -6,6 +6,7 @@ DEFINES = -DMAX_IFACE_LEN=$(MAX_IFACE_LEN)
 
 SOURCES = \
  src/jt_msg_stats.c \
+ src/jt_msg_pgap_distr.c \
  src/jt_msg_list_ifaces.c \
  src/jt_msg_select_iface.c \
  src/jt_msg_netem_params.c \
@@ -16,6 +17,7 @@ SOURCES = \
 HEADERS = \
  include/jt_message_types.h \
  include/jt_msg_stats.h \
+ include/jt_msg_pgap_distr.h \
  include/jt_msg_list_ifaces.h \
  include/jt_msg_select_iface.h \
  include/jt_msg_netem_params.h \

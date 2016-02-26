@@ -6,6 +6,7 @@
 #include "jt_messages.h"
 
 #include "jt_msg_stats.h"
+#include "jt_msg_pgap_distr.h"
 #include "jt_msg_list_ifaces.h"
 #include "jt_msg_select_iface.h"
 #include "jt_msg_netem_params.h"
