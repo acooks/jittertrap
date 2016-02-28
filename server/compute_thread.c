@@ -48,6 +48,7 @@ struct minmaxmean {
 	uint32_t min;
 	uint32_t max;
 	uint32_t mean;
+	uint32_t count;
 };
 
 enum { RX = 0, TX = 1 };
@@ -101,7 +102,7 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx,
 	mean_gap = roundl((1000.0 * sum_gap) / (gap_idx + 1));
 	assert(1000 * min_gap <= mean_gap);
 
-	return (struct minmaxmean){ min_gap, max_gap, mean_gap };
+	return (struct minmaxmean){ min_gap, max_gap, mean_gap, gap_idx };
 }
 
 inline static int
@@ -129,11 +130,12 @@ inline static int
 calc_pgap_distr(struct slist *list, struct mq_stats_msg *m, int decim8)
 {
 	uint8_t gap_lengths[MAX_LIST_LEN];
-
+	struct minmaxmean mmm;
 	memset(gap_lengths, 0, sizeof(gap_lengths));
-	calc_min_max_mean_gap(list, decim8, RX, gap_lengths);
 	memset(m->pgap_distr, 0, sizeof(m->pgap_distr));
-	for (int j = 0; j < MAX_LIST_LEN; j++) {
+	mmm = calc_min_max_mean_gap(list, decim8, RX, gap_lengths);
+	m->nz_bins = mmm.count;
+	for (int j = 0; j < (int)mmm.count; j++) {
 		m->pgap_distr[gap_lengths[j]] += 1;
 	}
 

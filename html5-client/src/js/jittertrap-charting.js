@@ -26,12 +26,14 @@ JT = (function (my) {
     mainChart: [],
     packetGapMean: [],
     packetGapMinMax: [],
+    packetGapDistr: [],
   };
 
   var clearChartData = function () {
     chartData.mainChart.length = 0;
     chartData.packetGapMean.length = 0;
     chartData.packetGapMinMax.length = 0;
+    chartData.packetGapDistr.length = 0;
   };
 
   /* must return a reference to an array of {x:x, y:y} */
@@ -45,6 +47,10 @@ JT = (function (my) {
 
   my.charts.getPacketGapMinMaxRef = function () {
     return chartData.packetGapMinMax;
+  };
+
+  my.charts.getPacketGapDistrRef = function() {
+    return chartData.packetGapDistr;
   };
 
   my.charts.mainChart = (function (m) {

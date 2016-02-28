@@ -53,7 +53,10 @@ struct NS(msg) {
 			uint32_t mean_tx_packet_gap;
 		};
 
-		uint8_t pgap_distr[PGAP_DISTR_BINS];
+		struct {
+			uint8_t nz_bins;
+			uint8_t pgap_distr[PGAP_DISTR_BINS];
+		};
 	};
 
 	char iface[MAX_IFACE_LEN];

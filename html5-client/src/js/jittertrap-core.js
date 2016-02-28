@@ -54,6 +54,7 @@ JT = (function (my) {
     }
  };
 
+  var pGapDistr = new CBuffer(400);
 
   var sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
@@ -279,6 +280,19 @@ JT = (function (my) {
            console.log("unknown interval: " + interval);
     }
   };
+
+  my.core.processPGapDistr = function (distr) {
+    pGapDistr.push(distr);
+
+    var chartSeries = JT.charts.getPacketGapDistrRef();
+    chartSeries.length = 0;
+    var len = pGapDistr.size;
+
+    for (var i = 0; i < len; i++) {
+      chartSeries.push({timestamp: i * 200, value: pGapDistr.get(i)});
+    }
+
+ };
 
   return my;
 }(JT));
