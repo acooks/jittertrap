@@ -241,6 +241,236 @@ JT = (function (my) {
 
   }({}));
 
+  my.charts.pgapDistrChart = (function (m) {
+    var margin = {
+      top: 20,
+      right: 20,
+      bottom: 40,
+      left: 75
+    };
+
+    var width = 960 - margin.left - margin.right;
+    var height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, width]);
+    var yScale = d3.scale.linear().range([height, 0]);
+    var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .ticks(10)
+                .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .ticks(5)
+                .orient("left");
+
+    var line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+
+    var svg = {};
+    var canvas = {};
+
+    var xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .ticks(0);
+      };
+
+    var yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .ticks(0);
+      };
+ 
+    m.reset = function() {
+
+      d3.select("#chartGapDistribution").selectAll("svg").remove();
+      d3.select("#chartGapDistribution").selectAll("canvas").remove();
+
+      svg = d3.select("#chartGapDistribution")
+            .append("svg");
+
+      canvas = d3.select("#chartGapDistribution").append("canvas");
+
+      width = $("#chartGapDistribution").width() - margin.left - margin.right;
+      height = $("#chartGapDistribution").height() - margin.top - margin.bottom;
+
+      canvas.attr("width", width)
+      .attr("height", height)
+      .style("width", width + "px")
+      .style("height", height + "px");
+
+      xScale = d3.scale.linear().range([0, width]);
+      yScale = d3.scale.linear().range([height, 0]);
+
+      xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(10)
+              .orient("bottom");
+
+      yAxis = d3.svg.axis()
+              .scale(yScale)
+              .ticks(5)
+              .orient("left");
+
+      line = d3.svg
+          .line()
+          .x(function(d) { return xScale(d.timestamp); })
+          .y(function(d) { return yScale(d.value); })
+          .interpolate("basis");
+
+      svg.attr("width", width + margin.left + margin.right)
+         .attr("height", height + margin.top + margin.bottom);
+
+
+      var graph = svg.append("g")
+         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      graph.append("text")
+         .attr("class", "title")
+         .attr("text-anchor", "middle")
+         .attr("x", width/2)
+         .attr("y", -margin.top/2)
+         .text("packet gap distribution");
+
+      graph.append("g")
+         .attr("class", "x axis")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis);
+
+      graph.append("text")
+           .attr("class", "x label")
+           .attr("text-anchor", "middle")
+           .attr("x", width/2)
+           .attr("y", height + 15 + 0.5 * margin.bottom)
+           .text("sample (ms)");
+
+      graph.append("g")
+         .attr("class", "y axis")
+         .call(yAxis)
+         .append("text")
+         .attr("x", -margin.left)
+         .attr("transform", "rotate(-90)")
+         .attr("y", -margin.left)
+         .attr("dy", ".71em")
+         .style("text-anchor", "end")
+         .text("gap length (ms)");
+
+      graph.append("g")
+        .attr("class", "xGrid")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
+
+      graph.append("g")
+        .attr("class", "yGrid")
+        .call(yGrid())
+        .attr(
+             {
+               "fill" : "none",
+               "shape-rendering" : "crispEdges",
+               "stroke" : "grey",
+               "opacity": 0.4,
+               "stroke-width" : "1px"
+             });
+
+      graph.append("path")
+         .datum(chartData.packetGapDistr)
+         .attr("class", "line")
+         .attr("d", line);
+
+    };
+
+    m.drawImage = function(canvas) {
+      var dx = chartData.packetGapDistr.length;
+      var dy = 100;
+
+      if (dx === 0) { return; }
+
+      var context = canvas.node().getContext("2d"),
+          image = context.createImageData(dx, dy);
+
+      for (var y = 0, p = -1; y < dy; ++y) {
+        for (var x = 0; x < dx; ++x) {
+          var l = chartData.packetGapDistr[x].value[y];
+          /* l has a range of [0-199] ; c has a range of [0-255] */
+          l = y * l/99 * 255;
+          var c = d3.rgb(255-l, 255-l, 255-l);
+          image.data[++p] = c.r;
+          image.data[++p] = c.g;
+          image.data[++p] = c.b;
+          image.data[++p] = 255;
+        }
+      }
+
+      width = $("#chartGapDistribution").width() - margin.left - margin.right;
+      height = $("#chartGapDistribution").height() - margin.top - margin.bottom;
+
+      context.putImageData(image, 0, 0);
+      context.scale(width/dx, height/dy);
+    };
+
+
+    m.redraw = function() {
+
+      width = $("#chartGapDistribution").width() - margin.left - margin.right;
+      height = $("#chartGapDistribution").height() - margin.top - margin.bottom;
+
+      /* Scale the range of the data again */
+      xScale.domain(d3.extent(chartData.packetGapDistr, function(d) {
+        return d.timestamp;
+      }));
+
+      yScale.domain([0, d3.max(chartData.packetGapDistr, function(d) {
+        return d.value;
+      })]);
+
+      xGrid = function() {
+        return d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .tickSize(-height)
+           .ticks(10)
+           .tickFormat("");
+      };
+
+      yGrid = function() {
+        return d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .tickSize(-width)
+           .ticks(5)
+           .tickFormat("");
+      };
+
+      svg = d3.select("#chartGapDistribution");
+      //svg.select(".line").attr("d", line(chartData.packetGapDistr));
+      svg.select(".x.axis").call(xAxis);
+      svg.select(".y.axis").call(yAxis);
+      svg.select(".xGrid").call(xGrid());
+      svg.select(".yGrid").call(yGrid());
+
+      canvas = d3.select("#chartGapDistribution").selectAll("canvas");
+      canvas.attr("width", width).attr("height", height);
+      m.drawImage(canvas);
+
+    };
+
+    return m;
+
+  }({}));
+
 
   my.charts.packetGapChart = (function (m) {
     var margin = {
@@ -455,6 +685,7 @@ JT = (function (my) {
 
     my.charts.mainChart.reset(selectedSeries);
     my.charts.packetGapChart.reset();
+    my.charts.pgapDistrChart.reset();
 
   };
 
@@ -493,6 +724,7 @@ JT = (function (my) {
     var d1 = Date.now();
     my.charts.mainChart.redraw();
     my.charts.packetGapChart.redraw();
+    my.charts.pgapDistrChart.redraw();
 
     var d2 = Date.now();
     renderCount++;

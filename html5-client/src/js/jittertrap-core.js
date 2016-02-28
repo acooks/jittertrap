@@ -211,7 +211,6 @@ JT = (function (my) {
                                  JT.charts.getPacketGapMinMaxRef());
       }
     }
-
   };
 
   var updateData = function (d, sSeries, timeScale) {
