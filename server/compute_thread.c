@@ -145,8 +145,9 @@ calc_whoosh_err(struct slist *list, struct mq_stats_msg *m, int decim8)
 	double variance = (long double)whoosh_sum2 / (double)decim8;
 	m->sd_whoosh = (uint64_t)ceill(sqrtl(variance));
 
-	if ((whoosh_max >= 0.1 * m->interval_ns) ||
-	    (m->sd_whoosh >= m->interval_ns)) {
+	if ((decim8 == decs[DECIMATIONS_COUNT - 1]) &&
+	    ((whoosh_max >= 0.1 * m->interval_ns) ||
+	     (m->sd_whoosh >= m->interval_ns))) {
 		fprintf(stderr, "sampling jitter! mean: %10" PRId32
 		                " max: %10" PRId32 " sd: %10" PRId32 "\n",
 		        m->mean_whoosh, m->max_whoosh, m->sd_whoosh);
@@ -233,7 +234,6 @@ stats_filter(struct slist *list, struct mq_stats_msg *m, int decim8)
 	calc_txrx_minmaxmean(list, m, decim8);
 	calc_whoosh_err(list, m, decim8);
 	calc_packet_gap(list, m, decim8);
-
 
 	return 0;
 }
