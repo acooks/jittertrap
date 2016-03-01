@@ -9,7 +9,7 @@
 #define MAX_JSON_MSG_LEN 4096
 #endif
 
-#define MESSAGES_PER_SECOND 200
+#define MESSAGES_PER_SECOND 100
 
 #define USECS_PER_SECOND 1000000
 #define SAMPLES_PER_FRAME                                                      \
