@@ -319,7 +319,8 @@ int compute_thread_init(void)
 	assert(!err);
 	pthread_setname_np(compute_thread, "jt-compute");
 
-	sample_thread_init(sample_thread_event_handler);
+	err = sample_thread_init(sample_thread_event_handler);
+	assert(!err);
 
 	return 0;
 }
