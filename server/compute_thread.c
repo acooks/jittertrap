@@ -39,8 +39,8 @@ int g_sample_count;
 static void *run(void *data);
 
 #define MAX_LIST_LEN 200
-#define DECIMATIONS_COUNT 6
-int decs[DECIMATIONS_COUNT] = { 5, 10, 20, 50, 100, 200 };
+#define DECIMATIONS_COUNT 4
+int decs[DECIMATIONS_COUNT] = { 10, 20, 50, 100 };
 
 /* TODO: check all integer divisions and consider using FP */
 
@@ -101,7 +101,7 @@ calc_min_max_mean_gap(struct slist *list, int decim8, int rxtx)
 	mean_gap = roundl((1000.0 * sum_gap) / (gap_idx + 1));
 	assert(1000 * min_gap <= mean_gap);
 
-	return (struct minmaxmean){min_gap, max_gap, mean_gap};
+	return (struct minmaxmean){ min_gap, max_gap, mean_gap };
 }
 
 inline static int
