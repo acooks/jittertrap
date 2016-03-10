@@ -1,0 +1,30 @@
+      <div id="help" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+          <div id="help" class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Help</h4>
+            </div>
+            <div class="modal-body">
+        <h3>Impairment Help</h3>
+        <p>Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.</p>
+
+        <h4>Delay:</h4>
+        <p>A basic time delay, specified in milliseconds.</p>
+        <h5>Example:</h5>
+        <p>42</p>
+
+        <h4>Delay Variation (Jitter):</h4> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.</p>
+        <p>Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.</p>
+        <p>Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.</p>
+        <h5>Example:</h5>
+        <p>22</p>
+
+        <h4>Loss:</h4>
+        <p>A percentage of random packet loss. Each packet has X percent chance of being dropped.</p>
+        <h5>Example:</h5>
+        <p>7</p>
+            </div>
+          </div>
+        </div>
+      </div>

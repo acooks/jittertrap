@@ -1,0 +1,77 @@
+        <!-- Traps -->
+        <div id="trapsPanel" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <button id="trap_add" class="btn btn-default" data-toggle="modal" data-target="#add_trap_modal" type="button">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Add Trap
+              </button>
+
+              <!-- Trap Dialog viewed by clicking the Add Trap button -->
+              <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title" id="myModalLabel">Add a Trap</h4>
+                    </div>
+                    <div class="modal-body">
+                      <form>
+                        <!-- Traps and their measurement units -->
+                        <select id="trap_names">
+                          <option data-trap-id="mean_rx_bitrate" data-trap-units="Kbps">Mean Ingress Bitrate Exceeds</option>
+                          <option data-trap-id="mean_tx_bitrate" data-trap-units="Kbps">Mean Egress Bitrate Exceeds </option>
+                          <option data-trap-id="max_rx_bitrate" data-trap-units="Kbps">Max Ingress Bitrate Exceeds </option>
+                          <option data-trap-id="max_tx_bitrate" data-trap-units="Kbps">Max Egress Bitrate Exceeds </option>
+                          <option data-trap-id="min_rx_bitrate" data-trap-units="Kbps">Min Ingress Bitrate Below </option>
+                          <option data-trap-id="min_tx_bitrate" data-trap-units="Kbps">Min Egress Bitrate Below </option>
+                          <option data-trap-id="rx_pkt_gap" data-trap-units="ms">Max Ingress Packet Spacing Exceeds</option>
+                          <option data-trap-id="tx_pkt_gap" data-trap-units="ms">Max Egress Packet Spacing Exceeds</option>
+                        </select>
+                        <!-- Trap value and measurement units for that value -->
+                        <div class="input-group">
+                          <input id="trap_value" class="form-control" type="text" />
+                          <span class="input-group-addon">Kbps</span>
+                        </div>
+                      </form>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-primary">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <table id="traps_table" class="table">
+                <thead>
+                  <tr>
+                    <th>Trap</th>
+                    <th>Value</th>
+                    <th>Options</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example Trap after being added through the UI
+                  <tr data-trap-id="max_rx_bitrate" data-trap-value="123">
+                    <td>Exceeds RX Bitrate</td>
+                    <td>
+                      <div class="input-group">
+                        <span class="form-control">123</span>
+                        <span class="input-group-addon">kbps</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-default">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                      </button>
+                    </td>
+                  </tr>
+                  -->
+                </tbody>
+              </table>
+            </div> <!-- end panel body -->
+          </div> <!-- end panel -->
+        </div> <!-- end tab pane -->
+        <!-- End of Traps -->
