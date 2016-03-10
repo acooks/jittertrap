@@ -1,0 +1,27 @@
+Source: jittertrap
+Section: web
+Priority: extra
+Maintainer: Andrew Cooks <acooks@rationali.st>
+Build-Depends: debhelper (>= 9),
+               libwebsockets-dev (>= 1.6),
+               libnl-3-dev (>=3.2.21),
+               libnl-route-3-dev (>=3.2.21),
+               libnl-genl-3-dev (>=3.2.21),
+               libjansson-dev,
+               pkg-config
+Standards-Version: 3.9.6
+Homepage: http://www.jittertrap.net
+
+Package: jittertrap
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         libnl-3-200,
+         libnl-route-3-200,
+         libnl-genl-3-200,
+         libwebsockets6,
+         libjansson4
+Description: Network test and measurement for delay-sensitive applications.
+ Consists of a back-end server to configure the 'netem' qdisc and capture
+ packets, and a browser interface for humans.
+

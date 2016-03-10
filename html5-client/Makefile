@@ -37,8 +37,7 @@ copydeps: createdirs
 	cp deps/css/bootstrap-theme.css.map ${OUT}/css/
 	cp deps/fonts/glyphicons-halflings-regular.* ${OUT}/fonts/
 
-copyhtml: createdirs
-	cp src/html/index.html ${OUT}/
+copyhtml: createdirs assemble-html
 	cp -r src/html/templates ${OUT}/
 
 copycss: createdirs
@@ -66,6 +65,18 @@ version:
 coreconfig: version
 	cp src/js/jittertrap-coreconfig-template.js src/js/jittertrap-coreconfig.js
 	sed -i 's/##CORECONFIG-SAMPLEPERIOD##/${SAMPLE_PERIOD_US}/g' src/js/jittertrap-coreconfig.js
+
+
+TPL = ${OUT}/index.html
+assemble-html: createdirs
+	cp src/html/index.tpl.html ${TPL}
+	perl -pe 's|##MODAL-ERROR##|`cat src/html/modal-error.part.html`|ge' -i ${TPL}
+	perl -pe 's|##MODAL-ABOUT##|`cat src/html/modal-about.part.html`|ge' -i ${TPL}
+	perl -pe 's|##MODAL-HELP##|`cat src/html/modal-help.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat src/html/panel-impairments.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-MEASUREMENTS##|`cat src/html/panel-measurements.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
 
 install:
 	install -d ${DESTDIR}/var/lib/jittertrap/
