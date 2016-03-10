@@ -5,7 +5,7 @@ include ../make.config
 # BE CAREFUL! Check the 'rm -rf' if you edit this!
 OUT = output
 
-all: clean createdirs version coreconfig concat assemble-html copydeps copyhtml copycss
+all: clean createdirs version coreconfig concat copydeps copyhtml copycss
 
 createdirs: clean
 	mkdir ${OUT}
@@ -68,7 +68,7 @@ coreconfig: version
 
 
 TPL = ${OUT}/index.html
-assemble-html:
+assemble-html: createdirs
 	cp src/html/index.tpl.html ${TPL}
 	perl -pe 's|##MODAL-ERROR##|`cat src/html/modal-error.part.html`|ge' -i ${TPL}
 	perl -pe 's|##MODAL-ABOUT##|`cat src/html/modal-about.part.html`|ge' -i ${TPL}
