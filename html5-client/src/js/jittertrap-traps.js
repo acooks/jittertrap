@@ -7,28 +7,37 @@ JT = (function (my) {
   'use strict';
   my.trapModule = {};
 
+  var trapsNextUID = 123123;
+
   var trapsBin = {}; // a container for Traps
 
   var trapStates = { disarmed: 0, armed: 1, triggered: 2 };
 
   var testTypes = {
-    minLessThan: function (val, stats) {
-      return { pass: (stats.min < val), val: stats.min };
     },
-    maxMoreThan: function (val, stats) {
-      return { pass: (stats.max > val), val: stats.max };
+    minLessThan: function (threshold, tripped, stats) {
+      return { pass: (stats.min < threshold),
+               val:  (stats.min < tripped) ? stats.min : tripped };
     },
-    meanMoreThan: function (val, stats) {
-      return { pass: (stats.mean > val), val: stats.mean };
+    maxMoreThan: function (threshold, tripped, stats) {
+      return { pass: (stats.max > threshold),
+               val:  (stats.max > tripped) ? stats.max : tripped };
     },
-    meanLessThan: function (val, stats) {
-      return { pass: (stats.mean < val), val: stats.mean };
+    meanMoreThan: function (threshold, tripped, stats) {
+      return { pass: (stats.mean > threshold),
+               val:  (stats.mean > tripped) ? stats.mean : tripped };
     },
-    meanPGapMoreThan: function (val, stats) {
-      return { pass: (stats.meanZ > val), val: stats.meanZ };
+    meanLessThan: function (threshold, tripped, stats) {
+      return { pass: (stats.mean < threshold),
+               val:  (stats.mean < tripped) ? stats.mean : tripped };
     },
-    maxPGapMoreThan: function (val, stats) {
-      return { pass:(stats.maxZ > val), val: stats.maxZ };
+    meanPGapMoreThan: function (threshold, tripped, stats) {
+      return { pass: (stats.meanZ > threshold),
+               val:  (stats.meanZ > tripped) ? stats.meanZ : tripped };
+    },
+    maxPGapMoreThan: function (threshold, tripped, stats) {
+      return { pass:(stats.maxZ > threshold),
+               val: (stats.maxZ > tripped) ? stats.maxZ : tripped };
     }
   };
 
@@ -46,7 +55,7 @@ JT = (function (my) {
   var actionTypes = {};
 
   actionTypes.logAction = function (trap, triggeredVal) {
-    console.log("log action. Trap: " + trap.trapId
+    console.log("log action. Trap: " + trap.trapType
                 + " series: " + trap.seriesName
                 + " threshold Val: " + trap.threshVal
                 + " triggered Val: " + triggeredVal);
@@ -67,14 +76,14 @@ JT = (function (my) {
       var led = $("#"+ledId);
       led.css("color", "red");
       led.html("&nbsp;"+triggeredVal.toFixed(2));
-      if (handles.ledId) {
-        clearTimeout(handles.ledId);
+      if (handles[ledId]) {
+        clearTimeout(handles[ledId]);
       }
-      handles.ledId = setTimeout(function() { ledOff(ledId); },
+      handles[ledId] = setTimeout(function() { ledOff(ledId); },
                                  my.charts.getChartPeriod() + 10);
     };
 
-    ledOn(trap.trapId + "_led");
+    ledOn(trap.trapUID + "_led");
   };
 
   /**
@@ -90,11 +99,13 @@ JT = (function (my) {
   /**
    *
    */
-  var Trap = function (trapId, seriesName, triggerTester, threshVal) {
-    this.trapId = trapId;
+  var Trap = function (trapType, seriesName, triggerTester, threshVal) {
+    this.trapType = trapType;
+    this.trapUID = trapType + "_" + trapsNextUID++;
     this.seriesName = seriesName;
     this.triggerTester = triggerTester;
     this.threshVal = threshVal;  // threshold value
+    this.tripVal = threshVal;
     this.state = trapStates.disarmed;
     this.actionList = []; // a list of TrapAction
 
@@ -104,9 +115,10 @@ JT = (function (my) {
     };
 
     this.testAndAct = function (stats) {
-      var result = this.triggerTester(this.threshVal, stats);
+      var result = this.triggerTester(this.threshVal, this.tripVal, stats);
       if (result.pass) {
         //console.log("trap triggered.");
+        this.tripVal = result.val;
         $.each(this.actionList, function(idx, action) {
           //console.log("taking action: " + idx);
           action.execute(result.val);
@@ -143,10 +155,10 @@ JT = (function (my) {
   /**
    *
    */
-  var addTrapToUI = function(){
+  var addTrapToUI = function(trap){
     var trapValue        = $('#trap_value').val(),
         trapValueInt     = parseInt(trapValue),
-        trapIdSelected   = $('#trap_names option:selected').data('trapId'),
+        trapTypeSelected   = $('#trap_names option:selected').data('trapType'),
         trapNameSelected = $('#trap_names option:selected').text(),
         $trapTable       = $('#traps_table'),
         trapUnits        = $('#trap_names option:selected').data('trapUnits');
@@ -155,7 +167,8 @@ JT = (function (my) {
     if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
       // Add the trap to the traps table
       $.get('/templates/trap.html', function(template) {
-        var template_data = { trapId: trapIdSelected,
+        var template_data = { trapType: trapTypeSelected,
+                              trapUID:  trap.trapUID,
                               trapName: trapNameSelected,
                               trapValue: trapValueInt,
                               trapUnits: trapUnits
@@ -176,25 +189,25 @@ JT = (function (my) {
   my.trapModule.addTrapHandler = function(event) {
     var $selectedTrapOption = $(event.target).parents('.modal')
                               .find('option:selected');
-    var trapId              = $selectedTrapOption.data('trapId');
+    var trapType            = $selectedTrapOption.data('trapType');
     var trapValue           = $('#trap_value').val();
     var trapValueInt        = parseInt(trapValue);
 
     if (trapValueInt > 0) {
-      var map = mapTrapIdToSeriesAndTest[trapId];
-      var t = new Trap(trapId, map.series, map.test, trapValue);
+      var map = mapTrapIdToSeriesAndTest[trapType];
+      var t = new Trap(trapType, map.series, map.test, trapValue);
       //t.addAction(actionTypes.logAction);
       t.addAction(actionTypes.blinkAction);
-      trapsBin[trapId] = t;
-      addTrapToUI();
+      trapsBin[t.trapUID] = t;
+      addTrapToUI(t);
     }
   };
 
   /**
    *
    */
-  my.trapModule.deleteTrap = function (trapId) {
-    delete trapsBin[trapId];
+  my.trapModule.deleteTrap = function (trapType) {
+    delete trapsBin[trapType];
   };
 
   return my;

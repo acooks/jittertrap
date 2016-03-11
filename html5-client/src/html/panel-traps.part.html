@@ -19,14 +19,13 @@
                       <form>
                         <!-- Traps and their measurement units -->
                         <select id="trap_names">
-                          <option data-trap-id="mean_rx_bitrate" data-trap-units="Kbps">Mean Ingress Bitrate Exceeds</option>
-                          <option data-trap-id="mean_tx_bitrate" data-trap-units="Kbps">Mean Egress Bitrate Exceeds </option>
-                          <option data-trap-id="max_rx_bitrate" data-trap-units="Kbps">Max Ingress Bitrate Exceeds </option>
-                          <option data-trap-id="max_tx_bitrate" data-trap-units="Kbps">Max Egress Bitrate Exceeds </option>
-                          <option data-trap-id="min_rx_bitrate" data-trap-units="Kbps">Min Ingress Bitrate Below </option>
-                          <option data-trap-id="min_tx_bitrate" data-trap-units="Kbps">Min Egress Bitrate Below </option>
-                          <option data-trap-id="rx_pkt_gap" data-trap-units="ms">Max Ingress Packet Spacing Exceeds</option>
-                          <option data-trap-id="tx_pkt_gap" data-trap-units="ms">Max Egress Packet Spacing Exceeds</option>
+                          <option data-trap-type="mean_tx_bitrate" data-trap-units="Kbps">Mean Egress Bitrate Exceeds </option>
+                          <option data-trap-type="max_rx_bitrate" data-trap-units="Kbps">Max Ingress Bitrate Exceeds </option>
+                          <option data-trap-type="max_tx_bitrate" data-trap-units="Kbps">Max Egress Bitrate Exceeds </option>
+                          <option data-trap-type="min_rx_bitrate" data-trap-units="Kbps">Min Ingress Bitrate Below </option>
+                          <option data-trap-type="min_tx_bitrate" data-trap-units="Kbps">Min Egress Bitrate Below </option>
+                          <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Ingress Packet Spacing Exceeds</option>
+                          <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Egress Packet Spacing Exceeds</option>
                         </select>
                         <!-- Trap value and measurement units for that value -->
                         <div class="input-group">
