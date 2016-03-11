@@ -14,6 +14,13 @@ JT = (function (my) {
   var trapStates = { disarmed: 0, armed: 1, triggered: 2 };
 
   var testTypes = {
+    curLessThan: function (threshold, tripped, stats) {
+      return { pass: (stats.cur < threshold),
+               val:  (stats.cur < tripped) ? stats.cur : tripped };
+    },
+    curMoreThan: function (threshold, tripped, stats) {
+      return { pass: (stats.cur > threshold),
+               val:  (stats.cur > tripped) ? stats.cur : tripped };
     },
     minLessThan: function (threshold, tripped, stats) {
       return { pass: (stats.min < threshold),
@@ -42,6 +49,8 @@ JT = (function (my) {
   };
 
   var mapTrapIdToSeriesAndTest = {
+    cur_rx_bitrate_lt : { series: "rxRate", test: testTypes.curLessThan },
+    cur_rx_bitrate_mt : { series: "rxRate", test: testTypes.curMoreThan },
     mean_rx_bitrate: { series: "rxRate", test: testTypes.meanMoreThan },
     mean_tx_bitrate: { series: "txRate", test: testTypes.meanMoreThan },
     max_rx_bitrate : { series: "rxRate", test: testTypes.maxMoreThan },

@@ -161,6 +161,7 @@ JT = (function (my) {
 
   var updateStats = function (series, timeScale) {
     var sortedData = series.samples[timeScale].slice(0);
+    series.stats.cur = sortedData[sortedData.length-1];
     sortedData.sort(numSort);
 
     series.stats.max = sortedData[sortedData.length-1];
