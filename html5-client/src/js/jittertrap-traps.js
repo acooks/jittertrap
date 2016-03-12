@@ -167,9 +167,9 @@ JT = (function (my) {
   var addTrapToUI = function(trap){
     var trapValue        = $('#trap_value').val(),
         trapValueInt     = parseInt(trapValue),
-        trapTypeSelected   = $('#trap_names option:selected').data('trapType'),
+        trapTypeSelected = $('#trap_names option:selected').data('trapType'),
         trapNameSelected = $('#trap_names option:selected').text(),
-        $trapTable       = $('#traps_table'),
+        trapTable        = $('#traps_table'),
         trapUnits        = $('#trap_names option:selected').data('trapUnits');
 
     // Validity/Verification checks first
@@ -184,7 +184,18 @@ JT = (function (my) {
                             },
             rendered      = Mustache.render(template, template_data);
 
-        $trapTable.find('tbody').append(rendered);
+        trapTable.find('tbody').append(rendered);
+
+        // Remove trap button
+        $("#"+trap.trapUID+"_delete").on('click', function(event) {
+          // Remove from JS
+          my.trapModule.deleteTrap(trap.trapUID);
+
+          // Removal from the UI
+          var trapTr = $(event.target).parents('tr');
+          trapTr.remove();
+        });
+
       });
 
       $('#add_trap_modal input').val("");

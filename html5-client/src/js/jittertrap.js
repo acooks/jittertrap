@@ -63,18 +63,6 @@ $(document).ready(function() {
   $('#trap_names').bind('change', JT.trapModule.trapSelectionHandler);
   // Add a trap
   $('#add_trap_modal button').last().click(JT.trapModule.addTrapHandler);
-  // Remove trap button(s)
-  $('#traps_table tbody').on('click', 'tr button', function(event){
-    var $trapTr = $(event.target).parents('tr');
-
-    // Remove from JS
-    var trapId = $trapTr.data("trapId");
-    JT.trapModule.deleteTrap(trapId);
-
-    // Removal from the UI
-    $trapTr.remove();
-  });
-
 
 });
 
