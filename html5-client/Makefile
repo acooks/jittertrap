@@ -22,6 +22,7 @@ concat: createdirs
 	cat src/js/jittertrap-websocket.js  >> ${CONCAT}
 	cat src/js/jittertrap-charting.js   >> ${CONCAT}
 	cat src/js/jittertrap-traps.js      >> ${CONCAT}
+	cat src/js/jittertrap-programs.js   >> ${CONCAT}
 	cat src/js/jittertrap-version.js    >> ${CONCAT}
 	cat src/js/jittertrap.js            >> ${CONCAT}
 
@@ -77,6 +78,7 @@ assemble-html: createdirs
 	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat src/html/panel-impairments.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-MEASUREMENTS##|`cat src/html/panel-measurements.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-PROGRAMS##|`cat src/html/panel-programs.part.html`|ge' -i ${TPL}
 
 install:
 	install -d ${DESTDIR}/var/lib/jittertrap/
