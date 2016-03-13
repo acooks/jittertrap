@@ -189,7 +189,7 @@ JT = (function (my) {
         // Remove trap button
         $("#"+trap.trapUID+"_delete").on('click', function(event) {
           // Remove from JS
-          my.trapModule.deleteTrap(trap.trapUID);
+          delete trapsBin[trap.trapUID];
 
           // Removal from the UI
           var trapTr = $(event.target).parents('tr');
@@ -221,13 +221,6 @@ JT = (function (my) {
       trapsBin[t.trapUID] = t;
       addTrapToUI(t);
     }
-  };
-
-  /**
-   *
-   */
-  my.trapModule.deleteTrap = function (trapType) {
-    delete trapsBin[trapType];
   };
 
   return my;
