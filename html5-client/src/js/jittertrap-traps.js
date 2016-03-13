@@ -63,45 +63,72 @@ JT = (function (my) {
 
   var actionTypes = {};
 
-  actionTypes.logAction = function (trap, triggeredVal) {
-    console.log("log action. Trap: " + trap.trapType
+  actionTypes = (function (my) {
+    my.logAction = {};
+    my.logAction.act = function (trap, val) {
+      console.log("log action. Trap: " + trap.trapType
                 + " series: " + trap.seriesName
                 + " threshold Val: " + trap.threshVal
-                + " triggered Val: " + triggeredVal);
-  };
+                + " triggered Val: " + val);
+    };
 
-  actionTypes.blinkTimeoutHandles = {};
-  actionTypes.blinkAction = function (trap, triggeredVal) {
+    my.logAction.reset = function (trap) {};
 
+    return my;
+  }(actionTypes));
+
+
+  actionTypes = (function (my) {
+    my.blinkAction = {};
+    my.blinkTimeoutHandles = {};
     var handles = actionTypes.blinkTimeoutHandles;
 
     var ledOff = function (ledId) {
       var led = $("#"+ledId);
       led.css("color", "#FF9900");
-      actionTypes.blinkTimeoutHandles.ledId = 0;
+      my.blinkTimeoutHandles.ledId = 0;
     };
 
-    var ledOn = function (ledId) {
+    var ledOn = function (trap, val) {
+      var ledId = trap.trapUID + "_led";
       var led = $("#"+ledId);
       led.css("color", "red");
-      led.html("&nbsp;"+triggeredVal.toFixed(2));
-      if (handles[ledId]) {
-        clearTimeout(handles[ledId]);
+      led.html("&nbsp;"+val.toFixed(2));
+      if (my.blinkTimeoutHandles[ledId]) {
+        clearTimeout(my.blinkTimeoutHandles[ledId]);
       }
-      handles[ledId] = setTimeout(function() { ledOff(ledId); },
-                                 my.charts.getChartPeriod() + 10);
+      my.blinkTimeoutHandles[ledId] =
+        setTimeout(function() { ledOff(ledId); },
+                   JT.charts.getChartPeriod() + 10);
     };
 
-    ledOn(trap.trapUID + "_led");
-  };
+    my.blinkAction.act = function (trap, val) {
+      ledOn(trap, val);
+    };
+
+    my.blinkAction.reset = function (trap) {
+      var ledId = trap.trapUID + "_led";
+      ledOff(ledId);
+      var led = $("#"+ledId);
+      led.css("color", "black");
+      led.html("&nbsp;");
+    };
+
+    return my;
+  }(actionTypes));
 
   /**
    *
    */
   var TrapAction = function (trap, actionType) {
     this.trap = trap;
+
     this.execute = function (triggeredVal) {
-      actionType(trap, triggeredVal);
+      actionType.act(trap, triggeredVal);
+    };
+
+    this.reset = function () {
+      actionType.reset(trap);
     };
   };
 
@@ -134,6 +161,17 @@ JT = (function (my) {
         });
       }
     };
+
+    this.reset = function () {
+      this.tripVal = this.threshVal;
+      this.state = trapStates.disarmed;
+
+      $.each(this.actionList, function(idx, action) {
+        action.reset();
+      });
+    };
+
+    console.log("new trap: " + trapsNextUID);
   };
 
   /**
@@ -194,6 +232,11 @@ JT = (function (my) {
           // Removal from the UI
           var trapTr = $(event.target).parents('tr');
           trapTr.remove();
+        });
+
+        // Reset trap button
+        $("#"+trap.trapUID+"_reset").on('click', function(event) {
+          trap.reset();
         });
 
       });
