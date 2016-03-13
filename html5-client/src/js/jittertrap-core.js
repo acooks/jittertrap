@@ -46,7 +46,7 @@ JT = (function (my) {
     this.ylabel = ylabel;
     this.rateFormatter = rateFormatter;
     this.xlabel = "Time (ms)";
-    this.stats = {min: 99999, max:0, median:0, mean:0, maxZ:0, meanZ:0 };
+    this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
     this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[]};
     this.pgaps = {};
     for (var ts in timeScaleTable) {

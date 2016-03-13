@@ -39,12 +39,12 @@ JT = (function (my) {
                val:  (stats.mean < tripped) ? stats.mean : tripped };
     },
     meanPGapMoreThan: function (threshold, tripped, stats) {
-      return { pass: (stats.meanZ > threshold),
-               val:  (stats.meanZ > tripped) ? stats.meanZ : tripped };
+      return { pass: (stats.meanPG > threshold),
+               val:  (stats.meanPG > tripped) ? stats.meanPG : tripped };
     },
     maxPGapMoreThan: function (threshold, tripped, stats) {
-      return { pass:(stats.maxZ > threshold),
-               val: (stats.maxZ > tripped) ? stats.maxZ : tripped };
+      return { pass:(stats.maxPG > threshold),
+               val: (stats.maxPG > tripped) ? stats.maxPG : tripped };
     }
   };
 
