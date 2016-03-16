@@ -76,21 +76,18 @@ int jt_set_netem_unpacker(json_t *root, void **data)
 
 	token = json_object_get(params_token, "delay");
 	if (!json_is_integer(token)) {
-		assert(0);
 		goto cleanup_unpack_fail;
 	}
 	params->delay = json_integer_value(token);
 
 	token = json_object_get(params_token, "jitter");
 	if (!json_is_integer(token)) {
-		assert(0);
 		goto cleanup_unpack_fail;
 	}
 	params->jitter = json_integer_value(token);
 
 	token = json_object_get(params_token, "loss");
 	if (!json_is_integer(token)) {
-		assert(0);
 		goto cleanup_unpack_fail;
 	}
 	params->loss = json_integer_value(token);
