@@ -27,7 +27,7 @@ concat: createdirs
 	cat src/js/jittertrap.js            >> ${CONCAT}
 
 copydeps: createdirs
-	cp deps/js/jquery-2.1.3.min.js ${OUT}/js/
+	cp deps/js/jquery-2.2.1.min.js ${OUT}/js/
 	cp deps/js/cbuffer.js ${OUT}/js/
 	cp deps/js/bootstrap.min.js ${OUT}/js/
 	cp deps/js/mustache.min.js ${OUT}/js/
