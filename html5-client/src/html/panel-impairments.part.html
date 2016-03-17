@@ -23,17 +23,83 @@
                     <span class="input-group-addon">%</span>
                   </div>
                 </div>
+                <div>&nbsp;</div>
+                <div><em>Status:</em> <span id="netem_status"></span></div>
+                <div>&nbsp;</div>
                 <div class="btn-group">
                   <button id="set_netem_button" class="btn btn-primary">
-                    <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                    <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                    Update
                   </button>
                   <button id="clear_netem_button" class="btn btn-default">
-                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Clear
+                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                    Clear
+                  </button>
+                  <button id="program_add" class="btn btn-default" data-toggle="modal" data-target="#add_program_modal" type="button">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    Add Program
                   </button>
                 </div>
                 <br/>
               </form>
+
+              <!-- Program Dialog viewed by clicking the Add Program button -->
+              <div class="modal fade" id="add_program_modal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                      </button>
+                      <h4 class="modal-title" id="myModalLabel">Add Program</h4>
+                    </div>
+                    <div class="modal-body">
+                      <form>
+                        <textarea id="new_program" rows="10" class="form-control"></textarea>
+                      </form>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-primary">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div> <!-- end modal -->
+
+              <table id="programs_table" class="table">
+                <thead>
+                  <tr>
+                    <th>Programs</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example Program after being added through the UI -->
+                  <!--
+                  <tr data-program-id="program_123">
+                    <td class="col-xs-4">templateProgram</td>
+                    <td class="col-xs-2">
+                      <button type="button" class="btn btn-default" id="program_123_start">
+                        <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                      </button>
+                      <button type="button" class="btn btn-default" id="program_123_stop">
+                        <span class="glyphicon glyphicon-stop" aria-hidden="true"></span>
+                      </button>
+                      <button type="button" class="btn btn-default" id="program_123_delete">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                      </button>
+                    </td>
+                    <td class="col-xs-2">
+                      <div>
+                        <span class="glyphicon" id="program_123_status"></span>
+                      </div>
+                    </td>
+                  </tr>
+                  -->
+                  <!-- END Example -->
+                </tbody>
+              </table> <!-- end programs -->
+
             </div>
-            <div class="panel-footer"><em>Status:</em> <span id="netem_status"></span></div>
           </div>
         </div> <!-- tab pane -->
