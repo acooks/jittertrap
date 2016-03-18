@@ -491,11 +491,9 @@ JT = (function (my) {
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
-    var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
-
+    my.core.setSelectedSeriesName(selectedSeriesOpt);
     clearChartData();
-
-    my.charts.mainChart.reset(selectedSeries);
+    my.charts.mainChart.reset(my.core.getSelectedSeries());
     my.charts.packetGapChart.reset();
 
   };

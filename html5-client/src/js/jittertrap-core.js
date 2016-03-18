@@ -76,9 +76,14 @@ JT = (function (my) {
                                  "pkts per sec, mean",
                                  packetDeltaToRate);
 
-  /* FIXME: this is a stepping stone to nowhere. */
-  my.core.getSeriesByName = function (sName) {
-    return sBin[sName];
+  var selectedSeriesName = "rxRate";
+
+  my.core.setSelectedSeriesName = function(sName) {
+    selectedSeriesName = sName;
+  };
+
+  my.core.getSelectedSeries = function () {
+    return sBin[selectedSeriesName];
   };
 
   var resizeCBuf = function(series, len) {
@@ -254,8 +259,7 @@ JT = (function (my) {
   };
 
   my.core.processDataMsg = function (stats, interval) {
-    var visibleSeries = $("#chopts_series option:selected").val();
-    var selectedSeries = sBin[visibleSeries];
+    var selectedSeries = sBin[selectedSeriesName];
 
     switch (interval) {
       case 5000000:
