@@ -48,7 +48,6 @@ JT = (function (my) {
       $("#jitter").val("0");
       $("#loss").val("0");
     } else {
-      $("#netem_status").html("Ready");
       $("#delay").val(params.delay);
       $("#jitter").val(params.jitter);
       /* params.loss is a 10th of a percent (integer). convert it to float */

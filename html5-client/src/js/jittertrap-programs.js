@@ -28,6 +28,12 @@ JT = (function (my) {
       JT.ws.clear_netem();
       runningProgram = this;
       $("#"+this.id+"_play").css('color','green');
+      $("#delay").prop('readonly', true);
+      $("#jitter").prop('readonly', true);
+      $("#loss").prop('readonly', true);
+      $("#set_netem_button").prop('disabled', true);
+      $("#clear_netem_button").prop('disabled', true);
+      $("#netem_status").html("Program Running");
 
       for (var i in this.impairments) {
         if (json.impairments[i].stop) {
@@ -70,6 +76,12 @@ JT = (function (my) {
       JT.ws.clear_netem();
       runningProgram = null;
       $("#"+this.id+"_play").css('color','#333');
+      $("#delay").prop('readonly', false);
+      $("#jitter").prop('readonly', false);
+      $("#loss").prop('readonly', false);
+      $("#set_netem_button").prop('disabled', false);
+      $("#clear_netem_button").prop('disabled', false);
+      $("#netem_status").html("Ready");
     };
   };
 
