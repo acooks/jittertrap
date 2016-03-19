@@ -22,3 +22,6 @@
   vertical-align: middle;
 }
 
+.form-inline .input-group input[type="number"] {
+   width:5em;
+}

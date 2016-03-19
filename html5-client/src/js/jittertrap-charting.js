@@ -55,10 +55,10 @@ JT = (function (my) {
       left: 75
     };
 
-    var width = 960 - margin.left - margin.right;
-    var height = 300 - margin.top - margin.bottom;
-    var xScale = d3.scale.linear().range([0, width]);
-    var yScale = d3.scale.linear().range([height, 0]);
+    var c_width = 960 - margin.left - margin.right;
+    var c_height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, c_width]);
+    var yScale = d3.scale.linear().range([c_height, 0]);
     var xAxis = d3.svg.axis()
                 .scale(xScale)
                 .ticks(10)
@@ -98,8 +98,8 @@ JT = (function (my) {
       svg = d3.select("#chartThroughput")
             .append("svg");
 
-      width = $("#chartThroughput").width() - margin.left - margin.right;
-      height = $("#chartThroughput").height() - margin.top - margin.bottom;
+      var width = c_width - margin.left - margin.right;
+      var height = c_height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -187,12 +187,26 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
+      resize();
     };
 
     m.redraw = function() {
 
-      width = $("#chartThroughput").width() - margin.left - margin.right;
-      height = $("#chartThroughput").height() - margin.top - margin.bottom;
+      var width = c_width - margin.left - margin.right;
+      var height = c_height - margin.top - margin.bottom;
+
+      xScale = d3.scale.linear().range([0, width]);
+      yScale = d3.scale.linear().range([height, 0]);
+
+      xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(10)
+              .orient("bottom");
+
+      yAxis = d3.svg.axis()
+              .scale(yScale)
+              .ticks(5)
+              .orient("left");
 
       /* Scale the range of the data again */
       xScale.domain(d3.extent(chartData.mainChart, function(d) {
@@ -227,9 +241,25 @@ JT = (function (my) {
       svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid());
       svg.select(".yGrid").call(yGrid());
-
     };
 
+    var resize = function() {
+      var container = d3.select("#chartThroughput");
+      var new_width = container.node().getBoundingClientRect().width;
+      var new_height = container.node().getBoundingClientRect().height;
+      if (new_width === 0 ) {
+        return;
+      }
+      c_width = new_width;
+      c_height = new_height;
+      container.attr("width", c_width)
+               .attr("height", c_height);
+      container.select("svg")
+               .attr("width", c_width)
+               .attr("height", c_height);
+    };
+
+    d3.select(window).on('resize.chartThroughput', resize);
 
     return m;
 
@@ -244,10 +274,10 @@ JT = (function (my) {
       left: 75
     };
 
-    var width = 960 - margin.left - margin.right;
-    var height = 300 - margin.top - margin.bottom;
-    var xScale = d3.scale.linear().range([0, width]);
-    var yScale = d3.scale.linear().range([height, 0]);
+    var c_width = 960 - margin.left - margin.right;
+    var c_height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, c_width]);
+    var yScale = d3.scale.linear().range([c_height, 0]);
     var xAxis = d3.svg.axis()
                 .scale(xScale)
                 .ticks(10)
@@ -285,6 +315,22 @@ JT = (function (my) {
            .ticks(0);
       };
 
+    var resize = function() {
+      var container = d3.select("#packetGapContainer");
+      var new_width = container.node().getBoundingClientRect().width;
+      var new_height = container.node().getBoundingClientRect().height;
+      if (new_width === 0 ) {
+        return;
+      }
+      c_width = new_width;
+      c_height = new_height;
+      container.attr("width", c_width)
+               .attr("height", c_height);
+      container.select("svg")
+               .attr("width", c_width)
+               .attr("height", c_height);
+    };
+
     m.reset = function() {
 
       d3.select("#packetGapContainer").selectAll("svg").remove();
@@ -292,8 +338,8 @@ JT = (function (my) {
       svg = d3.select("#packetGapContainer")
             .append("svg");
 
-      width = $("#packetGapContainer").width() - margin.left - margin.right;
-      height = $("#packetGapContainer").height() - margin.top - margin.bottom;
+      var width = c_width - margin.left - margin.right;
+      var height = c_height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -392,12 +438,26 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
+      resize();
     };
 
     m.redraw = function() {
 
-      width = $("#packetGapContainer").width() - margin.left - margin.right;
-      height = $("#packetGapContainer").height() - margin.top - margin.bottom;
+      var width = c_width - margin.left - margin.right;
+      var height = c_height - margin.top - margin.bottom;
+
+      xScale = d3.scale.linear().range([0, width]);
+      yScale = d3.scale.linear().range([height, 0]);
+
+      xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(10)
+              .orient("bottom");
+
+      yAxis = d3.svg.axis()
+              .scale(yScale)
+              .ticks(5)
+              .orient("left");
 
       /* Scale the range of the data again */
       xScale.domain(d3.extent(chartData.packetGapMean, function(d) {
@@ -433,9 +493,9 @@ JT = (function (my) {
       svg.select(".xGrid").call(xGrid());
       svg.select(".yGrid").call(yGrid());
       svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
-
     };
 
+    d3.select(window).on('resize.packetGapContainer', resize);
 
     return m;
 
@@ -443,11 +503,9 @@ JT = (function (my) {
 
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
-    var selectedSeries = my.core.getSeriesByName(selectedSeriesOpt);
-
+    my.core.setSelectedSeriesName(selectedSeriesOpt);
     clearChartData();
-
-    my.charts.mainChart.reset(selectedSeries);
+    my.charts.mainChart.reset(my.core.getSelectedSeries());
     my.charts.packetGapChart.reset();
 
   };

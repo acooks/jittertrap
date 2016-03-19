@@ -22,11 +22,12 @@ concat: createdirs
 	cat src/js/jittertrap-websocket.js  >> ${CONCAT}
 	cat src/js/jittertrap-charting.js   >> ${CONCAT}
 	cat src/js/jittertrap-traps.js      >> ${CONCAT}
+	cat src/js/jittertrap-programs.js   >> ${CONCAT}
 	cat src/js/jittertrap-version.js    >> ${CONCAT}
 	cat src/js/jittertrap.js            >> ${CONCAT}
 
 copydeps: createdirs
-	cp deps/js/jquery-2.1.3.min.js ${OUT}/js/
+	cp deps/js/jquery-2.2.1.min.js ${OUT}/js/
 	cp deps/js/cbuffer.js ${OUT}/js/
 	cp deps/js/bootstrap.min.js ${OUT}/js/
 	cp deps/js/mustache.min.js ${OUT}/js/
@@ -75,7 +76,6 @@ assemble-html: createdirs
 	perl -pe 's|##MODAL-HELP##|`cat src/html/modal-help.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat src/html/panel-impairments.part.html`|ge' -i ${TPL}
-	perl -pe 's|##PANEL-MEASUREMENTS##|`cat src/html/panel-measurements.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
 
 install:
