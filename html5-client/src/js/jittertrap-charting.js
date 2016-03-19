@@ -98,8 +98,6 @@ JT = (function (my) {
       svg = d3.select("#chartThroughput")
             .append("svg");
 
-      c_width = d3.select("#chartThroughput").node().getBoundingClientRect().width;
-      c_height = d3.select("#chartThroughput").node().getBoundingClientRect().height;
       var width = c_width - margin.left - margin.right;
       var height = c_height - margin.top - margin.bottom;
 
@@ -189,6 +187,7 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
+      resize();
     };
 
     m.redraw = function() {
@@ -244,16 +243,23 @@ JT = (function (my) {
       svg.select(".yGrid").call(yGrid());
     };
 
-    d3.select(window).on('resize.chartThroughput', function() {
+    var resize = function() {
       var container = d3.select("#chartThroughput");
-      c_width = container.node().getBoundingClientRect().width;
-      c_height = container.node().getBoundingClientRect().height;
+      var new_width = container.node().getBoundingClientRect().width;
+      var new_height = container.node().getBoundingClientRect().height;
+      if (new_width === 0 ) {
+        return;
+      }
+      c_width = new_width;
+      c_height = new_height;
       container.attr("width", c_width)
                .attr("height", c_height);
       container.select("svg")
                .attr("width", c_width)
                .attr("height", c_height);
-    });
+    };
+
+    d3.select(window).on('resize.chartThroughput', resize);
 
     return m;
 
@@ -309,6 +315,22 @@ JT = (function (my) {
            .ticks(0);
       };
 
+    var resize = function() {
+      var container = d3.select("#packetGapContainer");
+      var new_width = container.node().getBoundingClientRect().width;
+      var new_height = container.node().getBoundingClientRect().height;
+      if (new_width === 0 ) {
+        return;
+      }
+      c_width = new_width;
+      c_height = new_height;
+      container.attr("width", c_width)
+               .attr("height", c_height);
+      container.select("svg")
+               .attr("width", c_width)
+               .attr("height", c_height);
+    };
+
     m.reset = function() {
 
       d3.select("#packetGapContainer").selectAll("svg").remove();
@@ -316,8 +338,6 @@ JT = (function (my) {
       svg = d3.select("#packetGapContainer")
             .append("svg");
 
-      c_width = d3.select("#packetGapContainer").node().getBoundingClientRect().width;
-      c_height = d3.select("#packetGapContainer").node().getBoundingClientRect().height;
       var width = c_width - margin.left - margin.right;
       var height = c_height - margin.top - margin.bottom;
 
@@ -418,6 +438,7 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
+      resize();
     };
 
     m.redraw = function() {
@@ -474,16 +495,7 @@ JT = (function (my) {
       svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
     };
 
-    d3.select(window).on('resize.packetGapContainer', function() {
-      var container = d3.select("#packetGapContainer");
-      c_width = container.node().getBoundingClientRect().width;
-      c_height = container.node().getBoundingClientRect().height;
-      container.attr("width", c_width)
-               .attr("height", c_height);
-      container.select("svg")
-               .attr("width", c_width)
-               .attr("height", c_height);
-    });
+    d3.select(window).on('resize.packetGapContainer', resize);
 
     return m;
 
