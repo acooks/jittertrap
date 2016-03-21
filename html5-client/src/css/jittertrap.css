@@ -23,5 +23,10 @@
 }
 
 .form-inline .input-group input[type="number"] {
-   width:5em;
+  width:5em;
+}
+
+.page-header {
+  margin: 0;
+  border: 0;
 }
