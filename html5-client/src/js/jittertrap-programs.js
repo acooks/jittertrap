@@ -10,7 +10,7 @@ JT = (function (my) {
 
   var programs = {};
   var nextPID = 123;
-  var runningProgram = {};
+  var runningProgram = null;
 
   var Program = function (json) {
     this.id = "program_" + nextPID++;
@@ -149,6 +149,26 @@ JT = (function (my) {
 
     // Close the modal dialog
     $('#add_program_modal button').get(1).click();
+  };
+
+  my.programsModule.processNetemMsg = function (params) {
+    if (params.delay === -1 && params.jitter === -1 && params.loss === -1) {
+      $("#netem_status").html("No active impairment on device. Set parameters to activate.");
+      $("#delay").val("0");
+      $("#jitter").val("0");
+      $("#loss").val("0");
+    } else {
+      $("#delay").val(params.delay);
+      $("#jitter").val(params.jitter);
+      /* params.loss is a 10th of a percent (integer). convert it to float */
+      $("#loss").val(0.1 * params.loss);
+    }
+    if (runningProgram) {
+      $("#netem_status").html("Program Running");
+    } else {
+      // response to ad-hoc set
+      $("#netem_status").html("Ready");
+    }
   };
 
   return my;

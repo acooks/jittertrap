@@ -42,17 +42,7 @@ JT = (function (my) {
   };
 
   var handleMsgNetemParams = function(params) {
-    if (params.delay === -1 && params.jitter === -1 && params.loss === -1) {
-      $("#netem_status").html("No active impairment on device. Set parameters to activate.");
-      $("#delay").val("0");
-      $("#jitter").val("0");
-      $("#loss").val("0");
-    } else {
-      $("#delay").val(params.delay);
-      $("#jitter").val(params.jitter);
-      /* params.loss is a 10th of a percent (integer). convert it to float */
-      $("#loss").val(0.1 * params.loss);
-    }
+    JT.programsModule.processNetemMsg(params);
   };
 
   var handleMsgSamplePeriod = function(params) {
