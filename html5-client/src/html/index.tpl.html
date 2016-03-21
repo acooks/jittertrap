@@ -16,36 +16,34 @@
 
   </head>
   <body>
+    <div class="page-header"></div>
     <div class="container">
-      <div class="navbar-text navbar-right">
-        <div class="dropdown">
-          <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-            Menu <span class="caret"></span>
-          </button>
-          <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-            <li><a href="#" data-toggle="modal" data-target="#about">About</a></li>
-            <li><a href="#" data-toggle="modal" data-target="#help">Help!</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="page-header">
-        <h1 class="text-muted">JitterTrap</h1>
-      </div>
-
       <div class="panel panel-default">
-        <div class="panel-heading">
-          <h2 class="panel-title">Interface Selection</h2>
-        </div>
         <div class="panel-body">
-          <form id="devSelectForm" class="form-inline">
-            <div class="form-group">
-              <label for="dev_select">Interface</label>
-              <select id="dev_select" class="form-control"></select>
+        <div class="row">
+          <div class="col-xs-5">
+            <div class="dropdown">
+              <button class="btn btn-default dropdown-toggle brand-name" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                JitterTrap <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                <li><a href="#" data-toggle="modal" data-target="#about">About</a></li>
+                <li><a href="#" data-toggle="modal" data-target="#help">Help!</a></li>
+              </ul>
             </div>
-          </form>
-        </div>
+          </div>
+          <div class="col-xs-5">
+            <form id="devSelectForm" class="form-inline">
+              <div class="form-group">
+                <label for="dev_select">Interface</label>
+                <select id="dev_select" class="form-control"></select>
+              </div>
+            </form>
+          </div>
+        </div> <!-- row -->
+        </div> <!-- panel-body -->
       </div>
+
 
       <ul class="nav nav-tabs nav-justified">
         <li class="active"><a data-toggle="tab" href="#chartsPanel"><span class="glyphicon glyphicon-stats" aria-hidden="true"></span>&nbsp;Charts</a></li>
