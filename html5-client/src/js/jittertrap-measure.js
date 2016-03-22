@@ -44,6 +44,8 @@ JT = (function (my) {
     updateTputDOM();
     updateRateDOM();
     updateZRunDOM();
+    $("#jt-measure-sample-period").html(my.charts.getChartPeriod() + "ms");
+
   };
 
   var drawIntervalID = setInterval(updateDOM, 100);
