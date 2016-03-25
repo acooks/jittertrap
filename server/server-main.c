@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 		/* FIXME: something is causing us to spin. This helps to
 		 * slow things down, but it's not a proper solution.
 		 */
-		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 1E7 };
+		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 1E5 };
 		nanosleep(&rqtp, NULL);
 
 		/*
