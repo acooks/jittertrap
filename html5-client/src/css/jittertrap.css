@@ -30,3 +30,13 @@
   margin: 0;
   border: 0;
 }
+
+.measurements td {
+  width: 9em;
+  text-align: right;
+}
+
+.measurements th {
+  width: 9em;
+  text-align: right;
+}
