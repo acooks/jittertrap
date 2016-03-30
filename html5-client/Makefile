@@ -77,6 +77,7 @@ assemble-html: createdirs
 	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat src/html/panel-impairments.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
 
 install:
 	install -d ${DESTDIR}/var/lib/jittertrap/
