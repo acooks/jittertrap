@@ -48,9 +48,7 @@ static int set_netem(void *data)
 	};
 
 	netem_set_params(p1->iface, &p2);
-	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
-	jt_srv_send_sample_period();
 	return 0;
 }
 
