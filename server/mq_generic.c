@@ -75,6 +75,7 @@ int NS(consumer_subscribe)(unsigned long *subscriber_id)
 	pthread_mutex_lock(&mq_mutex);
 
 	if (MAX_CONSUMERS == consumer_count) {
+		*subscriber_id = 0;
 		pthread_mutex_unlock(&mq_mutex);
 		return -1;
 	}

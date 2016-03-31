@@ -53,9 +53,13 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 
 	switch (reason) {
 	case LWS_CALLBACK_CLOSED:
-		err = mq_ws_consumer_unsubscribe(pss->consumer_id);
-		if (err) {
-			lwsl_err("mq consumer unsubscribe failed.\n");
+		if (!pss->consumer_id) {
+			lwsl_err("no consumer to unsubscribe.\n");
+		} else {
+			err = mq_ws_consumer_unsubscribe(pss->consumer_id);
+			if (err) {
+				lwsl_err("mq consumer unsubscribe failed.\n");
+			}
 		}
 		break;
 
@@ -65,6 +69,7 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 		err = mq_ws_consumer_subscribe(&(pss->consumer_id));
 		if (err) {
 			lwsl_err("mq consumer subscription failed.\n");
+			return -1;
 		}
 		jt_srv_send_iface_list();
 		jt_srv_send_select_iface();
