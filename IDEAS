@@ -1,0 +1,71 @@
+
+Goals:
+  * to find top n <things>, by cumulative bytes over time, where <thing> is
+  * src ip
+  * dst ip
+  * src port
+  * dst port
+  * ingress flow: {src_ip, src_port, dst_ip, dst_port} && src_ip is  ~local 
+  * egress flow: {src_ip, src_port, dst_ip, dst_port} && src_ip is local
+
+
+Definitions:
+  Table: O(1) insert and O(1) lookup on average
+  List:  O(1) append and O(1) remove at the head
+
+
+
+Option 0:
+=========
+
+  Gather:
+  * Append to a list of tuples containing 
+        { packet_counter, packet_len, src_ip, dst_ip, src_port, dst_port }
+    O(1)
+  Expire:
+  * delete list entries outside the window. O(1)
+
+  Calculate:
+  * Sort list on field of interest.  O(n log n)
+  * Create rollup list from sorted list. O(n)
+  * Sort rollup list. O(n log n)
+  * Retrieve top n list entries. O(1)
+
+  Pros/Cons:
+  * space efficient
+  * cpu efficient for Gather and Expire
+  * not cpu efficient for Calculate
+
+
+
+Option 1:
+=========
+
+  Setup:
+  * Create accumulation tables for 
+      src_id, dst_ip, src_port, dst_port
+      where each table entry contains
+      { <src_ip|dst_ip|src_port|dst_port>, acc_bytes }
+
+  Gather:
+  * Append to a list of tuples containing
+       { packet_counter, packet_len, src_ip, dst_ip, src_port, dst_port }
+    O(1)
+  * For each of m acc tables, accumulate the packet_len entry 
+    O(m)
+
+  Expire:
+  * for each of list entry outside the window,
+    * for each acc table, subtract the packet_len
+    * remove table entry if acc == 0  XXXXXXXXXXXXXXXX MAYBE XXXXXXXXXXXXX
+    * delete list entry
+
+  Calculate:
+  * Sort acc table of interest
+  * Retrieve top n table entries
+
+  Pros/Cons:
+  * not space efficient
+  * insert more cpu expensive than Option 0.
+  * expire more cpu expensive than Option 0.
+  * collect more efficient than Option 0.
