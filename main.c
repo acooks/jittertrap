@@ -7,12 +7,8 @@
 
 void got_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes)
 {
-	struct timespec t;
-
-	clock_gettime(CLOCK_MONOTONIC, &t);
-
 	/* Print the time and length */
-	printf("%ld.%09ld,  %d\n", t.tv_sec, t.tv_nsec, h->len);
+	printf("%ld.%06ld,  %d\n", h->ts.tv_sec, h->ts.tv_usec, h->len);
 }
 
 int grab_packets(int fd, pcap_t *handle)
