@@ -5,7 +5,7 @@ HEADERS = decode.h
 
 LIBS = -lpcap
 
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -pedantic
 
 all: $(SRC) $(HEADERS) Makefile
 	gcc -o $(PROG) $(SRC) $(LIBS) $(CFLAGS)
