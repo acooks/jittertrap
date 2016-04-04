@@ -8,4 +8,4 @@ LIBS = -lpcap
 CFLAGS = -g -Wall -pedantic
 
 all: $(SRC) $(HEADERS) Makefile
-	gcc -o $(PROG) $(SRC) $(LIBS) $(CFLAGS)
+	$(CC) -o $(PROG) $(SRC) $(LIBS) $(CFLAGS)
