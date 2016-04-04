@@ -43,8 +43,8 @@ void decode_ip(const struct hdr_ip *packet)
 {
 	const void  *next; /* IP Payload */
 	unsigned int size_ip;
-	char ip_src[13];
-	char ip_dst[13];
+	char ip_src[16];
+	char ip_dst[16];
 
 	size_ip = IP_HL(packet) * 4;
 	if (size_ip < 20) {
