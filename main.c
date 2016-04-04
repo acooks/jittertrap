@@ -63,14 +63,17 @@ void decode_ip(const struct hdr_ip *packet)
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
 	case IPPROTO_TCP:
-		return decode_tcp(next);
+		decode_tcp(next);
+		break;
 	case IPPROTO_UDP:
-		return decode_udp(next);
+		decode_udp(next);
+		break;
 	case IPPROTO_ICMP:
-		return decode_icmp(next);
+		decode_icmp(next);
+		break;
 	default:
 		fprintf(stderr, " *** Protocol [0x%x] unknown\n", packet->ip_p);
-		return;
+		break;
 	}
 }
 
