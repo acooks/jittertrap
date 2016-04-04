@@ -8,6 +8,7 @@
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 
+#include "uthash.h"
 #include "decode.h"
 
 const char *protos[IPPROTO_MAX] = {
@@ -20,40 +21,44 @@ const char *protos[IPPROTO_MAX] = {
 struct pkt_record {
 	uint32_t ts_sec;
 	uint32_t ts_usec;
-	uint16_t len;
-	struct in_addr src_ip;
+	uint32_t len;              /* this is cumulative in tables */
+	struct in_addr src_ip;     /* key */
 	struct in_addr dst_ip;
 	uint16_t proto;
 	uint16_t sport;
 	uint16_t dport;
+	UT_hash_handle hh;         /* makes this structure hashable */
 };
 
-struct pkt_record pkt;
+
+/* hash tables for stats */
+struct pkt_record *src_table = NULL;
+struct pkt_record *dst_table = NULL;
 
 #define zero_pkt(p)                                                            \
 	do {                                                                   \
-		p.ts_sec = 0;                                                  \
-		p.ts_usec = 0;                                                 \
-		p.len = 0;                                                     \
-		p.proto = 0;                                                   \
-		p.sport = 0;                                                   \
-		p.dport = 0;                                                   \
+		p->ts_sec = 0;                                                 \
+		p->ts_usec = 0;                                                \
+		p->len = 0;                                                    \
+		p->proto = 0;                                                  \
+		p->sport = 0;                                                  \
+		p->dport = 0;                                                  \
 	} while (0);
 
-void print_pkt()
+void print_pkt(struct pkt_record *pkt)
 {
 	char ip_src[16];
 	char ip_dst[16];
 
-	sprintf(ip_src, "%s", inet_ntoa(pkt.src_ip));
-	sprintf(ip_dst, "%s", inet_ntoa(pkt.dst_ip));
+	sprintf(ip_src, "%s", inet_ntoa(pkt->src_ip));
+	sprintf(ip_dst, "%s", inet_ntoa(pkt->dst_ip));
 
 	printf("%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
-	       pkt.ts_sec, pkt.ts_usec, pkt.len, ip_src, ip_dst,
-	       protos[pkt.proto], pkt.sport, pkt.dport);
+	       pkt->ts_sec, pkt->ts_usec, pkt->len, ip_src, ip_dst,
+	       protos[pkt->proto], pkt->sport, pkt->dport);
 }
 
-void decode_tcp(const struct hdr_tcp *packet)
+void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
 {
 	unsigned int size_tcp = (TH_OFF(packet) * 4);
 
@@ -62,22 +67,22 @@ void decode_tcp(const struct hdr_tcp *packet)
 		return;
 	}
 
-	pkt.proto = IPPROTO_TCP;
-	pkt.sport = ntohs(packet->th_sport);
-	pkt.dport = ntohs(packet->th_dport);
+	pkt->proto = IPPROTO_TCP;
+	pkt->sport = ntohs(packet->th_sport);
+	pkt->dport = ntohs(packet->th_dport);
 }
 
-void decode_udp(const struct hdr_udp *packet)
+void decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt)
 {
-	pkt.proto = IPPROTO_UDP;
+	pkt->proto = IPPROTO_UDP;
 }
 
-void decode_icmp(const struct hdr_icmp *packet)
+void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 {
-	pkt.proto = IPPROTO_ICMP;
+	pkt->proto = IPPROTO_ICMP;
 }
 
-void decode_ip(const struct hdr_ip *packet)
+void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
 {
 	const void *next; /* IP Payload */
 	unsigned int size_ip;
@@ -90,19 +95,19 @@ void decode_ip(const struct hdr_ip *packet)
 	}
 	next = ((uint8_t *)packet + size_ip);
 
-	pkt.src_ip = (packet->ip_src);
-	pkt.dst_ip = (packet->ip_dst);
+	pkt->src_ip = (packet->ip_src);
+	pkt->dst_ip = (packet->ip_dst);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
 	case IPPROTO_TCP:
-		decode_tcp(next);
+		decode_tcp(next, pkt);
 		break;
 	case IPPROTO_UDP:
-		decode_udp(next);
+		decode_udp(next, pkt);
 		break;
 	case IPPROTO_ICMP:
-		decode_icmp(next);
+		decode_icmp(next, pkt);
 		break;
 	default:
 		fprintf(stderr, " *** Protocol [0x%x] unknown\n", packet->ip_p);
@@ -110,18 +115,53 @@ void decode_ip(const struct hdr_ip *packet)
 	}
 }
 
+void update_stats_tables(struct pkt_record *pkt)
+{
+	struct pkt_record *table_entry;
+
+	print_pkt(pkt);
+
+	/* Update the Source accounting table */
+	/* id already in the hash? */
+	HASH_FIND_INT(src_table, &(pkt->src_ip), table_entry);
+	if (!table_entry) {
+		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
+		memcpy(table_entry, pkt, sizeof(struct pkt_record));
+		HASH_ADD_INT(src_table, src_ip, table_entry);
+	} else {
+		table_entry->len += pkt->len;
+	}
+	printf("Source IP Account: %d\n",table_entry->len);
+
+
+	/* Update the destination accounting table */
+	table_entry = NULL;
+	/* id already in the hash? */
+	HASH_FIND_INT(dst_table, &(pkt->dst_ip), table_entry);
+	if (!table_entry) {
+		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
+		memcpy(table_entry, pkt, sizeof(struct pkt_record));
+		HASH_ADD_INT(dst_table, dst_ip, table_entry);
+	} else {
+		table_entry->len += pkt->len;
+	}
+	printf("Destination IP Account: %d\n",table_entry->len);
+}
+
 void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
                    const uint8_t *packet)
 {
 	const struct hdr_ethernet *ethernet;
 	const struct hdr_ip *ip; /* The IP header */
+	uint32_t size_ether;
+	struct pkt_record *pkt;
 
-	u_int size_ether;
-
+	pkt = malloc(sizeof(struct pkt_record));
 	zero_pkt(pkt);
-	pkt.ts_sec = h->ts.tv_sec;
-	pkt.ts_usec = h->ts.tv_usec;
-	pkt.len = h->len;
+
+	pkt->ts_sec = h->ts.tv_sec;
+	pkt->ts_usec = h->ts.tv_usec;
+	pkt->len = h->len;
 
 	/* Ethernet header */
 	ethernet = (struct hdr_ethernet *)packet;
@@ -148,8 +188,13 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 
 	/* IP header */
 	ip = (struct hdr_ip *)(packet + size_ether);
-	decode_ip(ip);
-	print_pkt();
+
+	decode_ip(ip, pkt);
+
+
+	update_stats_tables(pkt);
+
+	free(pkt);
 }
 
 int grab_packets(int fd, pcap_t *handle)
