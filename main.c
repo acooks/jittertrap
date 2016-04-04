@@ -26,7 +26,7 @@ void decode_tcp(const struct hdr_tcp *packet)
 		return;
 	}
 
-	printf("%d, %d\n", ntohs(packet->th_sport), ntohs(packet->th_dport));
+	printf("%6d, %6d\n", ntohs(packet->th_sport), ntohs(packet->th_dport));
 }
 
 void decode_udp(const struct hdr_udp *packet)
@@ -58,7 +58,7 @@ void decode_ip(const struct hdr_ip *packet)
 	sprintf(ip_dst, inet_ntoa(packet->ip_dst));
 
 	/* Print source, destination, IP proto */
-	printf("%s, %s, %s ", ip_src, ip_dst, protos[packet->ip_p]);
+	printf("%15s, %15s, %4s ", ip_src, ip_dst, protos[packet->ip_p]);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
@@ -83,7 +83,7 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 	u_int size_ether;
 
 	/* Print the time and length */
-	printf("%ld.%06ld,  %d, ", h->ts.tv_sec, h->ts.tv_usec, h->len);
+	printf("%ld.%06ld,  %4d, ", h->ts.tv_sec, h->ts.tv_usec, h->len);
 
 	/* Ethernet header */
 	ethernet = (struct hdr_ethernet *)packet;
