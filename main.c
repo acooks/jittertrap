@@ -17,34 +17,70 @@ const char *protos[IPPROTO_MAX] = {
 	[IPPROTO_IP]   = "IP"
 };
 
+struct pkt_record {
+	uint32_t ts_sec;
+	uint32_t ts_usec;
+	uint16_t len;
+	struct in_addr src_ip;
+	struct in_addr dst_ip;
+	uint16_t proto;
+	uint16_t sport;
+	uint16_t dport;
+};
+
+struct pkt_record pkt;
+
+#define zero_pkt(p)                                                            \
+	do {                                                                   \
+		p.ts_sec = 0;                                                  \
+		p.ts_usec = 0;                                                 \
+		p.len = 0;                                                     \
+		p.proto = 0;                                                   \
+		p.sport = 0;                                                   \
+		p.dport = 0;                                                   \
+	} while (0);
+
+void print_pkt()
+{
+	char ip_src[16];
+	char ip_dst[16];
+
+	sprintf(ip_src, "%s", inet_ntoa(pkt.src_ip));
+	sprintf(ip_dst, "%s", inet_ntoa(pkt.dst_ip));
+
+	printf("%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
+	       pkt.ts_sec, pkt.ts_usec, pkt.len, ip_src, ip_dst,
+	       protos[pkt.proto], pkt.sport, pkt.dport);
+}
+
 void decode_tcp(const struct hdr_tcp *packet)
 {
-	unsigned int size_tcp  = (TH_OFF(packet) * 4);
+	unsigned int size_tcp = (TH_OFF(packet) * 4);
 
 	if (size_tcp < 20) {
 		printf(" *** Invalid TCP header length: %u bytes\n", size_tcp);
 		return;
 	}
 
-	printf("%6d, %6d\n", ntohs(packet->th_sport), ntohs(packet->th_dport));
+	pkt.proto = IPPROTO_TCP;
+	pkt.sport = ntohs(packet->th_sport);
+	pkt.dport = ntohs(packet->th_dport);
 }
 
 void decode_udp(const struct hdr_udp *packet)
 {
-	printf("\n");
+	pkt.proto = IPPROTO_UDP;
 }
 
 void decode_icmp(const struct hdr_icmp *packet)
 {
-	printf("\n");
+	pkt.proto = IPPROTO_ICMP;
 }
 
 void decode_ip(const struct hdr_ip *packet)
 {
-	const void  *next; /* IP Payload */
+	const void *next; /* IP Payload */
 	unsigned int size_ip;
-	char ip_src[16];
-	char ip_dst[16];
 
 	size_ip = IP_HL(packet) * 4;
 	if (size_ip < 20) {
@@ -54,11 +90,8 @@ void decode_ip(const struct hdr_ip *packet)
 	}
 	next = ((uint8_t *)packet + size_ip);
 
-	sprintf(ip_src, "%s", inet_ntoa(packet->ip_src));
-	sprintf(ip_dst, "%s", inet_ntoa(packet->ip_dst));
-
-	/* Print source, destination, IP proto */
-	printf("%15s, %15s, %4s ", ip_src, ip_dst, protos[packet->ip_p]);
+	pkt.src_ip = (packet->ip_src);
+	pkt.dst_ip = (packet->ip_dst);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
@@ -85,8 +118,10 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 
 	u_int size_ether;
 
-	/* Print the time and length */
-	printf("%ld.%06ld,  %4d, ", h->ts.tv_sec, h->ts.tv_usec, h->len);
+	zero_pkt(pkt);
+	pkt.ts_sec = h->ts.tv_sec;
+	pkt.ts_usec = h->ts.tv_usec;
+	pkt.len = h->len;
 
 	/* Ethernet header */
 	ethernet = (struct hdr_ethernet *)packet;
@@ -114,6 +149,7 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 	/* IP header */
 	ip = (struct hdr_ip *)(packet + size_ether);
 	decode_ip(ip);
+	print_pkt();
 }
 
 int grab_packets(int fd, pcap_t *handle)
