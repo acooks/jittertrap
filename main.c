@@ -54,8 +54,8 @@ void decode_ip(const struct hdr_ip *packet)
 	}
 	next = ((uint8_t *)packet + size_ip);
 
-	sprintf(ip_src, inet_ntoa(packet->ip_src));
-	sprintf(ip_dst, inet_ntoa(packet->ip_dst));
+	sprintf(ip_src, "%s", inet_ntoa(packet->ip_src));
+	sprintf(ip_dst, "%s", inet_ntoa(packet->ip_dst));
 
 	/* Print source, destination, IP proto */
 	printf("%15s, %15s, %4s ", ip_src, ip_dst, protos[packet->ip_p]);
