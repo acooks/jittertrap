@@ -19,7 +19,7 @@ const char *protos[IPPROTO_MAX] = {
 
 void decode_tcp(const struct hdr_tcp *packet)
 {
-	int size_tcp  = (TH_OFF(packet) * 4);
+	unsigned int size_tcp  = (TH_OFF(packet) * 4);
 
 	if (size_tcp < 20) {
 		printf(" *** Invalid TCP header length: %u bytes\n", size_tcp);
@@ -42,7 +42,7 @@ void decode_icmp(const struct hdr_icmp *packet)
 void decode_ip(const struct hdr_ip *packet)
 {
 	const void  *next; /* IP Payload */
-	int size_ip;
+	unsigned int size_ip;
 	char ip_src[13];
 	char ip_dst[13];
 
@@ -115,15 +115,13 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 
 int grab_packets(int fd, pcap_t *handle)
 {
-	int ready;
 	struct timespec timeout_ts = {.tv_sec = 0, .tv_nsec = 1E8 };
 	struct pollfd fds[] = {
 		{.fd = fd, .events = POLLIN, .revents = POLLHUP }
 	};
 
 	while (1) {
-		ready = ppoll(fds, 1, &timeout_ts, NULL);
-		if (ready) {
+		if (ppoll(fds, 1, &timeout_ts, NULL)) {
 			pcap_dispatch(handle, 0, decode_packet, NULL);
 		}
 	}
