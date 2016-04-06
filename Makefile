@@ -3,7 +3,7 @@ PROG = toptalk
 SRC = main.c
 HEADERS = decode.h
 
-LIBS = -lpcap
+LIBS = -lpcap -lcurses
 
 CFLAGS = -g -Wall -pedantic
 

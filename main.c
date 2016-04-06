@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <pcap.h>
 #include <time.h>
-
 #include <net/ethernet.h>
 #include <arpa/inet.h>
+#include <ncurses.h>
 
 #include "uthash.h"
 #include "decode.h"
@@ -53,7 +53,7 @@ void print_pkt(struct pkt_record *pkt)
 	sprintf(ip_src, "%s", inet_ntoa(pkt->src_ip));
 	sprintf(ip_dst, "%s", inet_ntoa(pkt->dst_ip));
 
-	printf("%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
+	mvprintw(1, 0, "%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
 	       pkt->ts_sec, pkt->ts_usec, pkt->len, ip_src, ip_dst,
 	       protos[pkt->proto], pkt->sport, pkt->dport);
 }
@@ -115,6 +115,36 @@ void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
 	}
 }
 
+int bytes_cmp(struct pkt_record *p1, struct pkt_record *p2)
+{
+	return (p2->len - p1->len);
+}
+
+#define TOP_N_LINE_OFFSET 5
+#define DEST_COL_OFFSET 40
+void print_top_n(int stop)
+{
+	struct pkt_record *r;
+	int row, rowcnt = stop;
+
+	mvprintw(TOP_N_LINE_OFFSET, 0,
+	         "%15s: %9s", "Sources", "bytes");
+
+	for(row = 1, r = src_table; r != NULL && rowcnt--; r = r->hh.next) {
+		mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+		         "%15s: %9d", inet_ntoa(r->src_ip), r->len);
+	}
+
+	rowcnt = stop;
+	mvprintw(TOP_N_LINE_OFFSET, DEST_COL_OFFSET,
+	         "%15s: %9s","Destinations", "bytes");
+
+	for(row = 1, r = dst_table; r != NULL && rowcnt--; r = r->hh.next) {
+		mvprintw(TOP_N_LINE_OFFSET + row++, DEST_COL_OFFSET,
+		         "%15s: %9d", inet_ntoa(r->dst_ip), r->len);
+	}
+}
+
 void update_stats_tables(struct pkt_record *pkt)
 {
 	struct pkt_record *table_entry;
@@ -131,8 +161,8 @@ void update_stats_tables(struct pkt_record *pkt)
 	} else {
 		table_entry->len += pkt->len;
 	}
-	printf("Source IP Account: %d\n",table_entry->len);
 
+	HASH_SORT(src_table, bytes_cmp);
 
 	/* Update the destination accounting table */
 	table_entry = NULL;
@@ -145,7 +175,9 @@ void update_stats_tables(struct pkt_record *pkt)
 	} else {
 		table_entry->len += pkt->len;
 	}
-	printf("Destination IP Account: %d\n",table_entry->len);
+
+	HASH_SORT(dst_table, bytes_cmp);
+
 }
 
 void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
@@ -191,25 +223,49 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 
 	decode_ip(ip, pkt);
 
-
 	update_stats_tables(pkt);
 
 	free(pkt);
+
+	print_top_n(5);
 }
 
-int grab_packets(int fd, pcap_t *handle)
+void grab_packets(int fd, pcap_t *handle)
 {
 	struct timespec timeout_ts = {.tv_sec = 0, .tv_nsec = 1E8 };
 	struct pollfd fds[] = {
 		{.fd = fd, .events = POLLIN, .revents = POLLHUP }
 	};
 
+	int ch;
+
 	while (1) {
 		if (ppoll(fds, 1, &timeout_ts, NULL)) {
 			pcap_dispatch(handle, 0, decode_packet, NULL);
 		}
+
+		if ((ch = getch()) == ERR) {
+			/* normal case - no input */
+			;
+		}
+		else {
+			switch (ch) {
+			case 'q':
+				endwin();  /* End curses mode */
+				return;
+			}
+		}
+		refresh(); /* ncurses screen update */
 	}
-	return 0;
+}
+
+void init_curses()
+{
+	initscr();            /* Start curses mode              */
+	raw();                /* Line buffering disabled        */
+	keypad(stdscr, TRUE); /* We get F1, F2 etc..            */
+	noecho();             /* Don't echo() while we do getch */
+	nodelay(stdscr, TRUE);
 }
 
 int main(int argc, char *argv[])
@@ -228,7 +284,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
 		return (2);
 	}
-	printf("Device: %s\n", dev);
 
 	handle = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
 	if (handle == NULL) {
@@ -254,7 +309,11 @@ int main(int argc, char *argv[])
 		return (2);
 	}
 
+	init_curses();
+	mvprintw(0, 0, "Device: %s\n", dev);
+
 	grab_packets(selectable_fd, handle);
+
 	/* And close the session */
 	pcap_close(handle);
 	return 0;
