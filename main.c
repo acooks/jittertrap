@@ -22,11 +22,15 @@ struct pkt_record {
 	uint32_t ts_sec;
 	uint32_t ts_usec;
 	uint32_t len;              /* this is cumulative in tables */
-	struct in_addr src_ip;     /* key */
-	struct in_addr dst_ip;
+	struct {
+		struct in_addr src_ip;     /* key */
+		uint16_t sport;
+	} src;
+	struct {
+		struct in_addr dst_ip;
+		uint16_t dport;
+	} dst;
 	uint16_t proto;
-	uint16_t sport;
-	uint16_t dport;
 	UT_hash_handle hh;         /* makes this structure hashable */
 };
 
@@ -41,8 +45,8 @@ struct pkt_record *dst_table = NULL;
 		p->ts_usec = 0;                                                \
 		p->len = 0;                                                    \
 		p->proto = 0;                                                  \
-		p->sport = 0;                                                  \
-		p->dport = 0;                                                  \
+		p->src.sport = 0;                                              \
+		p->dst.dport = 0;                                              \
 	} while (0);
 
 void print_pkt(struct pkt_record *pkt)
@@ -50,12 +54,12 @@ void print_pkt(struct pkt_record *pkt)
 	char ip_src[16];
 	char ip_dst[16];
 
-	sprintf(ip_src, "%s", inet_ntoa(pkt->src_ip));
-	sprintf(ip_dst, "%s", inet_ntoa(pkt->dst_ip));
+	sprintf(ip_src, "%s", inet_ntoa(pkt->src.src_ip));
+	sprintf(ip_dst, "%s", inet_ntoa(pkt->dst.dst_ip));
 
 	mvprintw(1, 0, "%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
 	       pkt->ts_sec, pkt->ts_usec, pkt->len, ip_src, ip_dst,
-	       protos[pkt->proto], pkt->sport, pkt->dport);
+	       protos[pkt->proto], pkt->src.sport, pkt->dst.dport);
 }
 
 void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
@@ -68,18 +72,22 @@ void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
 	}
 
 	pkt->proto = IPPROTO_TCP;
-	pkt->sport = ntohs(packet->th_sport);
-	pkt->dport = ntohs(packet->th_dport);
+	pkt->src.sport = ntohs(packet->th_sport);
+	pkt->dst.dport = ntohs(packet->th_dport);
 }
 
 void decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt)
 {
 	pkt->proto = IPPROTO_UDP;
+	pkt->src.sport = 0;
+	pkt->dst.dport = 0;
 }
 
 void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 {
 	pkt->proto = IPPROTO_ICMP;
+	pkt->src.sport = 0;
+	pkt->dst.dport = 0;
 }
 
 void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
@@ -95,8 +103,8 @@ void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
 	}
 	next = ((uint8_t *)packet + size_ip);
 
-	pkt->src_ip = (packet->ip_src);
-	pkt->dst_ip = (packet->ip_dst);
+	pkt->src.src_ip = (packet->ip_src);
+	pkt->dst.dst_ip = (packet->ip_dst);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
@@ -128,20 +136,22 @@ void print_top_n(int stop)
 	int row, rowcnt = stop;
 
 	mvprintw(TOP_N_LINE_OFFSET, 0,
-	         "%15s: %9s", "Sources", "bytes");
+	         "%15s:%-6s %9s", "Sources", "port", "bytes");
 
 	for(row = 1, r = src_table; r != NULL && rowcnt--; r = r->hh.next) {
 		mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-		         "%15s: %9d", inet_ntoa(r->src_ip), r->len);
+		         "%15s:%-6d %9d",
+		         inet_ntoa(r->src.src_ip), r->src.sport, r->len);
 	}
 
 	rowcnt = stop;
 	mvprintw(TOP_N_LINE_OFFSET, DEST_COL_OFFSET,
-	         "%15s: %9s","Destinations", "bytes");
+	         "%15s:%-6s %9s","Destinations", "port", "bytes");
 
 	for(row = 1, r = dst_table; r != NULL && rowcnt--; r = r->hh.next) {
 		mvprintw(TOP_N_LINE_OFFSET + row++, DEST_COL_OFFSET,
-		         "%15s: %9d", inet_ntoa(r->dst_ip), r->len);
+		         "%15s:%-6d %9d",
+		         inet_ntoa(r->dst.dst_ip), r->dst.dport, r->len);
 	}
 }
 
@@ -153,11 +163,11 @@ void update_stats_tables(struct pkt_record *pkt)
 
 	/* Update the Source accounting table */
 	/* id already in the hash? */
-	HASH_FIND_INT(src_table, &(pkt->src_ip), table_entry);
+	HASH_FIND_INT(src_table, &(pkt->src), table_entry);
 	if (!table_entry) {
 		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
 		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD_INT(src_table, src_ip, table_entry);
+		HASH_ADD_INT(src_table, src, table_entry);
 	} else {
 		table_entry->len += pkt->len;
 	}
@@ -167,11 +177,11 @@ void update_stats_tables(struct pkt_record *pkt)
 	/* Update the destination accounting table */
 	table_entry = NULL;
 	/* id already in the hash? */
-	HASH_FIND_INT(dst_table, &(pkt->dst_ip), table_entry);
+	HASH_FIND_INT(dst_table, &(pkt->dst), table_entry);
 	if (!table_entry) {
 		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
 		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD_INT(dst_table, dst_ip, table_entry);
+		HASH_ADD_INT(dst_table, dst, table_entry);
 	} else {
 		table_entry->len += pkt->len;
 	}
