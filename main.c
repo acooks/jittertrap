@@ -18,35 +18,34 @@ const char *protos[IPPROTO_MAX] = {
 	[IPPROTO_IP]   = "IP"
 };
 
+struct flow {
+	struct in_addr src_ip;
+	uint16_t sport;
+	struct in_addr dst_ip;
+	uint16_t dport;
+	uint16_t proto;
+};
+
 struct pkt_record {
 	uint32_t ts_sec;
 	uint32_t ts_usec;
 	uint32_t len;              /* this is cumulative in tables */
-	struct {
-		struct in_addr src_ip;     /* key */
-		uint16_t sport;
-	} src;
-	struct {
-		struct in_addr dst_ip;
-		uint16_t dport;
-	} dst;
-	uint16_t proto;
+	struct flow flow;
 	UT_hash_handle hh;         /* makes this structure hashable */
 };
 
 
 /* hash tables for stats */
-struct pkt_record *src_table = NULL;
-struct pkt_record *dst_table = NULL;
+struct pkt_record *flow_table = NULL;
 
 #define zero_pkt(p)                                                            \
 	do {                                                                   \
 		p->ts_sec = 0;                                                 \
 		p->ts_usec = 0;                                                \
 		p->len = 0;                                                    \
-		p->proto = 0;                                                  \
-		p->src.sport = 0;                                              \
-		p->dst.dport = 0;                                              \
+		p->flow.proto = 0;                                             \
+		p->flow.sport = 0;                                             \
+		p->flow.dport = 0;                                             \
 	} while (0);
 
 void print_pkt(struct pkt_record *pkt)
@@ -54,12 +53,12 @@ void print_pkt(struct pkt_record *pkt)
 	char ip_src[16];
 	char ip_dst[16];
 
-	sprintf(ip_src, "%s", inet_ntoa(pkt->src.src_ip));
-	sprintf(ip_dst, "%s", inet_ntoa(pkt->dst.dst_ip));
+	sprintf(ip_src, "%s", inet_ntoa(pkt->flow.src_ip));
+	sprintf(ip_dst, "%s", inet_ntoa(pkt->flow.dst_ip));
 
 	mvprintw(1, 0, "%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
 	       pkt->ts_sec, pkt->ts_usec, pkt->len, ip_src, ip_dst,
-	       protos[pkt->proto], pkt->src.sport, pkt->dst.dport);
+	       protos[pkt->flow.proto], pkt->flow.sport, pkt->flow.dport);
 }
 
 void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
@@ -71,23 +70,24 @@ void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
 		return;
 	}
 
-	pkt->proto = IPPROTO_TCP;
-	pkt->src.sport = ntohs(packet->th_sport);
-	pkt->dst.dport = ntohs(packet->th_dport);
+	pkt->flow.proto = IPPROTO_TCP;
+	pkt->flow.sport = ntohs(packet->sport);
+	pkt->flow.dport = ntohs(packet->dport);
 }
 
 void decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt)
 {
-	pkt->proto = IPPROTO_UDP;
-	pkt->src.sport = 0;
-	pkt->dst.dport = 0;
+	pkt->flow.proto = IPPROTO_UDP;
+	pkt->flow.sport = ntohs(packet->sport);
+	pkt->flow.dport = ntohs(packet->dport);
 }
 
 void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 {
-	pkt->proto = IPPROTO_ICMP;
-	pkt->src.sport = 0;
-	pkt->dst.dport = 0;
+	pkt->flow.proto = IPPROTO_ICMP;
+	/* ICMP doesn't have ports, but we depend on that for the flow */
+	pkt->flow.sport = 0;
+	pkt->flow.dport = 0;
 }
 
 void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
@@ -103,8 +103,8 @@ void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
 	}
 	next = ((uint8_t *)packet + size_ip);
 
-	pkt->src.src_ip = (packet->ip_src);
-	pkt->dst.dst_ip = (packet->ip_dst);
+	pkt->flow.src_ip = (packet->ip_src);
+	pkt->flow.dst_ip = (packet->ip_dst);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (packet->ip_p) {
@@ -129,29 +129,25 @@ int bytes_cmp(struct pkt_record *p1, struct pkt_record *p2)
 }
 
 #define TOP_N_LINE_OFFSET 5
-#define DEST_COL_OFFSET 40
 void print_top_n(int stop)
 {
 	struct pkt_record *r;
 	int row, rowcnt = stop;
+	char ip_src[16];
+	char ip_dst[16];
 
 	mvprintw(TOP_N_LINE_OFFSET, 0,
-	         "%15s:%-6s %9s", "Sources", "port", "bytes");
+	         "%15s:%-6s %15s    %15s:%-6s",
+	         "Source", "port", "bytes", "Destination", "port");
 
-	for(row = 1, r = src_table; r != NULL && rowcnt--; r = r->hh.next) {
+	for(row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
+		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
+		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
+
 		mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-		         "%15s:%-6d %9d",
-		         inet_ntoa(r->src.src_ip), r->src.sport, r->len);
-	}
-
-	rowcnt = stop;
-	mvprintw(TOP_N_LINE_OFFSET, DEST_COL_OFFSET,
-	         "%15s:%-6s %9s","Destinations", "port", "bytes");
-
-	for(row = 1, r = dst_table; r != NULL && rowcnt--; r = r->hh.next) {
-		mvprintw(TOP_N_LINE_OFFSET + row++, DEST_COL_OFFSET,
-		         "%15s:%-6d %9d",
-		         inet_ntoa(r->dst.dst_ip), r->dst.dport, r->len);
+		         "%15s:%-6d %15d    %15s:%-6d",
+		         ip_src, r->flow.sport, r->len,
+		         ip_dst, r->flow.dport);
 	}
 }
 
@@ -161,33 +157,20 @@ void update_stats_tables(struct pkt_record *pkt)
 
 	print_pkt(pkt);
 
-	/* Update the Source accounting table */
+	/* Update the flow accounting table */
 	/* id already in the hash? */
-	HASH_FIND_INT(src_table, &(pkt->src), table_entry);
+	HASH_FIND(hh, flow_table, &(pkt->flow), sizeof(struct flow),
+	          table_entry);
 	if (!table_entry) {
 		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
+		memset(table_entry, 0, sizeof(struct pkt_record));
 		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD_INT(src_table, src, table_entry);
+		HASH_ADD(hh, flow_table, flow, sizeof(struct flow), table_entry);
 	} else {
 		table_entry->len += pkt->len;
 	}
 
-	HASH_SORT(src_table, bytes_cmp);
-
-	/* Update the destination accounting table */
-	table_entry = NULL;
-	/* id already in the hash? */
-	HASH_FIND_INT(dst_table, &(pkt->dst), table_entry);
-	if (!table_entry) {
-		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
-		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD_INT(dst_table, dst, table_entry);
-	} else {
-		table_entry->len += pkt->len;
-	}
-
-	HASH_SORT(dst_table, bytes_cmp);
-
+	HASH_SORT(flow_table, bytes_cmp);
 }
 
 void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
