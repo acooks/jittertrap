@@ -71,7 +71,10 @@ struct hdr_tcp {
 
 
 struct hdr_udp {
-	uint8_t todo;
+	uint16_t sport; /* source port */
+	uint16_t dport; /* destination port */
+	uint16_t ip_len;   /* total length */
+	uint16_t chcksum;  /* udp header + payload checksum */
 } __attribute__((__packed__));
 
 struct hdr_icmp {
