@@ -90,7 +90,7 @@ void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 	pkt->flow.dport = 0;
 }
 
-void decode_ip(const struct hdr_ip *packet, struct pkt_record *pkt)
+void decode_ip4(const struct hdr_ipv4 *packet, struct pkt_record *pkt)
 {
 	const void *next; /* IP Payload */
 	unsigned int size_ip;
@@ -177,7 +177,7 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
                    const uint8_t *packet)
 {
 	const struct hdr_ethernet *ethernet;
-	const struct hdr_ip *ip; /* The IP header */
+	const struct hdr_ipv4 *ip4; /* The IP header */
 	uint32_t size_ether;
 	struct pkt_record *pkt;
 
@@ -212,9 +212,9 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 	}
 
 	/* IP header */
-	ip = (struct hdr_ip *)(packet + size_ether);
+	ip4 = (struct hdr_ipv4 *)(packet + size_ether);
 
-	decode_ip(ip, pkt);
+	decode_ip4(ip4, pkt);
 
 	update_stats_tables(pkt);
 

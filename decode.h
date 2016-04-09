@@ -25,7 +25,7 @@ struct hdr_ethernet {
 } __attribute__((__packed__));
 
 /* IP */
-struct hdr_ip {
+struct hdr_ipv4 {
 	uint8_t ip_vhl;        /* version << 4 | header length >> 2 */
 	uint8_t ip_tos;        /* type of service */
 	uint16_t ip_len;       /* total length */
