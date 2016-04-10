@@ -277,6 +277,10 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
 		mvprintw(ERR_LINE_OFFSET, 0, "ARP ignored");
 		return;
+	case ETHERTYPE_LLDP:
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0, "LLDP ignored");
+		return;
 	default:
 		/* we don't know how to decode other types right now. */
 		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");

@@ -11,6 +11,8 @@
 #define HDR_LEN_ETHER_VLAN 18
 #define ADDR_LEN_ETHER 6
 
+#define ETHERTYPE_LLDP 0x88cc /* Link Layer Discovery Protocol */
+
 struct hdr_ethernet {
 	uint8_t dhost[ADDR_LEN_ETHER]; /* Destination host address */
 	uint8_t shost[ADDR_LEN_ETHER]; /* Source host address */
