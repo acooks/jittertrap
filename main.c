@@ -62,12 +62,16 @@ void print_pkt(struct pkt_record *pkt)
 	       protos[pkt->flow.proto], pkt->flow.sport, pkt->flow.dport);
 }
 
+#define ERR_LINE_OFFSET 2
+
 void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
 {
 	unsigned int size_tcp = (TH_OFF(packet) * 4);
 
 	if (size_tcp < 20) {
-		printf(" *** Invalid TCP header length: %u bytes\n", size_tcp);
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0,
+		         "*** Invalid TCP header length: %u bytes", size_tcp);
 		return;
 	}
 
@@ -123,7 +127,9 @@ void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
 		decode_igmp(next, pkt);
 		break;
 	default:
-		fprintf(stderr, " *** Protocol [0x%02x] unknown\n",
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0,
+		         "*** Protocol [0x%02x] unknown",
 		        ip6_packet->next_hdr);
 		break;
 	}
@@ -135,7 +141,9 @@ void decode_ip4(const uint8_t *packet, struct pkt_record *pkt)
 	const struct hdr_ipv4 *ip4_packet = (const struct hdr_ipv4 *)packet;
 	unsigned int size_ip = IP_HL(ip4_packet) * 4;
 	if (size_ip < 20) {
-		fprintf(stderr, " *** Invalid IP header length: %u bytes\n",
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0,
+		         "*** Invalid IP header length: %u bytes",
 		        size_ip);
 		return;
 	}
@@ -160,7 +168,9 @@ void decode_ip4(const uint8_t *packet, struct pkt_record *pkt)
 		decode_igmp(next, pkt);
 		break;
 	default:
-		fprintf(stderr, " *** Protocol [0x%02x] unknown\n",
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0,
+		         "*** Protocol [0x%02x] unknown",
 		        ip4_packet->ip_p);
 		break;
 	}
@@ -206,7 +216,8 @@ void print_top_n(int stop)
 			         r->len, protos[r->flow.proto], r->flow.sport, r->flow.dport);
 			break;
 		default:
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+			mvprintw(ERR_LINE_OFFSET + row++, 0,
 			         "%15d Unknown ethertype: %d", r->flow.ethertype);
 		}
 
@@ -263,11 +274,13 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 		decode_ip6(packet + HDR_LEN_ETHER, pkt);
 		break;
 	case ETHERTYPE_ARP:
-		printf("ARP ignored\n");
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0, "ARP ignored");
 		return;
 	default:
 		/* we don't know how to decode other types right now. */
-		fprintf(stderr, "EtherType [0x%04x] ignored\n",
+		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+		mvprintw(ERR_LINE_OFFSET, 0,"EtherType [0x%04x] ignored",
 		        ntohs(ethernet->type));
 		return;
 	}
