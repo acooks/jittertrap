@@ -305,12 +305,10 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 		return;
 	}
 
-
 	update_stats_tables(pkt);
 
 	free(pkt);
 
-	print_top_n(5);
 }
 
 void grab_packets(int fd, pcap_t *handle)
@@ -338,6 +336,7 @@ void grab_packets(int fd, pcap_t *handle)
 				return;
 			}
 		}
+		print_top_n(5);
 		refresh(); /* ncurses screen update */
 	}
 }
