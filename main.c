@@ -15,7 +15,8 @@ const char *protos[IPPROTO_MAX] = {
 	[IPPROTO_TCP]  = "TCP",
 	[IPPROTO_UDP]  = "UDP",
 	[IPPROTO_ICMP] = "ICMP",
-	[IPPROTO_IP]   = "IP"
+	[IPPROTO_IP]   = "IP",
+	[IPPROTO_IGMP] = "IGMP"
 };
 
 struct flow {
@@ -90,6 +91,14 @@ void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 	pkt->flow.dport = 0;
 }
 
+void decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
+{
+	pkt->flow.proto = IPPROTO_IGMP;
+	/* IGMP doesn't have ports, but we depend on that for the flow */
+	pkt->flow.sport = 0;
+	pkt->flow.dport = 0;
+}
+
 void decode_ip4(const struct hdr_ipv4 *packet, struct pkt_record *pkt)
 {
 	const void *next; /* IP Payload */
@@ -116,6 +125,9 @@ void decode_ip4(const struct hdr_ipv4 *packet, struct pkt_record *pkt)
 		break;
 	case IPPROTO_ICMP:
 		decode_icmp(next, pkt);
+		break;
+	case IPPROTO_IGMP:
+		decode_igmp(next, pkt);
 		break;
 	default:
 		fprintf(stderr, " *** Protocol [0x%x] unknown\n", packet->ip_p);
