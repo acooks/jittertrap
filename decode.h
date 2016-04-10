@@ -78,12 +78,11 @@ struct hdr_tcp {
 	uint16_t urp; /* urgent pointer */
 } __attribute__((__packed__));
 
-
 struct hdr_udp {
-	uint16_t sport; /* source port */
-	uint16_t dport; /* destination port */
-	uint16_t ip_len;   /* total length */
-	uint16_t chcksum;  /* udp header + payload checksum */
+	uint16_t sport;   /* source port */
+	uint16_t dport;   /* destination port */
+	uint16_t ip_len;  /* total length */
+	uint16_t chcksum; /* udp header + payload checksum */
 } __attribute__((__packed__));
 
 struct hdr_icmp {
