@@ -52,15 +52,8 @@ struct pkt_record *flow_table = NULL;
 
 void print_pkt(struct pkt_record *pkt)
 {
-	char ip_src[16];
-	char ip_dst[16];
-
-	sprintf(ip_src, "%s", inet_ntoa(pkt->flow.src_ip));
-	sprintf(ip_dst, "%s", inet_ntoa(pkt->flow.dst_ip));
-
-	mvprintw(1, 0, "%d.%06d,  %4d, %15s, %15s, %4s %6d, %6d\n",
-	       pkt->ts_sec, pkt->ts_usec, pkt->len, ip_src, ip_dst,
-	       protos[pkt->flow.proto], pkt->flow.sport, pkt->flow.dport);
+	mvprintw(0, 20, "%d.%06d,  %4d, %5s",
+	         pkt->ts_sec, pkt->ts_usec, pkt->len, protos[pkt->flow.proto]);
 }
 
 #define ERR_LINE_OFFSET 2
@@ -196,7 +189,7 @@ int bytes_cmp(struct pkt_record *p1, struct pkt_record *p2)
 void print_top_n(int stop)
 {
 	struct pkt_record *r;
-	int row, rowcnt = stop;
+	int row = 0, rowcnt = stop;
 	char ip_src[16];
 	char ip_dst[16];
 	char ip6_src[40];
@@ -207,24 +200,36 @@ void print_top_n(int stop)
 	         "%15s:%-6s %15s    %15s:%-6s  %10s",
 	         "Source", "port", "bytes", "Destination", "port", "proto");
 #endif
+	mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+	         "Top Flows:");
 
 	for(row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
 		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
+		inet_ntop(AF_INET6, &(r->flow.src_ip6), ip6_src, sizeof(ip6_src));
+		inet_ntop(AF_INET6, &(r->flow.dst_ip6), ip6_dst, sizeof(ip6_dst));
 
 		switch (r->flow.ethertype) {
 		case ETHERTYPE_IP:
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%15s:%-6d %15d    %15s:%-6d  %10s",
-			         ip_src, r->flow.sport, r->len,
-			         ip_dst, r->flow.dport, protos[r->flow.proto]);
+			         "%39s->%-39s", ip_src, ip_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			         "%-5s %15d %10s %6d->%-6d",
+			         protos[r->flow.proto], r->len,
+			         " ",
+			         r->flow.sport, r->flow.dport);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
 			break;
+
 		case ETHERTYPE_IPV6:
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
 			         "%39s->%-39s", ip6_src, ip6_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row++, 10,
-			         "%15d   %10s  %6d -> %-6d",
-			         r->len, protos[r->flow.proto], r->flow.sport, r->flow.dport);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			         "%-5s %15d %10s %6d->%-6d",
+			         protos[r->flow.proto], r->len,
+			         " ",
+			         r->flow.sport, r->flow.dport);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
 			break;
 		default:
 			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
