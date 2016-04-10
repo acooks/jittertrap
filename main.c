@@ -39,16 +39,6 @@ struct pkt_record {
 /* hash tables for stats */
 struct pkt_record *flow_table = NULL;
 
-#define zero_pkt(p)                                                            \
-	do {                                                                   \
-		p->ts_sec = 0;                                                 \
-		p->ts_usec = 0;                                                \
-		p->len = 0;                                                    \
-		p->flow.proto = 0;                                             \
-		p->flow.sport = 0;                                             \
-		p->flow.dport = 0;                                             \
-	} while (0);
-
 void print_pkt(struct pkt_record *pkt)
 {
 	char ip_src[16];
@@ -191,10 +181,11 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 	const struct hdr_ethernet *ethernet;
 	const struct hdr_ipv4 *ip4; /* The IP header */
 	uint32_t size_ether;
+	static const struct pkt_record ZeroPkt = { 0 };
 	struct pkt_record *pkt;
 
 	pkt = malloc(sizeof(struct pkt_record));
-	zero_pkt(pkt);
+	*pkt = ZeroPkt;
 
 	pkt->ts_sec = h->ts.tv_sec;
 	pkt->ts_usec = h->ts.tv_usec;
