@@ -19,10 +19,20 @@ const char *protos[IPPROTO_MAX] = {
 	[IPPROTO_IGMP] = "IGMP"
 };
 
+
 struct flow {
-	struct in_addr src_ip;
+	int ethertype;
+	union {
+		struct {
+			struct in_addr src_ip;
+			struct in_addr dst_ip;
+		};
+		struct {
+			struct in6_addr src_ip6;
+			struct in6_addr dst_ip6;
+		};
+	};
 	uint16_t sport;
-	struct in_addr dst_ip;
 	uint16_t dport;
 	uint16_t proto;
 };
@@ -89,24 +99,17 @@ void decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 	pkt->flow.dport = 0;
 }
 
-void decode_ip4(const struct hdr_ipv4 *packet, struct pkt_record *pkt)
+void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
 {
-	const void *next; /* IP Payload */
-	unsigned int size_ip;
+	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
+	const struct hdr_ipv6 *ip6_packet = (const struct hdr_ipv6 *)packet;
 
-	size_ip = IP_HL(packet) * 4;
-	if (size_ip < 20) {
-		fprintf(stderr, " *** Invalid IP header length: %u bytes\n",
-		        size_ip);
-		return;
-	}
-	next = ((uint8_t *)packet + size_ip);
+	pkt->flow.ethertype = ETHERTYPE_IPV6;
+	pkt->flow.src_ip6 = (ip6_packet->ip6_src);
+	pkt->flow.dst_ip6 = (ip6_packet->ip6_dst);
 
-	pkt->flow.src_ip = (packet->ip_src);
-	pkt->flow.dst_ip = (packet->ip_dst);
-
-	/* IP proto TCP/UDP/ICMP */
-	switch (packet->ip_p) {
+	/* Transport proto TCP/UDP/ICMP */
+	switch (ip6_packet->next_hdr) {
 	case IPPROTO_TCP:
 		decode_tcp(next, pkt);
 		break;
@@ -120,7 +123,45 @@ void decode_ip4(const struct hdr_ipv4 *packet, struct pkt_record *pkt)
 		decode_igmp(next, pkt);
 		break;
 	default:
-		fprintf(stderr, " *** Protocol [0x%x] unknown\n", packet->ip_p);
+		fprintf(stderr, " *** Protocol [0x%02x] unknown\n",
+		        ip6_packet->next_hdr);
+		break;
+	}
+}
+
+void decode_ip4(const uint8_t *packet, struct pkt_record *pkt)
+{
+	const void *next;
+	const struct hdr_ipv4 *ip4_packet = (const struct hdr_ipv4 *)packet;
+	unsigned int size_ip = IP_HL(ip4_packet) * 4;
+	if (size_ip < 20) {
+		fprintf(stderr, " *** Invalid IP header length: %u bytes\n",
+		        size_ip);
+		return;
+	}
+	next = ((uint8_t *)ip4_packet + size_ip);
+
+	pkt->flow.ethertype = ETHERTYPE_IP;
+	pkt->flow.src_ip = (ip4_packet->ip_src);
+	pkt->flow.dst_ip = (ip4_packet->ip_dst);
+
+	/* IP proto TCP/UDP/ICMP */
+	switch (ip4_packet->ip_p) {
+	case IPPROTO_TCP:
+		decode_tcp(next, pkt);
+		break;
+	case IPPROTO_UDP:
+		decode_udp(next, pkt);
+		break;
+	case IPPROTO_ICMP:
+		decode_icmp(next, pkt);
+		break;
+	case IPPROTO_IGMP:
+		decode_igmp(next, pkt);
+		break;
+	default:
+		fprintf(stderr, " *** Protocol [0x%02x] unknown\n",
+		        ip4_packet->ip_p);
 		break;
 	}
 }
@@ -137,19 +178,38 @@ void print_top_n(int stop)
 	int row, rowcnt = stop;
 	char ip_src[16];
 	char ip_dst[16];
+	char ip6_src[40];
+	char ip6_dst[40];
 
+#if 0
 	mvprintw(TOP_N_LINE_OFFSET, 0,
-	         "%15s:%-6s %15s    %15s:%-6s",
-	         "Source", "port", "bytes", "Destination", "port");
+	         "%15s:%-6s %15s    %15s:%-6s  %10s",
+	         "Source", "port", "bytes", "Destination", "port", "proto");
+#endif
 
 	for(row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
 		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
 
-		mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-		         "%15s:%-6d %15d    %15s:%-6d",
-		         ip_src, r->flow.sport, r->len,
-		         ip_dst, r->flow.dport);
+		switch (r->flow.ethertype) {
+		case ETHERTYPE_IP:
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			         "%15s:%-6d %15d    %15s:%-6d  %10s",
+			         ip_src, r->flow.sport, r->len,
+			         ip_dst, r->flow.dport, protos[r->flow.proto]);
+			break;
+		case ETHERTYPE_IPV6:
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			         "%39s->%-39s", ip6_src, ip6_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 10,
+			         "%15d   %10s  %6d -> %-6d",
+			         r->len, protos[r->flow.proto], r->flow.sport, r->flow.dport);
+			break;
+		default:
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
+			         "%15d Unknown ethertype: %d", r->flow.ethertype);
+		}
+
 	}
 }
 
@@ -179,8 +239,6 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
                    const uint8_t *packet)
 {
 	const struct hdr_ethernet *ethernet;
-	const struct hdr_ipv4 *ip4; /* The IP header */
-	uint32_t size_ether;
 	static const struct pkt_record ZeroPkt = { 0 };
 	struct pkt_record *pkt;
 
@@ -196,14 +254,14 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 
 	switch (ntohs(ethernet->type)) {
 	case ETHERTYPE_IP:
-		size_ether = HDR_LEN_ETHER;
+		decode_ip4(packet + HDR_LEN_ETHER, pkt);
 		break;
 	case ETHERTYPE_VLAN:
-		size_ether = HDR_LEN_ETHER_VLAN;
-		break;
-	case ETHERTYPE_IPV6:
-		printf("IPv6 ignored\n");
+		decode_packet(user, h, packet + HDR_LEN_ETHER_VLAN);
 		return;
+	case ETHERTYPE_IPV6:
+		decode_ip6(packet + HDR_LEN_ETHER, pkt);
+		break;
 	case ETHERTYPE_ARP:
 		printf("ARP ignored\n");
 		return;
@@ -214,10 +272,6 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 		return;
 	}
 
-	/* IP header */
-	ip4 = (struct hdr_ipv4 *)(packet + size_ether);
-
-	decode_ip4(ip4, pkt);
 
 	update_stats_tables(pkt);
 

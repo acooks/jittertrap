@@ -44,6 +44,15 @@ struct hdr_ipv4 {
 #define IP_HL(ip) (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip) (((ip)->ip_vhl) >> 4)
 
+struct hdr_ipv6 {
+	uint32_t version : 4, class : 8, flowlabel : 20;
+	uint16_t payload_len;
+	uint8_t next_hdr;      /* like protocol in ipv4 */
+	uint8_t hop_limit;
+	struct in6_addr ip6_src;
+	struct in6_addr ip6_dst;
+} __attribute__((__packed__));
+
 /* TCP */
 typedef u_int tcp_seq;
 
