@@ -15,6 +15,7 @@ const char *protos[IPPROTO_MAX] = {
 	[IPPROTO_TCP]  = "TCP",
 	[IPPROTO_UDP]  = "UDP",
 	[IPPROTO_ICMP] = "ICMP",
+	[IPPROTO_ICMPV6] = "ICMP6",
 	[IPPROTO_IP]   = "IP",
 	[IPPROTO_IGMP] = "IGMP"
 };
@@ -103,6 +104,13 @@ void decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
 	pkt->flow.dport = 0;
 }
 
+void decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt)
+{
+	pkt->flow.proto = IPPROTO_ICMPV6;
+	pkt->flow.sport = 0;
+	pkt->flow.dport = 0;
+}
+
 void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
 {
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
@@ -125,6 +133,9 @@ void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
 		break;
 	case IPPROTO_IGMP:
 		decode_igmp(next, pkt);
+		break;
+	case IPPROTO_ICMPV6:
+		decode_icmp6(next, pkt);
 		break;
 	default:
 		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
