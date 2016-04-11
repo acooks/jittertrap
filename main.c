@@ -111,14 +111,11 @@ void update_stats_tables(struct pkt_record *pkt)
 {
 	struct pkt_record *table_entry;
 	struct pkt_list_entry *ple, *tmp, *titer;
-	int count;
 
-	print_pkt(pkt);
 
 	/* maintain a 10ms history of packets */
 	ple = malloc(sizeof(struct pkt_list_entry));
 	ple->pkt = *pkt;
-	memcpy(&(ple->pkt), pkt, sizeof(struct pkt_record));
 	DL_APPEND(pkt_list_head, ple);
 	DL_FOREACH_SAFE(pkt_list_head, titer, tmp)
 	{
