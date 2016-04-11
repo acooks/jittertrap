@@ -1,6 +1,6 @@
 PROG = toptalk
 
-SRC = main.c
+SRC = main.c decode.c
 HEADERS = decode.h flow.h
 
 LIBS = -lpcap -lcurses

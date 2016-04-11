@@ -21,6 +21,9 @@ struct hdr_ethernet {
 #define VLAN_TPID 0x8100
 } __attribute__((__packed__));
 
+int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
+                    struct pkt_record *pkt);
+
 /* IP */
 struct hdr_ipv4 {
 	uint8_t ip_vhl;        /* version << 4 | header length >> 2 */
@@ -40,6 +43,7 @@ struct hdr_ipv4 {
 } __attribute__((__packed__));
 #define IP_HL(ip) (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip) (((ip)->ip_vhl) >> 4)
+void decode_ip4(const uint8_t *packet, struct pkt_record *pkt);
 
 struct hdr_ipv6 {
 	uint32_t version : 4, class : 8, flowlabel : 20;
@@ -74,6 +78,8 @@ struct hdr_tcp {
 	uint16_t urp; /* urgent pointer */
 } __attribute__((__packed__));
 
+void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt);
+
 struct hdr_udp {
 	uint16_t sport;   /* source port */
 	uint16_t dport;   /* destination port */
@@ -81,8 +87,16 @@ struct hdr_udp {
 	uint16_t chcksum; /* udp header + payload checksum */
 } __attribute__((__packed__));
 
+void decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt);
+
 struct hdr_icmp {
 	uint8_t todo;
 } __attribute__((__packed__));
+
+void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt);
+
+void decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt);
+
+void decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt);
 
 #endif
