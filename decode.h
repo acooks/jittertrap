@@ -1,11 +1,6 @@
 #ifndef DECODE_H
 #define DECODE_H
 
-#if 0
-/* depends on... */
-#include <arpa/inet.h>
-#endif
-
 /* Ethernet */
 #define HDR_LEN_ETHER 14
 #define HDR_LEN_ETHER_VLAN 18
@@ -55,14 +50,13 @@ struct hdr_ipv6 {
 	struct in6_addr ip6_dst;
 } __attribute__((__packed__));
 
-/* TCP */
-typedef u_int tcp_seq;
+void decode_ip6(const uint8_t *packet, struct pkt_record *pkt);
 
 struct hdr_tcp {
 	uint16_t sport; /* source port */
 	uint16_t dport; /* destination port */
-	tcp_seq seq;    /* sequence number */
-	tcp_seq ack;    /* acknowledgement number */
+	uint32_t seq;   /* sequence number */
+	uint32_t ack;   /* acknowledgement number */
 	uint8_t offx2;  /* data offset, rsvd */
 #define TH_OFF(th) (((th)->offx2 & 0xf0) >> 4)
 	uint8_t flags;

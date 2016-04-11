@@ -19,9 +19,7 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IP] = "IP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
-
-
-/* hash tables for stats */
+/* hash table for stats */
 struct pkt_record *flow_table = NULL;
 
 void print_pkt(struct pkt_record *pkt)
