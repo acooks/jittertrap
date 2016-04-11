@@ -118,12 +118,15 @@ void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 {
 	static const struct pkt_record ZeroPkt = { 0 };
 	struct pkt_record *pkt;
+	char errstr[DECODE_ERRBUF_SIZE];
 
 	pkt = malloc(sizeof(struct pkt_record));
 	*pkt = ZeroPkt;
 
-	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt)) {
+	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
 		update_stats_tables(pkt);
+	} else {
+		mvprintw(ERR_LINE_OFFSET, 0, "%-80s", errstr);
 	}
 
 	free(pkt);

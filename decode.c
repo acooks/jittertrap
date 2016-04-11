@@ -7,9 +7,8 @@
 #include "flow.h"
 #include "decode.h"
 
-#define ERR_LINE_OFFSET 2
 int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
-                    struct pkt_record *pkt)
+                    struct pkt_record *pkt, char *errstr)
 {
 	const struct hdr_ethernet *ethernet;
 	int ret;
@@ -22,40 +21,36 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 
 	switch (ntohs(ethernet->type)) {
 	case ETHERTYPE_IP:
-		decode_ip4(wirebits + HDR_LEN_ETHER, pkt);
-		ret = 0;
+		ret = decode_ip4(wirebits + HDR_LEN_ETHER, pkt, errstr);
 		break;
 	case ETHERTYPE_VLAN:
-		decode_ethernet(h, wirebits + HDR_LEN_ETHER_VLAN, pkt);
-		ret = 0; /* TODO: check recursion! */
+		ret = decode_ethernet(h, wirebits + HDR_LEN_ETHER_VLAN, pkt,
+		                      errstr);
 		break;
 	case ETHERTYPE_IPV6:
-		decode_ip6(wirebits + HDR_LEN_ETHER, pkt);
-		ret = 0;
+		ret = decode_ip6(wirebits + HDR_LEN_ETHER, pkt, errstr);
 		break;
 	case ETHERTYPE_ARP:
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0, "ARP ignored");
-		ret = 1;
+		snprintf(errstr, DECODE_ERRBUF_SIZE, "%s", "ARP ignored");
+		ret = -1;
 		break;
 	case ETHERTYPE_LLDP:
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0, "LLDP ignored");
-		ret = 1;
+		snprintf(errstr, DECODE_ERRBUF_SIZE, "%s", "LLDP ignored");
+		ret = -1;
 		break;
 	default:
 		/* we don't know how to decode other types right now. */
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0, "EtherType [0x%04x] ignored",
-		         ntohs(ethernet->type));
-		ret = 1;
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "EtherType [0x%04x] ignored", ntohs(ethernet->type));
+		ret = -1;
 		break;
 	}
 	return ret;
 }
 
-void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
+int decode_ip6(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
 {
+	int ret;
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
 	const struct hdr_ipv6 *ip6_packet = (const struct hdr_ipv6 *)packet;
 
@@ -66,38 +61,39 @@ void decode_ip6(const uint8_t *packet, struct pkt_record *pkt)
 	/* Transport proto TCP/UDP/ICMP */
 	switch (ip6_packet->next_hdr) {
 	case IPPROTO_TCP:
-		decode_tcp(next, pkt);
+		ret = decode_tcp(next, pkt, errstr);
 		break;
 	case IPPROTO_UDP:
-		decode_udp(next, pkt);
+		ret = decode_udp(next, pkt, errstr);
 		break;
 	case IPPROTO_ICMP:
-		decode_icmp(next, pkt);
+		ret = decode_icmp(next, pkt, errstr);
 		break;
 	case IPPROTO_IGMP:
-		decode_igmp(next, pkt);
+		ret = decode_igmp(next, pkt, errstr);
 		break;
 	case IPPROTO_ICMPV6:
-		decode_icmp6(next, pkt);
+		ret = decode_icmp6(next, pkt, errstr);
 		break;
 	default:
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0, "*** Protocol [0x%02x] unknown",
-		         ip6_packet->next_hdr);
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "*** Protocol [0x%02x] unknown", ip6_packet->next_hdr);
+		ret = -1;
 		break;
 	}
+	return ret;
 }
 
-void decode_ip4(const uint8_t *packet, struct pkt_record *pkt)
+int decode_ip4(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
 {
+	int ret;
 	const void *next;
 	const struct hdr_ipv4 *ip4_packet = (const struct hdr_ipv4 *)packet;
 	unsigned int size_ip = IP_HL(ip4_packet) * 4;
 	if (size_ip < 20) {
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0,
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
 		         "*** Invalid IP header length: %u bytes", size_ip);
-		return;
+		return -1;
 	}
 	next = ((uint8_t *)ip4_packet + size_ip);
 
@@ -108,67 +104,77 @@ void decode_ip4(const uint8_t *packet, struct pkt_record *pkt)
 	/* IP proto TCP/UDP/ICMP */
 	switch (ip4_packet->ip_p) {
 	case IPPROTO_TCP:
-		decode_tcp(next, pkt);
+		ret = decode_tcp(next, pkt, errstr);
 		break;
 	case IPPROTO_UDP:
-		decode_udp(next, pkt);
+		ret = decode_udp(next, pkt, errstr);
 		break;
 	case IPPROTO_ICMP:
-		decode_icmp(next, pkt);
+		ret = decode_icmp(next, pkt, errstr);
 		break;
 	case IPPROTO_IGMP:
-		decode_igmp(next, pkt);
+		ret = decode_igmp(next, pkt, errstr);
 		break;
 	default:
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0, "*** Protocol [0x%02x] unknown",
-		         ip4_packet->ip_p);
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "*** Protocol [0x%02x] unknown", ip4_packet->ip_p);
+		ret = -1;
 		break;
 	}
+	return ret;
 }
 
-void decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt)
+int decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt,
+               char *errstr)
 {
 	unsigned int size_tcp = (TH_OFF(packet) * 4);
 
 	if (size_tcp < 20) {
-		mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-		mvprintw(ERR_LINE_OFFSET, 0,
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
 		         "*** Invalid TCP header length: %u bytes", size_tcp);
-		return;
+		return -1;
 	}
 
 	pkt->flow.proto = IPPROTO_TCP;
 	pkt->flow.sport = ntohs(packet->sport);
 	pkt->flow.dport = ntohs(packet->dport);
+	return 0;
 }
 
-void decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt)
+int decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt,
+               char *errstr)
 {
 	pkt->flow.proto = IPPROTO_UDP;
 	pkt->flow.sport = ntohs(packet->sport);
 	pkt->flow.dport = ntohs(packet->dport);
+	return 0;
 }
 
-void decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
+int decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+                char *errstr)
 {
 	pkt->flow.proto = IPPROTO_ICMP;
 	/* ICMP doesn't have ports, but we depend on that for the flow */
 	pkt->flow.sport = 0;
 	pkt->flow.dport = 0;
+	return 0;
 }
 
-void decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt)
+int decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+                char *errstr)
 {
 	pkt->flow.proto = IPPROTO_IGMP;
 	/* IGMP doesn't have ports, but we depend on that for the flow */
 	pkt->flow.sport = 0;
 	pkt->flow.dport = 0;
+	return 0;
 }
 
-void decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt)
+int decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt,
+                 char *errstr)
 {
 	pkt->flow.proto = IPPROTO_ICMPV6;
 	pkt->flow.sport = 0;
 	pkt->flow.dport = 0;
+	return 0;
 }
