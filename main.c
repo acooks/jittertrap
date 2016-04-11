@@ -52,6 +52,11 @@ void print_top_n(int stop)
 #endif
 	mvprintw(TOP_N_LINE_OFFSET + row++, 0, "Top Flows:");
 
+	/* Clear the table */
+	for (int i = 1; i <= 15; i++) {
+		mvprintw(TOP_N_LINE_OFFSET + i, 0, "%80s", " ");
+	}
+
 	for (row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
 		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
