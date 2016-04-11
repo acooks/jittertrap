@@ -186,7 +186,7 @@ void grab_packets(int fd, pcap_t *handle)
 
 	while (1) {
 		if (ppoll(fds, 1, &timeout_ts, NULL)) {
-			pcap_dispatch(handle, 100, handle_packet, NULL);
+			pcap_dispatch(handle, 10000, handle_packet, NULL);
 		}
 
 		if ((ch = getch()) == ERR) {
