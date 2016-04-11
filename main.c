@@ -9,6 +9,7 @@
 #include <ncurses.h>
 
 #include "uthash.h"
+#include "flow.h"
 #include "decode.h"
 
 static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
@@ -18,31 +19,6 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IP] = "IP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
-
-struct flow {
-	int ethertype;
-	union {
-		struct {
-			struct in_addr src_ip;
-			struct in_addr dst_ip;
-		};
-		struct {
-			struct in6_addr src_ip6;
-			struct in6_addr dst_ip6;
-		};
-	};
-	uint16_t sport;
-	uint16_t dport;
-	uint16_t proto;
-};
-
-struct pkt_record {
-	uint32_t ts_sec;
-	uint32_t ts_usec;
-	uint32_t len;              /* this is cumulative in tables */
-	struct flow flow;
-	UT_hash_handle hh;         /* makes this structure hashable */
-};
 
 
 /* hash tables for stats */
