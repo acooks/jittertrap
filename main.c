@@ -11,14 +11,12 @@
 #include "uthash.h"
 #include "decode.h"
 
-const char *protos[IPPROTO_MAX] = {
-	[IPPROTO_TCP]  = "TCP",
-	[IPPROTO_UDP]  = "UDP",
-	[IPPROTO_ICMP] = "ICMP",
-	[IPPROTO_ICMPV6] = "ICMP6",
-	[IPPROTO_IP]   = "IP",
-	[IPPROTO_IGMP] = "IGMP"
-};
+static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
+	                                        [IPPROTO_UDP] = "UDP",
+	                                        [IPPROTO_ICMP] = "ICMP",
+	                                        [IPPROTO_ICMPV6] = "ICMP6",
+	                                        [IPPROTO_IP] = "IP",
+	                                        [IPPROTO_IGMP] = "IGMP" };
 
 
 struct flow {
@@ -52,8 +50,8 @@ struct pkt_record *flow_table = NULL;
 
 void print_pkt(struct pkt_record *pkt)
 {
-	mvprintw(0, 20, "%d.%06d,  %4d, %5s",
-	         pkt->ts_sec, pkt->ts_usec, pkt->len, protos[pkt->flow.proto]);
+	mvprintw(0, 20, "%d.%06d,  %4d, %5s", pkt->ts_sec, pkt->ts_usec,
+	         pkt->len, protos[pkt->flow.proto]);
 }
 
 #define ERR_LINE_OFFSET 2
@@ -200,43 +198,42 @@ void print_top_n(int stop)
 	         "%15s:%-6s %15s    %15s:%-6s  %10s",
 	         "Source", "port", "bytes", "Destination", "port", "proto");
 #endif
-	mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-	         "Top Flows:");
+	mvprintw(TOP_N_LINE_OFFSET + row++, 0, "Top Flows:");
 
-	for(row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
+	for (row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
 		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
-		inet_ntop(AF_INET6, &(r->flow.src_ip6), ip6_src, sizeof(ip6_src));
-		inet_ntop(AF_INET6, &(r->flow.dst_ip6), ip6_dst, sizeof(ip6_dst));
+		inet_ntop(AF_INET6, &(r->flow.src_ip6), ip6_src,
+		          sizeof(ip6_src));
+		inet_ntop(AF_INET6, &(r->flow.dst_ip6), ip6_dst,
+		          sizeof(ip6_dst));
 
 		switch (r->flow.ethertype) {
 		case ETHERTYPE_IP:
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%39s->%-39s", ip_src, ip_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%39s->%-39s",
+			         ip_src, ip_dst);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
 			         "%-5s %15d %10s %6d->%-6d",
-			         protos[r->flow.proto], r->len,
-			         " ",
+			         protos[r->flow.proto], r->len, " ",
 			         r->flow.sport, r->flow.dport);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
 			break;
 
 		case ETHERTYPE_IPV6:
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%39s->%-39s", ip6_src, ip6_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%39s->%-39s",
+			         ip6_src, ip6_dst);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
 			         "%-5s %15d %10s %6d->%-6d",
-			         protos[r->flow.proto], r->len,
-			         " ",
+			         protos[r->flow.proto], r->len, " ",
 			         r->flow.sport, r->flow.dport);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
 			break;
 		default:
 			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
 			mvprintw(ERR_LINE_OFFSET + row++, 0,
-			         "%15d Unknown ethertype: %d", r->flow.ethertype);
+			         "%15d Unknown ethertype: %d",
+			         r->flow.ethertype);
 		}
-
 	}
 }
 
@@ -251,10 +248,12 @@ void update_stats_tables(struct pkt_record *pkt)
 	HASH_FIND(hh, flow_table, &(pkt->flow), sizeof(struct flow),
 	          table_entry);
 	if (!table_entry) {
-		table_entry = (struct pkt_record*)malloc(sizeof(struct pkt_record));
+		table_entry =
+		    (struct pkt_record *)malloc(sizeof(struct pkt_record));
 		memset(table_entry, 0, sizeof(struct pkt_record));
 		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD(hh, flow_table, flow, sizeof(struct flow), table_entry);
+		HASH_ADD(hh, flow_table, flow, sizeof(struct flow),
+		         table_entry);
 	} else {
 		table_entry->len += pkt->len;
 	}
@@ -308,7 +307,6 @@ void decode_packet(uint8_t *user, const struct pcap_pkthdr *h,
 	update_stats_tables(pkt);
 
 	free(pkt);
-
 }
 
 void grab_packets(int fd, pcap_t *handle)
@@ -328,11 +326,10 @@ void grab_packets(int fd, pcap_t *handle)
 		if ((ch = getch()) == ERR) {
 			/* normal case - no input */
 			;
-		}
-		else {
+		} else {
 			switch (ch) {
 			case 'q':
-				endwin();  /* End curses mode */
+				endwin(); /* End curses mode */
 				return;
 			}
 		}

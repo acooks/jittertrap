@@ -49,7 +49,7 @@ struct hdr_ipv4 {
 struct hdr_ipv6 {
 	uint32_t version : 4, class : 8, flowlabel : 20;
 	uint16_t payload_len;
-	uint8_t next_hdr;      /* like protocol in ipv4 */
+	uint8_t next_hdr; /* like protocol in ipv4 */
 	uint8_t hop_limit;
 	struct in6_addr ip6_src;
 	struct in6_addr ip6_dst;
