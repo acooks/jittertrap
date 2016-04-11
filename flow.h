@@ -23,3 +23,8 @@ struct pkt_record {
 	struct flow flow;
 	UT_hash_handle hh; /* makes this structure hashable */
 };
+
+struct pkt_list_entry {
+        struct pkt_record pkt;
+        struct pkt_list_entry *next, *prev;
+};

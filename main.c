@@ -8,9 +8,11 @@
 #include <arpa/inet.h>
 #include <ncurses.h>
 
+#include "utlist.h"
 #include "uthash.h"
 #include "flow.h"
 #include "decode.h"
+#include "timeywimey.h"
 
 static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_UDP] = "UDP",
@@ -19,8 +21,11 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IP] = "IP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
-/* hash table for stats */
+/* initialise hash table for stats */
 struct pkt_record *flow_table = NULL;
+
+/* initialise packet list */
+struct pkt_list_entry *pkt_list_head = NULL;
 
 void print_pkt(struct pkt_record *pkt)
 {
@@ -88,17 +93,50 @@ void print_top_n(int stop)
 		default:
 			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
 			mvprintw(ERR_LINE_OFFSET + row++, 0,
-			         "%15d Unknown ethertype: %d",
-			         r->flow.ethertype);
+			         "Unknown ethertype: %d", r->flow.ethertype);
 		}
 	}
+}
+
+int has_aged(struct pkt_list_entry *new_pkt, struct pkt_list_entry *old_pkt)
+{
+	struct timeval diff;
+
+	diff = tv_absdiff(new_pkt->pkt.timestamp, old_pkt->pkt.timestamp);
+
+	return (diff.tv_sec > 1 || diff.tv_usec > 1E6);
 }
 
 void update_stats_tables(struct pkt_record *pkt)
 {
 	struct pkt_record *table_entry;
+	struct pkt_list_entry *ple, *tmp, *titer;
+	int count;
 
 	print_pkt(pkt);
+
+	/* maintain a 10ms history of packets */
+	ple = malloc(sizeof(struct pkt_list_entry));
+	ple->pkt = *pkt;
+	memcpy(&(ple->pkt), pkt, sizeof(struct pkt_record));
+	DL_APPEND(pkt_list_head, ple);
+	DL_FOREACH_SAFE(pkt_list_head, titer, tmp)
+	{
+		if (has_aged(ple, titer)) {
+			HASH_FIND(hh, flow_table, &(titer->pkt.flow),
+			          sizeof(struct flow), table_entry);
+			assert(table_entry);
+			table_entry->len -= titer->pkt.len;
+			if (0 == table_entry->len) {
+				HASH_DEL(flow_table, table_entry);
+			}
+
+			DL_DELETE(pkt_list_head, titer);
+			free(titer);
+		} else {
+			break;
+		}
+	}
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
