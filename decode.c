@@ -13,8 +13,8 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 	const struct hdr_ethernet *ethernet;
 	int ret;
 
-	pkt->ts_sec = h->ts.tv_sec;
-	pkt->ts_usec = h->ts.tv_usec;
+	pkt->timestamp.tv_sec = h->ts.tv_sec;
+	pkt->timestamp.tv_usec = h->ts.tv_usec;
 	pkt->len = h->len;
 
 	ethernet = (struct hdr_ethernet *)wirebits;

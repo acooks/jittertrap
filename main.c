@@ -24,8 +24,8 @@ struct pkt_record *flow_table = NULL;
 
 void print_pkt(struct pkt_record *pkt)
 {
-	mvprintw(0, 20, "%d.%06d,  %4d, %5s", pkt->ts_sec, pkt->ts_usec,
-	         pkt->len, protos[pkt->flow.proto]);
+	mvprintw(0, 20, "%d.%06d,  %4d, %5s", pkt->timestamp.tv_sec,
+	         pkt->timestamp.tv_usec, pkt->len, protos[pkt->flow.proto]);
 }
 
 #define ERR_LINE_OFFSET 2

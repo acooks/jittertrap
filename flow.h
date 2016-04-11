@@ -18,8 +18,7 @@ struct flow {
 };
 
 struct pkt_record {
-	uint32_t ts_sec;
-	uint32_t ts_usec;
+	struct timeval timestamp;
 	uint32_t len; /* this is cumulative in tables */
 	struct flow flow;
 	UT_hash_handle hh; /* makes this structure hashable */
