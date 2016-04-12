@@ -22,10 +22,12 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
 /* initialise hash table for stats */
-struct pkt_record *flow_table = NULL;
+struct pkt_record *st_flow_table = NULL;
+struct pkt_record *lt_flow_table = NULL;
 
 /* initialise packet list */
-struct pkt_list_entry *pkt_list_head = NULL;
+struct pkt_list_entry *st_pkt_list_head = NULL; /* short-term */
+struct pkt_list_entry *lt_pkt_list_head = NULL; /* long-term */
 
 void print_pkt(struct pkt_record *pkt)
 {
@@ -44,6 +46,7 @@ int bytes_cmp(struct pkt_record *p1, struct pkt_record *p2)
 void print_top_n(int stop)
 {
 	struct pkt_record *r;
+	static struct pkt_record zp = { 0 };
 	int row = 0, rowcnt = stop;
 	char ip_src[16];
 	char ip_dst[16];
@@ -62,7 +65,15 @@ void print_top_n(int stop)
 		mvprintw(TOP_N_LINE_OFFSET + i, 0, "%80s", " ");
 	}
 
-	for (row = 1, r = flow_table; r != NULL && rowcnt--; r = r->hh.next) {
+	for (row = 1, r = lt_flow_table; r != NULL && rowcnt--;
+	     r = r->hh.next) {
+		struct pkt_record *st_table_entry;
+		HASH_FIND(hh, st_flow_table, &(r->flow), sizeof(struct flow),
+		          st_table_entry);
+		if (!st_table_entry) {
+			st_table_entry = &zp;
+		}
+
 		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
 		inet_ntop(AF_INET6, &(r->flow.src_ip6), ip6_src,
@@ -75,8 +86,8 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%39s->%-39s",
 			         ip_src, ip_dst);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%-5s %15d %10s %6d->%-6d",
-			         protos[r->flow.proto], r->len, " ",
+			         "%-5s %10d %5d %4s %6d->%-6d",
+			         protos[r->flow.proto], r->len, st_table_entry->len, " ",
 			         r->flow.sport, r->flow.dport);
 			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
 			break;
@@ -98,37 +109,38 @@ void print_top_n(int stop)
 	}
 }
 
-int has_aged(struct pkt_list_entry *new_pkt, struct pkt_list_entry *old_pkt)
+int has_aged(struct pkt_list_entry *new_pkt, struct pkt_list_entry *old_pkt,
+             struct timeval max_age)
 {
 	struct timeval diff;
 
 	diff = tv_absdiff(new_pkt->pkt.timestamp, old_pkt->pkt.timestamp);
 
-	return (diff.tv_sec > 1 || diff.tv_usec > 1E6);
+	return (0 < tv_cmp(diff, max_age));
 }
 
-void update_stats_tables(struct pkt_record *pkt)
+void update_st_stats(struct pkt_record *pkt)
 {
 	struct pkt_record *table_entry;
 	struct pkt_list_entry *ple, *tmp, *titer;
+	struct timeval max_age = {.tv_sec = 0, .tv_usec = 5E5 };
 
-
-	/* maintain a 10ms history of packets */
+	/* maintain a long-term history of packets */
 	ple = malloc(sizeof(struct pkt_list_entry));
 	ple->pkt = *pkt;
-	DL_APPEND(pkt_list_head, ple);
-	DL_FOREACH_SAFE(pkt_list_head, titer, tmp)
+	DL_APPEND(st_pkt_list_head, ple);
+	DL_FOREACH_SAFE(st_pkt_list_head, titer, tmp)
 	{
-		if (has_aged(ple, titer)) {
-			HASH_FIND(hh, flow_table, &(titer->pkt.flow),
+		if (has_aged(ple, titer, max_age)) {
+			HASH_FIND(hh, st_flow_table, &(titer->pkt.flow),
 			          sizeof(struct flow), table_entry);
 			assert(table_entry);
 			table_entry->len -= titer->pkt.len;
 			if (0 == table_entry->len) {
-				HASH_DEL(flow_table, table_entry);
+				HASH_DEL(st_flow_table, table_entry);
 			}
 
-			DL_DELETE(pkt_list_head, titer);
+			DL_DELETE(st_pkt_list_head, titer);
 			free(titer);
 		} else {
 			break;
@@ -137,20 +149,72 @@ void update_stats_tables(struct pkt_record *pkt)
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
-	HASH_FIND(hh, flow_table, &(pkt->flow), sizeof(struct flow),
+	HASH_FIND(hh, st_flow_table, &(pkt->flow), sizeof(struct flow),
 	          table_entry);
 	if (!table_entry) {
 		table_entry =
 		    (struct pkt_record *)malloc(sizeof(struct pkt_record));
 		memset(table_entry, 0, sizeof(struct pkt_record));
 		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD(hh, flow_table, flow, sizeof(struct flow),
+		HASH_ADD(hh, st_flow_table, flow, sizeof(struct flow),
 		         table_entry);
 	} else {
 		table_entry->len += pkt->len;
 	}
 
-	HASH_SORT(flow_table, bytes_cmp);
+	HASH_SORT(st_flow_table, bytes_cmp);
+}
+
+void update_lt_stats(struct pkt_record *pkt)
+{
+	struct pkt_record *table_entry;
+	struct pkt_list_entry *ple, *tmp, *titer;
+	struct timeval max_age = {.tv_sec = 60, .tv_usec = 0 };
+
+	/* maintain a long-term history of packets */
+	ple = malloc(sizeof(struct pkt_list_entry));
+	ple->pkt = *pkt;
+	DL_APPEND(lt_pkt_list_head, ple);
+	DL_FOREACH_SAFE(lt_pkt_list_head, titer, tmp)
+	{
+		if (has_aged(ple, titer, max_age)) {
+			HASH_FIND(hh, lt_flow_table, &(titer->pkt.flow),
+			          sizeof(struct flow), table_entry);
+			assert(table_entry);
+			table_entry->len -= titer->pkt.len;
+			if (0 == table_entry->len) {
+				HASH_DEL(lt_flow_table, table_entry);
+			}
+
+			DL_DELETE(lt_pkt_list_head, titer);
+			free(titer);
+		} else {
+			break;
+		}
+	}
+
+	/* Update the flow accounting table */
+	/* id already in the hash? */
+	HASH_FIND(hh, lt_flow_table, &(pkt->flow), sizeof(struct flow),
+	          table_entry);
+	if (!table_entry) {
+		table_entry =
+		    (struct pkt_record *)malloc(sizeof(struct pkt_record));
+		memset(table_entry, 0, sizeof(struct pkt_record));
+		memcpy(table_entry, pkt, sizeof(struct pkt_record));
+		HASH_ADD(hh, lt_flow_table, flow, sizeof(struct flow),
+		         table_entry);
+	} else {
+		table_entry->len += pkt->len;
+	}
+
+	HASH_SORT(lt_flow_table, bytes_cmp);
+}
+
+void update_stats_tables(struct pkt_record *pkt)
+{
+	update_st_stats(pkt);
+	update_lt_stats(pkt);
 }
 
 void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,

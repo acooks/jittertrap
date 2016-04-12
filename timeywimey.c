@@ -56,6 +56,18 @@ inline struct timeval tv_absdiff(struct timeval t1, struct timeval t2)
 	return t;
 }
 
+int tv_cmp(struct timeval t1, struct timeval t2)
+{
+	if ((t1.tv_sec < t2.tv_sec) ||
+	    ((t1.tv_sec == t2.tv_sec) && (t1.tv_usec < t2.tv_usec))) {
+		return -1;
+	} else if ((t1.tv_sec > t2.tv_sec) ||
+	           ((t1.tv_sec == t2.tv_sec) && (t1.tv_usec > t2.tv_usec))) {
+		return 1;
+	}
+	return 0;
+}
+
 inline struct timespec ts_add(struct timespec t1, struct timespec t2)
 {
 	struct timespec t;
