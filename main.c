@@ -53,19 +53,19 @@ void print_top_n(int stop)
 	char ip6_src[40];
 	char ip6_dst[40];
 
-#if 0
-	mvprintw(TOP_N_LINE_OFFSET, 0,
-	         "%15s:%-6s %15s    %15s:%-6s  %10s",
-	         "Source", "port", "bytes", "Destination", "port", "proto");
-#endif
-	mvprintw(TOP_N_LINE_OFFSET + row++, 0, "Top Flows:");
+	attron(A_BOLD);
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %5s", "Source", "SPort", "Proto");
+
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %10s %10s", "Destination", "DPort", "Bytes", "Bytes");
+	attroff(A_BOLD);
+	row++;
 
 	/* Clear the table */
-	for (int i = 1; i <= 15; i++) {
+	for (int i = 2; i <= 15; i++) {
 		mvprintw(TOP_N_LINE_OFFSET + i, 0, "%80s", " ");
 	}
 
-	for (row = 1, r = lt_flow_table; r != NULL && rowcnt--;
+	for (r = lt_flow_table; r != NULL && rowcnt--;
 	     r = r->hh.next) {
 		struct pkt_record *st_table_entry;
 		HASH_FIND(hh, st_flow_table, &(r->flow), sizeof(struct flow),
@@ -83,23 +83,41 @@ void print_top_n(int stop)
 
 		switch (r->flow.ethertype) {
 		case ETHERTYPE_IP:
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%39s->%-39s",
-			         ip_src, ip_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%-5s %10d %5d %4s %6d->%-6d",
-			         protos[r->flow.proto], r->len, st_table_entry->len, " ",
-			         r->flow.sport, r->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
+			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
+			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
+			         ip_src);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
+			         ip_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
+			         r->flow.sport);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
+			         r->flow.dport);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
+			         protos[r->flow.proto]);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
+			         r->len, st_table_entry->len);
+			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			row += 3;
 			break;
 
 		case ETHERTYPE_IPV6:
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%39s->%-39s",
-			         ip6_src, ip6_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0,
-			         "%-5s %15d %10s %6d->%-6d",
-			         protos[r->flow.proto], r->len, " ",
-			         r->flow.sport, r->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row++, 0, "%80s", " ");
+			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
+			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
+			         ip6_src);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
+			         ip6_dst);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
+			         r->flow.sport);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
+			         r->flow.dport);
+			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
+			         protos[r->flow.proto]);
+			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
+			         r->len, st_table_entry->len);
+			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			row += 3;
 			break;
 		default:
 			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
@@ -316,7 +334,10 @@ int main(int argc, char *argv[])
 	}
 
 	init_curses();
-	mvprintw(0, 0, "Device: %s\n", dev);
+	mvprintw(0, 0, "Device:");
+	attron(A_BOLD);
+	mvprintw(0, 10,"%s\n", dev);
+	attroff(A_BOLD);
 
 	grab_packets(selectable_fd, handle);
 
