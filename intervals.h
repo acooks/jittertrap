@@ -17,7 +17,7 @@ struct flow_hash {
         struct flow_record f;
 	union {
 	        UT_hash_handle r_hh; /* sliding window reference table */
-		UT_hash_handle ts_hh[INTERVAL_COUNT]; /* time series tables */
+		UT_hash_handle ts_hh; /* time series tables */
 	};
 };
 

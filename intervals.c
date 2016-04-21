@@ -31,11 +31,11 @@ static void clear_table(int table_idx)
 {
 	struct flow_hash *table = flow_tables[table_idx];
 	struct flow_hash *iter, *tmp;
-	HASH_ITER(ts_hh[table_idx], table, iter, tmp) {
-		HASH_DELETE(ts_hh[table_idx], table, iter);
+	HASH_ITER(ts_hh, table, iter, tmp) {
+		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
         }
-	assert(0 == HASH_CNT(ts_hh[table_idx], table));
+	assert(0 == HASH_CNT(ts_hh, table));
 	flow_tables[table_idx] = NULL;
 }
 
@@ -131,13 +131,13 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
-	HASH_FIND(ts_hh[time_series], flow_tables[time_series],
+	HASH_FIND(ts_hh, flow_tables[time_series],
 	          &(pkt->flow_rec.flow), sizeof(struct flow), fte);
 	if (!fte) {
 		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
-		HASH_ADD(ts_hh[time_series], flow_tables[time_series], f.flow,
+		HASH_ADD(ts_hh, flow_tables[time_series], f.flow,
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.size += pkt->flow_rec.size;
@@ -175,7 +175,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		}
 
 		/* try to find the reference flow in the short flow table */
-		HASH_FIND(ts_hh[i], fti, &(ref_flow->f.flow),
+		HASH_FIND(ts_hh, fti, &(ref_flow->f.flow),
 		          sizeof(struct flow), te);
 
 		st_flows[i].size = te ? te->f.size : 0;
