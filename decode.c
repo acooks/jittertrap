@@ -8,14 +8,14 @@
 #include "decode.h"
 
 int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
-                    struct pkt_record *pkt, char *errstr)
+                    struct flow_pkt *pkt, char *errstr)
 {
 	const struct hdr_ethernet *ethernet;
 	int ret;
 
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
 	pkt->timestamp.tv_usec = h->ts.tv_usec;
-	pkt->len = h->len;
+	pkt->flow_rec.size = h->len;
 
 	ethernet = (struct hdr_ethernet *)wirebits;
 
@@ -48,15 +48,15 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 	return ret;
 }
 
-int decode_ip6(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
+int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
 	const struct hdr_ipv6 *ip6_packet = (const struct hdr_ipv6 *)packet;
 
-	pkt->flow.ethertype = ETHERTYPE_IPV6;
-	pkt->flow.src_ip6 = (ip6_packet->ip6_src);
-	pkt->flow.dst_ip6 = (ip6_packet->ip6_dst);
+	pkt->flow_rec.flow.ethertype = ETHERTYPE_IPV6;
+	pkt->flow_rec.flow.src_ip6 = (ip6_packet->ip6_src);
+	pkt->flow_rec.flow.dst_ip6 = (ip6_packet->ip6_dst);
 
 	/* Transport proto TCP/UDP/ICMP */
 	switch (ip6_packet->next_hdr) {
@@ -84,7 +84,7 @@ int decode_ip6(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
 	return ret;
 }
 
-int decode_ip4(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
+int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next;
@@ -97,9 +97,9 @@ int decode_ip4(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
 	}
 	next = ((uint8_t *)ip4_packet + size_ip);
 
-	pkt->flow.ethertype = ETHERTYPE_IP;
-	pkt->flow.src_ip = (ip4_packet->ip_src);
-	pkt->flow.dst_ip = (ip4_packet->ip_dst);
+	pkt->flow_rec.flow.ethertype = ETHERTYPE_IP;
+	pkt->flow_rec.flow.src_ip = (ip4_packet->ip_src);
+	pkt->flow_rec.flow.dst_ip = (ip4_packet->ip_dst);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (ip4_packet->ip_p) {
@@ -124,8 +124,7 @@ int decode_ip4(const uint8_t *packet, struct pkt_record *pkt, char *errstr)
 	return ret;
 }
 
-int decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt,
-               char *errstr)
+int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt, char *errstr)
 {
 	unsigned int size_tcp = (TH_OFF(packet) * 4);
 
@@ -135,46 +134,45 @@ int decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt,
 		return -1;
 	}
 
-	pkt->flow.proto = IPPROTO_TCP;
-	pkt->flow.sport = ntohs(packet->sport);
-	pkt->flow.dport = ntohs(packet->dport);
+	pkt->flow_rec.flow.proto = IPPROTO_TCP;
+	pkt->flow_rec.flow.sport = ntohs(packet->sport);
+	pkt->flow_rec.flow.dport = ntohs(packet->dport);
 	return 0;
 }
 
-int decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt,
-               char *errstr)
+int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt, char *errstr)
 {
-	pkt->flow.proto = IPPROTO_UDP;
-	pkt->flow.sport = ntohs(packet->sport);
-	pkt->flow.dport = ntohs(packet->dport);
+	pkt->flow_rec.flow.proto = IPPROTO_UDP;
+	pkt->flow_rec.flow.sport = ntohs(packet->sport);
+	pkt->flow_rec.flow.dport = ntohs(packet->dport);
 	return 0;
 }
 
-int decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr)
 {
-	pkt->flow.proto = IPPROTO_ICMP;
+	pkt->flow_rec.flow.proto = IPPROTO_ICMP;
 	/* ICMP doesn't have ports, but we depend on that for the flow */
-	pkt->flow.sport = 0;
-	pkt->flow.dport = 0;
+	pkt->flow_rec.flow.sport = 0;
+	pkt->flow_rec.flow.dport = 0;
 	return 0;
 }
 
-int decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr)
 {
-	pkt->flow.proto = IPPROTO_IGMP;
+	pkt->flow_rec.flow.proto = IPPROTO_IGMP;
 	/* IGMP doesn't have ports, but we depend on that for the flow */
-	pkt->flow.sport = 0;
-	pkt->flow.dport = 0;
+	pkt->flow_rec.flow.sport = 0;
+	pkt->flow_rec.flow.dport = 0;
 	return 0;
 }
 
-int decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                  char *errstr)
 {
-	pkt->flow.proto = IPPROTO_ICMPV6;
-	pkt->flow.sport = 0;
-	pkt->flow.dport = 0;
+	pkt->flow_rec.flow.proto = IPPROTO_ICMPV6;
+	pkt->flow_rec.flow.sport = 0;
+	pkt->flow_rec.flow.dport = 0;
 	return 0;
 }

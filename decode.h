@@ -24,7 +24,7 @@ struct hdr_ethernet {
 } __attribute__((__packed__));
 
 int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
-                    struct pkt_record *pkt, char *errstr);
+                    struct flow_pkt *pkt, char *errstr);
 
 /* IP */
 struct hdr_ipv4 {
@@ -45,7 +45,7 @@ struct hdr_ipv4 {
 } __attribute__((__packed__));
 #define IP_HL(ip) (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip) (((ip)->ip_vhl) >> 4)
-int decode_ip4(const uint8_t *packet, struct pkt_record *pkt, char *errstr);
+int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
 
 struct hdr_ipv6 {
 	uint32_t version : 4, class : 8, flowlabel : 20;
@@ -56,7 +56,7 @@ struct hdr_ipv6 {
 	struct in6_addr ip6_dst;
 } __attribute__((__packed__));
 
-int decode_ip6(const uint8_t *packet, struct pkt_record *pkt, char *errstr);
+int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
 
 struct hdr_tcp {
 	uint16_t sport; /* source port */
@@ -80,7 +80,7 @@ struct hdr_tcp {
 	uint16_t urp; /* urgent pointer */
 } __attribute__((__packed__));
 
-int decode_tcp(const struct hdr_tcp *packet, struct pkt_record *pkt,
+int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt,
                char *errstr);
 
 struct hdr_udp {
@@ -90,20 +90,20 @@ struct hdr_udp {
 	uint16_t chcksum; /* udp header + payload checksum */
 } __attribute__((__packed__));
 
-int decode_udp(const struct hdr_udp *packet, struct pkt_record *pkt,
+int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt,
                char *errstr);
 
 struct hdr_icmp {
 	uint8_t todo;
 } __attribute__((__packed__));
 
-int decode_icmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr);
 
-int decode_igmp(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr);
 
-int decode_icmp6(const struct hdr_icmp *packet, struct pkt_record *pkt,
+int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                  char *errstr);
 
 #endif

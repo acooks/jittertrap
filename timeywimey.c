@@ -80,3 +80,16 @@ inline struct timespec ts_add(struct timespec t1, struct timespec t2)
 	}
 	return t;
 }
+
+inline struct timeval tv_add(struct timeval t1, struct timeval t2)
+{
+	struct timeval t;
+	t.tv_sec = t1.tv_sec + t2.tv_sec;
+	t.tv_usec = t1.tv_usec + t2.tv_usec;
+	/* carry over seconds */
+	if (t.tv_usec >= 1E6L) {
+		t.tv_sec++;
+		t.tv_usec -= 1E6L;
+	}
+	return t;
+}

@@ -13,6 +13,7 @@
 #include "flow.h"
 #include "decode.h"
 #include "timeywimey.h"
+#include "intervals.h"
 
 static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_UDP] = "UDP",
@@ -21,67 +22,52 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IP] = "IP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
-/* initialise hash table for stats */
-struct pkt_record *st_flow_table = NULL;
-struct pkt_record *lt_flow_table = NULL;
-
-/* initialise packet list */
-struct pkt_list_entry *st_pkt_list_head = NULL; /* short-term */
-struct pkt_list_entry *lt_pkt_list_head = NULL; /* long-term */
-
-void print_pkt(struct pkt_record *pkt)
-{
-	mvprintw(0, 20, "%d.%06d,  %4d, %5s", pkt->timestamp.tv_sec,
-	         pkt->timestamp.tv_usec, pkt->len, protos[pkt->flow.proto]);
-}
-
 #define ERR_LINE_OFFSET 2
-
-int bytes_cmp(struct pkt_record *p1, struct pkt_record *p2)
-{
-	return (p2->len - p1->len);
-}
-
 #define TOP_N_LINE_OFFSET 5
+
 void print_top_n(int stop)
 {
-	struct pkt_record *r;
-	static struct pkt_record zp = { 0 };
-	int row = 0, rowcnt = stop;
+	int row = 0, flowcnt = stop;
 	char ip_src[16];
 	char ip_dst[16];
 	char ip6_src[40];
 	char ip6_dst[40];
 
-	attron(A_BOLD);
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %5s", "Source", "SPort", "Proto");
+	flowcnt = get_flow_count();
+	mvprintw(0, 50, "%5d active flows", flowcnt);
 
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %10s %10s", "Destination", "DPort", "Bytes", "Bytes");
+	attron(A_BOLD);
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %5s", "Source",
+	         "SPort", "Proto");
+
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %10s %10s",
+	         "Destination", "DPort", "Bytes", "Bytes");
 	attroff(A_BOLD);
 	row++;
 
 	/* Clear the table */
-	for (int i = 2; i <= 15; i++) {
-		mvprintw(TOP_N_LINE_OFFSET + i, 0, "%80s", " ");
+	for (int i = TOP_N_LINE_OFFSET + row;
+	     i <= TOP_N_LINE_OFFSET + row + 3 * stop; i++) {
+		mvprintw(i, 0, "%80s", " ");
 	}
 
-	for (r = lt_flow_table; r != NULL && rowcnt--;
-	     r = r->hh.next) {
-		struct pkt_record *st_table_entry;
-		HASH_FIND(hh, st_flow_table, &(r->flow), sizeof(struct flow),
-		          st_table_entry);
-		if (!st_table_entry) {
-			st_table_entry = &zp;
-		}
+	struct top_flows *t5 = malloc(sizeof(struct top_flows));
+	memset(t5, 0, sizeof(struct top_flows));
+	get_top5(t5);
 
-		sprintf(ip_src, "%s", inet_ntoa(r->flow.src_ip));
-		sprintf(ip_dst, "%s", inet_ntoa(r->flow.dst_ip));
-		inet_ntop(AF_INET6, &(r->flow.src_ip6), ip6_src,
+	for (int i = 0; i < flowcnt && i < 5; i++) {
+
+		struct flow_record *fte1 = &(t5->flow[i][0]);
+		struct flow_record *fte2 = &(t5->flow[i][3]);
+
+		sprintf(ip_src, "%s", inet_ntoa(fte1->flow.src_ip));
+		sprintf(ip_dst, "%s", inet_ntoa(fte1->flow.dst_ip));
+		inet_ntop(AF_INET6, &(fte1->flow.src_ip6), ip6_src,
 		          sizeof(ip6_src));
-		inet_ntop(AF_INET6, &(r->flow.dst_ip6), ip6_dst,
+		inet_ntop(AF_INET6, &(fte1->flow.dst_ip6), ip6_dst,
 		          sizeof(ip6_dst));
 
-		switch (r->flow.ethertype) {
+		switch (fte1->flow.ethertype) {
 		case ETHERTYPE_IP:
 			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
 			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
@@ -90,13 +76,13 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
 			         ip_dst);
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         r->flow.sport);
+			         fte1->flow.sport);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         r->flow.dport);
+			         fte1->flow.dport);
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[r->flow.proto]);
+			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         r->len, st_table_entry->len);
+			         fte2->size, fte1->size);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
@@ -109,141 +95,34 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
 			         ip6_dst);
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         r->flow.sport);
+			         fte1->flow.sport);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         r->flow.dport);
+			         fte1->flow.dport);
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[r->flow.proto]);
+			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         r->len, st_table_entry->len);
+			         fte2->size, fte1->size);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
 		default:
 			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
-			mvprintw(ERR_LINE_OFFSET + row++, 0,
-			         "Unknown ethertype: %d", r->flow.ethertype);
+			mvprintw(ERR_LINE_OFFSET, 0, "Unknown ethertype: %d",
+			         fte1->flow.ethertype);
 		}
 	}
-}
-
-int has_aged(struct pkt_list_entry *new_pkt, struct pkt_list_entry *old_pkt,
-             struct timeval max_age)
-{
-	struct timeval diff;
-
-	diff = tv_absdiff(new_pkt->pkt.timestamp, old_pkt->pkt.timestamp);
-
-	return (0 < tv_cmp(diff, max_age));
-}
-
-void update_st_stats(struct pkt_record *pkt)
-{
-	struct pkt_record *table_entry;
-	struct pkt_list_entry *ple, *tmp, *titer;
-	struct timeval max_age = {.tv_sec = 0, .tv_usec = 5E5 };
-
-	/* maintain a long-term history of packets */
-	ple = malloc(sizeof(struct pkt_list_entry));
-	ple->pkt = *pkt;
-	DL_APPEND(st_pkt_list_head, ple);
-	DL_FOREACH_SAFE(st_pkt_list_head, titer, tmp)
-	{
-		if (has_aged(ple, titer, max_age)) {
-			HASH_FIND(hh, st_flow_table, &(titer->pkt.flow),
-			          sizeof(struct flow), table_entry);
-			assert(table_entry);
-			table_entry->len -= titer->pkt.len;
-			if (0 == table_entry->len) {
-				HASH_DEL(st_flow_table, table_entry);
-			}
-
-			DL_DELETE(st_pkt_list_head, titer);
-			free(titer);
-		} else {
-			break;
-		}
-	}
-
-	/* Update the flow accounting table */
-	/* id already in the hash? */
-	HASH_FIND(hh, st_flow_table, &(pkt->flow), sizeof(struct flow),
-	          table_entry);
-	if (!table_entry) {
-		table_entry =
-		    (struct pkt_record *)malloc(sizeof(struct pkt_record));
-		memset(table_entry, 0, sizeof(struct pkt_record));
-		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD(hh, st_flow_table, flow, sizeof(struct flow),
-		         table_entry);
-	} else {
-		table_entry->len += pkt->len;
-	}
-
-	HASH_SORT(st_flow_table, bytes_cmp);
-}
-
-void update_lt_stats(struct pkt_record *pkt)
-{
-	struct pkt_record *table_entry;
-	struct pkt_list_entry *ple, *tmp, *titer;
-	struct timeval max_age = {.tv_sec = 60, .tv_usec = 0 };
-
-	/* maintain a long-term history of packets */
-	ple = malloc(sizeof(struct pkt_list_entry));
-	ple->pkt = *pkt;
-	DL_APPEND(lt_pkt_list_head, ple);
-	DL_FOREACH_SAFE(lt_pkt_list_head, titer, tmp)
-	{
-		if (has_aged(ple, titer, max_age)) {
-			HASH_FIND(hh, lt_flow_table, &(titer->pkt.flow),
-			          sizeof(struct flow), table_entry);
-			assert(table_entry);
-			table_entry->len -= titer->pkt.len;
-			if (0 == table_entry->len) {
-				HASH_DEL(lt_flow_table, table_entry);
-			}
-
-			DL_DELETE(lt_pkt_list_head, titer);
-			free(titer);
-		} else {
-			break;
-		}
-	}
-
-	/* Update the flow accounting table */
-	/* id already in the hash? */
-	HASH_FIND(hh, lt_flow_table, &(pkt->flow), sizeof(struct flow),
-	          table_entry);
-	if (!table_entry) {
-		table_entry =
-		    (struct pkt_record *)malloc(sizeof(struct pkt_record));
-		memset(table_entry, 0, sizeof(struct pkt_record));
-		memcpy(table_entry, pkt, sizeof(struct pkt_record));
-		HASH_ADD(hh, lt_flow_table, flow, sizeof(struct flow),
-		         table_entry);
-	} else {
-		table_entry->len += pkt->len;
-	}
-
-	HASH_SORT(lt_flow_table, bytes_cmp);
-}
-
-void update_stats_tables(struct pkt_record *pkt)
-{
-	update_st_stats(pkt);
-	update_lt_stats(pkt);
+	free(t5);
 }
 
 void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                    const uint8_t *wirebits)
 {
-	static const struct pkt_record ZeroPkt = { 0 };
-	struct pkt_record *pkt;
+	static const struct flow_pkt zp = { 0 };
+	struct flow_pkt *pkt;
 	char errstr[DECODE_ERRBUF_SIZE];
 
-	pkt = malloc(sizeof(struct pkt_record));
-	*pkt = ZeroPkt;
+	pkt = malloc(sizeof(struct flow_pkt));
+	*pkt = zp;
 
 	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
 		update_stats_tables(pkt);
@@ -256,7 +135,7 @@ void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 void grab_packets(int fd, pcap_t *handle)
 {
-	struct timespec timeout_ts = {.tv_sec = 0, .tv_nsec = 1E8 };
+	struct timespec timeout_ts = {.tv_sec = 1, .tv_nsec = 0 };
 	struct pollfd fds[] = {
 		{.fd = fd, .events = POLLIN, .revents = POLLHUP }
 	};
@@ -265,7 +144,7 @@ void grab_packets(int fd, pcap_t *handle)
 
 	while (1) {
 		if (ppoll(fds, 1, &timeout_ts, NULL)) {
-			pcap_dispatch(handle, 10000, handle_packet, NULL);
+			pcap_dispatch(handle, 0, handle_packet, NULL);
 		}
 
 		if ((ch = getch()) == ERR) {
@@ -336,7 +215,7 @@ int main(int argc, char *argv[])
 	init_curses();
 	mvprintw(0, 0, "Device:");
 	attron(A_BOLD);
-	mvprintw(0, 10,"%s\n", dev);
+	mvprintw(0, 10, "%s\n", dev);
 	attroff(A_BOLD);
 
 	grab_packets(selectable_fd, handle);

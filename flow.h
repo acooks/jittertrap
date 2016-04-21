@@ -17,14 +17,12 @@ struct flow {
 	uint16_t proto;
 };
 
-struct pkt_record {
-	struct timeval timestamp;
-	uint32_t len; /* this is cumulative in tables */
+struct flow_record {
 	struct flow flow;
-	UT_hash_handle hh; /* makes this structure hashable */
+	uint32_t size;
 };
 
-struct pkt_list_entry {
-        struct pkt_record pkt;
-        struct pkt_list_entry *next, *prev;
+struct flow_pkt {
+	struct flow_record flow_rec;
+	struct timeval timestamp;
 };
