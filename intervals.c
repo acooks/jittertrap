@@ -1,6 +1,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <ncurses.h>
+#include <sys/time.h>
 
 #include "utlist.h"
 #include "uthash.h"
@@ -26,21 +27,36 @@ static struct flow_hash *flow_tables[INTERVAL_COUNT] = { NULL };
 static struct timeval interval_end[INTERVAL_COUNT] = { 0 };
 static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 
-void tick()
+static void clear_table(int table_idx)
 {
-	// generate metrics for top n flows.
-	// clear table
+	struct flow_hash *table = flow_tables[table_idx];
+	struct flow_hash *iter, *tmp;
+	HASH_ITER(ts_hh[table_idx], table, iter, tmp) {
+		HASH_DELETE(ts_hh[table_idx], table, iter);
+		free(iter);
+        }
+	assert(0 == HASH_CNT(ts_hh[table_idx], table));
+	flow_tables[table_idx] = NULL;
 }
 
-void check_time(struct timeval now)
+static void expire_old_interval_tables(struct timeval now)
 {
+	struct timeval tz = {0};
+
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		struct timeval interval = {.tv_sec = 0,
 			                   .tv_usec = intervals[i] };
 
+		/* at start-up, end is still zero. initialise it. */
+		if (0 == tv_cmp(tz, interval_end[i])) {
+			interval_start[i] = now;
+			interval_end[i] = tv_add(interval_start[i], interval);
+		}
+
 		/* interval elapsed? */
 		if (0 < tv_cmp(now, interval_end[i])) {
-			tick(flow_tables[i]);
+			/* clear the hash table */
+			clear_table(i);
 			interval_start[i] = interval_end[i];
 			interval_end[i] = tv_add(interval_end[i], interval);
 		}
@@ -137,6 +153,7 @@ void update_stats_tables(struct flow_pkt *pkt)
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		add_flow_to_interval(pkt, i);
 	}
+	expire_old_interval_tables(pkt->timestamp);
 }
 
 static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
@@ -167,10 +184,14 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 void get_top5(struct top_flows *t5)
 {
+	struct timeval now;
 	struct flow_hash *rfti; /* reference flow table iter */
 
 	/* sort the flow reference table */
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
+
+	gettimeofday(&now, NULL);
+	expire_old_interval_tables(now);
 
 	/* for each of the top 5 flow in the reference table,
 	 * fill the counts from the short-interval flow tables */
