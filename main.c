@@ -135,16 +135,20 @@ void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 void grab_packets(int fd, pcap_t *handle)
 {
-	struct timespec timeout_ts = {.tv_sec = 1, .tv_nsec = 0 };
+	struct timespec poll_timeout = {.tv_sec = 1, .tv_nsec = 0 };
+	struct timespec print_timeout, now;
+	int ch;
+
 	struct pollfd fds[] = {
 		{.fd = fd, .events = POLLIN, .revents = POLLHUP }
 	};
 
-	int ch;
+	clock_gettime(CLOCK_MONOTONIC, &print_timeout);
+	print_timeout = ts_add(print_timeout, poll_timeout);
 
 	while (1) {
-		if (ppoll(fds, 1, &timeout_ts, NULL)) {
-			pcap_dispatch(handle, 0, handle_packet, NULL);
+		if (ppoll(fds, 1, &poll_timeout, NULL)) {
+			pcap_dispatch(handle, 100000, handle_packet, NULL);
 		}
 
 		if ((ch = getch()) == ERR) {
@@ -157,8 +161,14 @@ void grab_packets(int fd, pcap_t *handle)
 				return;
 			}
 		}
-		print_top_n(5);
-		refresh(); /* ncurses screen update */
+
+	        clock_gettime(CLOCK_MONOTONIC, &now);
+
+		if (0 > ts_cmp(print_timeout, now)) {
+			print_timeout = ts_add(print_timeout, poll_timeout);
+			print_top_n(5);
+			refresh(); /* ncurses screen update */
+		}
 	}
 }
 
