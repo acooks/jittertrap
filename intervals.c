@@ -11,7 +11,7 @@
 #include "intervals.h"
 
 const int intervals[INTERVAL_COUNT] = {
-	3,  5E3,   10E3,  20E3,
+	1E3,  5E3,   10E3,  20E3,
 	50E3, 100E3, 200E3, 500E3
 };
 
