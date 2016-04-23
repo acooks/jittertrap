@@ -36,12 +36,19 @@ void print_top_n(int stop)
 	flowcnt = get_flow_count();
 	mvprintw(0, 50, "%5d active flows", flowcnt);
 
-	attron(A_BOLD);
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %5s", "Source",
-	         "SPort", "Proto");
+	const int interval1 = 7, interval2 = 3;
 
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, "%39s %5s %10s %10s",
-	         "Destination", "DPort", "Bytes", "Bytes");
+#define HEADER1 \
+"                                 Source|SPort|Proto"
+
+#define HEADER2 \
+"                            Destination|DPort|B/s @%3dms|B/s @%3dms"
+
+	attron(A_BOLD);
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, HEADER1);
+	mvprintw(TOP_N_LINE_OFFSET + row++, 1, HEADER2,
+	         intervals[interval1] / 1000, intervals[interval2] / 1000);
+
 	attroff(A_BOLD);
 	row++;
 
@@ -57,8 +64,8 @@ void print_top_n(int stop)
 
 	for (int i = 0; i < flowcnt && i < 5; i++) {
 
-		struct flow_record *fte1 = &(t5->flow[i][0]);
-		struct flow_record *fte2 = &(t5->flow[i][3]);
+		struct flow_record *fte1 = &(t5->flow[i][interval1]);
+		struct flow_record *fte2 = &(t5->flow[i][interval2]);
 
 		sprintf(ip_src, "%s", inet_ntoa(fte1->flow.src_ip));
 		sprintf(ip_dst, "%s", inet_ntoa(fte1->flow.dst_ip));
@@ -82,7 +89,7 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte2->size, fte1->size);
+			         fte1->size, fte2->size);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
@@ -101,7 +108,7 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte2->size, fte1->size);
+			         fte1->size, fte2->size);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;

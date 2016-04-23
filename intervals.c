@@ -22,21 +22,44 @@ static struct flow_hash *flow_ref_table = { NULL };
 static struct flow_pkt_list *pkt_list_ref_head = { NULL };
 
 /* flows recorded as period-on-period intervals */
-static struct flow_hash *flow_tables[INTERVAL_COUNT] = { NULL };
+static struct flow_hash *incomplete_flow_tables[INTERVAL_COUNT] = { NULL };
+static struct flow_hash *complete_flow_tables[INTERVAL_COUNT] = { NULL };
 
 static struct timeval interval_end[INTERVAL_COUNT] = { 0 };
 static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 
 static void clear_table(int table_idx)
 {
-	struct flow_hash *table = flow_tables[table_idx];
-	struct flow_hash *iter, *tmp;
+	struct flow_hash *table, *iter, *tmp;
+
+	/* clear the complete table */
+	table = complete_flow_tables[table_idx];
 	HASH_ITER(ts_hh, table, iter, tmp) {
 		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
         }
 	assert(0 == HASH_CNT(ts_hh, table));
-	flow_tables[table_idx] = NULL;
+	complete_flow_tables[table_idx] = NULL;
+
+	/* copy incomplete to complete */
+	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp) {
+		/* TODO: copy and insert */
+		struct flow_hash *n = malloc(sizeof(struct flow_hash));
+		memcpy(n, iter, sizeof(struct flow_hash));
+		HASH_ADD(ts_hh, complete_flow_tables[table_idx], f.flow,
+		         sizeof(struct flow), n);
+	}
+	assert(HASH_CNT(ts_hh, complete_flow_tables[table_idx])
+	       == HASH_CNT(ts_hh, incomplete_flow_tables[table_idx]));
+
+	/* clear the incomplete table */
+	table = incomplete_flow_tables[table_idx];
+	HASH_ITER(ts_hh, table, iter, tmp) {
+		HASH_DELETE(ts_hh, table, iter);
+		free(iter);
+        }
+	assert(0 == HASH_CNT(ts_hh, table));
+	incomplete_flow_tables[table_idx] = NULL;
 }
 
 static void expire_old_interval_tables(struct timeval now)
@@ -55,6 +78,7 @@ static void expire_old_interval_tables(struct timeval now)
 
 		/* interval elapsed? */
 		if (0 < tv_cmp(now, interval_end[i])) {
+
 			/* clear the hash table */
 			clear_table(i);
 			interval_start[i] = interval_end[i];
@@ -131,19 +155,17 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
-	HASH_FIND(ts_hh, flow_tables[time_series],
+	HASH_FIND(ts_hh, incomplete_flow_tables[time_series],
 	          &(pkt->flow_rec.flow), sizeof(struct flow), fte);
 	if (!fte) {
 		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
-		HASH_ADD(ts_hh, flow_tables[time_series], f.flow,
+		HASH_ADD(ts_hh, incomplete_flow_tables[time_series], f.flow,
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.size += pkt->flow_rec.size;
 	}
-
-	// dump_ft(flow_tables[time_series], time_series);
 }
 
 void update_stats_tables(struct flow_pkt *pkt)
@@ -156,6 +178,14 @@ void update_stats_tables(struct flow_pkt *pkt)
 	expire_old_interval_tables(pkt->timestamp);
 }
 
+static inline unsigned int rate_calc(int interval, int bytes)
+{
+	struct timeval t = { 0 };
+	t.tv_usec = interval;
+	double dt = t.tv_sec + t.tv_usec * 1E-9;
+	return (unsigned int)(1.0 * bytes / dt / 1000);
+}
+
 static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
                                  const struct flow_hash *ref_flow)
 {
@@ -164,7 +194,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 	/* for each table in all time intervals.... */
 	for (int i = INTERVAL_COUNT - 1; i >= 0; i--) {
-		fti = flow_tables[i];
+		fti = complete_flow_tables[i];
 		memcpy(&st_flows[i], &(ref_flow->f),
 		       sizeof(struct flow_record));
 
@@ -179,6 +209,9 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		          sizeof(struct flow), te);
 
 		st_flows[i].size = te ? te->f.size : 0;
+
+		/* convert to bytes per second */
+		st_flows[i].size = rate_calc(intervals[i], st_flows[i].size);
 	}
 }
 
