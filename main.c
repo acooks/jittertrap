@@ -24,10 +24,55 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 
 #define ERR_LINE_OFFSET 2
 #define TOP_N_LINE_OFFSET 5
+#define TP1_COL 48
+#define TP2_COL 59
+
+#define HEADER1 \
+"                                 Source|SPort|Proto"
+#define HEADER2 \
+"                            Destination|DPort|B/s @%3dms|B/s @%3dms"
+
+int print_tp_hdrs(int tp1, int interval1, int tp2, int interval2)
+{
+	enum speeds { BPS, KBPS, MBPS, GBPS };
+	static char * const units[] = {
+		[BPS]  = "B/s",
+		[KBPS] = "kB/s",
+		[MBPS] = "MB/s",
+		[GBPS] = "GB/s"
+	};
+
+	char *unit;
+	int div;
+
+	if (tp1 > 1E9) {
+		unit = units[GBPS];
+		div = 1E9;
+	} else if (tp1 > 1E6) {
+		unit = units[MBPS];
+		div = 1E6;
+	} else if (tp1 > 1E3) {
+		unit = units[KBPS];
+		div = 1E3;
+	} else {
+		unit = units[BPS];
+		div = 1;
+	}
+
+	attron(A_BOLD);
+	mvprintw(TOP_N_LINE_OFFSET, 1, HEADER1);
+	mvprintw(TOP_N_LINE_OFFSET + 1, 1,
+"                            Destination|DPort|%4s@%3dms|%4s@%3dms          ",
+	         unit, interval1 / 1000,
+	         unit, interval2 / 1000);
+
+	attroff(A_BOLD);
+	return div;
+}
 
 void print_top_n(int stop)
 {
-	int row = 0, flowcnt = stop;
+	int row = 3, flowcnt = stop;
 	char ip_src[16];
 	char ip_dst[16];
 	char ip6_src[40];
@@ -37,20 +82,6 @@ void print_top_n(int stop)
 	mvprintw(0, 50, "%5d active flows", flowcnt);
 
 	const int interval1 = 7, interval2 = 3;
-
-#define HEADER1 \
-"                                 Source|SPort|Proto"
-
-#define HEADER2 \
-"                            Destination|DPort|B/s @%3dms|B/s @%3dms"
-
-	attron(A_BOLD);
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, HEADER1);
-	mvprintw(TOP_N_LINE_OFFSET + row++, 1, HEADER2,
-	         intervals[interval1] / 1000, intervals[interval2] / 1000);
-
-	attroff(A_BOLD);
-	row++;
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
@@ -63,6 +94,7 @@ void print_top_n(int stop)
 	get_top5(t5);
 
 	for (int i = 0; i < flowcnt && i < 5; i++) {
+		int div;
 
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);
 		struct flow_record *fte2 = &(t5->flow[i][interval2]);
@@ -73,6 +105,13 @@ void print_top_n(int stop)
 		          sizeof(ip6_src));
 		inet_ntop(AF_INET6, &(fte1->flow.dst_ip6), ip6_dst,
 		          sizeof(ip6_dst));
+
+		if (0 == i) {
+			div = print_tp_hdrs(fte1->size,
+			                    intervals[interval1],
+			                    fte2->size,
+			                    intervals[interval2]);
+		}
 
 		switch (fte1->flow.ethertype) {
 		case ETHERTYPE_IP:
@@ -89,7 +128,7 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->size, fte2->size);
+			         fte1->size / div, fte2->size / div);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
@@ -108,7 +147,7 @@ void print_top_n(int stop)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->size, fte2->size);
+			         fte1->size / div, fte2->size / div);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
@@ -142,7 +181,7 @@ void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 void grab_packets(int fd, pcap_t *handle)
 {
-	struct timespec poll_timeout = {.tv_sec = 1, .tv_nsec = 0 };
+	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 5E6 };
 	struct timespec print_timeout, now;
 	int ch;
 
