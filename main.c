@@ -23,48 +23,70 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
 #define ERR_LINE_OFFSET 2
+#define DEBUG_LINE_OFFSET 3
 #define TOP_N_LINE_OFFSET 5
-#define TP1_COL 48
+#define TP1_COL 47
 #define TP2_COL 59
 
-#define HEADER1 \
-"                                 Source|SPort|Proto"
-#define HEADER2 \
-"                            Destination|DPort|B/s @%3dms|B/s @%3dms"
-
-int print_tp_hdrs(int tp1, int interval1, int tp2, int interval2)
+int print_tp_hdrs(int tp1, struct timeval interval1, int tp2,
+                  struct timeval interval2)
 {
 	enum speeds { BPS, KBPS, MBPS, GBPS };
-	static char * const units[] = {
+	enum intervals { MILLISECONDS, SECONDS };
+
+	static char const * const byteunits[] = {
 		[BPS]  = "B/s",
 		[KBPS] = "kB/s",
 		[MBPS] = "MB/s",
 		[GBPS] = "GB/s"
 	};
 
-	char *unit;
+	static char * const intervalunits[] = {
+		[MILLISECONDS] = "ms",
+		[SECONDS]      = "s "
+	};
+
+	char const * byteunit;
 	int div;
 
+	float dt1 = interval1.tv_sec + (float)interval1.tv_usec / (float)1E6;
+	float dt2 = interval2.tv_sec + (float)interval2.tv_usec / (float)1E6;
+
 	if (tp1 > 1E9) {
-		unit = units[GBPS];
+		byteunit = byteunits[GBPS];
 		div = 1E9;
 	} else if (tp1 > 1E6) {
-		unit = units[MBPS];
+		byteunit = byteunits[MBPS];
 		div = 1E6;
 	} else if (tp1 > 1E3) {
-		unit = units[KBPS];
+		byteunit = byteunits[KBPS];
 		div = 1E3;
 	} else {
-		unit = units[BPS];
+		byteunit = byteunits[BPS];
 		div = 1;
 	}
 
+#if DEBUG
+	mvprintw(DEBUG_LINE_OFFSET, 1,
+	         "tp1: %d byteunit:%s div:%d",
+	         tp1, byteunit, div);
+#endif
+
 	attron(A_BOLD);
-	mvprintw(TOP_N_LINE_OFFSET, 1, HEADER1);
-	mvprintw(TOP_N_LINE_OFFSET + 1, 1,
-"                            Destination|DPort|%4s@%3dms|%4s@%3dms          ",
-	         unit, interval1 / 1000,
-	         unit, interval2 / 1000);
+	mvprintw(TOP_N_LINE_OFFSET, 1, "%51s", "Source|SPort|Proto");
+	mvprintw(TOP_N_LINE_OFFSET + 1, 1, "%46s", "Destination|DPort|");
+
+	if (dt1 > 1) {
+		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
+		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         byteunit, dt1, intervalunits[SECONDS],
+		         byteunit, dt2, intervalunits[SECONDS]);
+	} else {
+		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
+		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         byteunit, dt1 * 1E3, intervalunits[MILLISECONDS],
+		         byteunit, dt2 * 1E3, intervalunits[MILLISECONDS]);
+	}
 
 	attroff(A_BOLD);
 	return div;
@@ -81,7 +103,7 @@ void print_top_n(int stop)
 	flowcnt = get_flow_count();
 	mvprintw(0, 50, "%5d active flows", flowcnt);
 
-	const int interval1 = 7, interval2 = 3;
+	const int interval1 = 4, interval2 = 3;
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
@@ -181,7 +203,7 @@ void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 void grab_packets(int fd, pcap_t *handle)
 {
-	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 5E6 };
+	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 	struct timespec print_timeout, now;
 	int ch;
 
@@ -274,6 +296,7 @@ int main(int argc, char *argv[])
 	mvprintw(0, 10, "%s\n", dev);
 	attroff(A_BOLD);
 
+	update_ref_window_size((struct timeval){.tv_sec = 3, .tv_usec = 0});
 	grab_packets(selectable_fd, handle);
 
 	/* And close the session */

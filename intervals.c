@@ -10,9 +10,15 @@
 #include "timeywimey.h"
 #include "intervals.h"
 
-const int intervals[INTERVAL_COUNT] = {
-	1E3,  5E3,   10E3,  20E3,
-	50E3, 100E3, 200E3, 500E3
+struct timeval const intervals[INTERVAL_COUNT] = {
+	{ .tv_sec = 0,  .tv_usec = 1E5 },
+	{ .tv_sec = 0,  .tv_usec = 2E5 },
+	{ .tv_sec = 0,  .tv_usec = 5E5 },
+	{ .tv_sec = 1,  .tv_usec = 0 },
+	{ .tv_sec = 3,  .tv_usec = 0 },
+	{ .tv_sec = 5,  .tv_usec = 0 },
+	{ .tv_sec = 10, .tv_usec = 0 },
+	{ .tv_sec = 60, .tv_usec = 0 }
 };
 
 /* long, continuous sliding window tracking top flows */
@@ -27,6 +33,8 @@ static struct flow_hash *complete_flow_tables[INTERVAL_COUNT] = { NULL };
 
 static struct timeval interval_end[INTERVAL_COUNT] = { 0 };
 static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
+
+static struct timeval ref_window_size;
 
 static void clear_table(int table_idx)
 {
@@ -67,8 +75,7 @@ static void expire_old_interval_tables(struct timeval now)
 	struct timeval tz = {0};
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
-		struct timeval interval = {.tv_sec = 0,
-			                   .tv_usec = intervals[i] };
+		struct timeval interval = intervals[i];
 
 		/* at start-up, end is still zero. initialise it. */
 		if (0 == tv_cmp(tz, interval_end[i])) {
@@ -92,21 +99,24 @@ static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
 	return (f2->f.size - f1->f.size);
 }
 
-static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt,
-                    struct timeval max_age)
+static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt)
 {
 	struct timeval diff;
 
 	diff = tv_absdiff(new_pkt->timestamp, old_pkt->timestamp);
 
-	return (0 < tv_cmp(diff, max_age));
+	return (0 < tv_cmp(diff, ref_window_size));
+}
+
+void update_ref_window_size(struct timeval t)
+{
+	ref_window_size = t;
 }
 
 static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
 	struct flow_pkt_list *ple, *tmp, *iter;
-	struct timeval max_age = {.tv_sec = 5, .tv_usec = REF_INTERVAL };
 
 	/* keep a list of packets, used for sliding window byte counts */
 	ple = malloc(sizeof(struct flow_pkt_list));
@@ -117,7 +127,7 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 	 * is more than max_age */
 	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
 	{
-		if (has_aged(&(ple->pkt), &(iter->pkt), max_age)) {
+		if (has_aged(&(ple->pkt), &(iter->pkt))) {
 			HASH_FIND(r_hh, flow_ref_table,
 			          &(iter->pkt.flow_rec.flow),
 			          sizeof(struct flow), fte);
@@ -178,12 +188,10 @@ void update_stats_tables(struct flow_pkt *pkt)
 	expire_old_interval_tables(pkt->timestamp);
 }
 
-static inline unsigned int rate_calc(int interval, int bytes)
+static inline unsigned int rate_calc(struct timeval interval, int bytes)
 {
-	struct timeval t = { 0 };
-	t.tv_usec = interval;
-	double dt = t.tv_sec + t.tv_usec * 1E-9;
-	return (unsigned int)(1.0 * bytes / dt / 1000);
+	double dt = interval.tv_sec + interval.tv_usec * 1E-6;
+	return (unsigned int)((float)bytes / dt);
 }
 
 static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
