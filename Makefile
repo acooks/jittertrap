@@ -3,7 +3,7 @@ PROG = toptalk
 SRC = main.c decode.c timeywimey.c intervals.c
 HEADERS = decode.h flow.h timeywimey.h intervals.h
 
-LIBS = -lpcap -lcurses
+LIBS = -lpcap -lcurses -lrt
 
 CFLAGS = -g -Wall -pedantic
 
