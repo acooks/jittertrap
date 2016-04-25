@@ -28,6 +28,24 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 #define TP1_COL 47
 #define TP2_COL 59
 
+/* two displayed intervals */
+int interval1 = 4, interval2 = 3;
+
+void update_interval(int updown)
+{
+	if ((0 > updown) && (interval2 > 0)) {
+		interval1--;
+		interval2--;
+	} else if ((0 < updown) && (interval1 < INTERVAL_COUNT -1)) {
+		interval1++;
+		interval2++;
+	} else {
+		mvprintw(ERR_LINE_OFFSET, 1, "Requested interval invalid.");
+	}
+	update_ref_window_size(intervals[interval1]);
+}
+
+
 int print_tp_hdrs(int tp1, struct timeval interval1, int tp2,
                   struct timeval interval2)
 {
@@ -103,7 +121,6 @@ void print_top_n(int stop)
 	flowcnt = get_flow_count();
 	mvprintw(0, 50, "%5d active flows", flowcnt);
 
-	const int interval1 = 4, interval2 = 3;
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
@@ -227,6 +244,13 @@ void grab_packets(int fd, pcap_t *handle)
 			case 'q':
 				endwin(); /* End curses mode */
 				return;
+			case '-':
+				update_interval(-1);
+				break;
+			case '=':
+			case '+':
+				update_interval(1);
+				break;
 			}
 		}
 
