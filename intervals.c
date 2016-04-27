@@ -111,11 +111,6 @@ static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt)
 	return (0 < tv_cmp(diff, ref_window_size));
 }
 
-void update_ref_window_size(struct timeval t)
-{
-	ref_window_size = t;
-}
-
 static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
@@ -181,16 +176,6 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 	}
 }
 
-void update_stats_tables(struct flow_pkt *pkt)
-{
-	update_sliding_window_flow_ref(pkt);
-
-	for (int i = 0; i < INTERVAL_COUNT; i++) {
-		add_flow_to_interval(pkt, i);
-	}
-	expire_old_interval_tables(pkt->timestamp);
-}
-
 static inline unsigned int rate_calc(struct timeval interval, int bytes)
 {
 	double dt = interval.tv_sec + interval.tv_usec * 1E-6;
@@ -226,6 +211,16 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	}
 }
 
+void update_stats_tables(struct flow_pkt *pkt)
+{
+	update_sliding_window_flow_ref(pkt);
+
+	for (int i = 0; i < INTERVAL_COUNT; i++) {
+		add_flow_to_interval(pkt, i);
+	}
+	expire_old_interval_tables(pkt->timestamp);
+}
+
 void get_top5(struct top_flows *t5)
 {
 	struct timeval now;
@@ -249,4 +244,9 @@ void get_top5(struct top_flows *t5)
 int get_flow_count()
 {
 	return HASH_CNT(r_hh, flow_ref_table);
+}
+
+void update_ref_window_size(struct timeval t)
+{
+	ref_window_size = t;
 }
