@@ -42,7 +42,8 @@ static void clear_table(int table_idx)
 
 	/* clear the complete table */
 	table = complete_flow_tables[table_idx];
-	HASH_ITER(ts_hh, table, iter, tmp) {
+	HASH_ITER(ts_hh, table, iter, tmp)
+	{
 		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
         }
@@ -50,7 +51,8 @@ static void clear_table(int table_idx)
 	complete_flow_tables[table_idx] = NULL;
 
 	/* copy incomplete to complete */
-	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp) {
+	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp)
+	{
 		/* TODO: copy and insert */
 		struct flow_hash *n = malloc(sizeof(struct flow_hash));
 		memcpy(n, iter, sizeof(struct flow_hash));
@@ -62,7 +64,8 @@ static void clear_table(int table_idx)
 
 	/* clear the incomplete table */
 	table = incomplete_flow_tables[table_idx];
-	HASH_ITER(ts_hh, table, iter, tmp) {
+	HASH_ITER(ts_hh, table, iter, tmp)
+	{
 		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
         }
