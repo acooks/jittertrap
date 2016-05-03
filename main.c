@@ -22,6 +22,21 @@ static const char const *protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_IP] = "IP",
 	                                        [IPPROTO_IGMP] = "IGMP" };
 
+enum speeds { BPS, KBPS, MBPS, GBPS };
+enum intervals { MILLISECONDS, SECONDS };
+
+static char const * const byteunits[] = {
+	[BPS]  = "B/s",
+	[KBPS] = "kB/s",
+	[MBPS] = "MB/s",
+	[GBPS] = "GB/s"
+};
+
+static char * const intervalunits[] = {
+	[MILLISECONDS] = "ms",
+	[SECONDS]      = "s "
+};
+
 #define ERR_LINE_OFFSET 2
 #define DEBUG_LINE_OFFSET 3
 #define TOP_N_LINE_OFFSET 5
@@ -48,21 +63,6 @@ void update_interval(int updown)
 int print_tp_hdrs(int tp1, struct timeval interval1, int tp2,
                   struct timeval interval2)
 {
-	enum speeds { BPS, KBPS, MBPS, GBPS };
-	enum intervals { MILLISECONDS, SECONDS };
-
-	static char const * const byteunits[] = {
-		[BPS]  = "B/s",
-		[KBPS] = "kB/s",
-		[MBPS] = "MB/s",
-		[GBPS] = "GB/s"
-	};
-
-	static char * const intervalunits[] = {
-		[MILLISECONDS] = "ms",
-		[SECONDS]      = "s "
-	};
-
 	char const * byteunit;
 	int div;
 
