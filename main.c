@@ -60,7 +60,7 @@ void update_interval(int updown)
 	update_ref_window_size(intervals[interval1]);
 }
 
-int print_tp_hdrs(int tp1, struct timeval interval1, int tp2,
+int print_hdrs(int tp1, struct timeval interval1, int tp2,
                   struct timeval interval2)
 {
 	char const * byteunit;
@@ -143,8 +143,8 @@ void print_top_n(int stop)
 		          sizeof(ip6_dst));
 
 		if (0 == i) {
-			div = print_tp_hdrs(fte1->size, intervals[interval1],
-			                    fte2->size, intervals[interval2]);
+			div = print_hdrs(fte1->size, intervals[interval1],
+			                 fte2->size, intervals[interval2]);
 		}
 
 		switch (fte1->flow.ethertype) {
