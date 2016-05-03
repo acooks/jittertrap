@@ -111,14 +111,13 @@ int print_tp_hdrs(int tp1, struct timeval interval1, int tp2,
 
 void print_top_n(int stop)
 {
-	int row = 3, flowcnt = stop;
+	int row = 3;
 	char ip_src[16];
 	char ip_dst[16];
 	char ip6_src[40];
 	char ip6_dst[40];
 
-	flowcnt = get_flow_count();
-	mvprintw(0, 50, "%5d active flows", flowcnt);
+	mvprintw(0, 50, "%5d active flows", t5->count);
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
@@ -130,7 +129,7 @@ void print_top_n(int stop)
 	memset(t5, 0, sizeof(struct top_flows));
 	get_top5(t5);
 
-	for (int i = 0; i < flowcnt && i < 5; i++) {
+	for (int i = 0; i < t5->count && i < 5; i++) {
 		int div;
 
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);

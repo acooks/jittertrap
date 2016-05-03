@@ -6,6 +6,7 @@
 extern struct timeval const intervals[INTERVAL_COUNT];
 
 struct top_flows {
+	int count;
 	struct flow_record flow[5][INTERVAL_COUNT];
 };
 
