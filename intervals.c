@@ -1,6 +1,5 @@
 #include <time.h>
 #include <arpa/inet.h>
-#include <ncurses.h>
 #include <sys/time.h>
 
 #include "utlist.h"
@@ -22,10 +21,10 @@ struct timeval const intervals[INTERVAL_COUNT] = {
 };
 
 /* long, continuous sliding window tracking top flows */
-static struct flow_hash *flow_ref_table = { NULL };
+static struct flow_hash *flow_ref_table =  NULL;
 
 /* packet list enables removing expired packets from flow table */
-static struct flow_pkt_list *pkt_list_ref_head = { NULL };
+static struct flow_pkt_list *pkt_list_ref_head = NULL;
 
 /* flows recorded as period-on-period intervals */
 static struct flow_hash *incomplete_flow_tables[INTERVAL_COUNT] = { NULL };
