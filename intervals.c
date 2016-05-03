@@ -235,12 +235,11 @@ void get_top5(struct top_flows *t5)
 	 * fill the counts from the short-interval flow tables */
 	rfti = flow_ref_table;
 
-	t5->count = 0;
 	for (int i = 0; i < 5 && rfti; i++) {
 		fill_short_int_flows(t5->flow[i], rfti);
 		rfti = rfti->r_hh.next;
-		t5->count++;
 	}
+	t5->count = HASH_CNT(r_hh, flow_ref_table);
 }
 
 int get_flow_count()
