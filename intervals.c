@@ -247,6 +247,14 @@ int get_flow_count()
 	return HASH_CNT(r_hh, flow_ref_table);
 }
 
+void init_intervals(struct timeval interval, struct top_flows *top5)
+{
+	flow_ref_table =  NULL;
+	pkt_list_ref_head = NULL;
+	ref_window_size = interval;
+	top5->count = 0;
+}
+
 void update_ref_window_size(struct timeval t)
 {
 	ref_window_size = t;

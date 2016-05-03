@@ -27,5 +27,6 @@ void update_ref_window_size(struct timeval t);
 void update_stats_tables(struct flow_pkt *pkt);
 void get_top5(struct top_flows *t5);
 int get_flow_count();
+void init_intervals(struct timeval interval, struct top_flows *top5);
 
 #endif
