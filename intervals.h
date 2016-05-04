@@ -1,8 +1,8 @@
 #ifndef INTERVALS_H
 #define INTERVALS_H
 
-#define INTERVAL_COUNT 8
-
+/* INTERVAL_COUNT must be defined in intervals_user.h */
+/* intvervals[] must be defined in intervals_user.c */
 extern struct timeval const intervals[INTERVAL_COUNT];
 
 struct top_flows {

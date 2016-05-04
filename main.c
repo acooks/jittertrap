@@ -15,6 +15,8 @@
 #include "flow.h"
 #include "decode.h"
 #include "timeywimey.h"
+
+#include "intervals_user.h"
 #include "intervals.h"
 
 #define handle_error_en(en, msg) \
