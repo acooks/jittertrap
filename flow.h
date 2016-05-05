@@ -1,4 +1,3 @@
-#include "uthash.h"
 
 struct flow {
 	int ethertype;

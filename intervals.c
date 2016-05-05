@@ -1,11 +1,19 @@
+#define _GNU_SOURCE
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <net/ethernet.h>
+#include <arpa/inet.h>
+#include <pcap.h>
+#include <pthread.h>
+#include <poll.h>
+#include <errno.h>
 
 #include "utlist.h"
 #include "uthash.h"
 
 #include "flow.h"
+#include "decode.h"
 #include "timeywimey.h"
 
 #include "intervals_user.h"
@@ -201,7 +209,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	}
 }
 
-void update_stats_tables(struct flow_pkt *pkt)
+static void update_stats_tables(struct flow_pkt *pkt)
 {
 	update_sliding_window_flow_ref(pkt);
 
@@ -238,15 +246,126 @@ int get_flow_count()
 	return HASH_CNT(r_hh, flow_ref_table);
 }
 
-void init_intervals(struct timeval interval, struct top_flows *top5)
-{
-	flow_ref_table =  NULL;
-	pkt_list_ref_head = NULL;
-	ref_window_size = interval;
-	top5->count = 0;
-}
-
 void update_ref_window_size(struct timeval t)
 {
 	ref_window_size = t;
 }
+
+static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
+                   const uint8_t *wirebits)
+{
+        struct pcap_handler_result *result = (struct pcap_handler_result *)user;
+        static const struct flow_pkt zp = { 0 };
+        struct flow_pkt *pkt;
+        char errstr[DECODE_ERRBUF_SIZE];
+
+        pkt = malloc(sizeof(struct flow_pkt));
+        *pkt = zp;
+
+        if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
+                update_stats_tables(pkt);
+                result->err = 0;
+        } else {
+                result->err = -1;
+                snprintf(result->errstr, DECODE_ERRBUF_SIZE-1, "%s", errstr);
+        }
+
+        free(pkt);
+}
+
+static int init_pcap(char **dev, struct pcap_info *pi)
+{
+        char errbuf[PCAP_ERRBUF_SIZE];
+
+        if (*dev == NULL) {
+                *dev = pcap_lookupdev(errbuf);
+        }
+
+        if (*dev == NULL) {
+                fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
+                return (2);
+        }
+
+        pi->handle = pcap_open_live(*dev, BUFSIZ, 1, 0, errbuf);
+        if (pi->handle == NULL) {
+                fprintf(stderr, "Couldn't open device %s: %s\n", *dev, errbuf);
+                return (2);
+        }
+
+        if (pcap_datalink(pi->handle) != DLT_EN10MB) {
+                fprintf(stderr, "Device %s doesn't provide Ethernet headers - "
+                                "not supported\n",
+                        *dev);
+                return (2);
+        }
+
+        if (pcap_setnonblock(pi->handle, 1, errbuf) != 0) {
+                fprintf(stderr, "Non-blocking mode failed: %s\n", errbuf);
+                return (2);
+        }
+
+        pi->selectable_fd = pcap_get_selectable_fd(pi->handle);
+        if (-1 == pi->selectable_fd) {
+                fprintf(stderr, "pcap handle not selectable.\n");
+                return (2);
+        }
+        return 0;
+}
+
+void *intervals_run(void *p)
+{
+        int err;
+        struct pcap_info pi;
+        struct pcap_handler_result result;
+        struct thread_info *ti = (struct thread_info *)p;
+        struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
+
+        err = init_pcap(&(ti->dev), &pi);
+        if (err) {
+                handle_error_en(err, "pcap init");
+        }
+        assert(pi.handle);
+        assert(pi.selectable_fd);
+
+        struct pollfd fds[] = {
+                {.fd = pi.selectable_fd, .events = POLLIN, .revents = 0 }
+        };
+
+        while (1) {
+                if (ppoll(fds, 1, &poll_timeout, NULL)) {
+                        int cnt, max=100000;
+                        cnt = pcap_dispatch(pi.handle, max, handle_packet,
+                                            (u_char *)&result);
+                        if (cnt && result.err) {
+				/* FIXME: think of an elegant way to
+				 * get the errors out of this thread. */
+                                ti->decode_errors++;
+                        }
+                } else {
+                        /* poll timeout */
+                        if (fds[0].revents) {
+                                fprintf(stderr, "error. revents: %x\n",
+                                        fds[0].revents);
+                        }
+                }
+                pthread_mutex_lock(&ti->t5_mutex);
+                get_top5(ti->t5);
+                pthread_mutex_unlock(&ti->t5_mutex);
+        }
+
+        /* close the pcap session */
+        pcap_close(pi.handle);
+        return NULL;
+}
+
+void intervals_init(struct thread_info *ti)
+{
+	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0};
+	flow_ref_table =  NULL;
+	pkt_list_ref_head = NULL;
+
+	ti->t5 = malloc(sizeof(struct top_flows));
+	memset(ti->t5, 0, sizeof(struct top_flows));
+        pthread_mutex_init(&(ti->t5_mutex), NULL);
+}
+

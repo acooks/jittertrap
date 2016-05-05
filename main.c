@@ -1,51 +1,14 @@
 #define _GNU_SOURCE
-#include <signal.h>
-#include <poll.h>
-#include <stdio.h>
-#include <pcap.h>
-#include <time.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 #include <ncurses.h>
 #include <pthread.h>
 #include <errno.h>
 
-#include "utlist.h"
-#include "uthash.h"
 #include "flow.h"
-#include "decode.h"
-#include "timeywimey.h"
 
 #include "intervals_user.h"
 #include "intervals.h"
-
-#define handle_error_en(en, msg) \
-	do {                                                                   \
-		errno = en;                                                    \
-		perror(msg);                                                   \
-		exit(EXIT_FAILURE);                                            \
-	} while (0)
-
-pthread_t thread_id;
-pthread_attr_t attr;
-
-struct pcap_info {
-	pcap_t *handle;
-	int selectable_fd;
-};
-
-struct pcap_handler_result {
-	int err;
-	char errstr[DECODE_ERRBUF_SIZE];
-};
-
-struct thread_info {
-	char *dev;
-	struct top_flows *t5;
-	unsigned int decode_errors;
-};
-
-static pthread_mutex_t t5_mutex;
 
 static char const * const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_UDP] = "UDP",
@@ -68,6 +31,7 @@ static char * const intervalunits[] = {
 	[MILLISECONDS] = "ms",
 	[SECONDS]      = "s "
 };
+
 
 #define ERR_LINE_OFFSET 2
 #define DEBUG_LINE_OFFSET 3
@@ -220,33 +184,7 @@ void print_top_n(int stop, struct top_flows *t5)
 	}
 }
 
-
-
-void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
-                   const uint8_t *wirebits)
-{
-	struct pcap_handler_result *result = (struct pcap_handler_result *)user;
-	static const struct flow_pkt zp = { 0 };
-	struct flow_pkt *pkt;
-	char errstr[DECODE_ERRBUF_SIZE];
-
-	pkt = malloc(sizeof(struct flow_pkt));
-	*pkt = zp;
-
-	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
-		update_stats_tables(pkt);
-		result->err = 0;
-	} else {
-		result->err = -1;
-		snprintf(result->errstr, DECODE_ERRBUF_SIZE-1, "%s", errstr);
-	}
-
-	free(pkt);
-}
-
-
-
-void handle_io(char *dev, struct top_flows *t5)
+void handle_io(struct thread_info *ti)
 {
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 	struct timespec now;
@@ -260,16 +198,16 @@ void handle_io(char *dev, struct top_flows *t5)
 
 	mvprintw(0, 0, "Device:");
 	attron(A_BOLD);
-	mvprintw(0, 10, "%s\n", dev);
+	mvprintw(0, 10, "%s\n", ti->dev);
 	attroff(A_BOLD);
 
 	while (!stop) {
 		clock_gettime(CLOCK_REALTIME, &now);
 		mvprintw(DEBUG_LINE_OFFSET, 0, "%20d", now.tv_sec);
 
-		pthread_mutex_lock(&t5_mutex);
-		print_top_n(5, t5);
-		pthread_mutex_unlock(&t5_mutex);
+		pthread_mutex_lock(&ti->t5_mutex);
+		print_top_n(5, ti->t5);
+		pthread_mutex_unlock(&ti->t5_mutex);
 
 		refresh(); /* ncurses screen update */
 
@@ -293,7 +231,7 @@ void handle_io(char *dev, struct top_flows *t5)
 
 		nanosleep (&print_timeout, NULL);
 		void *ret;
-		if (EBUSY != pthread_tryjoin_np(thread_id, &ret)) {
+		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
 			mvprintw(ERR_LINE_OFFSET, 0, "%20s",
 			         "Interval thread died.");
 			stop = 1;
@@ -305,112 +243,24 @@ void handle_io(char *dev, struct top_flows *t5)
 	/* End curses mode */
 	endwin();
 
-	pthread_cancel(thread_id);
-}
-
-int init_pcap(char **dev, struct pcap_info *pi)
-{
-	char errbuf[PCAP_ERRBUF_SIZE];
-
-	if (*dev == NULL) {
-		*dev = pcap_lookupdev(errbuf);
-	}
-
-	if (*dev == NULL) {
-		fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
-		return (2);
-	}
-
-	pi->handle = pcap_open_live(*dev, BUFSIZ, 1, 0, errbuf);
-	if (pi->handle == NULL) {
-		fprintf(stderr, "Couldn't open device %s: %s\n", *dev, errbuf);
-		return (2);
-	}
-
-	if (pcap_datalink(pi->handle) != DLT_EN10MB) {
-		fprintf(stderr, "Device %s doesn't provide Ethernet headers - "
-		                "not supported\n",
-		        *dev);
-		return (2);
-	}
-
-	if (pcap_setnonblock(pi->handle, 1, errbuf) != 0) {
-		fprintf(stderr, "Non-blocking mode failed: %s\n", errbuf);
-		return (2);
-	}
-
-	pi->selectable_fd = pcap_get_selectable_fd(pi->handle);
-	if (-1 == pi->selectable_fd) {
-		fprintf(stderr, "pcap handle not selectable.\n");
-		return (2);
-	}
-	return 0;
-}
-
-void *thread_run(void *p)
-{
-	int err;
-	struct pcap_info pi;
-	struct pcap_handler_result result;
-	struct thread_info *ti = (struct thread_info *)p;
-	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
-
-	err = init_pcap(&(ti->dev), &pi);
-	if (err) {
-		handle_error_en(err, "pcap init");
-	}
-	assert(pi.handle);
-	assert(pi.selectable_fd);
-
-	struct pollfd fds[] = {
-		{.fd = pi.selectable_fd, .events = POLLIN, .revents = 0 }
-	};
-
-	init_intervals((struct timeval){.tv_sec = 3, .tv_usec = 0}, ti->t5);
-
-	while (1) {
-		if (ppoll(fds, 1, &poll_timeout, NULL)) {
-			int cnt, max=100000;
-			cnt = pcap_dispatch(pi.handle, max, handle_packet,
-			                    (u_char *)&result);
-			if (cnt && result.err) {
-				/* FIXME: think of an elegant way to
-				 * get the errors out of this thread. */
-				ti->decode_errors++;
-			}
-		} else {
-			/* poll timeout */
-			if (fds[0].revents) {
-				fprintf(stderr, "error. revents: %x\n",
-				        fds[0].revents);
-			}
-		}
-		pthread_mutex_lock(&t5_mutex);
-		get_top5(ti->t5);
-		pthread_mutex_unlock(&t5_mutex);
-	}
-
-	/* close the pcap session */
-	pcap_close(pi.handle);
-	return NULL;
+	pthread_cancel(ti->thread_id);
 }
 
 void init_thread(struct thread_info *ti)
 {
-	int err;
+        int err;
 
-	ti->t5 = malloc(sizeof(struct top_flows));
-	memset(ti->t5, 0, sizeof(struct top_flows));
+        intervals_init(ti);
 
-	err = pthread_attr_init(&attr);
-	if (err) {
-		handle_error_en(err, "pthread_attr_init");
-	}
+        err = pthread_attr_init(&ti->attr);
+        if (err) {
+                handle_error_en(err, "pthread_attr_init");
+        }
 
-	err = pthread_create(&thread_id, &attr, thread_run, ti);
-	if (err) {
-		handle_error_en(err, "pthread_create");
-	}
+        err = pthread_create(&ti->thread_id, &ti->attr, intervals_run, ti);
+        if (err) {
+                handle_error_en(err, "pthread_create");
+        }
 }
 
 int main(int argc, char *argv[])
@@ -423,16 +273,14 @@ int main(int argc, char *argv[])
 		ti.dev = NULL;
 	}
 
-	pthread_mutex_init(&(t5_mutex), NULL);
-
 	/* start & run thread for capture and interval processing */
 	init_thread(&ti);
 
 	/* print top flows and handle user input */
-	handle_io(ti.dev, ti.t5);
+	handle_io(&ti);
 
 	void *res;
-	pthread_join(thread_id, &res);
+	pthread_join(ti.thread_id, &res);
 
 	free(ti.t5);
 
