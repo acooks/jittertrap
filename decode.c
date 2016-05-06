@@ -142,6 +142,8 @@ int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt, char *errstr)
 
 int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt, char *errstr)
 {
+	(void)errstr;
+	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_UDP;
 	pkt->flow_rec.flow.sport = ntohs(packet->sport);
 	pkt->flow_rec.flow.dport = ntohs(packet->dport);
@@ -151,6 +153,8 @@ int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt, char *errstr)
 int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr)
 {
+	(void)errstr;
+	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_ICMP;
 	/* ICMP doesn't have ports, but we depend on that for the flow */
 	pkt->flow_rec.flow.sport = 0;
@@ -161,6 +165,8 @@ int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr)
 {
+	(void)errstr;
+	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_IGMP;
 	/* IGMP doesn't have ports, but we depend on that for the flow */
 	pkt->flow_rec.flow.sport = 0;
@@ -171,6 +177,8 @@ int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                  char *errstr)
 {
+	(void)errstr;
+	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_ICMPV6;
 	pkt->flow_rec.flow.sport = 0;
 	pkt->flow_rec.flow.dport = 0;
