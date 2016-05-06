@@ -24,7 +24,7 @@ Help is available at #jittertrap on irc.freenode.net or help@jittertrap.net
 
 ## Installing JitterTrap
 
-We're working on packaging JitterTrap and its dependencies for Fedora and Ubuntu. If you'd like to help, send email to packaging@jittertrap.net.
+Packaging is in progress. We're aiming for Fedora and Ubuntu. If you'd like to help, send email to packaging@jittertrap.net.
 
 ## Building JitterTrap
 ### Dependencies
@@ -33,9 +33,6 @@ We're working on packaging JitterTrap and its dependencies for Fedora and Ubuntu
 * [libjansson](http://www.digip.org/jansson/) >= 2.6
 
 #### Fedora  
-libwebsockets packaging is in progress, but in the mean time you can get it from [this copr repo](https://copr.fedoraproject.org/coprs/acooks/libwebsockets/)
-
-    sudo dnf copr enable acooks/libwebsockets
 
 Build dependencies:  
 
@@ -47,7 +44,7 @@ Run-time dependencies:
 
 
 #### Ubuntu  
-libwebsockets packaging is in progress, but in the mean time you can get it from[this ppa](https://launchpad.net/~acooks/+archive/ubuntu/libwebsockets6)
+libwebsockets packages are available for Xenial Xerus and later. Backports might be available from [this ppa](https://launchpad.net/~acooks/+archive/ubuntu/libwebsockets6)
 
     sudo apt-add-repository ppa:acooks/libwebsockets6
     sudo apt-get update
