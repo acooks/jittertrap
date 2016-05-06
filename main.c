@@ -121,7 +121,7 @@ void print_top_n(int stop, struct top_flows *t5)
 		mvprintw(i, 0, "%80s", " ");
 	}
 
-	for (int i = 0; i < t5->count && i < 5; i++) {
+	for (int i = 0; i < t5->count && i < MAX_FLOW_COUNT; i++) {
 		int div;
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);
 		struct flow_record *fte2 = &(t5->flow[i][interval2]);

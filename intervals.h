@@ -13,7 +13,7 @@ extern struct timeval const intervals[INTERVAL_COUNT];
 
 struct top_flows {
 	int count;
-	struct flow_record flow[5][INTERVAL_COUNT];
+	struct flow_record flow[MAX_FLOW_COUNT][INTERVAL_COUNT];
 };
 
 struct thread_info {
