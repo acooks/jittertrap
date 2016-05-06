@@ -105,7 +105,7 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	return div;
 }
 
-void print_top_n(int stop, struct top_flows *t5)
+void print_top_n(struct top_flows *t5)
 {
 	int row = 3;
 	char ip_src[16];
@@ -117,7 +117,7 @@ void print_top_n(int stop, struct top_flows *t5)
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
-	     i <= TOP_N_LINE_OFFSET + row + 3 * stop; i++) {
+	     i <= TOP_N_LINE_OFFSET + row + 3 * MAX_FLOW_COUNT; i++) {
 		mvprintw(i, 0, "%80s", " ");
 	}
 
@@ -206,7 +206,7 @@ void handle_io(struct thread_info *ti)
 		mvprintw(DEBUG_LINE_OFFSET, 0, "%20d", now.tv_sec);
 
 		pthread_mutex_lock(&ti->t5_mutex);
-		print_top_n(5, ti->t5);
+		print_top_n(ti->t5);
 		pthread_mutex_unlock(&ti->t5_mutex);
 
 		refresh(); /* ncurses screen update */
