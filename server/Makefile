@@ -64,7 +64,6 @@ MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
 INCLUDES = \
  -I . \
  -I ../messages/include/ \
- -I ../backend/ \
 
 PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
