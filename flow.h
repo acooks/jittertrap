@@ -1,3 +1,5 @@
+#ifndef FLOW_H
+#define FLOW_H
 
 struct flow {
 	int ethertype;
@@ -25,3 +27,5 @@ struct flow_pkt {
 	struct flow_record flow_rec;
 	struct timeval timestamp;
 };
+
+#endif
