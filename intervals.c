@@ -19,6 +19,29 @@
 #include "intervals_user.h"
 #include "intervals.h"
 
+struct flow_hash {
+        struct flow_record f;
+        union {
+                UT_hash_handle r_hh; /* sliding window reference table */
+                UT_hash_handle ts_hh; /* time series tables */
+        };
+};
+
+struct flow_pkt_list {
+        struct flow_pkt pkt;
+        struct flow_pkt_list *next, *prev;
+};
+
+struct pcap_info {
+        pcap_t *handle;
+        int selectable_fd;
+};
+
+struct pcap_handler_result {
+        int err;
+        char errstr[DECODE_ERRBUF_SIZE];
+};
+
 /* long, continuous sliding window tracking top flows */
 static struct flow_hash *flow_ref_table =  NULL;
 

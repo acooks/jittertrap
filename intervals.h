@@ -16,19 +16,6 @@ struct top_flows {
 	struct flow_record flow[5][INTERVAL_COUNT];
 };
 
-struct flow_hash {
-        struct flow_record f;
-	union {
-	        UT_hash_handle r_hh; /* sliding window reference table */
-		UT_hash_handle ts_hh; /* time series tables */
-	};
-};
-
-struct flow_pkt_list {
-        struct flow_pkt pkt;
-        struct flow_pkt_list *next, *prev;
-};
-
 struct thread_info {
 	pthread_t thread_id;
 	pthread_attr_t attr;
@@ -36,16 +23,6 @@ struct thread_info {
         struct top_flows *t5;
 	pthread_mutex_t t5_mutex;
         unsigned int decode_errors;
-};
-
-struct pcap_info {
-        pcap_t *handle;
-        int selectable_fd;
-};
-
-struct pcap_handler_result {
-        int err;
-        char errstr[DECODE_ERRBUF_SIZE];
 };
 
 void update_ref_window_size(struct timeval t);
