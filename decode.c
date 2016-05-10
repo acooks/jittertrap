@@ -16,6 +16,7 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
 	pkt->timestamp.tv_usec = h->ts.tv_usec;
 	pkt->flow_rec.bytes = h->len;
+	pkt->flow_rec.packets = 1;
 
 	ethernet = (struct hdr_ethernet *)wirebits;
 

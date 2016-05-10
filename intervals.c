@@ -152,6 +152,8 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			          sizeof(struct flow), fte);
 			assert(fte);
 			fte->f.bytes -= iter->pkt.flow_rec.bytes;
+			fte->f.packets -= iter->pkt.flow_rec.packets;
+
 			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
 			}
