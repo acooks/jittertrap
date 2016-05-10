@@ -134,8 +134,8 @@ void print_top_n(struct top_flows *t5)
 		          sizeof(ip6_dst));
 
 		if (0 == i) {
-			div = print_hdrs(fte1->size, intervals[interval1],
-			                 fte2->size, intervals[interval2]);
+			div = print_hdrs(fte1->bytes, intervals[interval1],
+			                 fte2->bytes, intervals[interval2]);
 		}
 
 		switch (fte1->flow.ethertype) {
@@ -153,7 +153,7 @@ void print_top_n(struct top_flows *t5)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->size / div, fte2->size / div);
+			         fte1->bytes / div, fte2->bytes / div);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;
@@ -172,7 +172,7 @@ void print_top_n(struct top_flows *t5)
 			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 			         protos[fte1->flow.proto]);
 			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->size / div, fte2->size / div);
+			         fte1->bytes / div, fte2->bytes / div);
 			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 			row += 3;
 			break;

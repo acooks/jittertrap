@@ -120,7 +120,7 @@ static void expire_old_interval_tables(struct timeval now)
 
 static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
 {
-	return (f2->f.size - f1->f.size);
+	return (f2->f.bytes - f1->f.bytes);
 }
 
 static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt)
@@ -151,8 +151,8 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			          &(iter->pkt.flow_rec.flow),
 			          sizeof(struct flow), fte);
 			assert(fte);
-			fte->f.size -= iter->pkt.flow_rec.size;
-			if (0 == fte->f.size) {
+			fte->f.bytes -= iter->pkt.flow_rec.bytes;
+			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
 			}
 
@@ -174,7 +174,7 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 		HASH_ADD(r_hh, flow_ref_table, f.flow, sizeof(struct flow),
 		         fte);
 	} else {
-		fte->f.size += pkt->flow_rec.size;
+		fte->f.bytes += pkt->flow_rec.bytes;
 	}
 }
 
@@ -193,7 +193,7 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 		HASH_ADD(ts_hh, incomplete_flow_tables[time_series], f.flow,
 		         sizeof(struct flow), fte);
 	} else {
-		fte->f.size += pkt->flow_rec.size;
+		fte->f.bytes += pkt->flow_rec.bytes;
 	}
 }
 
@@ -217,7 +217,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 		if (!fti) {
 			/* table doesn't have anything in it yet */
-			st_flows[i].size = 0;
+			st_flows[i].bytes = 0;
 			continue;
 		}
 
@@ -225,10 +225,10 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		HASH_FIND(ts_hh, fti, &(ref_flow->f.flow),
 		          sizeof(struct flow), te);
 
-		st_flows[i].size = te ? te->f.size : 0;
+		st_flows[i].bytes = te ? te->f.bytes : 0;
 
 		/* convert to bytes per second */
-		st_flows[i].size = rate_calc(intervals[i], st_flows[i].size);
+		st_flows[i].bytes = rate_calc(intervals[i], st_flows[i].bytes);
 	}
 }
 
