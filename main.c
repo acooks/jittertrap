@@ -113,7 +113,9 @@ void print_top_n(struct top_flows *t5)
 	char ip6_src[40];
 	char ip6_dst[40];
 
-	mvprintw(0, 50, "%5d active flows", t5->count);
+	mvprintw(0, 50, "%5d active flows", t5->flow_count);
+	mvprintw(1, 50, "%5d B/s", t5->total_bytes);
+	mvprintw(2, 50, "%5d Pkts/s", t5->total_packets);
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
@@ -121,7 +123,7 @@ void print_top_n(struct top_flows *t5)
 		mvprintw(i, 0, "%80s", " ");
 	}
 
-	for (int i = 0; i < t5->count && i < MAX_FLOW_COUNT; i++) {
+	for (int i = 0; i < t5->flow_count && i < MAX_FLOW_COUNT; i++) {
 		int div;
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);
 		struct flow_record *fte2 = &(t5->flow[i][interval2]);

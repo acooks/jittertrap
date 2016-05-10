@@ -12,7 +12,9 @@
 extern struct timeval const intervals[INTERVAL_COUNT];
 
 struct top_flows {
-	int count;
+	unsigned int flow_count;
+	unsigned int total_bytes;
+	unsigned int total_packets;
 	struct flow_record flow[MAX_FLOW_COUNT][INTERVAL_COUNT];
 };
 

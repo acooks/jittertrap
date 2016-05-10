@@ -57,6 +57,11 @@ static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 
 static struct timeval ref_window_size;
 
+static struct {
+	unsigned int bytes;
+	unsigned int packets;
+} totals;
+
 static void clear_table(int table_idx)
 {
 	struct flow_hash *table, *iter, *tmp;
@@ -154,6 +159,9 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			fte->f.bytes -= iter->pkt.flow_rec.bytes;
 			fte->f.packets -= iter->pkt.flow_rec.packets;
 
+			totals.bytes -= iter->pkt.flow_rec.bytes;
+			totals.packets -= iter->pkt.flow_rec.packets;
+
 			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
 			}
@@ -178,6 +186,9 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
 	}
+
+	totals.bytes += pkt->flow_rec.bytes;
+	totals.packets += pkt->flow_rec.packets;
 }
 
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
@@ -263,7 +274,10 @@ void get_top5(struct top_flows *t5)
 		fill_short_int_flows(t5->flow[i], rfti);
 		rfti = rfti->r_hh.next;
 	}
-	t5->count = HASH_CNT(r_hh, flow_ref_table);
+	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
+
+	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
+	t5->total_packets = rate_calc(ref_window_size, totals.packets);
 }
 
 int get_flow_count()
