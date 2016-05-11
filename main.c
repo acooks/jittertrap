@@ -88,6 +88,12 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	attron(A_BOLD);
 	mvprintw(TOP_N_LINE_OFFSET, 1, "%51s", "Source|SPort|Proto");
 	mvprintw(TOP_N_LINE_OFFSET + 1, 1, "%46s", "Destination|DPort|");
+	mvaddch(TOP_N_LINE_OFFSET + 0, 40, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 40, ACS_VLINE);
+
+	mvaddch(TOP_N_LINE_OFFSET + 0, 46, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 46, ACS_VLINE);
+
 
 	if (dt1 > 1) {
 		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
@@ -100,6 +106,7 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 		         byteunit, dt1 * 1E3, intervalunits[MILLISECONDS],
 		         byteunit, dt2 * 1E3, intervalunits[MILLISECONDS]);
 	}
+	mvaddch(TOP_N_LINE_OFFSET + 1, 58, ACS_VLINE);
 
 	attroff(A_BOLD);
 	return div;
