@@ -1,7 +1,18 @@
 PROG = toptalk
 
-SRC = decode.c timeywimey.c intervals.c intervals_user.c
-HEADERS = intervals.h decode.h flow.h timeywimey.h intervals.h intervals_user.h
+SRC = \
+ decode.c \
+ timeywimey.c \
+ intervals.c \
+ intervals_user.c
+
+HEADERS = \
+ intervals.h \
+ decode.h \
+ flow.h \
+ timeywimey.h \
+ intervals.h \
+ intervals_user.h
 
 LIBS = -lpcap -lcurses -lrt -lpthread
 
