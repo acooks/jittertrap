@@ -17,6 +17,11 @@ update-cbuffer:
 	git subtree split --prefix deps/cbuffer --annotate='split ' --rejoin
 	git subtree pull --prefix deps/cbuffer https://github.com/acooks/cbuffer.git master --squash
 
+update-toptalk:
+	git subtree split --prefix deps/toptalk --annotate='split ' --rejoin
+	git subtree pull --prefix deps/toptalk https://github.com/acooks/toptalk.git master --squash
+
+
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
 	cov-build --dir cov-int make messages server cli-client
