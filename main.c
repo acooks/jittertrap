@@ -196,7 +196,6 @@ void print_top_n(struct top_flows *t5)
 void handle_io(struct thread_info *ti)
 {
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
-	struct timespec now;
 	int ch, stop = 0;
 
 	initscr();            /* Start curses mode              */
@@ -211,9 +210,6 @@ void handle_io(struct thread_info *ti)
 	attroff(A_BOLD);
 
 	while (!stop) {
-		clock_gettime(CLOCK_REALTIME, &now);
-		mvprintw(DEBUG_LINE_OFFSET, 0, "%20d", now.tv_sec);
-
 		pthread_mutex_lock(&ti->t5_mutex);
 		print_top_n(ti->t5);
 		pthread_mutex_unlock(&ti->t5_mutex);
