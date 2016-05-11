@@ -31,7 +31,7 @@ $(LIB): $(SRC) $(HEADERS) Makefile
 	gcc-ar cr $(LIB) *.o
 	@echo -e "$(LIB) OK\n"
 
-test:
+test: $(LIB)
 	@echo Building $(TEST)
 	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
 	@./$(TEST) && echo -e "Test OK\n"
