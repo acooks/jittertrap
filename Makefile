@@ -14,14 +14,14 @@ HEADERS = \
  intervals.h \
  intervals_user.h
 
-LIBS = -lpcap -lcurses -lrt -lpthread
+LFLAGS = -lpcap -lcurses -lrt -lpthread
 
 CFLAGS += -g -Wall -pedantic
 
 all: main test
 
 main: $(SRC) $(HEADERS) Makefile
-	$(CC) -o $(PROG) main.c $(SRC) $(LIBS) $(CFLAGS)
+	$(CC) -o $(PROG) main.c $(SRC) $(LFLAGS) $(CFLAGS)
 	@echo Build OK
 
 cppcheck:
@@ -31,5 +31,5 @@ clang-analyze:
 	scan-build make .
 
 test:
-	$(CC) -o test-$(PROG) test.c $(SRC) $(LIBS) $(CFLAGS)
+	$(CC) -o test-$(PROG) test.c $(SRC) $(LFLAGS) $(CFLAGS)
 	@./test-$(PROG) && echo "Test OK"
