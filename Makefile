@@ -1,7 +1,7 @@
 
 include make.config
 
-SUBDIRS = messages server cli-client html5-client docs deps/toptalk
+SUBDIRS = deps/toptalk messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 
 .PHONY: all $(SUBDIRS)
