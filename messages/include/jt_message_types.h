@@ -6,6 +6,7 @@ typedef enum {
 
 	/* Server to Client messages */
 	JT_MSG_STATS_V1         = 50,
+	JT_MSG_TOPTALK_V1       = 60,
 	JT_MSG_IFACE_LIST_V1    = 100,
 	JT_MSG_SELECT_IFACE_V1  = 110, // used in both s2c and c2s directions
 	JT_MSG_NETEM_PARAMS_V1  = 120,
@@ -20,6 +21,7 @@ typedef enum {
 
 static const int jt_msg_types_s2c[] = {
 	JT_MSG_STATS_V1,
+	JT_MSG_TOPTALK_V1,
         JT_MSG_IFACE_LIST_V1,
         JT_MSG_SELECT_IFACE_V1,
 	JT_MSG_NETEM_PARAMS_V1,

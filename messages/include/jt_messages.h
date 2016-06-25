@@ -7,6 +7,7 @@
 #include "jt_message_types.h"
 
 #include "jt_msg_stats.h"
+#include "jt_msg_toptalk.h"
 #include "jt_msg_list_ifaces.h"
 #include "jt_msg_select_iface.h"
 #include "jt_msg_netem_params.h"
@@ -21,6 +22,14 @@ static const struct jt_msg_type jt_messages[] =
 		           .print = jt_stats_printer,
 		           .free = jt_stats_free,
 		           .get_test_msg = jt_stats_test_msg_get },
+
+     [JT_MSG_TOPTALK_V1] = { .type = JT_MSG_TOPTALK_V1,
+                             .key = "toptalk",
+                             .to_struct = jt_toptalk_unpacker,
+                             .to_json_string = jt_toptalk_packer,
+                             .print = jt_toptalk_printer,
+                             .free = jt_toptalk_free,
+                             .get_test_msg = jt_toptalk_test_msg_get },
 
      [JT_MSG_IFACE_LIST_V1] = { .type = JT_MSG_IFACE_LIST_V1,
 		                .key = "iface_list",
