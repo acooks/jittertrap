@@ -64,11 +64,13 @@ MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
 INCLUDES = \
  -I . \
  -I ../messages/include/ \
+ -I ../deps/toptalk/ \
 
 PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
  $$(pkg-config --cflags --libs libnl-route-3.0)
 
+TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
 LFLAGS = -lwebsockets -ljansson -lm
@@ -114,6 +116,10 @@ test: test-mq test-mq-mt test-multi-mq
 	./test-multi-mq >/dev/null
 	@echo -e "Test OK\n"
 
+TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
+
+test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
+	$(CC) -o test-toptalk $(TOPTALK_TEST_SOURCES) $(TOPTALK_LIB) $(INCLUDES) $(CFLAGS) -O0 $(DEFINES) -lpcap
 
 clean:
 	rm $(PROG) || true
