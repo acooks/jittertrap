@@ -109,6 +109,10 @@ test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEP
 	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test: test-mq test-mq-mt test-multi-mq
+	./test-mq >/dev/null
+	./test-mq-mt >/dev/null
+	./test-multi-mq >/dev/null
+	@echo -e "Test OK\n"
 
 
 clean:

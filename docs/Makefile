@@ -5,3 +5,5 @@ all:
 
 clean:
 
+test:
+	true

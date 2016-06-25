@@ -48,5 +48,8 @@ test-packing: lib test/test_messages.c
 	$(CC) test/test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LFLAGS) $(DEFINES)
 
 
+test: test-packing
+	@./test-packing >/dev/null && echo -e "Test OK\n"
+
 clean:
 	rm $(LIB) *.o *.a test-packing || true

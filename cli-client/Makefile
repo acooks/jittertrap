@@ -44,3 +44,6 @@ indent:
 
 clean:
 	rm $(PROG) || true
+
+test:
+	true

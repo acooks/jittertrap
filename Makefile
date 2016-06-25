@@ -3,6 +3,7 @@ include make.config
 
 SUBDIRS = deps/toptalk messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
+TESTDIRS = $(SUBDIRS:%=test-%)
 
 .PHONY: all $(SUBDIRS)
 
@@ -46,3 +47,9 @@ install: all
 	install -d ${DESTDIR}/usr/bin/
 	install -m 0755 server/jt-server ${DESTDIR}/usr/bin/
 	$(MAKE) -C html5-client install
+
+test: $(TESTDIRS)
+
+$(TESTDIRS):
+	@echo "Test $@"
+	@$(MAKE) --silent -C $(@:test-%=%) test
