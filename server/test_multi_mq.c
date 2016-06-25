@@ -19,7 +19,7 @@ int stats_message_printer(struct mq_stats_msg *m,
                           void *data __attribute__((unused)))
 {
 	assert(m);
-	printf("m: %" PRId64 "\n", m->whoosh_err_mean);
+	printf("m: %" PRId64 "\n", m->mean_rx_bytes);
 	return 0;
 }
 
