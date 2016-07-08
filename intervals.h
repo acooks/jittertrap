@@ -27,7 +27,7 @@ struct tt_thread_info {
         unsigned int decode_errors;
 };
 
-void update_ref_window_size(struct timeval t);
+void tt_update_ref_window_size(struct timeval t);
 void get_top5(struct tt_top_flows *t5);
 int get_flow_count();
 void *intervals_run(void *p);

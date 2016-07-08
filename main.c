@@ -53,7 +53,7 @@ void update_interval(int updown)
 	} else {
 		mvprintw(ERR_LINE_OFFSET, 1, "Requested interval invalid.");
 	}
-	update_ref_window_size(tt_intervals[interval1]);
+	tt_update_ref_window_size(tt_intervals[interval1]);
 }
 
 int print_hdrs(int tp1, struct timeval interval1, int tp2,

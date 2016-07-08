@@ -285,7 +285,7 @@ int get_flow_count()
 	return HASH_CNT(r_hh, flow_ref_table);
 }
 
-void update_ref_window_size(struct timeval t)
+void tt_update_ref_window_size(struct timeval t)
 {
 	ref_window_size = t;
 }
