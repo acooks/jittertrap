@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
         int err;
 	void *res;
-	struct thread_info ti = {0};
+	struct tt_thread_info ti = {0};
 
 	if (argc == 2) {
 		ti.dev = argv[1];

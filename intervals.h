@@ -18,7 +18,7 @@ struct tt_top_flows {
 	struct flow_record flow[MAX_FLOW_COUNT][INTERVAL_COUNT];
 };
 
-struct thread_info {
+struct tt_thread_info {
 	pthread_t thread_id;
 	pthread_attr_t attr;
         char *dev;
@@ -31,7 +31,7 @@ void update_ref_window_size(struct timeval t);
 void get_top5(struct tt_top_flows *t5);
 int get_flow_count();
 void *intervals_run(void *p);
-void intervals_init(struct thread_info *ti);
+void intervals_init(struct tt_thread_info *ti);
 
 #define handle_error_en(en, msg) \
         do {                                                                   \

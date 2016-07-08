@@ -356,7 +356,7 @@ void *intervals_run(void *p)
         int err;
         struct pcap_info pi;
         struct pcap_handler_result result;
-        struct thread_info *ti = (struct thread_info *)p;
+        struct tt_thread_info *ti = (struct tt_thread_info *)p;
         struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
         err = init_pcap(&(ti->dev), &pi);
@@ -397,7 +397,7 @@ void *intervals_run(void *p)
         return NULL;
 }
 
-void intervals_init(struct thread_info *ti)
+void intervals_init(struct tt_thread_info *ti)
 {
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0};
 	flow_ref_table =  NULL;

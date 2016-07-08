@@ -193,7 +193,7 @@ void print_top_n(struct tt_top_flows *t5)
 	}
 }
 
-void handle_io(struct thread_info *ti)
+void handle_io(struct tt_thread_info *ti)
 {
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
 	int ch, stop = 0;
@@ -251,7 +251,7 @@ void handle_io(struct thread_info *ti)
 	pthread_cancel(ti->thread_id);
 }
 
-void init_thread(struct thread_info *ti)
+void init_thread(struct tt_thread_info *ti)
 {
         int err;
 
@@ -270,7 +270,7 @@ void init_thread(struct thread_info *ti)
 
 int main(int argc, char *argv[])
 {
-	struct thread_info ti = {0};
+	struct tt_thread_info ti = {0};
 
 	if (argc == 2) {
 		ti.dev = argv[1];
