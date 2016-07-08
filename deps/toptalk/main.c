@@ -10,7 +10,7 @@
 #include "intervals_user.h"
 #include "intervals.h"
 
-static char const * const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
+static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_UDP] = "UDP",
 	                                        [IPPROTO_ICMP] = "ICMP",
 	                                        [IPPROTO_ICMPV6] = "ICMP6",
@@ -47,19 +47,19 @@ void update_interval(int updown)
 	if ((0 > updown) && (interval2 > 0)) {
 		interval1--;
 		interval2--;
-	} else if ((0 < updown) && (interval1 < INTERVAL_COUNT -1)) {
+	} else if ((0 < updown) && (interval1 < INTERVAL_COUNT - 1)) {
 		interval1++;
 		interval2++;
 	} else {
 		mvprintw(ERR_LINE_OFFSET, 1, "Requested interval invalid.");
 	}
-	update_ref_window_size(intervals[interval1]);
+	tt_update_ref_window_size(tt_intervals[interval1]);
 }
 
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
-                  struct timeval interval2)
+               struct timeval interval2)
 {
-	char const * byteunit;
+	char const *byteunit;
 	int div;
 
 	float dt1 = interval1.tv_sec + (float)interval1.tv_usec / (float)1E6;
@@ -112,7 +112,7 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	return div;
 }
 
-void print_top_n(struct top_flows *t5)
+void print_top_n(struct tt_top_flows *t5)
 {
 	int row = 3;
 	char ip_src[16];
@@ -143,8 +143,8 @@ void print_top_n(struct top_flows *t5)
 		          sizeof(ip6_dst));
 
 		if (0 == i) {
-			div = print_hdrs(fte1->bytes, intervals[interval1],
-			                 fte2->bytes, intervals[interval2]);
+			div = print_hdrs(fte1->bytes, tt_intervals[interval1],
+			                 fte2->bytes, tt_intervals[interval2]);
 		}
 
 		switch (fte1->flow.ethertype) {
@@ -193,7 +193,7 @@ void print_top_n(struct top_flows *t5)
 	}
 }
 
-void handle_io(struct thread_info *ti)
+void handle_io(struct tt_thread_info *ti)
 {
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
 	int ch, stop = 0;
@@ -234,7 +234,7 @@ void handle_io(struct thread_info *ti)
 			}
 		}
 
-		nanosleep (&print_timeout, NULL);
+		nanosleep(&print_timeout, NULL);
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
 			mvprintw(ERR_LINE_OFFSET, 0, "%20s",
@@ -251,26 +251,26 @@ void handle_io(struct thread_info *ti)
 	pthread_cancel(ti->thread_id);
 }
 
-void init_thread(struct thread_info *ti)
+void init_thread(struct tt_thread_info *ti)
 {
-        int err;
+	int err;
 
-        intervals_init(ti);
+	tt_intervals_init(ti);
 
-        err = pthread_attr_init(&ti->attr);
-        if (err) {
-                handle_error_en(err, "pthread_attr_init");
-        }
+	err = pthread_attr_init(&ti->attr);
+	if (err) {
+		handle_error_en(err, "pthread_attr_init");
+	}
 
-        err = pthread_create(&ti->thread_id, &ti->attr, intervals_run, ti);
-        if (err) {
-                handle_error_en(err, "pthread_create");
-        }
+	err = pthread_create(&ti->thread_id, &ti->attr, tt_intervals_run, ti);
+	if (err) {
+		handle_error_en(err, "pthread_create");
+	}
 }
 
 int main(int argc, char *argv[])
 {
-	struct thread_info ti = {0};
+	struct tt_thread_info ti = { 0 };
 
 	if (argc == 2) {
 		ti.dev = argv[1];

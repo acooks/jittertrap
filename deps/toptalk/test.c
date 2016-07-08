@@ -10,9 +10,9 @@
 
 int main(int argc, char *argv[])
 {
-        int err;
+	int err;
 	void *res;
-	struct thread_info ti = {0};
+	struct tt_thread_info ti = { 0 };
 
 	if (argc == 2) {
 		ti.dev = argv[1];
@@ -21,20 +21,20 @@ int main(int argc, char *argv[])
 	}
 
 	/* start & run thread for capture and interval processing */
-        intervals_init(&ti);
+	tt_intervals_init(&ti);
 
-        err = pthread_attr_init(&ti.attr);
-        if (err) {
-                handle_error_en(err, "pthread_attr_init");
-        }
+	err = pthread_attr_init(&ti.attr);
+	if (err) {
+		handle_error_en(err, "pthread_attr_init");
+	}
 
-        err = pthread_create(&ti.thread_id, &ti.attr, intervals_run, &ti);
-        if (err) {
-                handle_error_en(err, "pthread_create");
-        }
+	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
+	if (err) {
+		handle_error_en(err, "pthread_create");
+	}
 
-	update_ref_window_size(intervals[0]);
-	update_ref_window_size(intervals[INTERVAL_COUNT -1]);
+	tt_update_ref_window_size(tt_intervals[0]);
+	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
 
 	/* check if the thread is still alive */
 	if (EBUSY != pthread_tryjoin_np(ti.thread_id, &res)) {
