@@ -80,7 +80,6 @@ int ts_cmp(struct timespec t1, struct timespec t2)
 	return 0;
 }
 
-
 inline struct timespec ts_add(struct timespec t1, struct timespec t2)
 {
 	struct timespec t;

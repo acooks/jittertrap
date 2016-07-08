@@ -10,7 +10,7 @@
 #include "intervals_user.h"
 #include "intervals.h"
 
-static char const * const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
+static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_UDP] = "UDP",
 	                                        [IPPROTO_ICMP] = "ICMP",
 	                                        [IPPROTO_ICMPV6] = "ICMP6",
@@ -47,7 +47,7 @@ void update_interval(int updown)
 	if ((0 > updown) && (interval2 > 0)) {
 		interval1--;
 		interval2--;
-	} else if ((0 < updown) && (interval1 < INTERVAL_COUNT -1)) {
+	} else if ((0 < updown) && (interval1 < INTERVAL_COUNT - 1)) {
 		interval1++;
 		interval2++;
 	} else {
@@ -57,9 +57,9 @@ void update_interval(int updown)
 }
 
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
-                  struct timeval interval2)
+               struct timeval interval2)
 {
-	char const * byteunit;
+	char const *byteunit;
 	int div;
 
 	float dt1 = interval1.tv_sec + (float)interval1.tv_usec / (float)1E6;
@@ -234,7 +234,7 @@ void handle_io(struct tt_thread_info *ti)
 			}
 		}
 
-		nanosleep (&print_timeout, NULL);
+		nanosleep(&print_timeout, NULL);
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
 			mvprintw(ERR_LINE_OFFSET, 0, "%20s",
@@ -253,24 +253,24 @@ void handle_io(struct tt_thread_info *ti)
 
 void init_thread(struct tt_thread_info *ti)
 {
-        int err;
+	int err;
 
-        tt_intervals_init(ti);
+	tt_intervals_init(ti);
 
-        err = pthread_attr_init(&ti->attr);
-        if (err) {
-                handle_error_en(err, "pthread_attr_init");
-        }
+	err = pthread_attr_init(&ti->attr);
+	if (err) {
+		handle_error_en(err, "pthread_attr_init");
+	}
 
-        err = pthread_create(&ti->thread_id, &ti->attr, tt_intervals_run, ti);
-        if (err) {
-                handle_error_en(err, "pthread_create");
-        }
+	err = pthread_create(&ti->thread_id, &ti->attr, tt_intervals_run, ti);
+	if (err) {
+		handle_error_en(err, "pthread_create");
+	}
 }
 
 int main(int argc, char *argv[])
 {
-	struct tt_thread_info ti = {0};
+	struct tt_thread_info ti = { 0 };
 
 	if (argc == 2) {
 		ti.dev = argv[1];
