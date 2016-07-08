@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <net/ethernet.h>
+#include <arpa/inet.h>
 
 #include <jansson.h>
 #include "jittertrap.h"
@@ -27,6 +29,10 @@
 #include "jt_message_types.h"
 #include "jt_messages.h"
 
+#include "flow.h"
+#include "intervals_user.h"
+#include "intervals.h"
+
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
@@ -39,6 +45,7 @@ enum { JT_STATE_STOPPING,
 int g_jt_state = JT_STATE_STARTING;
 char g_selected_iface[MAX_IFACE_LEN];
 unsigned long stats_consumer_id;
+struct tt_thread_info ti = { 0 };
 
 static int set_netem(void *data)
 {
@@ -123,7 +130,7 @@ inline static int message_producer(struct mq_ws_msg *m, void *data)
 	return 0;
 }
 
-inline static int jt_srv_send(int msg_type, void *msg_data)
+int jt_srv_send(int msg_type, void *msg_data)
 {
 	char *tmpstr;
 	int cb_err, err = 0;
@@ -255,6 +262,19 @@ int jt_srv_send_stats()
 	return 0;
 }
 
+int jt_srv_send_tt()
+{
+	struct tt_top_flows *t5 = ti.t5;
+	pthread_mutex_lock(&ti.t5_mutex);
+	/* TODO: turn print into message and send it. */
+        printf("%5d active flows, %5d B/s, %5d Pkts/s\r",
+	       t5->flow_count,
+	       t5->total_bytes,
+	       t5->total_packets);
+	pthread_mutex_unlock(&ti.t5_mutex);
+	return 0;
+}
+
 static int jt_init()
 {
 	int err;
@@ -280,6 +300,21 @@ static int jt_init()
 	err = mq_stats_consumer_subscribe(&stats_consumer_id);
 	assert(!err);
 
+	/* TODO: implement interface selection. */
+	ti.dev = "wlp3s0";
+
+	/* start & run thread for capture and interval processing */
+	tt_intervals_init(&ti);
+
+	err = pthread_attr_init(&ti.attr);
+	assert(!err);
+
+	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
+	assert(!err);
+
+	tt_update_ref_window_size(tt_intervals[0]);
+	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
+
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;
 }
@@ -297,6 +332,7 @@ int jt_server_tick()
 	case JT_STATE_RUNNING:
 		/* queue a stats msg (if there is one) */
 		jt_srv_send_stats();
+		jt_srv_send_tt();
 		break;
 	}
 	return 0;

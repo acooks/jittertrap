@@ -33,6 +33,7 @@ SOURCES = \
  sample_buf.c \
  netem.c \
  slist.c \
+ intervals_user.c \
 
 
 HEADERS = \
@@ -52,6 +53,7 @@ HEADERS = \
  tt_thread.h \
  sample_buf.h \
  slist.h \
+ intervals_user.h \
 
 
 MESSAGEHEADERS = \
@@ -78,7 +80,7 @@ PKGCONFIG_LIBNL = \
 TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
-LFLAGS = -lwebsockets -ljansson -lm
+LFLAGS = -lwebsockets -ljansson -lm -lpcap
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 
@@ -91,7 +93,7 @@ all: $(PROG) Makefile ../make.config
 	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
-	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
+	$(CC) $(SOURCES) $(INCLUDES) $(TOPTALK_LIB) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
 
 
 indent:
