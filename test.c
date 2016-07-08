@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* start & run thread for capture and interval processing */
-        intervals_init(&ti);
+        tt_intervals_init(&ti);
 
         err = pthread_attr_init(&ti.attr);
         if (err) {

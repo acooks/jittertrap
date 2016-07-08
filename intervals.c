@@ -397,7 +397,7 @@ void *tt_intervals_run(void *p)
         return NULL;
 }
 
-void intervals_init(struct tt_thread_info *ti)
+void tt_intervals_init(struct tt_thread_info *ti)
 {
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0};
 	flow_ref_table =  NULL;

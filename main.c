@@ -255,7 +255,7 @@ void init_thread(struct tt_thread_info *ti)
 {
         int err;
 
-        intervals_init(ti);
+        tt_intervals_init(ti);
 
         err = pthread_attr_init(&ti->attr);
         if (err) {
