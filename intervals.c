@@ -104,7 +104,7 @@ static void expire_old_interval_tables(struct timeval now)
 	struct timeval tz = {0};
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
-		struct timeval interval = intervals[i];
+		struct timeval interval = tt_intervals[i];
 
 		/* at start-up, end is still zero. initialise it. */
 		if (0 == tv_cmp(tz, interval_end[i])) {
@@ -241,7 +241,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[i].bytes = te ? te->f.bytes : 0;
 
 		/* convert to bytes per second */
-		st_flows[i].bytes = rate_calc(intervals[i], st_flows[i].bytes);
+		st_flows[i].bytes = rate_calc(tt_intervals[i], st_flows[i].bytes);
 	}
 }
 

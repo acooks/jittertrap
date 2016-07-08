@@ -53,7 +53,7 @@ void update_interval(int updown)
 	} else {
 		mvprintw(ERR_LINE_OFFSET, 1, "Requested interval invalid.");
 	}
-	update_ref_window_size(intervals[interval1]);
+	update_ref_window_size(tt_intervals[interval1]);
 }
 
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
@@ -143,8 +143,8 @@ void print_top_n(struct top_flows *t5)
 		          sizeof(ip6_dst));
 
 		if (0 == i) {
-			div = print_hdrs(fte1->bytes, intervals[interval1],
-			                 fte2->bytes, intervals[interval2]);
+			div = print_hdrs(fte1->bytes, tt_intervals[interval1],
+			                 fte2->bytes, tt_intervals[interval2]);
 		}
 
 		switch (fte1->flow.ethertype) {

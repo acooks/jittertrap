@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
                 handle_error_en(err, "pthread_create");
         }
 
-	update_ref_window_size(intervals[0]);
-	update_ref_window_size(intervals[INTERVAL_COUNT -1]);
+	update_ref_window_size(tt_intervals[0]);
+	update_ref_window_size(tt_intervals[INTERVAL_COUNT -1]);
 
 	/* check if the thread is still alive */
 	if (EBUSY != pthread_tryjoin_np(ti.thread_id, &res)) {

@@ -9,7 +9,7 @@
 
 /* INTERVAL_COUNT must be defined in intervals_user.h */
 /* intvervals[] must be defined in intervals_user.c */
-extern struct timeval const intervals[INTERVAL_COUNT];
+extern struct timeval const tt_intervals[INTERVAL_COUNT];
 
 struct top_flows {
 	unsigned int flow_count;
