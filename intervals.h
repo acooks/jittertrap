@@ -29,7 +29,7 @@ struct tt_thread_info {
 
 void tt_update_ref_window_size(struct timeval t);
 void tt_get_top5(struct tt_top_flows *t5);
-int get_flow_count();
+int tt_get_flow_count();
 void *intervals_run(void *p);
 void intervals_init(struct tt_thread_info *ti);
 

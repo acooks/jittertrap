@@ -280,7 +280,7 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
 }
 
-int get_flow_count()
+int tt_get_flow_count()
 {
 	return HASH_CNT(r_hh, flow_ref_table);
 }
