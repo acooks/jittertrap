@@ -11,7 +11,7 @@
 /* intvervals[] must be defined in intervals_user.c */
 extern struct timeval const tt_intervals[INTERVAL_COUNT];
 
-struct top_flows {
+struct tt_top_flows {
 	unsigned int flow_count;
 	unsigned int total_bytes;
 	unsigned int total_packets;
@@ -22,13 +22,13 @@ struct thread_info {
 	pthread_t thread_id;
 	pthread_attr_t attr;
         char *dev;
-        struct top_flows *t5;
+        struct tt_top_flows *t5;
 	pthread_mutex_t t5_mutex;
         unsigned int decode_errors;
 };
 
 void update_ref_window_size(struct timeval t);
-void get_top5(struct top_flows *t5);
+void get_top5(struct tt_top_flows *t5);
 int get_flow_count();
 void *intervals_run(void *p);
 void intervals_init(struct thread_info *ti);

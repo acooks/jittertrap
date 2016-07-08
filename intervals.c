@@ -255,7 +255,7 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	expire_old_interval_tables(pkt->timestamp);
 }
 
-void get_top5(struct top_flows *t5)
+void get_top5(struct tt_top_flows *t5)
 {
 	struct timeval now;
 	struct flow_hash *rfti; /* reference flow table iter */
@@ -403,8 +403,8 @@ void intervals_init(struct thread_info *ti)
 	flow_ref_table =  NULL;
 	pkt_list_ref_head = NULL;
 
-	ti->t5 = malloc(sizeof(struct top_flows));
-	memset(ti->t5, 0, sizeof(struct top_flows));
+	ti->t5 = malloc(sizeof(struct tt_top_flows));
+	memset(ti->t5, 0, sizeof(struct tt_top_flows));
         pthread_mutex_init(&(ti->t5_mutex), NULL);
 }
 

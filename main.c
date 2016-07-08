@@ -112,7 +112,7 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	return div;
 }
 
-void print_top_n(struct top_flows *t5)
+void print_top_n(struct tt_top_flows *t5)
 {
 	int row = 3;
 	char ip_src[16];
