@@ -351,7 +351,7 @@ static int init_pcap(char **dev, struct pcap_info *pi)
         return 0;
 }
 
-void *intervals_run(void *p)
+void *tt_intervals_run(void *p)
 {
         int err;
         struct pcap_info pi;

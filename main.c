@@ -262,7 +262,7 @@ void init_thread(struct tt_thread_info *ti)
                 handle_error_en(err, "pthread_attr_init");
         }
 
-        err = pthread_create(&ti->thread_id, &ti->attr, intervals_run, ti);
+        err = pthread_create(&ti->thread_id, &ti->attr, tt_intervals_run, ti);
         if (err) {
                 handle_error_en(err, "pthread_create");
         }

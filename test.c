@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
                 handle_error_en(err, "pthread_attr_init");
         }
 
-        err = pthread_create(&ti.thread_id, &ti.attr, intervals_run, &ti);
+        err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
         if (err) {
                 handle_error_en(err, "pthread_create");
         }
