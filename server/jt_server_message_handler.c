@@ -59,6 +59,36 @@ static int set_netem(void *data)
 	return 0;
 }
 
+static int restart_tt_thread(char * iface)
+{
+	int err;
+        void *res;
+
+	if (ti.thread_id) {
+		pthread_cancel(ti.thread_id);
+	        pthread_join(ti.thread_id, &res);
+	        free(ti.t5);
+		free(ti.dev);
+	}
+
+	ti.dev = malloc(MAX_IFACE_LEN);
+	snprintf(ti.dev, MAX_IFACE_LEN, "%s", iface);
+
+	/* start & run thread for capture and interval processing */
+	tt_intervals_init(&ti);
+
+	err = pthread_attr_init(&ti.attr);
+	assert(!err);
+
+	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
+	assert(!err);
+
+	tt_update_ref_window_size(tt_intervals[0]);
+	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
+
+	return 0;
+}
+
 static int select_iface(void *data)
 {
 	char(*iface)[MAX_IFACE_LEN] = data;
@@ -72,6 +102,8 @@ static int select_iface(void *data)
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
 	printf("switching to iface: [%s]\n", *iface);
 	sample_iface(*iface);
+	restart_tt_thread(*iface);
+
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
 	jt_srv_send_sample_period();
@@ -278,7 +310,7 @@ int jt_srv_send_tt()
 static int jt_init()
 {
 	int err;
-	char iface[MAX_IFACE_LEN];
+	char *iface = malloc(MAX_IFACE_LEN);
 
 	if (netem_init() < 0) {
 		fprintf(stderr,
@@ -292,7 +324,7 @@ static int jt_init()
 	}
 
 	get_first_iface(iface);
-	select_iface(&iface);
+	select_iface(iface);
 
 	mq_stats_init();
 	compute_thread_init();
@@ -300,20 +332,7 @@ static int jt_init()
 	err = mq_stats_consumer_subscribe(&stats_consumer_id);
 	assert(!err);
 
-	/* TODO: implement interface selection. */
-	ti.dev = "wlp3s0";
-
-	/* start & run thread for capture and interval processing */
-	tt_intervals_init(&ti);
-
-	err = pthread_attr_init(&ti.attr);
-	assert(!err);
-
-	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
-	assert(!err);
-
-	tt_update_ref_window_size(tt_intervals[0]);
-	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
+	restart_tt_thread(iface);
 
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;
