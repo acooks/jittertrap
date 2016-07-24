@@ -24,10 +24,12 @@ SOURCES = \
  proto-jittertrap.c \
  mq_msg_ws.c \
  mq_msg_stats.c \
+ mq_msg_tt.c \
  jt_server_message_handler.c \
  timeywimey.c \
  sampling_thread.c \
  compute_thread.c \
+ tt_thread.c \
  sample_buf.c \
  netem.c \
  slist.c \
@@ -40,12 +42,14 @@ HEADERS = \
  mq_generic.h \
  mq_msg_ws.h \
  mq_msg_stats.h \
+ mq_msg_tt.h \
  jt_server_message_handler.h \
  netem.h \
  timeywimey.h \
  iface_stats.h \
  sampling_thread.h \
  compute_thread.h \
+ tt_thread.h \
  sample_buf.h \
  slist.h \
 
