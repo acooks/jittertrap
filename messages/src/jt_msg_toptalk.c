@@ -126,7 +126,7 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 		if (!json_is_string(t)) {
 			goto unpack_fail;
 		}
-		snprintf(tt->flows[i].proto, ADDR_LEN, "%s",
+		snprintf(tt->flows[i].proto, PROTO_LEN, "%s",
 		         json_string_value(t));
 
 	}
