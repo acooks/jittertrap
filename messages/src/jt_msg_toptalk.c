@@ -81,6 +81,8 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 
 	int l = json_array_size(flows);
 
+	/* tt->tflows may be more than the number of flows we send! */
+
 	int i;
 	for (i = 0; i < l; i++) {
 		json_t *f = json_array_get(flows, i);
@@ -154,7 +156,17 @@ int jt_toptalk_packer(void *data, char **out)
 	json_object_set_new(params, "interval_ns",
 	                    json_integer(tt_msg->interval_ns));
 
-	for (int i = 0; i < MAX_FLOWS; i++) {
+	assert(tt_msg);
+
+	/* tt_msg->tflows is the Total flows recorded, not the number of flows
+	 * listed in the message, so it will be more than MAX_FLOWS...
+	 * So this is wrong >>> assert(tt_msg->tflows <= MAX_FLOWS);
+	 */
+
+	const int stop = (tt_msg->tflows < MAX_FLOWS) ?
+	                  tt_msg->tflows : MAX_FLOWS;
+
+	for (int i = 0; i < stop; i++) {
 		flows[i] = json_object();
 		json_object_set_new(flows[i], "bytes",
 		                    json_integer(tt_msg->flows[i].bytes));
@@ -179,7 +191,7 @@ int jt_toptalk_packer(void *data, char **out)
 	json_object_set(t, "p", params);
 
 	*out = json_dumps(t, 0);
-	for (int i = 0; i < MAX_FLOWS; i++) {
+	for (int i = 0; i < stop; i++) {
 		json_decref(flows[i]);
 	}
 	json_array_clear(flows_arr);
