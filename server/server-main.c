@@ -74,6 +74,20 @@ static struct option options[] = {
 	{ NULL, 0, 0, 0 }
 };
 
+static const struct lws_extension exts[] = {
+	{
+		"permessage-deflate",
+		lws_extension_callback_pm_deflate,
+		"permessage-deflate"
+	},
+	{
+		"deflate-frame",
+		lws_extension_callback_pm_deflate,
+		"deflate_frame"
+	},
+	{ NULL, NULL, NULL /* terminator */ }
+};
+
 int main(int argc, char **argv)
 {
 	char cert_path[1024];
@@ -165,9 +179,8 @@ int main(int argc, char **argv)
 
 	info.iface = iface;
 	info.protocols = protocols;
-#ifndef LWS_NO_EXTENSIONS
-	info.extensions = lws_get_internal_extensions();
-#endif
+	info.extensions = exts;
+
 	if (!use_ssl) {
 		info.ssl_cert_filepath = NULL;
 		info.ssl_private_key_filepath = NULL;

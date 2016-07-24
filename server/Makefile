@@ -14,6 +14,7 @@ DEFINES = \
  -DRT_CPU=$(RT_CPU) \
  -DMAX_JSON_MSG_LEN=$(MAX_JSON_MSG_LEN) \
  -DMAX_JSON_TOKEN_LEN=$(MAX_JSON_TOKEN_LEN) \
+ -D_GNU_SOURCE \
 
 
 SOURCES = \
@@ -23,13 +24,16 @@ SOURCES = \
  proto-jittertrap.c \
  mq_msg_ws.c \
  mq_msg_stats.c \
+ mq_msg_tt.c \
  jt_server_message_handler.c \
  timeywimey.c \
  sampling_thread.c \
  compute_thread.c \
+ tt_thread.c \
  sample_buf.c \
  netem.c \
  slist.c \
+ intervals_user.c \
 
 
 HEADERS = \
@@ -39,14 +43,17 @@ HEADERS = \
  mq_generic.h \
  mq_msg_ws.h \
  mq_msg_stats.h \
+ mq_msg_tt.h \
  jt_server_message_handler.h \
  netem.h \
  timeywimey.h \
  iface_stats.h \
  sampling_thread.h \
  compute_thread.h \
+ tt_thread.h \
  sample_buf.h \
  slist.h \
+ intervals_user.h \
 
 
 MESSAGEHEADERS = \
@@ -64,14 +71,16 @@ MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
 INCLUDES = \
  -I . \
  -I ../messages/include/ \
+ -I ../deps/toptalk/ \
 
 PKGCONFIG_LIBNL = \
  $$(pkg-config --cflags --libs libnl-3.0) \
  $$(pkg-config --cflags --libs libnl-route-3.0)
 
+TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
-LFLAGS = -lwebsockets -ljansson -lm
+LFLAGS = -lwebsockets -ljansson -lm -lpcap
 CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
 
 
@@ -84,7 +93,7 @@ all: $(PROG) Makefile ../make.config
 	@echo -----------------------------------
 
 $(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
-	$(CC) $(SOURCES) $(INCLUDES) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
+	$(CC) $(SOURCES) $(INCLUDES) $(TOPTALK_LIB) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
 
 
 indent:
@@ -109,7 +118,15 @@ test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEP
 	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test: test-mq test-mq-mt test-multi-mq
+	./test-mq >/dev/null
+	./test-mq-mt >/dev/null
+	./test-multi-mq >/dev/null
+	@echo -e "Test OK\n"
 
+TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
+
+test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
+	$(CC) -o test-toptalk $(TOPTALK_TEST_SOURCES) $(TOPTALK_LIB) $(INCLUDES) $(CFLAGS) -O0 $(DEFINES) -lpcap
 
 clean:
 	rm $(PROG) || true

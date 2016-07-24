@@ -19,13 +19,16 @@
 #include "iface_stats.h"
 #include "sampling_thread.h"
 #include "compute_thread.h"
+#include "tt_thread.h"
 #include "netem.h"
 
 #include "mq_msg_stats.h"
 #include "mq_msg_ws.h"
+#include "mq_msg_tt.h"
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
+
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
@@ -39,6 +42,7 @@ enum { JT_STATE_STOPPING,
 int g_jt_state = JT_STATE_STARTING;
 char g_selected_iface[MAX_IFACE_LEN];
 unsigned long stats_consumer_id;
+unsigned long tt_consumer_id;
 
 static int set_netem(void *data)
 {
@@ -65,6 +69,8 @@ static int select_iface(void *data)
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
 	printf("switching to iface: [%s]\n", *iface);
 	sample_iface(*iface);
+	tt_thread_restart(*iface);
+
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
 	jt_srv_send_sample_period();
@@ -91,6 +97,7 @@ static void get_first_iface(char *iface)
 	free(ifaces);
 }
 
+/* FIXME: this is fugly. */
 static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
                                          struct jt_msg_stats *msg_s)
 {
@@ -123,7 +130,7 @@ inline static int message_producer(struct mq_ws_msg *m, void *data)
 	return 0;
 }
 
-inline static int jt_srv_send(int msg_type, void *msg_data)
+int jt_srv_send(int msg_type, void *msg_data)
 {
 	char *tmpstr;
 	int cb_err, err = 0;
@@ -255,10 +262,33 @@ int jt_srv_send_stats()
 	return 0;
 }
 
+static int tt_consumer(struct mq_tt_msg *m, void *data)
+{
+	(void)data;
+
+	//jt_messages[JT_MSG_TOPTALK_V1].print(m);
+
+	if (0 == jt_srv_send(JT_MSG_TOPTALK_V1, (struct jt_msg_toptalk *)m)) {
+		return 0;
+	}
+	return 1;
+}
+
+int jt_srv_send_tt()
+{
+	int ret, cb_err;
+
+	do {
+		ret = mq_tt_consume(tt_consumer_id, tt_consumer, NULL, &cb_err);
+	} while (JT_WS_MQ_OK == ret);
+
+	return 0;
+}
+
 static int jt_init()
 {
 	int err;
-	char iface[MAX_IFACE_LEN];
+	char *iface = malloc(MAX_IFACE_LEN);
 
 	if (netem_init() < 0) {
 		fprintf(stderr,
@@ -272,12 +302,17 @@ static int jt_init()
 	}
 
 	get_first_iface(iface);
-	select_iface(&iface);
+	select_iface(iface);
 
+	mq_tt_init();
 	mq_stats_init();
 	compute_thread_init();
+	intervals_thread_init();
 
 	err = mq_stats_consumer_subscribe(&stats_consumer_id);
+	assert(!err);
+
+	err = mq_tt_consumer_subscribe(&tt_consumer_id);
 	assert(!err);
 
 	g_jt_state = JT_STATE_RUNNING;
@@ -297,6 +332,7 @@ int jt_server_tick()
 	case JT_STATE_RUNNING:
 		/* queue a stats msg (if there is one) */
 		jt_srv_send_stats();
+		jt_srv_send_tt();
 		break;
 	}
 	return 0;

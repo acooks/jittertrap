@@ -2,7 +2,10 @@ include ../make.config
 
 PROG = jittertrap-cli
 
-DEFINES = -DMAX_IFACE_LEN=25
+DEFINES = \
+ -DMAX_IFACE_LEN=25 \
+ -D_GNU_SOURCE \
+
 
 SOURCES = \
  main.c \
@@ -44,3 +47,6 @@ indent:
 
 clean:
 	rm $(PROG) || true
+
+test:
+	true

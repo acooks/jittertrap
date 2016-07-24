@@ -1,8 +1,9 @@
 
 include make.config
 
-SUBDIRS = messages server cli-client html5-client docs
+SUBDIRS = deps/toptalk messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
+TESTDIRS = $(SUBDIRS:%=test-%)
 
 .PHONY: all $(SUBDIRS)
 
@@ -16,6 +17,11 @@ $(SUBDIRS): %: messages make.config
 update-cbuffer:
 	git subtree split --prefix deps/cbuffer --annotate='split ' --rejoin
 	git subtree pull --prefix deps/cbuffer https://github.com/acooks/cbuffer.git master --squash
+
+update-toptalk:
+	git subtree split --prefix deps/toptalk --annotate='split ' --rejoin
+	git subtree pull --prefix deps/toptalk https://github.com/acooks/toptalk.git master --squash
+
 
 # Remember to add the coverity bin directory to your PATH
 coverity-build: $(CLEANDIRS)
@@ -41,3 +47,9 @@ install: all
 	install -d ${DESTDIR}/usr/bin/
 	install -m 0755 server/jt-server ${DESTDIR}/usr/bin/
 	$(MAKE) -C html5-client install
+
+test: $(TESTDIRS)
+
+$(TESTDIRS):
+	@echo "Test $@"
+	@$(MAKE) --silent -C $(@:test-%=%) test

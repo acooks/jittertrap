@@ -14,7 +14,7 @@ $(document).ready(function() {
   var versionInfo = JSON.stringify(JT.version);
   $.ajax(
     {
-      url: "https://www.jittertrap.com/tracker",
+      url: "https://www.jittertrap.net/tracker",
       data: "srcrepo="+versionInfo,
       method: "POST",
       success: function(result) {;}

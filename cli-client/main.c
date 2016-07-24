@@ -30,6 +30,21 @@ static struct option options[] = { { "help", no_argument, NULL, 'h' },
 	                           { "longlived", no_argument, NULL, 'l' },
 	                           { NULL, 0, 0, 0 } };
 
+static const struct lws_extension exts[] = {
+        {
+		"permessage-deflate",
+		lws_extension_callback_pm_deflate,
+		"permessage-deflate; client_max_window_bits"
+	},
+	{
+		"deflate-frame",
+		lws_extension_callback_pm_deflate,
+		"deflate_frame"
+	},
+	{ NULL, NULL, NULL /* terminator */ }
+};
+
+
 int main(int argc, char **argv)
 {
 	int n = 0;
@@ -41,6 +56,7 @@ int main(int argc, char **argv)
 	struct lws *wsi_jt;
 	int ietf_version = -1; /* latest */
 	struct lws_context_creation_info info;
+	struct lws_client_connect_info ccinfo;
 
 	memset(&info, 0, sizeof info);
 
@@ -97,9 +113,6 @@ int main(int argc, char **argv)
 
 	info.port = CONTEXT_PORT_NO_LISTEN;
 	info.protocols = protocols;
-#ifndef LWS_NO_EXTENSIONS
-	info.extensions = lws_get_internal_extensions();
-#endif
 	info.gid = -1;
 	info.uid = -1;
 
@@ -110,10 +123,17 @@ int main(int argc, char **argv)
 	}
 
 	/* create a client websocket */
-
-	wsi_jt = lws_client_connect(
-	    context, address, port, use_ssl, "/", argv[optind], argv[optind],
-	    protocols[PROTOCOL_JITTERTRAP].name, ietf_version);
+	ccinfo.port = port;
+	ccinfo.path = "/";
+	ccinfo.context = context;
+	ccinfo.ssl_connection = use_ssl;
+	ccinfo.address = address;
+	ccinfo.host = address;
+	ccinfo.origin = address;
+	ccinfo.protocol = protocols[PROTOCOL_JITTERTRAP].name;
+	ccinfo.ietf_version_or_minus_one = ietf_version;
+	ccinfo.client_exts = exts;
+	wsi_jt = lws_client_connect_via_info(&ccinfo);
 
 	if (wsi_jt == NULL) {
 		fprintf(stderr, "libwebsocket connect failed\n");

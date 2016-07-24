@@ -16,3 +16,5 @@ messages/test-packing
 server/jt-server
 server/test-mq
 server/test-mq-mt
+server/*.o
+deps/toptalk/*.o

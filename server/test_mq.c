@@ -6,6 +6,8 @@
 
 #include "mq_msg_ws.h"
 
+#define MAX_Q_DEPTH 8
+
 int message_producer(struct mq_ws_msg *m, void *data)
 {
 	int *d = (int *)data;

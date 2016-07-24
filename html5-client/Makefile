@@ -90,3 +90,6 @@ install:
 	install -m 0644 ${OUT}/js/* ${DESTDIR}/var/lib/jittertrap/js/
 	install -m 0644 ${OUT}/templates/* ${DESTDIR}/var/lib/jittertrap/templates/
 	install -m 0644 ${OUT}/index.html ${DESTDIR}/var/lib/jittertrap/
+
+test:
+	true

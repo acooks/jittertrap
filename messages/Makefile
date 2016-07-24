@@ -6,6 +6,7 @@ DEFINES = -DMAX_IFACE_LEN=$(MAX_IFACE_LEN)
 
 SOURCES = \
  src/jt_msg_stats.c \
+ src/jt_msg_toptalk.c \
  src/jt_msg_list_ifaces.c \
  src/jt_msg_select_iface.c \
  src/jt_msg_netem_params.c \
@@ -16,6 +17,7 @@ SOURCES = \
 HEADERS = \
  include/jt_message_types.h \
  include/jt_msg_stats.h \
+ include/jt_msg_toptalk.h \
  include/jt_msg_list_ifaces.h \
  include/jt_msg_select_iface.h \
  include/jt_msg_netem_params.h \
@@ -25,6 +27,7 @@ HEADERS = \
 INCLUDES = \
  -I . \
  -I include \
+ -I ../deps/toptalk
 
 LFLAGS = -ljansson
 CFLAGS = -W -Wall -pedantic -std=c11 -g $(CFLAGS_EXTRA)
@@ -47,6 +50,9 @@ indent:
 test-packing: lib test/test_messages.c
 	$(CC) test/test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LFLAGS) $(DEFINES)
 
+
+test: test-packing
+	@./test-packing >/dev/null && echo -e "Test OK\n"
 
 clean:
 	rm $(LIB) *.o *.a test-packing || true
