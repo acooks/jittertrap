@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#include <net/ethernet.h>
-#include <arpa/inet.h>
 
 #include <jansson.h>
 #include "jittertrap.h"
@@ -21,17 +19,16 @@
 #include "iface_stats.h"
 #include "sampling_thread.h"
 #include "compute_thread.h"
+#include "tt_thread.h"
 #include "netem.h"
 
 #include "mq_msg_stats.h"
 #include "mq_msg_ws.h"
+#include "mq_msg_tt.h"
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
 
-#include "flow.h"
-#include "intervals_user.h"
-#include "intervals.h"
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
@@ -45,7 +42,7 @@ enum { JT_STATE_STOPPING,
 int g_jt_state = JT_STATE_STARTING;
 char g_selected_iface[MAX_IFACE_LEN];
 unsigned long stats_consumer_id;
-struct tt_thread_info ti = { 0 };
+unsigned long tt_consumer_id;
 
 static int set_netem(void *data)
 {
@@ -56,36 +53,6 @@ static int set_netem(void *data)
 
 	netem_set_params(p1->iface, &p2);
 	jt_srv_send_netem_params();
-	return 0;
-}
-
-static int restart_tt_thread(char * iface)
-{
-	int err;
-        void *res;
-
-	if (ti.thread_id) {
-		pthread_cancel(ti.thread_id);
-	        pthread_join(ti.thread_id, &res);
-	        free(ti.t5);
-		free(ti.dev);
-	}
-
-	ti.dev = malloc(MAX_IFACE_LEN);
-	snprintf(ti.dev, MAX_IFACE_LEN, "%s", iface);
-
-	/* start & run thread for capture and interval processing */
-	tt_intervals_init(&ti);
-
-	err = pthread_attr_init(&ti.attr);
-	assert(!err);
-
-	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
-	assert(!err);
-
-	tt_update_ref_window_size(tt_intervals[0]);
-	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
-
 	return 0;
 }
 
@@ -102,7 +69,7 @@ static int select_iface(void *data)
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
 	printf("switching to iface: [%s]\n", *iface);
 	sample_iface(*iface);
-	restart_tt_thread(*iface);
+	tt_thread_restart(*iface);
 
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
@@ -130,6 +97,7 @@ static void get_first_iface(char *iface)
 	free(ifaces);
 }
 
+/* FIXME: this is fugly. */
 static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
                                          struct jt_msg_stats *msg_s)
 {
@@ -294,16 +262,26 @@ int jt_srv_send_stats()
 	return 0;
 }
 
+static int tt_consumer(struct mq_tt_msg *m, void *data)
+{
+	(void)data;
+
+	//jt_messages[JT_MSG_TOPTALK_V1].print(m);
+
+	if (0 == jt_srv_send(JT_MSG_TOPTALK_V1, (struct jt_msg_toptalk *)m)) {
+		return 0;
+	}
+	return 1;
+}
+
 int jt_srv_send_tt()
 {
-	struct tt_top_flows *t5 = ti.t5;
-	pthread_mutex_lock(&ti.t5_mutex);
-	/* TODO: turn print into message and send it. */
-        printf("%5d active flows, %5d B/s, %5d Pkts/s\r",
-	       t5->flow_count,
-	       t5->total_bytes,
-	       t5->total_packets);
-	pthread_mutex_unlock(&ti.t5_mutex);
+	int ret, cb_err;
+
+	do {
+		ret = mq_tt_consume(tt_consumer_id, tt_consumer, NULL, &cb_err);
+	} while (JT_WS_MQ_OK == ret);
+
 	return 0;
 }
 
@@ -326,13 +304,16 @@ static int jt_init()
 	get_first_iface(iface);
 	select_iface(iface);
 
+	mq_tt_init();
 	mq_stats_init();
 	compute_thread_init();
+	intervals_thread_init();
 
 	err = mq_stats_consumer_subscribe(&stats_consumer_id);
 	assert(!err);
 
-	restart_tt_thread(iface);
+	err = mq_tt_consumer_subscribe(&tt_consumer_id);
+	assert(!err);
 
 	g_jt_state = JT_STATE_RUNNING;
 	return 0;
