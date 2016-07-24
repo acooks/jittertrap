@@ -15,7 +15,8 @@
 
 static const char *tt_test_msg =
     "{\"msg\":\"tt\","
-    " \"p\":{\"tflows\":20, \"tbytes\": 9999, \"tpackets\": 888,"
+    " \"p\":{\"tflows\":5, \"tbytes\": 9999, \"tpackets\": 888,"
+    " \"interval_ns\": 123,"
     " \"flows\": ["
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32000, \"dport\":32000, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32001, \"dport\":32001, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
@@ -66,6 +67,12 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 		goto unpack_fail;
 	}
 	tt->tpackets = json_integer_value(t);
+
+	t = json_object_get(params, "interval_ns");
+	if (!json_is_integer(t)) {
+		goto unpack_fail;
+	}
+	tt->interval_ns = json_integer_value(t);
 
 	flows = json_object_get(params, "flows");
 	if (!json_is_array(flows)) {
