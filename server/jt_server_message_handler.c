@@ -288,7 +288,7 @@ int jt_srv_send_tt()
 static int jt_init()
 {
 	int err;
-	char *iface = malloc(MAX_IFACE_LEN);
+	char *iface;
 
 	if (netem_init() < 0) {
 		fprintf(stderr,
@@ -301,6 +301,7 @@ static int jt_init()
 		return -1;
 	}
 
+	iface = malloc(MAX_IFACE_LEN);
 	get_first_iface(iface);
 	select_iface(iface);
 	free(iface);
