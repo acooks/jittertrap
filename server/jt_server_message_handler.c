@@ -303,6 +303,7 @@ static int jt_init()
 
 	get_first_iface(iface);
 	select_iface(iface);
+	free(iface);
 
 	mq_tt_init();
 	mq_stats_init();
