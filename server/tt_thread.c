@@ -118,13 +118,20 @@ int queue_tt_msg(int interval)
 
 /* TODO: calculate the GCD of tt_intervals
  * updates output var intervals
- * returns GCD */
+ * returns GCD nanoseconds*/
 static uint32_t calc_intervals(uint32_t intervals[INTERVAL_COUNT])
 {
+	uint64_t t0_us = tt_intervals[0].tv_sec * 1E6 + tt_intervals[0].tv_usec;
+
 	for (int i = INTERVAL_COUNT - 1; i >= 0; i--) {
-		intervals[i] = 1+i;
+		uint64_t t_us = tt_intervals[i].tv_sec * 1E6
+		                + tt_intervals[i].tv_usec;
+		intervals[i] = t_us / t0_us;
+
+		/* FIXME: for now, t0_us is the GCD of tt_intervals */
+		assert(0 == t_us % t0_us);
 	}
-	return 1E7;
+	return 1E3 * tt_intervals[0].tv_usec + 1E9 * tt_intervals[0].tv_sec;
 }
 
 
@@ -136,7 +143,7 @@ static void *intervals_run(void *data)
 	uint32_t tick = 0;
 	/* integer multiple of gcd in interval */
 	uint32_t imuls[INTERVAL_COUNT];
-	uint32_t sleep_time = calc_intervals(imuls);
+	uint32_t sleep_time_ns = calc_intervals(imuls);
 
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
@@ -152,7 +159,7 @@ static void *intervals_run(void *data)
 		/* increment / wrap tick */
 		tick = (imuls[INTERVAL_COUNT-1] == tick) ? 0 : tick + 1;
 
-		deadline.tv_nsec += sleep_time;
+		deadline.tv_nsec += sleep_time_ns;
 
 		/* Second boundary */
 		if (deadline.tv_nsec >= 1E9) {
