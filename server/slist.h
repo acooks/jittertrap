@@ -21,11 +21,17 @@ struct series_sample {
 
 #endif
 
+struct slist_meta {
+	int size;
+	struct slist *head;
+	struct slist *tail;
+};
+
 struct slist {
 	struct sample *s;
 	struct slist *next;
 	struct slist *prev;
-	int size;
+	struct slist_meta *meta;
 };
 
 void slist_push(struct slist *head, struct slist *new_tail);
