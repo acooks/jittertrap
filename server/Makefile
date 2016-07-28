@@ -117,10 +117,14 @@ test-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
 test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
 	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
-test: test-mq test-mq-mt test-multi-mq
+test-slist: test_slist.c slist.c slist.h
+	$(CC) -o test-slist test_slist.c slist.c slist.h
+
+test: test-mq test-mq-mt test-multi-mq test-slist
 	./test-mq >/dev/null
 	./test-mq-mt >/dev/null
 	./test-multi-mq >/dev/null
+	./test-slist
 	@echo -e "Test OK\n"
 
 TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
