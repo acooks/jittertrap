@@ -13,7 +13,7 @@
  * and used when accessing .flow inside struct tt_top_flows.
  */
 
-#define INTERVAL_COUNT 6
+#define INTERVAL_COUNT 8
 #define MAX_FLOW_COUNT 10
 
 #endif
