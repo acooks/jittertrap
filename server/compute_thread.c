@@ -24,7 +24,7 @@
 #include "mq_msg_stats.h"
 #include "slist.h"
 
-static pthread_mutex_t unsent_frame_count_mutex;
+static pthread_mutex_t unsent_frame_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_t compute_thread;
 struct iface_stats *g_raw_samples;
