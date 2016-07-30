@@ -138,6 +138,7 @@ int jt_srv_send(int msg_type, void *msg_data)
 	/* convert from jt_msg_* to string */
 	err = jt_messages[msg_type].to_json_string(msg_data, &tmpstr);
 	if (err) {
+		assert(0);
 		return -1;
 	}
 
@@ -238,10 +239,7 @@ static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
 	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
 	mq_stats_msg_to_jt_msg_stats(m, s);
-	if (0 == jt_srv_send(JT_MSG_STATS_V1, s)) {
-		return 0;
-	}
-	return 1;
+	return jt_srv_send(JT_MSG_STATS_V1, s);
 }
 
 int jt_srv_send_stats()
@@ -258,6 +256,10 @@ int jt_srv_send_stats()
 		/* cleanup */
 		jt_messages[JT_MSG_STATS_V1].free(msg_stats);
 	} while (JT_WS_MQ_OK == err);
+
+	if (-JT_WS_MQ_EMPTY != err) {
+		fprintf(stderr, "\n\nmq_stats_consume error: %d\n\n", err);
+	}
 
 	return 0;
 }

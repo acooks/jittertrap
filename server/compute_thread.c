@@ -245,14 +245,23 @@ inline static int message_producer(struct mq_stats_msg *m, void *data)
 
 void send_decimations()
 {
-	int cb_err;
+	int cb_err, err;
 
 	assert(SAMPLES_PER_FRAME <= decs[0]);
 
 	for (int i = 0; i < DECIMATIONS_COUNT; i++) {
 
 		if (0 == g_sample_count % decs[i]) {
-			mq_stats_produce(message_producer, &decs[i], &cb_err);
+			err = mq_stats_produce(message_producer, &decs[i],
+			                       &cb_err);
+			if (err) {
+				fprintf(stderr, "mq_stats_produce error: %d\n",
+				        err);
+			}
+			if (cb_err) {
+				fprintf(stderr,
+				        "mq_stats_produce callback error.\n");
+			}
 		}
 	}
 }
