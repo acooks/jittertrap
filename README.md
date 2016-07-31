@@ -48,7 +48,7 @@ libwebsockets packages are available for Xenial Xerus and later. Backports might
 
 Build dependencies:
 
-    sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev
+    sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf
 
 Run-time dependencies:
 
