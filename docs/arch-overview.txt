@@ -1,0 +1,36 @@
+
+
+Block diagram of compute tasks and messages types & queues.
+
+
++---------------+            +----------------+
+|               |            |                |
+| Sample Thread |            | Toptalk Thread |
+|  (jt-sample)  |            |  (jt-toptalk)  |
+|               |            |                |
++-------+-------+            +--------+-------+
+        |                             |
+        | iface_stats                 | tt_top_flows
+        |                             |
++-------v--------+          +---------v--------+
+|                |          |                  |
+| Compute Thread |          | Intervals Thread |
+|  (jt-compute)  |          |  (jt-intervals)  |
+|                |          |                  |
++-----+----------+          +-----------+------+
+      |                                 |
+      | mq_stats_msg                    | mq_tt_msg
+      |                                 |
+      |   +-------------------------+   |
+      |   |                         |   |
+      +---> Main (websocket) thread <---+
+          |      (jt-server)        |
+          |                         |
+          +-+--^------------------+-+
+            |  |                  |
+            |  | mq_ws_msg        | json over
+            |  |                  | websocket
+            |  |                  |
+            +--+                  v
+
+
