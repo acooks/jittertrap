@@ -8,12 +8,18 @@
 
 #include "mq_msg_ws.h"
 
-#define TEST_ITERATIONS 1000000
 
+#ifdef SPEED_TEST
+#define TEST_ITERATIONS 10000000
 #define DO_PRODUCER_SLEEP 0
 #define DO_CONSUMER_SLEEP 0
+#else
+#define TEST_ITERATIONS 100000
+#define DO_PRODUCER_SLEEP 1
+#define DO_CONSUMER_SLEEP 1
+#endif
 
-#define PRINT_TAIL 0
+#define PRINT_TAIL 1
 
 int message_producer(struct mq_ws_msg *m, void *data)
 {
@@ -119,6 +125,12 @@ void *produce(void *d __attribute__((unused)))
 #endif
 			i--;
 		}
+
+		if (0 == i % 5000) {
+			printf("%2d%%\r",
+			(int)(TEST_ITERATIONS - i) * 100 / TEST_ITERATIONS);
+			fflush(stdout);
+		}
 	}
 	assert(!err);
 	printf("producer done.\n");
@@ -174,8 +186,6 @@ int main()
 	int x, y, err;
 	struct timespec start;
 	struct timespec end;
-	struct timespec diff;
-	double rate;
 
 	pthread_t producer_thread;
 	pthread_t consumer_thread1;
@@ -230,10 +240,16 @@ int main()
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
+#ifdef SPEED_TEST
+	struct timespec diff;
+	double rate;
 	diff = ts_absdiff(start, end);
 	rate = TEST_ITERATIONS / ts_to_seconds(diff);
 
-	printf("message queue OK. %f msgs/s\n", rate);
+	printf("message queue OK. %.2f msgs/s\n", rate);
+#else
+	printf("message queue OK.\n");
+#endif
 
 	err = mq_ws_destroy();
 	assert(!err);

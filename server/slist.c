@@ -5,11 +5,10 @@
 
 #include "slist.h"
 
-int lsize;
 
 int slist_size(struct slist *head)
 {
-	return head->size;
+	return head->meta->size;
 }
 
 void slist_push(struct slist *head, struct slist *new_tail)
@@ -25,7 +24,8 @@ void slist_push(struct slist *head, struct slist *new_tail)
 
 	old_tail->next = new_tail;
 	head->prev = new_tail;
-	head->size++;
+	head->meta->tail = new_tail;
+	head->meta->size++;
 }
 
 struct slist *slist_pop(struct slist *head)
@@ -49,7 +49,9 @@ struct slist *slist_pop(struct slist *head)
 	pop_node->prev = NULL;
 
 	assert(pop_node->s);
-	head->size--;
+	head->meta->size--;
+	head->meta->head = head;
+
 	return pop_node;
 }
 
@@ -59,16 +61,33 @@ struct slist *slist_new()
 	head->next = head;
 	head->prev = head;
 	head->s = NULL;
-	head->size = 0;
+	head->meta = malloc(sizeof(struct slist_meta));
+	head->meta->size = 0;
+	head->meta->head = head;
+	head->meta->tail = head;
 	return head;
 }
 
 /* index is zero-based */
 struct slist *slist_idx(struct slist *head, int idx)
 {
-	struct slist *ln = head;
-	for (int i = idx + 1; i > 0; i--) {
-		ln = ln->next;
+	struct slist *ln = NULL;
+
+	if ((0 > idx) || (head->meta->size - idx < 0)) {
+		// idx out of bounds
+		return ln;
+	} else if (head->meta->size / 2 > idx) {
+		// index is in the first half, so move from head.
+		ln = head;
+		for (int i = idx + 1; i > 0; i--) {
+			ln = ln->next;
+		}
+	} else {
+		// index is closer to the tail, so move backwards.
+		ln = head->meta->tail;
+		for (int i = head->meta->size - idx - 1; i > 0; i--) {
+			ln = ln->prev;
+		}
 	}
 	return ln;
 }
@@ -79,7 +98,9 @@ void slist_clear(struct slist *head)
 	assert(head->next);
 	assert(head->prev);
 	while (NULL != slist_pop(head)) {
-		head->size--;
+		; // nop
 	}
-	assert(0 == head->size);
+	assert(0 == head->meta->size);
+	head->meta->head = NULL;
+	head->meta->tail = NULL;
 }

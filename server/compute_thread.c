@@ -24,7 +24,7 @@
 #include "mq_msg_stats.h"
 #include "slist.h"
 
-static pthread_mutex_t unsent_frame_count_mutex;
+static pthread_mutex_t unsent_frame_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_t compute_thread;
 struct iface_stats *g_raw_samples;
@@ -37,9 +37,9 @@ int g_sample_count;
 /* local prototypes */
 static void *run(void *data);
 
-#define MAX_LIST_LEN 200
-#define DECIMATIONS_COUNT 6
-int decs[DECIMATIONS_COUNT] = { 5, 10, 20, 50, 100, 200 };
+#define MAX_LIST_LEN 1000
+#define DECIMATIONS_COUNT 8
+int decs[DECIMATIONS_COUNT] = { 5, 10, 20, 50, 100, 200, 500, 1000 };
 
 /* TODO: check all integer divisions and consider using FP */
 
