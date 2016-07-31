@@ -16,7 +16,7 @@ HEADERS = \
 
 LFLAGS = -lpcap -lcurses -lrt -lpthread
 
-CFLAGS += -g -Wall -pedantic
+CFLAGS += -g -Wall -pedantic -std=c11
 
 all: $(LIB) test $(PROG)
 
