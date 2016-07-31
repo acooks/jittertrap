@@ -291,6 +291,33 @@ JT = (function (my) {
     }
   };
 
+  my.core.processTopTalkMsg = function (msg) {
+    var interval = msg.interval_ns;
+    var d = new Date();
+
+    switch (interval) {
+      case 5000000:
+           break;
+      case 10000000:
+           break;
+      case 20000000:
+           break;
+      case 50000000:
+           break;
+      case 100000000:
+           break;
+      case 200000000:
+           break;
+      case 500000000:
+           break;
+      case 1000000000:
+           console.log("ttmsg, d: " + d + " interval: " + interval);
+           break;
+      default:
+           console.log("unknown interval: " + interval);
+    }
+  };
+
   return my;
 }(JT));
 /* End of jittertrap-core.js */

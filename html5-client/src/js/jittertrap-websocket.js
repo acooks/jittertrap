@@ -21,6 +21,10 @@ JT = (function (my) {
     JT.core.processDataMsg(params.s, params.ival_ns);
   };
 
+  var handleMsgToptalk = function (params) {
+    JT.core.processTopTalkMsg(params);
+  };
+
   var handleMsgDevSelect = function(params) {
     var iface = params.iface;
     console.log("iface: " + iface);
@@ -131,6 +135,8 @@ JT = (function (my) {
 
       if ((msgType === "stats") && msg.p.iface === selectedIface) {
         handleMsgUpdateStats(msg.p);
+      } else if (msgType === "toptalk") {
+        handleMsgToptalk(msg.p);
       } else if (msgType === "dev_select") {
         handleMsgDevSelect(msg.p);
       } else if (msgType === "iface_list") {
