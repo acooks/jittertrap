@@ -447,15 +447,6 @@ JT = (function (my) {
       case 50000000:
       case 100000000:
       case 200000000:
-      case 500000000:
-           break;
-      case 1000000000:
-           /* insert debug logging here */
-           console.log("[processTopTalkMsg] interval === " + interval +
-                       " msg.timestamp:" + msg.timestamp.tv_sec + "." +
-                         + msg.timestamp.tv_nsec);
-           console.log("flowsTotals["+interval+"]: " +
-                       JSON.stringify(flowsTotals[interval]));
            break;
       default:
            console.log("unknown interval: " + interval);

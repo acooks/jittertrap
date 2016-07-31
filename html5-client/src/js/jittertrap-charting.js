@@ -12,7 +12,7 @@ JT = (function (my) {
   var params = {};
 
   /* time (milliseconds) represented by each point on the chart */
-  params.plotPeriod        = 1000;
+  params.plotPeriod        = 50;
   params.plotPeriodMin     = 1;
   params.plotPeriodMax     = 200;
 
