@@ -12,3 +12,16 @@ A network flow is determined by
 The interval of flow measurement can be adjusted from 100ms to 60s, by
 pressing '-' or '+'.
 
+
+Dependencies:
+  * ncurses
+  * libpcap
+
+
+## Building Toptalk
+
+#### Ubuntu
+
+Build-dependencies:
+
+    sudo apt install libncurses5-dev libpcap-dev pkgconf
