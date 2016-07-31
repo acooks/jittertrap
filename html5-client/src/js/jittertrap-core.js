@@ -40,7 +40,7 @@ JT = (function (my) {
     return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
   };
 
-  var timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200, "500ms": 500, "1000ms": 1000};
+  var timeScaleTable = { "50ms": 50, "100ms": 100, "200ms": 200 };
 
   /* a prototype object to encapsulate timeseries data. */
   var Series = function(name, title, ylabel, rateFormatter) {
@@ -50,7 +50,7 @@ JT = (function (my) {
     this.rateFormatter = rateFormatter;
     this.xlabel = "Time (ms)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
-    this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
+    this.samples = { '50ms': [], '100ms':[], '200ms':[] };
     this.pgaps = {};
     for (var ts in timeScaleTable) {
       this.pgaps[ts] = new CBuffer(sampleWindowSize);
@@ -315,15 +315,6 @@ JT = (function (my) {
     var selectedSeries = sBin[selectedSeriesName];
 
     switch (interval) {
-      case 5000000:
-           updateData(stats, selectedSeries, '5ms');
-           break;
-      case 10000000:
-           updateData(stats, selectedSeries, '10ms');
-           break;
-      case 20000000:
-           updateData(stats, selectedSeries, '20ms');
-           break;
       case 50000000:
            updateData(stats, selectedSeries, '50ms');
            break;
@@ -332,12 +323,6 @@ JT = (function (my) {
            break;
       case 200000000:
            updateData(stats, selectedSeries, '200ms');
-           break;
-      case 500000000:
-           updateData(stats, selectedSeries, '500ms');
-           break;
-      case 1000000000:
-           updateData(stats, selectedSeries, '1000ms');
            break;
       default:
            console.log("unknown interval: " + interval);
@@ -459,9 +444,6 @@ JT = (function (my) {
     updateTopFlowChartData(interval);
 
     switch (interval) {
-      case 5000000:
-      case 10000000:
-      case 20000000:
       case 50000000:
       case 100000000:
       case 200000000:

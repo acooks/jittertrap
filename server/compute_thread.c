@@ -47,9 +47,9 @@ int g_sample_count;
 /* local prototypes */
 static void *run(void *data);
 
-#define MAX_LIST_LEN 1000
-#define DECIMATIONS_COUNT 8
-int decs[DECIMATIONS_COUNT] = { 5, 10, 20, 50, 100, 200, 500, 1000 };
+#define MAX_LIST_LEN 200
+#define DECIMATIONS_COUNT 3
+int decs[DECIMATIONS_COUNT] = { 50, 100, 200 };
 
 /* TODO: check all integer divisions and consider using FP */
 

@@ -14,7 +14,7 @@ JT = (function (my) {
   /* time (milliseconds) represented by each point on the chart */
   params.plotPeriod        = 1000;
   params.plotPeriodMin     = 1;
-  params.plotPeriodMax     = 1000;
+  params.plotPeriodMax     = 200;
 
   /* chart redraw/refresh/updates; milliseconds; 40ms == 25 Hz */
   params.redrawPeriod      = 60;
