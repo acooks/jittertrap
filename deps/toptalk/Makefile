@@ -16,7 +16,13 @@ HEADERS = \
 
 LFLAGS = -lpcap -lcurses -lrt -lpthread
 
-CFLAGS += -g -Wall -pedantic -std=c11
+CFLAGS_HARDENED = \
+ -fPIC \
+ -fstack-protector \
+ --param ssp-buffer-size=4 \
+ -fPIE -pie -Wl,-z,relro,-z,now
+
+CFLAGS := -g -Wall -pedantic -std=c11 $(CFLAGS_HARDENED) $(CFLAGS)
 
 all: $(LIB) test $(PROG)
 
