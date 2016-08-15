@@ -186,7 +186,7 @@ JT = (function (my) {
 
   };
 
-  var updateMainChartData = function(samples, formatter, chartSeries) {
+  var updateMainChartData = function(samples, chartSeries) {
     var chartPeriod = my.charts.getChartPeriod();
     var len = samples.size;
 
@@ -198,7 +198,7 @@ JT = (function (my) {
   };
 
   var updateSeries = function (series, yVal, selectedSeries, timeScale) {
-    series.samples[timeScale].push(yVal);
+    series.samples[timeScale].push(series.rateFormatter(yVal / 1000.0));
 
     if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
       updateStats(series, timeScale);
@@ -208,7 +208,6 @@ JT = (function (my) {
       /* update the charts data */
       if (series.name === selectedSeries.name) {
         updateMainChartData(series.samples[timeScale],
-                            series.rateFormatter,
                             JT.charts.getMainChartRef());
 
         updatePacketGapChartData(series.pgaps[timeScale],
@@ -216,7 +215,6 @@ JT = (function (my) {
                                  JT.charts.getPacketGapMinMaxRef());
       }
     }
-
   };
 
   var updateData = function (d, sSeries, timeScale) {
@@ -252,10 +250,10 @@ JT = (function (my) {
       }
     );
 
-    updateSeries(sBin.txRate, byteCountToKbpsRate(d.tx / 1000.0), sSeries, timeScale);
-    updateSeries(sBin.rxRate, byteCountToKbpsRate(d.rx / 1000.0), sSeries, timeScale);
-    updateSeries(sBin.txPacketRate, packetDeltaToRate(d.txP / 1000.0), sSeries, timeScale);
-    updateSeries(sBin.rxPacketRate, packetDeltaToRate(d.rxP / 1000.0), sSeries, timeScale);
+    updateSeries(sBin.txRate, d.tx, sSeries, timeScale);
+    updateSeries(sBin.rxRate, d.rx, sSeries, timeScale);
+    updateSeries(sBin.txPacketRate, d.txP, sSeries, timeScale);
+    updateSeries(sBin.rxPacketRate, d.rxP, sSeries, timeScale);
   };
 
   my.core.processDataMsg = function (stats, interval) {
