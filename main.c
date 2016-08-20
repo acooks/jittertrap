@@ -266,11 +266,19 @@ void init_thread(struct tt_thread_info *ti)
 	if (err) {
 		handle_error_en(err, "pthread_create");
 	}
+	err = pthread_setname_np(ti->thread_id, ti->thread_name);
+	if (err) {
+		handle_error_en(err, "pthread_setname_np");
+	}
 }
 
 int main(int argc, char *argv[])
 {
-	struct tt_thread_info ti = { 0 };
+	struct tt_thread_info ti = {
+		0,
+		.thread_name = "toptalk-intervals-thread",
+		.thread_prio = 0
+	};
 
 	if (argc == 2) {
 		ti.dev = argv[1];
