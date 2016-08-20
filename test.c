@@ -12,7 +12,11 @@ int main(int argc, char *argv[])
 {
 	int err;
 	void *res;
-	struct tt_thread_info ti = { 0 };
+	struct tt_thread_info ti = {
+		0,
+		.thread_name = "tt-test",
+		.thread_prio = 0
+	};
 
 	if (argc == 2) {
 		ti.dev = argv[1];
