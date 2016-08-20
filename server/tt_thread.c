@@ -1,6 +1,7 @@
 #include <net/ethernet.h>
 #include <arpa/inet.h>
-
+#include <sched.h>
+#include <errno.h>
 #include <pthread.h>
 
 #include <jansson.h>
@@ -16,14 +17,22 @@
 
 #include "tt_thread.h"
 
-struct tt_thread_info ti = { 0 };
-
-struct intervals_thread_info {
-	pthread_t thread_id;
-	pthread_attr_t thread_attr;
+struct tt_thread_info ti = {
+	0,
+	.thread_name = "jt-toptalk",
+	.thread_prio = 3
 };
 
-struct intervals_thread_info iti = { 0 };
+struct {
+	pthread_t thread_id;
+	pthread_attr_t thread_attr;
+	const char * const thread_name;
+	const int thread_prio;
+} iti = {
+	0,
+	.thread_name = "jt-intervals",
+	.thread_prio = 2
+};
 
 static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
                                                 [IPPROTO_UDP] = "UDP",
@@ -55,7 +64,7 @@ int tt_thread_restart(char * iface)
 
 	err = pthread_create(&ti.thread_id, &ti.attr, tt_intervals_run, &ti);
 	assert(!err);
-        pthread_setname_np(ti.thread_id, "jt-toptalk");
+        pthread_setname_np(ti.thread_id, ti.thread_name);
 
 	tt_update_ref_window_size(tt_intervals[0]);
 	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
@@ -189,7 +198,7 @@ int intervals_thread_init()
 	err = pthread_create(&iti.thread_id, &iti.thread_attr, intervals_run,
 	                     NULL);
 	assert(!err);
-	pthread_setname_np(iti.thread_id, "jt-intervals");
+	pthread_setname_np(iti.thread_id, iti.thread_name);
 
 	return 0;
 }

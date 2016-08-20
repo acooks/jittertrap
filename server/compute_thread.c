@@ -26,7 +26,17 @@
 
 static pthread_mutex_t unsent_frame_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static pthread_t compute_thread;
+static struct {
+	pthread_t thread_id;
+	pthread_attr_t thread_attr;
+	const char * const thread_name;
+	const int thread_prio;
+} thread_info = {
+	0,
+	.thread_name = "jt-compute",
+	.thread_prio = 1  // lowest rt priority
+};
+
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
 char g_selected_iface[MAX_IFACE_LEN];
@@ -313,10 +323,10 @@ int compute_thread_init(void)
 	sample_list = slist_new();
 	assert(sample_list);
 
-	assert(!compute_thread);
-	err = pthread_create(&compute_thread, NULL, run, NULL);
+	assert(!thread_info.thread_id);
+	err = pthread_create(&thread_info.thread_id, NULL, run, NULL);
 	assert(!err);
-	pthread_setname_np(compute_thread, "jt-compute");
+	pthread_setname_np(thread_info.thread_id, thread_info.thread_name);
 
 	err = sample_thread_init(sample_thread_event_handler);
 	assert(!err);
@@ -351,7 +361,8 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread CPU affinity: ");
+	printf("RT thread [%s] priority [%d] CPU affinity: ",
+		thread_info.thread_name, thread_info.thread_prio);
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
 			printf(" CPU%d", j);
@@ -364,7 +375,7 @@ static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
-	schedparm.sched_priority = 1; // lowest rt priority
+	schedparm.sched_priority = thread_info.thread_prio;
 	sched_setscheduler(0, SCHED_FIFO, &schedparm);
 	set_affinity();
 	return 0;

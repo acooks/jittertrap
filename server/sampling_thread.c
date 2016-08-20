@@ -23,7 +23,17 @@
 #include "timeywimey.h"
 
 /* globals */
-static pthread_t sampling_thread;
+struct {
+	pthread_t thread_id;
+        pthread_attr_t thread_attr;
+        const char * const thread_name;
+        const int thread_prio;
+} thread_info = {
+	0,
+	.thread_name = "jt-sample",
+	.thread_prio = 2
+};
+
 struct sigaction sa;
 
 struct nl_sock *nl_sock;
@@ -66,10 +76,11 @@ int sample_thread_init(void (*_stats_handler)(struct iface_stats *counts))
 	}
 	stats_handler = _stats_handler;
 
-	if (!sampling_thread) {
-		err = pthread_create(&sampling_thread, NULL, run, NULL);
+	if (!thread_info.thread_id) {
+		err = pthread_create(&thread_info.thread_id, NULL, run, NULL);
 		assert(!err);
-		pthread_setname_np(sampling_thread, "jt-sample");
+		pthread_setname_np(thread_info.thread_id,
+		                   thread_info.thread_name);
 	}
 	return 0;
 }
@@ -182,6 +193,7 @@ static void set_affinity()
 	cpu_set_t cpuset;
 	pthread_t thread;
 	thread = pthread_self();
+
 	/* Set affinity mask to include CPUs 1 only */
 	CPU_ZERO(&cpuset);
 	CPU_SET(RT_CPU, &cpuset);
@@ -196,7 +208,8 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread CPU affinity: ");
+	printf("RT thread [%s] priority [%d] CPU affinity: ",
+	       thread_info.thread_name, thread_info.thread_prio);
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
 			printf(" CPU%d", j);
@@ -209,7 +222,7 @@ static int init_realtime(void)
 {
 	struct sched_param schedparm;
 	memset(&schedparm, 0, sizeof(schedparm));
-	schedparm.sched_priority = 2;
+	schedparm.sched_priority = thread_info.thread_prio;
 	sched_setscheduler(0, SCHED_FIFO, &schedparm);
 	set_affinity();
 	return 0;
