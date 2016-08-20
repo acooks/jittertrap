@@ -76,10 +76,10 @@ int tt_thread_restart(char * iface)
 static int
 m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 {
-	struct timespec t = {0};
 	struct jt_msg_toptalk *m = &msg->m;
 
-	m->timestamp = t;
+	clock_gettime(CLOCK_MONOTONIC, &m->timestamp);
+
 	m->interval_ns = tt_intervals[interval].tv_sec * 1E9
 		+ tt_intervals[interval].tv_usec * 1E3;
 
