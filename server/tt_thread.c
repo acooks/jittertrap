@@ -207,7 +207,7 @@ static void *intervals_run(void *data)
 		}
 
 		/* increment / wrap tick */
-		tick = (imuls[INTERVAL_COUNT-1] == tick) ? 0 : tick + 1;
+		tick = (imuls[INTERVAL_COUNT-1] == tick) ? 1 : tick + 1;
 
 		deadline.tv_nsec += sleep_time_ns;
 
