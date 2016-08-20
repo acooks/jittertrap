@@ -31,8 +31,9 @@ int jt_toptalk_printer(void *data)
 {
 	struct jt_msg_toptalk *t = (struct jt_msg_toptalk*)data;
 
-	printf("\r fc:%"PRId32", b: %"PRId32", p:%"PRId32,
-	       t->tflows, t->tbytes, t->tpackets);
+	printf("\r t:%ld.%ld fc:%"PRId32", b: %"PRId32", p:%"PRId32,
+	       t->timestamp.tv_sec, t->timestamp.tv_nsec, t->tflows, t->tbytes,
+	       t->tpackets);
 	return 0;
 }
 
