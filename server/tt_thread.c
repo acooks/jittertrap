@@ -143,6 +143,45 @@ static uint32_t calc_intervals(uint32_t intervals[INTERVAL_COUNT])
 	return 1E3 * tt_intervals[0].tv_usec + 1E9 * tt_intervals[0].tv_sec;
 }
 
+static void set_affinity()
+{
+	int s, j;
+	cpu_set_t cpuset;
+	pthread_t thread;
+	thread = pthread_self();
+	CPU_ZERO(&cpuset);
+	CPU_SET(RT_CPU, &cpuset);
+	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_setaffinity_np");
+	}
+
+	/* Check the actual affinity mask assigned to the thread */
+	s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_getaffinity_np");
+	}
+
+	printf("RT thread [%s] priority [%d] CPU affinity: ",
+	       iti.thread_name, iti.thread_prio);
+
+	for (j = 0; j < CPU_SETSIZE; j++) {
+		if (CPU_ISSET(j, &cpuset)) {
+			printf(" CPU%d", j);
+		}
+	}
+	printf("\n");
+}
+
+static int init_realtime(void)
+{
+	struct sched_param schedparm;
+	memset(&schedparm, 0, sizeof(schedparm));
+	schedparm.sched_priority = iti.thread_prio;
+	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	set_affinity();
+	return 0;
+}
 
 static void *intervals_run(void *data)
 {
@@ -153,6 +192,8 @@ static void *intervals_run(void *data)
 	/* integer multiple of gcd in interval */
 	uint32_t imuls[INTERVAL_COUNT];
 	uint32_t sleep_time_ns = calc_intervals(imuls);
+
+	init_realtime();
 
 	clock_gettime(CLOCK_MONOTONIC, &deadline);
 
