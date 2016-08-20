@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
 {
 	struct tt_thread_info ti = {
 		0,
-		.thread_name = "toptalk-intervals-thread",
+		.thread_name = "tt-intervals",
 		.thread_prio = 0
 	};
 
