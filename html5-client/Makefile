@@ -15,16 +15,17 @@ createdirs: clean
 
 CONCAT = ${OUT}/js/jittertrap-concat.js
 concat: createdirs
-	cat src/js/jittertrap-welcome.js    > ${CONCAT}
-	cat src/js/jittertrap-coreconfig.js >> ${CONCAT}
-	cat src/js/jittertrap-core.js       >> ${CONCAT}
-	cat src/js/jittertrap-measure.js    >> ${CONCAT}
-	cat src/js/jittertrap-websocket.js  >> ${CONCAT}
-	cat src/js/jittertrap-charting.js   >> ${CONCAT}
-	cat src/js/jittertrap-traps.js      >> ${CONCAT}
-	cat src/js/jittertrap-programs.js   >> ${CONCAT}
-	cat src/js/jittertrap-version.js    >> ${CONCAT}
-	cat src/js/jittertrap.js            >> ${CONCAT}
+	cat src/js/jittertrap-welcome.js                   > ${CONCAT}
+	cat src/js/jittertrap-coreconfig.js                >> ${CONCAT}
+	cat src/js/jittertrap-core.js                      >> ${CONCAT}
+	cat src/js/jittertrap-measure.js                   >> ${CONCAT}
+	cat src/js/jittertrap-websocket.js                 >> ${CONCAT}
+	cat src/js/jittertrap-charting.js                  >> ${CONCAT}
+	cat src/js/jittertrap-chart-toptalk.js             >> ${CONCAT}
+	cat src/js/jittertrap-traps.js                     >> ${CONCAT}
+	cat src/js/jittertrap-programs.js                  >> ${CONCAT}
+	cat src/js/jittertrap-version.js                   >> ${CONCAT}
+	cat src/js/jittertrap.js                           >> ${CONCAT}
 
 copydeps: createdirs
 	cp deps/js/jquery-2.2.1.min.js ${OUT}/js/

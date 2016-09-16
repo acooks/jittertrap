@@ -197,6 +197,49 @@ JT = (function (my) {
     }
   };
 
+  var chartSamples = {};
+
+  var updateSampleCounts = function(interval) {
+      if (!chartSamples[interval]) chartSamples[interval] = 1;
+      else if (chartSamples[interval] < sampleCount) chartSamples[interval]++;
+  };
+
+  var updateTopFlowChartData = function(interval) {
+    var chartPeriod = my.charts.getChartPeriod();
+    var chartSeries = JT.charts.getTopFlowsRef();
+    var fcount = (flowRank[interval].length < 10) ?
+                 flowRank[interval].length : 10;
+
+    updateSampleCounts(interval);
+
+    // careful, chartPeriod is a string. interval is in ns, so convert to ms.
+    if (chartPeriod != (interval / 1E6)) {
+      // only update chart if selected chartPeriod matches new data message
+      return;
+    }
+
+    chartSeries.length = 0;
+
+    var slices = flowsTS[interval].size;
+
+    /* get the top 10 from the ranking... */
+    for (var j = 0; j < fcount; j++) {
+      var fkey = flowRank[interval][j];
+      var flow = {"fkey": fkey, "values": []};
+      for (var i = 0; i < slices; i++) {
+        var slice = flowsTS[interval].get(i);
+        var d = {"ts": slice.ts, "bytes":0, "packets":0};
+        if (slice[fkey]) {
+          d.bytes = slice[fkey].bytes;
+          d.packets = slice[fkey].packets;
+        }
+        flow.values.push(d);
+      }
+      chartSeries.push(flow);
+    }
+
+  };
+
   var updateSeries = function (series, yVal, selectedSeries, timeScale) {
     series.samples[timeScale].push(series.rateFormatter(yVal / 1000.0));
 
@@ -289,30 +332,118 @@ JT = (function (my) {
     }
   };
 
+  var flows = {};
+  var flowRank = {}; /* a sortable list of flow keys for each interval */
+
+  var flowsTS = {};
+  var flowsTotals = {};
+
+  var getFlowKey = function (interval, flow) {
+    return interval + '/' + flow.src + '/' + flow.sport + '/' + flow.dst +
+           '/' + flow.dport + '/' + flow.proto;
+  };
+
+  /* FIXME: see about replacing sampleCount with sampleWindowSize */
+  /* number of samples to keep for a complete chart series. */
+  var sampleWindowSize = 1000;
+
+  var msgToFlows = function (msg, timestamp) {
+    var interval = msg.interval_ns;
+    var fcnt = msg.flows.length;
+
+    /* we haven't seen this interval before, initialise it. */
+    if (!flowsTS[interval]) {
+      flowsTS[interval] = new CBuffer(sampleWindowSize);
+      flowsTotals[interval] = {};
+      flowRank[interval] = []; /* sortable! */
+    }
+
+    var sample_slice = {};
+    sample_slice.ts = timestamp;
+    flowsTS[interval].push(sample_slice);
+
+    for (var i = 0; i < fcnt; i++) {
+      var fkey = getFlowKey(interval, msg.flows[i]);
+
+      /* create new flow entry if we haven't seen it before */
+      if (!flowsTotals[interval][fkey]) {
+        flowsTotals[interval][fkey] = {
+          'ttl': sampleWindowSize,
+          'tbytes': 0,
+          'tpackets': 0
+        };
+        flowRank[interval].push(fkey);
+      }
+
+      /* set bytes, packets for this (intervalSize,timeSlice,flow)  */
+      sample_slice[fkey] =
+        {"bytes": msg.flows[i].bytes, "packets": msg.flows[i].packets};
+
+      /* reset the time-to-live to the chart window length (in samples),
+       * so that it can be removed when it ages beyond the window. */
+      flowsTotals[interval][fkey].ttl = sampleWindowSize;
+      /* update totals for the flow */
+      flowsTotals[interval][fkey].tbytes += msg.flows[i].bytes;
+      flowsTotals[interval][fkey].tpackets += msg.flows[i].packets;
+
+      /* update flow ranks table, descending order */
+      flowRank[interval].sort(function (a, b) {
+        return flowsTotals[interval][b].tbytes -
+               flowsTotals[interval][a].tbytes;
+      });
+    }
+  };
+
+
+  /* reduce the time-to-live for the flow and expire it when no samples are
+   * within the visible chart window */
+  var expireOldFlowsAndUpdateRank = function (interval) {
+    var fkey;
+    var ft = flowsTotals[interval];
+    for (fkey in ft) {
+      if (ft.hasOwnProperty(fkey)) {
+        ft[fkey].ttl -= 1;
+
+        if (ft[fkey].ttl <= 0) {
+          delete ft[fkey];
+          flowRank[interval] = flowRank[interval].filter(function (o) {
+             o != fkey;
+          });
+        }
+      }
+    }
+  };
+
   my.core.processTopTalkMsg = function (msg) {
     var interval = msg.interval_ns;
-    var d = new Date();
+    var tstamp = Number(msg.timestamp.tv_sec + "." + msg.timestamp.tv_nsec);
+
+    console.assert(!(Number.isNaN(tstamp)));
+
+    msgToFlows(msg, tstamp);
+    expireOldFlowsAndUpdateRank(interval);
+    updateTopFlowChartData(interval);
 
     switch (interval) {
       case 5000000:
-           break;
       case 10000000:
-           break;
       case 20000000:
-           break;
       case 50000000:
-           break;
       case 100000000:
-           break;
       case 200000000:
-           break;
       case 500000000:
            break;
       case 1000000000:
-           console.log("ttmsg, d: " + d + " interval: " + interval);
+           /* insert debug logging here */
+           console.log("[processTopTalkMsg] interval === " + interval +
+                       " msg.timestamp:" + msg.timestamp.tv_sec + "." +
+                         + msg.timestamp.tv_nsec);
+           console.log("flowsTotals["+interval+"]: " +
+                       JSON.stringify(flowsTotals[interval]));
            break;
       default:
            console.log("unknown interval: " + interval);
+           return;
     }
   };
 

@@ -47,6 +47,10 @@ JT = (function (my) {
     return chartData.packetGapMinMax;
   };
 
+  my.charts.getTopFlowsRef = function () {
+    return my.charts.toptalk.getDataRef();
+  };
+
   my.charts.mainChart = (function (m) {
     var margin = {
       top: 20,
@@ -507,7 +511,7 @@ JT = (function (my) {
     clearChartData();
     my.charts.mainChart.reset(my.core.getSelectedSeries());
     my.charts.packetGapChart.reset();
-
+    my.charts.toptalk.toptalkChart.reset();
   };
 
   var renderCount = 0;
@@ -545,6 +549,7 @@ JT = (function (my) {
     var d1 = Date.now();
     my.charts.mainChart.redraw();
     my.charts.packetGapChart.redraw();
+    my.charts.toptalk.toptalkChart.redraw();
 
     var d2 = Date.now();
     renderCount++;
