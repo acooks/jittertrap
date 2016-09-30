@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
+#include <sched.h>
 #include <pcap.h>
 #include <pthread.h>
 #include <poll.h>
@@ -352,6 +353,51 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 	return 0;
 }
 
+static void set_affinity(struct tt_thread_info *ti)
+{
+	int s, j;
+	cpu_set_t cpuset;
+	pthread_t thread;
+	thread = pthread_self();
+
+	/* Set affinity mask to include CPUs 1 only */
+	CPU_ZERO(&cpuset);
+#ifndef RT_CPU
+#define RT_CPU 0
+#endif
+	CPU_SET(RT_CPU, &cpuset);
+	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_setaffinity_np");
+	}
+
+	/* Check the actual affinity mask assigned to the thread */
+	s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	if (s != 0) {
+		handle_error_en(s, "pthread_getaffinity_np");
+	}
+
+	printf("RT thread [%s] priority [%d] CPU affinity: ",
+	       ti->thread_name,
+	       ti->thread_prio);
+	for (j = 0; j < CPU_SETSIZE; j++) {
+		if (CPU_ISSET(j, &cpuset)) {
+			printf(" CPU%d", j);
+		}
+	}
+	printf("\n");
+}
+
+static int init_realtime(struct tt_thread_info *ti)
+{
+	struct sched_param schedparm;
+	memset(&schedparm, 0, sizeof(schedparm));
+	schedparm.sched_priority = ti->thread_prio;
+	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	set_affinity(ti);
+	return 0;
+}
+
 void *tt_intervals_run(void *p)
 {
 	int err;
@@ -359,6 +405,8 @@ void *tt_intervals_run(void *p)
 	struct pcap_handler_result result;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
 	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
+
+	init_realtime(ti);
 
 	err = init_pcap(&(ti->dev), &pi);
 	if (err) {
