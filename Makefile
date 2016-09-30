@@ -26,7 +26,7 @@ CFLAGS := -g -Wall -pedantic -std=c11 $(CFLAGS_HARDENED) $(CFLAGS)
 
 all: $(LIB) test $(PROG)
 
-$(PROG): $(LIB) $(SRC) $(HEADERS) Makefile
+$(PROG): $(LIB) $(SRC) $(HEADERS) Makefile main.c
 	@echo Building $(PROG)
 	$(CC) -o $(PROG) main.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
 	@echo -e "$(PROG) OK\n"

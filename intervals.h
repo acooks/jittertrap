@@ -24,7 +24,9 @@ struct tt_thread_info {
         char *dev;
         struct tt_top_flows *t5;
 	pthread_mutex_t t5_mutex;
-        unsigned int decode_errors;
+	unsigned int decode_errors;
+	const char * const thread_name;
+	const int thread_prio;
 };
 
 void tt_update_ref_window_size(struct timeval t);
