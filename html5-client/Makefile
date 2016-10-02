@@ -21,6 +21,7 @@ concat: createdirs
 	cat src/js/jittertrap-measure.js                   >> ${CONCAT}
 	cat src/js/jittertrap-websocket.js                 >> ${CONCAT}
 	cat src/js/jittertrap-charting.js                  >> ${CONCAT}
+	cat src/js/jittertrap-chart-pgaps.js               >> ${CONCAT}
 	cat src/js/jittertrap-chart-toptalk.js             >> ${CONCAT}
 	cat src/js/jittertrap-traps.js                     >> ${CONCAT}
 	cat src/js/jittertrap-programs.js                  >> ${CONCAT}
