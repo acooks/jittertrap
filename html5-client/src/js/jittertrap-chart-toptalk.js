@@ -119,7 +119,7 @@ JT = (function (my) {
          .attr("text-anchor", "middle")
          .attr("x", width/2)
          .attr("y", -margin.top/2)
-         .text("Title");
+         .text("Top flows");
 
       graph.append("g")
          .attr("class", "x axis")
@@ -131,7 +131,7 @@ JT = (function (my) {
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + 15 + 0.5 * margin.bottom)
-           .text("xlabel");
+           .text("Time");
 
       graph.append("g")
          .attr("class", "y axis")
@@ -142,7 +142,7 @@ JT = (function (my) {
          .attr("y", -margin.left)
          .attr("dy", ".71em")
          .style("text-anchor", "end")
-         .text("ylabel");
+         .text("Bytes");
 
       graph.append("g")
         .attr("class", "xGrid")
