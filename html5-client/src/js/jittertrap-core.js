@@ -407,7 +407,7 @@ JT = (function (my) {
         if (ft[fkey].ttl <= 0) {
           delete ft[fkey];
           flowRank[interval] = flowRank[interval].filter(function (o) {
-             o !== fkey;
+             return (o !== fkey);
           });
         }
       }
