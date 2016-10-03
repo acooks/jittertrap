@@ -26,10 +26,11 @@ JT = (function (my) {
       left: 75
     };
 
-    var c_width = 960 - margin.left - margin.right;
-    var c_height = 300 - margin.top - margin.bottom;
-    var xScale = d3.scale.linear().range([0, c_width]);
-    var yScale = d3.scale.linear().range([c_height, 0]);
+    var size = {};
+    size.width = 960 - margin.left - margin.right;
+    size.height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, size.width]);
+    var yScale = d3.scale.linear().range([size.height, 0]);
     var xAxis = d3.svg.axis()
                 .scale(xScale)
                 .ticks(10)
@@ -67,22 +68,6 @@ JT = (function (my) {
            .ticks(0);
       };
 
-    var resize = function() {
-      var container = d3.select("#packetGapContainer");
-      var new_width = container.node().getBoundingClientRect().width;
-      var new_height = container.node().getBoundingClientRect().height;
-      if (new_width === 0 ) {
-        return;
-      }
-      c_width = new_width;
-      c_height = new_height;
-      container.attr("width", c_width)
-               .attr("height", c_height);
-      container.select("svg")
-               .attr("width", c_width)
-               .attr("height", c_height);
-    };
-
     m.reset = function() {
 
       d3.select("#packetGapContainer").selectAll("svg").remove();
@@ -90,8 +75,8 @@ JT = (function (my) {
       svg = d3.select("#packetGapContainer")
             .append("svg");
 
-      var width = c_width - margin.left - margin.right;
-      var height = c_height - margin.top - margin.bottom;
+      var width = size.width - margin.left - margin.right;
+      var height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -190,13 +175,13 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
-      resize();
+      my.charts.resizeChart("#packetGapContainer", size)();
     };
 
     m.redraw = function() {
 
-      var width = c_width - margin.left - margin.right;
-      var height = c_height - margin.top - margin.bottom;
+      var width = size.width - margin.left - margin.right;
+      var height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -247,8 +232,8 @@ JT = (function (my) {
       svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
     };
 
-    d3.select(window).on('resize.packetGapContainer', resize);
-
+    d3.select(window).on('resize.packetGapContainer',
+                         my.charts.resizeChart("#packetGapContainer", size));
     return m;
 
   }({}));

@@ -45,6 +45,24 @@ JT = (function (my) {
     return my.charts.toptalk.getDataRef();
   };
 
+  my.charts.resizeChart = function(containerId, newSize) {
+    return function() {
+      var container = d3.select(containerId);
+      var new_width = container.node().getBoundingClientRect().width;
+      var new_height = container.node().getBoundingClientRect().height;
+      if (new_width === 0 ) {
+        return;
+      }
+      newSize.width = new_width;
+      newSize.height = new_height;
+      container.attr("width", new_width)
+               .attr("height", new_height);
+      container.select("svg")
+               .attr("width", new_width)
+               .attr("height", new_height);
+    };
+  };
+
   var resetChart = function() {
     var selectedSeriesOpt = $("#chopts_series option:selected").val();
     my.core.setSelectedSeriesName(selectedSeriesOpt);

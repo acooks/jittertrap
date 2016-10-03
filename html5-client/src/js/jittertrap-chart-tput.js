@@ -23,10 +23,11 @@ JT = (function (my) {
       left: 75
     };
 
-    var c_width = 960 - margin.left - margin.right;
-    var c_height = 300 - margin.top - margin.bottom;
-    var xScale = d3.scale.linear().range([0, c_width]);
-    var yScale = d3.scale.linear().range([c_height, 0]);
+    var size = {};
+    size.width = 960 - margin.left - margin.right;
+    size.height = 300 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, size.width]);
+    var yScale = d3.scale.linear().range([size.height, 0]);
 
     var xAxis = d3.svg.axis()
                 .scale(xScale)
@@ -67,8 +68,8 @@ JT = (function (my) {
       svg = d3.select("#chartThroughput")
             .append("svg");
 
-      var width = c_width - margin.left - margin.right;
-      var height = c_height - margin.top - margin.bottom;
+      var width = size.width - margin.left - margin.right;
+      var height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -156,13 +157,13 @@ JT = (function (my) {
          .attr("class", "line")
          .attr("d", line);
 
-      resize();
+      my.charts.resizeChart("#chartThroughput", size)();
     };
 
     m.redraw = function() {
 
-      var width = c_width - margin.left - margin.right;
-      var height = c_height - margin.top - margin.bottom;
+      var width = size.width - margin.left - margin.right;
+      var height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
@@ -212,24 +213,8 @@ JT = (function (my) {
       svg.select(".yGrid").call(yGrid());
     };
 
-    var resize = function() {
-      var container = d3.select("#chartThroughput");
-      var new_width = container.node().getBoundingClientRect().width;
-      var new_height = container.node().getBoundingClientRect().height;
-      if (new_width === 0 ) {
-        return;
-      }
-      c_width = new_width;
-      c_height = new_height;
-      container.attr("width", c_width)
-               .attr("height", c_height);
-      container.select("svg")
-               .attr("width", c_width)
-               .attr("height", c_height);
-    };
-
-    d3.select(window).on('resize.chartThroughput', resize);
-
+    d3.select(window).on('resize.chartThroughput',
+                         my.charts.resizeChart("#chartThroughput", size));
     return m;
 
   }({}));
