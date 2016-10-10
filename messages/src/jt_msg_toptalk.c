@@ -32,7 +32,7 @@ int jt_toptalk_printer(void *data)
 {
 	struct jt_msg_toptalk *t = (struct jt_msg_toptalk*)data;
 
-	printf("\r t:%ld.%ld fc:%"PRId32", b: %"PRId32", p:%"PRId32,
+	printf("\r t:%ld.%09ld fc:%"PRId32", b: %"PRId32", p:%"PRId32"\n",
 	       t->timestamp.tv_sec, t->timestamp.tv_nsec, t->tflows, t->tbytes,
 	       t->tpackets);
 	return 0;
@@ -180,10 +180,13 @@ int jt_toptalk_packer(void *data, char **out)
 	json_object_set_new(params, "interval_ns",
 	                    json_integer(tt_msg->interval_ns));
 
+	char tv_sec[20], tv_nsec[10];
+	snprintf(tv_sec, sizeof(tv_sec), "%19ld", tt_msg->timestamp.tv_sec);
+	snprintf(tv_nsec, sizeof(tv_nsec), "%09ld", tt_msg->timestamp.tv_nsec);
 	json_object_set(timestamp, "tv_sec",
-	                json_integer(tt_msg->timestamp.tv_sec));
+	                json_string(tv_sec));
 	json_object_set(timestamp, "tv_nsec",
-	                json_integer(tt_msg->timestamp.tv_nsec));
+	                json_string(tv_nsec));
 	json_object_set(params, "timestamp", timestamp);
 
 	/* tt_msg->tflows is the Total flows recorded, not the number of flows
