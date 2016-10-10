@@ -263,7 +263,7 @@ JT = (function (my) {
       };
 
       area = d3.svg.area()
-               .interpolate("basis-open")
+               .interpolate("monotone")
                .x(function (d) { return xScale(d.ts); })
                .y0(function (d) { return yScale(d.y0); })
                .y1(function (d) { return yScale(d.y0 + d.y); });
