@@ -213,7 +213,7 @@ JT = (function (my) {
     updateSampleCounts(interval);
 
     // careful, chartPeriod is a string. interval is in ns, so convert to ms.
-    if (chartPeriod !== (interval / 1E6)) {
+    if (Number(chartPeriod) !== Number(interval / 1E6)) {
       // only update chart if selected chartPeriod matches new data message
       return;
     }
