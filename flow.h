@@ -20,8 +20,8 @@ struct flow {
 
 struct flow_record {
 	struct flow flow;
-	uint32_t bytes;
-	uint32_t packets;
+	int64_t bytes;
+	int64_t packets;
 };
 
 struct flow_pkt {
