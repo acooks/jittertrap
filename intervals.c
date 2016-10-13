@@ -200,6 +200,7 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 		         fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
+		fte->f.packets += pkt->flow_rec.packets;
 	}
 
 	totals.bytes += pkt->flow_rec.bytes;
@@ -222,6 +223,7 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
+		fte->f.packets += pkt->flow_rec.packets;
 	}
 }
 
@@ -246,6 +248,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		if (!fti) {
 			/* table doesn't have anything in it yet */
 			st_flows[i].bytes = 0;
+			st_flows[i].packets = 0;
 			continue;
 		}
 
@@ -254,10 +257,14 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		          sizeof(struct flow), te);
 
 		st_flows[i].bytes = te ? te->f.bytes : 0;
+		st_flows[i].packets = te ? te->f.packets : 0;
 
 		/* convert to bytes per second */
 		st_flows[i].bytes =
 		    rate_calc(tt_intervals[i], st_flows[i].bytes);
+		/* convert to packets per second */
+		st_flows[i].packets =
+		    rate_calc(tt_intervals[i], st_flows[i].packets);
 	}
 }
 
