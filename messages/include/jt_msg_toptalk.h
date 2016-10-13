@@ -16,11 +16,11 @@ struct jt_msg_toptalk
 	struct timespec timestamp;
 	uint64_t interval_ns;
 	uint32_t tflows;
-	uint32_t tbytes;
-	uint32_t tpackets;
+	int64_t tbytes;
+	int64_t tpackets;
 	struct {
-		uint32_t bytes;
-		uint32_t packets;
+		int64_t bytes;
+		int64_t packets;
 		uint16_t sport;
 		uint16_t dport;
 		char src[ADDR_LEN];
