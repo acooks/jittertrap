@@ -20,8 +20,11 @@ JT = (function (my) {
     return samplePeriod;
   };
 
+  /* number of samples to keep for a complete chart series. */
+  var sampleWindowSize = 200;
   /* number of data samples. */
-  var sampleCount = 1000;
+  /* FIXME: see about replacing sampleCount with sampleWindowSize */
+  var sampleCount = sampleWindowSize;
 
   my.core.sampleCount = function () {
     return sampleCount;
@@ -50,7 +53,7 @@ JT = (function (my) {
     this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
     this.pgaps = {};
     for (var ts in timeScaleTable) {
-      this.pgaps[ts] = new CBuffer(1000);
+      this.pgaps[ts] = new CBuffer(sampleWindowSize);
     }
  };
 
@@ -116,7 +119,7 @@ JT = (function (my) {
   var clearSeries = function (s) {
 
     for (var key in timeScaleTable) {
-      s.samples[key] = new CBuffer(1000);
+      s.samples[key] = new CBuffer(sampleWindowSize);
       s.pgaps[key].empty();
     }
 
@@ -346,10 +349,6 @@ JT = (function (my) {
     return interval + '/' + flow.src + '/' + flow.sport + '/' + flow.dst +
            '/' + flow.dport + '/' + flow.proto;
   };
-
-  /* FIXME: see about replacing sampleCount with sampleWindowSize */
-  /* number of samples to keep for a complete chart series. */
-  var sampleWindowSize = 1000;
 
   var msgToFlows = function (msg, timestamp) {
     var interval = msg.interval_ns;
