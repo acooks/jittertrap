@@ -73,8 +73,8 @@ static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 static struct timeval ref_window_size;
 
 static struct {
-	unsigned int bytes;
-	unsigned int packets;
+	int64_t bytes;
+	int64_t packets;
 } totals;
 
 static void clear_table(int table_idx)
