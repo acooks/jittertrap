@@ -212,6 +212,8 @@ JT = (function (my) {
 
     updateSampleCounts(interval);
 
+    console.assert(Number(chartPeriod) > 0);
+    console.assert(Number(interval / 1E6) > 0);
     // careful, chartPeriod is a string. interval is in ns, so convert to ms.
     if (Number(chartPeriod) !== Number(interval / 1E6)) {
       // only update chart if selected chartPeriod matches new data message
@@ -233,6 +235,8 @@ JT = (function (my) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
         }
+        console.assert(d.bytes >= 0);
+        console.assert(d.packets >= 0);
         flow.values.push(d);
       }
       chartSeries.push(flow);
@@ -385,6 +389,15 @@ JT = (function (my) {
       /* update totals for the flow */
       flowsTotals[interval][fkey].tbytes += msg.flows[i].bytes;
       flowsTotals[interval][fkey].tpackets += msg.flows[i].packets;
+
+      console.assert(
+        ((flowsTotals[interval][fkey].tbytes === 0)
+         && (flowsTotals[interval][fkey].tpackets === 0))
+        ||
+        ((flowsTotals[interval][fkey].tbytes != 0)
+         && (flowsTotals[interval][fkey].tpackets != 0)
+        )
+      );
 
       /* update flow ranks table, descending order */
       flowRank[interval].sort(function (a, b) {
