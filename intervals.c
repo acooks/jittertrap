@@ -158,10 +158,16 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			          sizeof(struct flow), fte);
 			assert(fte);
 			fte->f.bytes -= iter->pkt.flow_rec.bytes;
+			assert(fte->f.bytes >= 0);
+
 			fte->f.packets -= iter->pkt.flow_rec.packets;
+			assert(fte->f.packets >= 0);
 
 			totals.bytes -= iter->pkt.flow_rec.bytes;
+			assert(totals.bytes >= 0);
+
 			totals.packets -= iter->pkt.flow_rec.packets;
+			assert(totals.packets >= 0);
 
 			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
@@ -190,7 +196,9 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 	}
 
 	totals.bytes += pkt->flow_rec.bytes;
+	assert(totals.bytes >= 0);
 	totals.packets += pkt->flow_rec.packets;
+	assert(totals.packets >= 0);
 }
 
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
@@ -286,7 +294,11 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
+	assert(t5->total_bytes >= 0);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
+	assert(t5->total_packets >= 0);
+	assert(((t5->total_bytes > 0) && (t5->total_packets > 0))
+		|| ((t5->total_bytes == 0) && (t5->total_packets == 0)));
 }
 
 int tt_get_flow_count()
