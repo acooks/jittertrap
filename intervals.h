@@ -12,9 +12,9 @@
 extern struct timeval const tt_intervals[INTERVAL_COUNT];
 
 struct tt_top_flows {
-	unsigned int flow_count;
-	unsigned int total_bytes;
-	unsigned int total_packets;
+	int64_t flow_count;
+	int64_t total_bytes;
+	int64_t total_packets;
 	struct flow_record flow[MAX_FLOW_COUNT][INTERVAL_COUNT];
 };
 
