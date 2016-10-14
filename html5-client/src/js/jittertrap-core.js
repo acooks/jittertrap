@@ -217,10 +217,10 @@ JT = (function (my) {
 
     updateSampleCounts(interval);
 
-    console.assert(Number(chartPeriod) > 0);
-    console.assert(Number(interval / 1E6) > 0);
-    // careful, chartPeriod is a string. interval is in ns, so convert to ms.
-    if (Number(chartPeriod) !== Number(interval / 1E6)) {
+    console.assert(chartPeriod > 0);
+    console.assert(interval / 1E6 > 0);
+    // interval is in ns, so convert to ms.
+    if (chartPeriod !== interval / 1E6) {
       // only update chart if selected chartPeriod matches new data message
       return;
     }

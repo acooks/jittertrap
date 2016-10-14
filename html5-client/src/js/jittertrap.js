@@ -37,7 +37,7 @@ $(document).ready(function() {
   $('#chopts_stop_start').bind('click', JT.charts.toggleStopStartGraph);
 
   $("#chopts_chartPeriod").bind('change', function() {
-    var plotPeriod = $("#chopts_chartPeriod").val();
+    var plotPeriod = Number($("#chopts_chartPeriod").val());
     var result = JT.charts.setChartPeriod(plotPeriod);
     $("#chopts_chartPeriod").val(result.newPeriod);
     $("#jt-measure-datalength").html(result.sampleCount);
