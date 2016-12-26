@@ -65,19 +65,15 @@ JT = (function (my) {
     
     var svg = {};
 
-    var xGrid = function() {
-        return d3.svg.axis()
+    var xGrid = d3.svg.axis()
           .scale(xScale)
            .orient("bottom")
            .ticks(0);
-      };
 
-    var yGrid = function() {
-        return d3.svg.axis()
+    var yGrid = d3.svg.axis()
           .scale(yScale)
            .orient("left")
            .ticks(0);
-      };
    
     m.reset = function() {
 
@@ -101,6 +97,20 @@ JT = (function (my) {
               .scale(yScale)
               .ticks(5)
               .orient("left");
+
+      xGrid = d3.svg.axis()
+          .scale(xScale)
+           .orient("bottom")
+           .tickSize(-height)
+           .ticks(10)
+           .tickFormat("");
+
+      yGrid = d3.svg.axis()
+          .scale(yScale)
+           .orient("left")
+           .tickSize(-width)
+           .ticks(5)
+           .tickFormat("");
 
 /*
       line = d3.svg.line()
@@ -148,7 +158,7 @@ JT = (function (my) {
       graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
-        .call(xGrid())
+        .call(xGrid)
         .attr(
              {
                "fill" : "none",
@@ -160,7 +170,7 @@ JT = (function (my) {
 
       graph.append("g")
         .attr("class", "yGrid")
-        .call(yGrid())
+        .call(yGrid)
         .attr(
              {
                "fill" : "none",
@@ -218,17 +228,6 @@ JT = (function (my) {
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
 
-      xAxis = d3.svg.axis()
-              .scale(xScale)
-              .ticks(10)
-              .orient("bottom");
-
-      yAxis = d3.svg.axis()
-              .scale(yScale)
-              .ticks(5)
-              .orient("left");
-
-
       /* Scale the range of the data again
       /* by computing the range of 'ts' in the first flow */
       if (chartData[0]) {
@@ -239,30 +238,18 @@ JT = (function (my) {
 
       yScale.domain([0, maxBytesSlice(chartData)]);
 
-      xGrid = function() {
-        return d3.svg.axis()
-          .scale(xScale)
-           .orient("bottom")
-           .tickSize(-height)
-           .ticks(10)
-           .tickFormat("");
-      };
+      xAxis.scale(xScale);
+      yAxis.scale(yScale);
 
-      yGrid = function() {
-        return d3.svg.axis()
-          .scale(yScale)
-           .orient("left")
-           .tickSize(-width)
-           .ticks(5)
-           .tickFormat("");
-      };
+      xGrid.scale(xScale);
+      yGrid.scale(yScale);
 
       svg = d3.select("#chartToptalk");
       //svg.select(".line").attr("d", line(chartData));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid());
-      svg.select(".yGrid").call(yGrid());
+      svg.select(".xGrid").call(xGrid);
+      svg.select(".yGrid").call(yGrid);
 
       var fkeys = chartData.map(function(f) { return f.fkey; });
       colorScale.domain(fkeys);
