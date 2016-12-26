@@ -176,6 +176,40 @@ JT = (function (my) {
       my.charts.resizeChart("#chartToptalk", size)();
     };
 
+
+    /* To find the range of the y-axis, find max of the stacked x values */
+    var maxBytesSlice = function(chartData) {
+      var i, j;
+      var flowCount, sampleCount, maxSlice = 0;
+
+      flowCount = chartData.length;
+      if (!flowCount) {
+        return 0;
+      }
+
+      sampleCount = chartData[0].values.length;
+
+      for (i = 0; i < sampleCount; i++) {
+        var thisSliceBytes = 0;
+        for (j = 0; j < flowCount; j++) {
+          thisSliceBytes += chartData[j].values[i].bytes;
+        }
+        if (thisSliceBytes > maxSlice) {
+          maxSlice = thisSliceBytes;
+        }
+      }
+      return maxSlice;
+    };
+
+
+    /* Make a displayable title from the flow key */
+    var title = function(fkey) {
+      var [cnt, src, sport, dst, dport, proto] = fkey.split("/");
+      return "" + src + ":" + sport + " -> " + dst + ":" + dport + " " + proto;
+    };
+
+
+    /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
 
       var width = size.width - margin.left - margin.right;
@@ -202,28 +236,6 @@ JT = (function (my) {
           return d.ts;
         }));
       }
-
-      var maxBytesSlice = function(chartData) {
-        var i, j;
-        var flowCount, sampleCount, maxSlice = 0;
-
-        flowCount = chartData.length;
-        if (!flowCount) {
-          return 0;
-        }
-        sampleCount = chartData[0].values.length;
-
-        for (i = 0; i < sampleCount; i++) {
-          var thisSliceBytes = 0;
-          for (j = 0; j < flowCount; j++) {
-            thisSliceBytes += chartData[j].values[i].bytes;
-          }
-          if (thisSliceBytes > maxSlice) {
-            maxSlice = thisSliceBytes;
-          }
-        }
-        return maxSlice;
-      };
 
       yScale.domain([0, maxBytesSlice(chartData)]);
 
@@ -255,12 +267,6 @@ JT = (function (my) {
       var fkeys = chartData.map(function(f) { return f.fkey; });
       colorScale.domain(fkeys);
       var stackedChartData = stack(chartData);
-
-      var title = function(fkey) {
-        var t = fkey.split("/");
-        return "" + t[1] + ":" + t[2] + " -> " + t[3] + ":" + t[4] +
-               " " + t[5];
-      };
 
       area = d3.svg.area()
                .interpolate("monotone")
