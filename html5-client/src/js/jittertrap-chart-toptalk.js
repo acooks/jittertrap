@@ -74,7 +74,9 @@ JT = (function (my) {
           .scale(yScale)
            .orient("left")
            .ticks(0);
-   
+
+
+    /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
 
       d3.select("#chartToptalk").selectAll("svg").remove();
@@ -228,8 +230,8 @@ JT = (function (my) {
       xScale = d3.scale.linear().range([0, width]);
       yScale = d3.scale.linear().range([height, 0]);
 
-      /* Scale the range of the data again
-      /* by computing the range of 'ts' in the first flow */
+      /* compute the domain of x as the [min,max] extent of timestamps
+       * of the first (largest) flow */
       if (chartData[0]) {
         xScale.domain(d3.extent(chartData[0].values, function(d) {
           return d.ts;
@@ -272,6 +274,8 @@ JT = (function (my) {
          .append("svg:title").text(function(d) { return title(d.fkey); });
     };
 
+
+    /* Set the callback for resizing the chart */
     d3.select(window).on('resize.chartToptalk',
                          my.charts.resizeChart("#chartToptalk", size));
 
