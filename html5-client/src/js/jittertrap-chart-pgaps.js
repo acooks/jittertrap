@@ -29,42 +29,14 @@ JT = (function (my) {
     var size = { width: 960, height: 300 };
     var xScale = d3.scale.linear().range([0, size.width]);
     var yScale = d3.scale.linear().range([size.height, 0]);
-    var xAxis = d3.svg.axis()
-                .scale(xScale)
-                .ticks(10)
-                .orient("bottom");
-
-    var yAxis = d3.svg.axis()
-                .scale(yScale)
-                .ticks(5)
-                .orient("left");
-
-    var line = d3.svg.line()
-          .x(function(d) { return xScale(d.timestamp); })
-          .y(function(d) { return yScale(d.value); })
-          .interpolate("basis");
-
-    var minMaxArea = d3.svg.area()
-        .x (function (d) { return xScale(d.x) || 1; })
-        .y0(function (d) { return yScale(d.y[0]); })
-        .y1(function (d) { return yScale(d.y[1]); })
-        .interpolate("basis");
+    var xAxis = d3.svg.axis();
+    var yAxis = d3.svg.axis();
+    var xGrid = d3.svg.axis();
+    var yGrid = d3.svg.axis();
+    var line = d3.svg.line();
+    var minMaxArea = d3.svg.area();
 
     var svg = {};
-
-    var xGrid = function() {
-        return d3.svg.axis()
-          .scale(xScale)
-           .orient("bottom")
-           .ticks(0);
-      };
-
-    var yGrid = function() {
-        return d3.svg.axis()
-          .scale(yScale)
-           .orient("left")
-           .ticks(0);
-      };
 
     m.reset = function() {
 

@@ -31,16 +31,11 @@ JT = (function (my) {
     var xScale = d3.scale.linear().range([0, size.width]);
     var yScale = d3.scale.linear().range([size.height, 0]);
     var colorScale = d3.scale.category10();
-
-    var xAxis = d3.svg.axis()
-                .scale(xScale)
-                .ticks(10)
-                .orient("bottom");
-
-    var yAxis = d3.svg.axis()
-                .scale(yScale)
-                .ticks(5)
-                .orient("left");
+    var xAxis = d3.svg.axis();
+    var yAxis = d3.svg.axis();
+    var xGrid = d3.svg.axis();
+    var yGrid = d3.svg.axis();
+    var area = d3.svg.area();
 
 /*
     var line = d3.svg
@@ -56,23 +51,8 @@ JT = (function (my) {
                 .x(function(d) { return d.ts; })
                 .y(function(d) { return d.bytes; })
 
-    var area = d3.svg.area()
-               .x(function (d) { return xScale(d.ts); })
-               .y0(function (d) { return (d.y); })
-               .y1(function (d) { return yScale(d.y0 + d.y); });
     
     var svg = {};
-
-    var xGrid = d3.svg.axis()
-          .scale(xScale)
-           .orient("bottom")
-           .ticks(0);
-
-    var yGrid = d3.svg.axis()
-          .scale(yScale)
-           .orient("left")
-           .ticks(0);
-
 
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
