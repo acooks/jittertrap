@@ -26,9 +26,7 @@ JT = (function (my) {
       left: 75
     };
 
-    var size = {};
-    size.width = 960 - margin.left - margin.right;
-    size.height = 300 - margin.top - margin.bottom;
+    var size = { width: 960, height: 300 };
     var xScale = d3.scale.linear().range([0, size.width]);
     var yScale = d3.scale.linear().range([size.height, 0]);
     var xAxis = d3.svg.axis()
