@@ -38,11 +38,8 @@ JT = (function (my) {
     var area = d3.svg.area();
 
 /*
-    var line = d3.svg
-          .line()
-          .x(function(d) { return xScale(d.f.ts); })
-          .y(function(d) { return yScale(d.f[0].bytes); })
-          .interpolate("basis");
+    // DEBUG line
+    var line = d3.svg.line();
 */
 
     var stack = d3.layout.stack()
@@ -93,10 +90,12 @@ JT = (function (my) {
            .tickFormat("");
 
 /*
+      // DEBUG line
       line = d3.svg.line()
-             .x(function(d) { return xScale(d.f[0].ts); })
-             .y(function(d) { return yScale(d.f[0].bytes); })
-             .interpolate("basis");
+             .x(function(d) { return xScale(d.ts); })
+             .y(function(d) { return yScale(d.bytes); })
+             .interpolate("monotone");
+             // Note: tput charts use "basis" interpolation
 */
 
       svg.attr("width", width + margin.left + margin.right)
@@ -163,6 +162,20 @@ JT = (function (my) {
       graph.append("g")
          .attr("id", "flows");
 
+/*
+      // DEBUG Black line.
+      graph.append("path")
+         .datum(chartData)
+         .attr("class", "blackline")
+         .attr(
+             {
+               "fill" : "none",
+               "stroke" : "black",
+               "opacity": 1,
+               "stroke-width" : "1px"
+             });
+*/
+
       my.charts.resizeChart("#chartToptalk", size)();
     };
 
@@ -225,7 +238,10 @@ JT = (function (my) {
       yGrid.scale(yScale);
 
       svg = d3.select("#chartToptalk");
-      //svg.select(".line").attr("d", line(chartData));
+/*
+      // DEBUG Line
+      svg.select(".blackline").attr("d", line(chartData[0].values));
+*/
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid);
