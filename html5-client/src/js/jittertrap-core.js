@@ -233,6 +233,7 @@ JT = (function (my) {
       var flow = {"fkey": fkey, "values": []};
       for (var i = 0; i < slices; i++) {
         var slice = flowsTS[interval].get(i);
+        /* the data point must exist to keep the series alignment intact */
         var d = {"ts": slice.ts, "bytes":0, "packets":0};
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
@@ -424,6 +425,13 @@ JT = (function (my) {
         }
       }
     }
+
+    /* We must have the same number of flow keys in the flowsTotals and
+     * flowRank accounting tables... */
+    console.assert(flowRank[interval].length ==
+                   Object.keys(flowsTotals[interval]).length);
+
+    /* Remember: each TCP flow has a return flow, but UDP may or may not! */
   };
 
   my.core.processTopTalkMsg = function (msg) {

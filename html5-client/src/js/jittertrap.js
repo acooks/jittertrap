@@ -43,6 +43,11 @@ $(document).ready(function() {
     $("#jt-measure-datalength").html(result.sampleCount);
   });
 
+  $("#showTputPanel")
+    .on('shown.bs.tab', JT.charts.resetChart);
+  $("#showTopTalkPanel")
+    .on('shown.bs.tab', JT.charts.resetChart);
+
   $('#more_chopts_toggle').click(function() {
     $('#more_chopts').toggle("fast");
     return false;

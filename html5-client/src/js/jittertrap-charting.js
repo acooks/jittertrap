@@ -45,6 +45,7 @@ JT = (function (my) {
     return my.charts.toptalk.getDataRef();
   };
 
+  /* newSize is an OUT parameter */
   my.charts.resizeChart = function(containerId, newSize) {
     return function() {
       var container = d3.select(containerId);

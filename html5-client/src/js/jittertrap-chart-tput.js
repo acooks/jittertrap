@@ -23,21 +23,14 @@ JT = (function (my) {
       left: 75
     };
 
-    var size = {};
-    size.width = 960 - margin.left - margin.right;
-    size.height = 300 - margin.top - margin.bottom;
+    var size = { width: 960, height: 300 };
     var xScale = d3.scale.linear().range([0, size.width]);
     var yScale = d3.scale.linear().range([size.height, 0]);
 
-    var xAxis = d3.svg.axis()
-                .scale(xScale)
-                .ticks(10)
-                .orient("bottom");
-
-    var yAxis = d3.svg.axis()
-                .scale(yScale)
-                .ticks(5)
-                .orient("left");
+    var xAxis = d3.svg.axis();
+    var yAxis = d3.svg.axis();
+    var xGrid = d3.svg.axis();
+    var yGrid = d3.svg.axis();
 
     var line = d3.svg
           .line()
@@ -46,20 +39,6 @@ JT = (function (my) {
           .interpolate("basis");
 
     var svg = {};
-
-    var xGrid = function() {
-        return d3.svg.axis()
-          .scale(xScale)
-           .orient("bottom")
-           .ticks(0);
-      };
-
-    var yGrid = function() {
-        return d3.svg.axis()
-          .scale(yScale)
-           .orient("left")
-           .ticks(0);
-      };
 
     m.reset = function(selectedSeries) {
 
