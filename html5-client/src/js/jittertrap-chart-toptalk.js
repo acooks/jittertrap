@@ -23,13 +23,13 @@ JT = (function (my) {
     var margin = {
       top: 20,
       right: 20,
-      bottom: 40,
+      bottom: 440,
       left: 75
     };
 
-    var size = { width: 960, height: 300 };
-    var xScale = d3.scale.linear().range([0, size.width]);
-    var yScale = d3.scale.linear().range([size.height, 0]);
+    var size = { width: 960, height: 700 };
+    var xScale = d3.scale.linear();
+    var yScale = d3.scale.linear();
     var colorScale = d3.scale.category10();
     var xAxis = d3.svg.axis();
     var yAxis = d3.svg.axis();
@@ -46,9 +46,23 @@ JT = (function (my) {
                 .offset("zero")
                 .values(function(flow) { return flow.values; })
                 .x(function(d) { return d.ts; })
-                .y(function(d) { return d.bytes; })
+                .y(function(d) { return d.bytes; });
 
-    
+    /* Make a displayable title from the flow key */
+    var key2legend = function (fkey) {
+      var a = fkey.split('/');
+      var padsource = " ".repeat(15 - a[1].length);
+      var padsport = " ".repeat(6 - a[2].length);
+      var paddest = " ".repeat(15 - a[3].length);
+      var paddport = " ".repeat(6 - a[4].length);
+      var padproto = " ".repeat(7 - a[5].length);
+      return a[1] + padsource + " : "
+             + a[2] + padsport
+             + "   ->   "
+             + a[3] + paddest + " : "
+             + a[4] + paddport + " " + padproto + a[5];
+    };
+
     var svg = {};
 
     /* Reset and redraw the things that don't change for every redraw() */
@@ -120,7 +134,7 @@ JT = (function (my) {
            .attr("class", "x label")
            .attr("text-anchor", "middle")
            .attr("x", width/2)
-           .attr("y", height + 15 + 0.5 * margin.bottom)
+           .attr("y", height + 35)
            .text("Time");
 
       graph.append("g")
@@ -176,9 +190,27 @@ JT = (function (my) {
              });
 */
 
+      svg.append("g")
+         .attr("class", "legendbox")
+         .attr("id", "ttlegendbox")
+         .append("text")
+	   .attr("x", 22)
+	   .attr("y", 9)
+	   .attr("dy", ".35em")
+	   .style("text-anchor", "begin")
+	   .style("font-family" ,"monospace")
+	   .style("white-space", "pre")
+	   .text("Source          : Src Port ->   Destination     : Dst Port   Protocol")
+             .attr("class", "legendheading")
+             .attr("transform",
+                    function(d, i) {
+                       return "translate(" + margin.left + "," + 400 + ")";
+                    }
+              );
+
+
       my.charts.resizeChart("#chartToptalk", size)();
     };
-
 
     /* To find the range of the y-axis, find max of the stacked x values */
     var maxBytesSlice = function(chartData) {
@@ -204,12 +236,6 @@ JT = (function (my) {
       return maxSlice;
     };
 
-
-    /* Make a displayable title from the flow key */
-    var title = function(fkey) {
-      var [cnt, src, sport, dst, dport, proto] = fkey.split("/");
-      return "" + src + ":" + sport + " -> " + dst + ":" + dport + " " + proto;
-    };
 
 
     /* Update the chart (try to avoid memory allocations here!) */
@@ -264,8 +290,37 @@ JT = (function (my) {
        .enter().append("path")
          .attr("class", "layer")
          .attr("d", function(d) { return area(d.values); })
-         .style("fill", function(d, i) { return colorScale(i); })
-         .append("svg:title").text(function(d) { return title(d.fkey); });
+         .style("fill", function(d, i) { return colorScale(i); });
+
+      var legend_tabs = colorScale.domain();
+      var legendbox = svg.select("#ttlegendbox");
+      legendbox.selectAll(".legend").remove();
+      var legend = legendbox.selectAll(".legend")
+                   .data(fkeys.slice()).enter()
+                   .append("g")
+                   .attr("class", "legend")
+                   .attr("transform",
+                         function(d, i) {
+                           return "translate(" + margin.left + ","
+                                             + (400 + ((i+1) * 25)) + ")";
+                         }
+                   );
+
+      legend.append("rect")
+	      .attr("x", 0)
+	      .attr("width", 18)
+	      .attr("height", 18)
+	      .style("fill", colorScale);
+
+      legend.append("text")
+	      .attr("x", 22)
+	      .attr("y", 9)
+	      .attr("dy", ".35em")
+	      .style("text-anchor", "begin")
+	      .style("font-family" ,"monospace")
+	      .style("white-space", "pre")
+	      .text(function(d) { return key2legend(d); });
+
     };
 
 
