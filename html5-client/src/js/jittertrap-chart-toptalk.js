@@ -191,6 +191,12 @@ JT = (function (my) {
 */
 
       svg.append("g")
+         .attr("class", "barsbox")
+         .attr("id", "barsbox")
+         .append("text")
+           .text("Byte Distribution")
+
+      svg.append("g")
          .attr("class", "legendbox")
          .attr("id", "ttlegendbox")
          .append("text")
@@ -292,6 +298,51 @@ JT = (function (my) {
          .attr("d", function(d) { return area(d.values); })
          .style("fill", function(d, i) { return colorScale(i); });
 
+
+      // distribution bar
+      var contribs = chartData.map(function(f) {
+        return { k: f.fkey, b: f.tbytes, p :f.tpackets };
+      });
+
+      var tbytes = contribs.reduce(function(a,b) { return a + b.b }, 0 );
+
+      var rangeStop = 0;
+      var barData = contribs.map(function(d) {
+        var new_d = {
+          k: d.k,
+          x0: rangeStop,
+          x1: (rangeStop + d.b)
+        };
+        rangeStop = new_d.x1;
+        return new_d;
+      });
+
+      var x = d3.scale.linear()
+                      .rangeRound([0, width])
+                      .domain([0,tbytes]);
+
+      var y = d3.scale.ordinal()
+                      .rangeRoundBands([0, 10], .3);
+
+      var barsbox = svg.select("#barsbox");
+      barsbox.selectAll(".subbar").remove();
+      var bars = barsbox.selectAll("rect")
+                    .data(barData)
+                    .enter().append("g").attr("class", "subbar");
+
+      bars.append("rect")
+          .attr("height", y.rangeBand())
+          .attr("y", 9)
+          .attr("x", function(d) { return x(d.x0); })
+          .attr("width", function(d) { return x(d.x1) - x(d.x0); })
+          .style("fill", function(d) { return colorScale(d.k); });
+
+      barsbox.attr("transform", function(d) {
+        return "translate(" + margin.left + "," + 350 + ")";
+      });
+
+
+      // legend box handling
       var legend_tabs = colorScale.domain();
       var legendbox = svg.select("#ttlegendbox");
       legendbox.selectAll(".legend").remove();

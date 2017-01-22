@@ -243,6 +243,8 @@ JT = (function (my) {
         console.assert(d.packets >= 0);
         flow.values.push(d);
       }
+      flow.tbytes = flowsTotals[interval][fkey].tbytes;
+      flow.tpackets = flowsTotals[interval][fkey].tpackets;
       chartSeries.push(flow);
     }
 
