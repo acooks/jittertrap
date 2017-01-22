@@ -12,9 +12,9 @@ JT = (function (my) {
   var params = {};
 
   /* time (milliseconds) represented by each point on the chart */
-  params.plotPeriod        = 50;
+  params.plotPeriod        = 200;
   params.plotPeriodMin     = 1;
-  params.plotPeriodMax     = 200;
+  params.plotPeriodMax     = 500;
 
   /* chart redraw/refresh/updates; milliseconds; 40ms == 25 Hz */
   params.redrawPeriod      = 60;

@@ -40,7 +40,7 @@ JT = (function (my) {
     return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
   };
 
-  var timeScaleTable = { "50ms": 50, "100ms": 100, "200ms": 200 };
+  var timeScaleTable = { "100ms": 100, "200ms": 200, "500ms": 500 };
 
   /* a prototype object to encapsulate timeseries data. */
   var Series = function(name, title, ylabel, rateFormatter) {
@@ -50,7 +50,7 @@ JT = (function (my) {
     this.rateFormatter = rateFormatter;
     this.xlabel = "Time (ms)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
-    this.samples = { '50ms': [], '100ms':[], '200ms':[] };
+    this.samples = { '100ms':[], '200ms':[], '500ms':[] };
     this.pgaps = {};
     for (var ts in timeScaleTable) {
       this.pgaps[ts] = new CBuffer(sampleWindowSize);
@@ -315,14 +315,14 @@ JT = (function (my) {
     var selectedSeries = sBin[selectedSeriesName];
 
     switch (interval) {
-      case 50000000:
-           updateData(stats, selectedSeries, '50ms');
-           break;
       case 100000000:
            updateData(stats, selectedSeries, '100ms');
            break;
       case 200000000:
            updateData(stats, selectedSeries, '200ms');
+           break;
+      case 500000000:
+           updateData(stats, selectedSeries, '500ms');
            break;
       default:
            console.log("unknown interval: " + interval);
@@ -444,9 +444,9 @@ JT = (function (my) {
     updateTopFlowChartData(interval);
 
     switch (interval) {
-      case 50000000:
       case 100000000:
       case 200000000:
+      case 500000000:
            break;
       default:
            console.log("unknown interval: " + interval);

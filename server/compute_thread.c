@@ -49,7 +49,7 @@ static void *run(void *data);
 
 #define MAX_LIST_LEN 200
 #define DECIMATIONS_COUNT 3
-int decs[DECIMATIONS_COUNT] = { 50, 100, 200 };
+int decs[DECIMATIONS_COUNT] = { 100, 200, 500 };
 
 /* TODO: check all integer divisions and consider using FP */
 
