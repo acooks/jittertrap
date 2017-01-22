@@ -112,7 +112,7 @@ JT = (function (my) {
       graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
-        .call(xGrid())
+        .call(xGrid)
         .attr(
              {
                "fill" : "none",
@@ -124,7 +124,7 @@ JT = (function (my) {
 
       graph.append("g")
         .attr("class", "yGrid")
-        .call(yGrid())
+        .call(yGrid)
         .attr(
              {
                "fill" : "none",
@@ -175,30 +175,26 @@ JT = (function (my) {
         return d.y[1];
       })]);
 
-      xGrid = function() {
-        return d3.svg.axis()
+      xGrid = d3.svg.axis()
           .scale(xScale)
            .orient("bottom")
            .tickSize(-height)
            .ticks(10)
            .tickFormat("");
-      };
 
-      yGrid = function() {
-        return d3.svg.axis()
+      yGrid = d3.svg.axis()
           .scale(yScale)
            .orient("left")
            .tickSize(-width)
            .ticks(5)
            .tickFormat("");
-      };
 
       svg = d3.select("#packetGapContainer");
       svg.select(".line").attr("d", line(chartData.packetGapMean));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid());
-      svg.select(".yGrid").call(yGrid());
+      svg.select(".xGrid").call(xGrid);
+      svg.select(".yGrid").call(yGrid);
       svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
     };
 

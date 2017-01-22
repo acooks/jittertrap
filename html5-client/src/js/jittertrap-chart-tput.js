@@ -109,7 +109,7 @@ JT = (function (my) {
       graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
-        .call(xGrid())
+        .call(xGrid)
         .attr(
              {
                "fill" : "none",
@@ -121,7 +121,7 @@ JT = (function (my) {
 
       graph.append("g")
         .attr("class", "yGrid")
-        .call(yGrid())
+        .call(yGrid)
         .attr(
              {
                "fill" : "none",
@@ -166,30 +166,26 @@ JT = (function (my) {
         return d.value;
       })]);
 
-      xGrid = function() {
-        return d3.svg.axis()
+      xGrid = d3.svg.axis()
           .scale(xScale)
            .orient("bottom")
            .tickSize(-height)
            .ticks(10)
            .tickFormat("");
-      };
 
-      yGrid = function() {
-        return d3.svg.axis()
+      yGrid = d3.svg.axis()
           .scale(yScale)
            .orient("left")
            .tickSize(-width)
            .ticks(5)
            .tickFormat("");
-      };
 
       svg = d3.select("#chartThroughput");
       svg.select(".line").attr("d", line(chartData));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid());
-      svg.select(".yGrid").call(yGrid());
+      svg.select(".xGrid").call(xGrid);
+      svg.select(".yGrid").call(yGrid);
     };
 
     d3.select(window).on('resize.chartThroughput',
