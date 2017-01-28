@@ -18,6 +18,9 @@ struct tt_top_flows {
 	struct flow_record flow[MAX_FLOW_COUNT][INTERVAL_COUNT];
 };
 
+/* forward declaration; definition and use is internal to tt thread */
+struct tt_thread_private;
+
 struct tt_thread_info {
 	pthread_t thread_id;
 	pthread_attr_t attr;
@@ -27,13 +30,16 @@ struct tt_thread_info {
 	unsigned int decode_errors;
 	const char * const thread_name;
 	const int thread_prio;
+	int thread_state;
+	struct tt_thread_private *priv;
 };
 
 void tt_update_ref_window_size(struct timeval t);
 void tt_get_top5(struct tt_top_flows *t5);
 int tt_get_flow_count();
 void *tt_intervals_run(void *p);
-void tt_intervals_init(struct tt_thread_info *ti);
+int tt_intervals_init(struct tt_thread_info *ti);
+int tt_intervals_free(struct tt_thread_info *ti);
 
 #define handle_error_en(en, msg) \
         do {                                                                   \

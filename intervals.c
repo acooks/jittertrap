@@ -38,6 +38,10 @@ struct pcap_info {
 	int selectable_fd;
 };
 
+struct tt_thread_private {
+	struct pcap_info pi;
+};
+
 struct pcap_handler_result {
 	int err;
 	char errstr[DECODE_ERRBUF_SIZE];
@@ -353,6 +357,12 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 	return 0;
 }
 
+static int free_pcap(struct pcap_info *pi)
+{
+	pcap_close(pi->handle);
+	return 0;
+}
+
 static void set_affinity(struct tt_thread_info *ti)
 {
 	int s, j;
@@ -400,29 +410,26 @@ static int init_realtime(struct tt_thread_info *ti)
 
 void *tt_intervals_run(void *p)
 {
-	int err;
-	struct pcap_info pi;
 	struct pcap_handler_result result;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
 	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
+	assert(ti);
+
 	init_realtime(ti);
 
-	err = init_pcap(&(ti->dev), &pi);
-	if (err) {
-		handle_error_en(err, "pcap init");
-	}
-	assert(pi.handle);
-	assert(pi.selectable_fd);
+	assert(ti->priv);
+	assert(ti->priv->pi.handle);
+	assert(ti->priv->pi.selectable_fd);
 
 	struct pollfd fds[] = {
-		{.fd = pi.selectable_fd, .events = POLLIN, .revents = 0 }
+		{.fd = ti->priv->pi.selectable_fd, .events = POLLIN, .revents = 0 }
 	};
 
 	while (1) {
 		if (ppoll(fds, 1, &poll_timeout, NULL)) {
 			int cnt, max = 100000;
-			cnt = pcap_dispatch(pi.handle, max, handle_packet,
+			cnt = pcap_dispatch(ti->priv->pi.handle, max, handle_packet,
 			                    (u_char *)&result);
 			if (cnt && result.err) {
 				/* FIXME: think of an elegant way to
@@ -442,17 +449,50 @@ void *tt_intervals_run(void *p)
 	}
 
 	/* close the pcap session */
-	pcap_close(pi.handle);
+	pcap_close(ti->priv->pi.handle);
 	return NULL;
 }
 
-void tt_intervals_init(struct tt_thread_info *ti)
+int tt_intervals_init(struct tt_thread_info *ti)
 {
+	int err;
+
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
-	ti->t5 = malloc(sizeof(struct tt_top_flows));
-	memset(ti->t5, 0, sizeof(struct tt_top_flows));
+	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
+	if (!ti->t5) { return 1; }
+
 	pthread_mutex_init(&(ti->t5_mutex), NULL);
+
+	ti->priv = calloc(1, sizeof(struct tt_thread_private));
+	if (!ti->priv) { goto cleanup1; }
+
+	err = init_pcap(&(ti->dev), &(ti->priv->pi));
+	if (err) {
+		errno = err;
+		perror("init_pcap failed");
+		goto cleanup;
+	}
+
+	return 0;
+
+cleanup:
+	free(ti->priv);
+cleanup1:
+	free(ti->t5);
+	return 1;
+}
+
+int tt_intervals_free(struct tt_thread_info *ti)
+{
+	assert(ti);
+	assert(ti->priv);
+	assert(ti->t5);
+
+	free_pcap(&(ti->priv->pi));
+	free(ti->priv);
+	free(ti->t5);
+	return 0;
 }
