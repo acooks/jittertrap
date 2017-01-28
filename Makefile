@@ -43,10 +43,10 @@ test: $(LIB)
 	@./$(TEST) && echo -e "Test OK\n"
 
 cppcheck:
-	cppcheck --enable=warning,performance,portability .
+	cppcheck --enable=warning,performance,portability --force .
 
-clang-analyze:
-	scan-build make .
+clang-analyze: clean
+	scan-build -v make
 
 clean:
 	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
