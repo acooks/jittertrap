@@ -300,22 +300,16 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                           const uint8_t *wirebits)
 {
 	struct pcap_handler_result *result = (struct pcap_handler_result *)user;
-	static const struct flow_pkt zp = { 0 };
-	struct flow_pkt *pkt;
 	char errstr[DECODE_ERRBUF_SIZE];
+	struct flow_pkt pkt = { 0 };
 
-	pkt = malloc(sizeof(struct flow_pkt));
-	*pkt = zp;
-
-	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
-		update_stats_tables(pkt);
+	if (0 == decode_ethernet(pcap_hdr, wirebits, &pkt, errstr)) {
+		update_stats_tables(&pkt);
 		result->err = 0;
 	} else {
 		result->err = -1;
 		snprintf(result->errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
 	}
-
-	free(pkt);
 }
 
 static int init_pcap(char **dev, struct pcap_info *pi)
