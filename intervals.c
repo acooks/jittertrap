@@ -42,9 +42,11 @@ struct tt_thread_private {
 	struct pcap_info pi;
 };
 
-struct pcap_handler_result {
-	int err;
-	char errstr[DECODE_ERRBUF_SIZE];
+struct pcap_handler_user {
+	struct {
+		int err;
+		char errstr[DECODE_ERRBUF_SIZE];
+	} result;
 };
 
 /* long, continuous sliding window tracking top flows */
@@ -299,16 +301,16 @@ void tt_update_ref_window_size(struct timeval t)
 static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                           const uint8_t *wirebits)
 {
-	struct pcap_handler_result *result = (struct pcap_handler_result *)user;
+	struct pcap_handler_user *cbdata = (struct pcap_handler_user *)user;
 	char errstr[DECODE_ERRBUF_SIZE];
 	struct flow_pkt pkt = { 0 };
 
 	if (0 == decode_ethernet(pcap_hdr, wirebits, &pkt, errstr)) {
 		update_stats_tables(&pkt);
-		result->err = 0;
+		cbdata->result.err = 0;
 	} else {
-		result->err = -1;
-		snprintf(result->errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
+		cbdata->result.err = -1;
+		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
 	}
 }
 
@@ -404,7 +406,7 @@ static int init_realtime(struct tt_thread_info *ti)
 
 void *tt_intervals_run(void *p)
 {
-	struct pcap_handler_result result;
+	struct pcap_handler_user cbdata;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
 	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
@@ -417,15 +419,18 @@ void *tt_intervals_run(void *p)
 	assert(ti->priv->pi.selectable_fd);
 
 	struct pollfd fds[] = {
-		{.fd = ti->priv->pi.selectable_fd, .events = POLLIN, .revents = 0 }
+		{ .fd = ti->priv->pi.selectable_fd,
+		  .events = POLLIN,
+		  .revents = 0
+		}
 	};
 
 	while (1) {
 		if (ppoll(fds, 1, &poll_timeout, NULL)) {
 			int cnt, max = 100000;
-			cnt = pcap_dispatch(ti->priv->pi.handle, max, handle_packet,
-			                    (u_char *)&result);
-			if (cnt && result.err) {
+			cnt = pcap_dispatch(ti->priv->pi.handle, max,
+			                    handle_packet, (u_char *)&cbdata);
+			if (cnt && cbdata.result.err) {
 				/* FIXME: think of an elegant way to
 				 * get the errors out of this thread. */
 				ti->decode_errors++;
