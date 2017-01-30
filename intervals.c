@@ -33,20 +33,29 @@ struct flow_pkt_list {
 	struct flow_pkt_list *next, *prev;
 };
 
-struct pcap_info {
-	pcap_t *handle;
-	int selectable_fd;
-};
 
-struct tt_thread_private {
-	struct pcap_info pi;
-};
+typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
+                            const uint8_t *wirebits,
+                            struct flow_pkt *pkt,
+                            char *errstr);
 
+/* userdata for callback used in pcap_dispatch */
 struct pcap_handler_user {
+	pcap_decoder decoder; /* callback / function pointer */
 	struct {
 		int err;
 		char errstr[DECODE_ERRBUF_SIZE];
 	} result;
+};
+
+struct pcap_info {
+	pcap_t *handle;
+	int selectable_fd;
+	struct pcap_handler_user decoder_cbdata;
+};
+
+struct tt_thread_private {
+	struct pcap_info pi;
 };
 
 /* long, continuous sliding window tracking top flows */
@@ -305,7 +314,7 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 	char errstr[DECODE_ERRBUF_SIZE];
 	struct flow_pkt pkt = { 0 };
 
-	if (0 == decode_ethernet(pcap_hdr, wirebits, &pkt, errstr)) {
+	if (0 == cbdata->decoder(pcap_hdr, wirebits, &pkt, errstr)) {
 		update_stats_tables(&pkt);
 		cbdata->result.err = 0;
 	} else {
@@ -317,6 +326,7 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 static int init_pcap(char **dev, struct pcap_info *pi)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
+	int dlt; /* pcap data link type */
 
 	if (*dev == NULL) {
 		*dev = pcap_lookupdev(errbuf);
@@ -333,7 +343,15 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		return (2);
 	}
 
-	if (pcap_datalink(pi->handle) != DLT_EN10MB) {
+	dlt = pcap_datalink(pi->handle);
+	switch (dlt) {
+	case DLT_EN10MB:
+		pi->decoder_cbdata.decoder = decode_ethernet;
+		break;
+	case DLT_LINUX_SLL:
+		pi->decoder_cbdata.decoder = decode_linux_sll;
+		break;
+	default:
 		fprintf(stderr, "Device %s doesn't provide Ethernet headers - "
 		                "not supported\n",
 		        *dev);
@@ -406,7 +424,7 @@ static int init_realtime(struct tt_thread_info *ti)
 
 void *tt_intervals_run(void *p)
 {
-	struct pcap_handler_user cbdata;
+	struct pcap_handler_user *cbdata;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
 	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
@@ -417,6 +435,9 @@ void *tt_intervals_run(void *p)
 	assert(ti->priv);
 	assert(ti->priv->pi.handle);
 	assert(ti->priv->pi.selectable_fd);
+	assert(ti->priv->pi.decoder_cbdata.decoder);
+
+	cbdata = &ti->priv->pi.decoder_cbdata;
 
 	struct pollfd fds[] = {
 		{ .fd = ti->priv->pi.selectable_fd,
@@ -429,8 +450,8 @@ void *tt_intervals_run(void *p)
 		if (ppoll(fds, 1, &poll_timeout, NULL)) {
 			int cnt, max = 100000;
 			cnt = pcap_dispatch(ti->priv->pi.handle, max,
-			                    handle_packet, (u_char *)&cbdata);
-			if (cnt && cbdata.result.err) {
+			                    handle_packet, (u_char *)cbdata);
+			if (cnt && cbdata->result.err) {
 				/* FIXME: think of an elegant way to
 				 * get the errors out of this thread. */
 				ti->decode_errors++;
