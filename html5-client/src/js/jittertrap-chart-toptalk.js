@@ -296,7 +296,7 @@ JT = (function (my) {
        .enter().append("path")
          .attr("class", "layer")
          .attr("d", function(d) { return area(d.values); })
-         .style("fill", function(d, i) { return colorScale(i); });
+         .style("fill", function(d, i) { return colorScale(d.fkey); });
 
 
       // distribution bar
