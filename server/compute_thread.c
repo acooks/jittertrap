@@ -47,7 +47,7 @@ int g_sample_count;
 /* local prototypes */
 static void *run(void *data);
 
-#define MAX_LIST_LEN 500
+#define MAX_LIST_LEN 1000 /* must be divisible by all the decimations! */
 #define DECIMATIONS_COUNT 3
 int decs[DECIMATIONS_COUNT] = { 100, 200, 500 };
 
