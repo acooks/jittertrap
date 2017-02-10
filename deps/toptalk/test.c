@@ -25,7 +25,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* start & run thread for capture and interval processing */
-	tt_intervals_init(&ti);
+	err = tt_intervals_init(&ti);
+	if (err) {
+		handle_error_en(err, "tt intervals init");
+	}
 
 	err = pthread_attr_init(&ti.attr);
 	if (err) {
@@ -49,7 +52,7 @@ int main(int argc, char *argv[])
 
 	pthread_join(ti.thread_id, &res);
 
-	free(ti.t5);
+	tt_intervals_free(&ti);
 
 	return 0;
 }

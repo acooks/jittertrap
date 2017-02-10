@@ -24,7 +24,8 @@ CFLAGS_HARDENED = \
 
 CFLAGS := -g -Wall -pedantic -std=c11 $(CFLAGS_HARDENED) $(CFLAGS)
 
-all: $(LIB) test $(PROG)
+.PHONY: all
+all: $(LIB) $(TEST) $(PROG)
 
 $(PROG): $(LIB) $(SRC) $(HEADERS) Makefile main.c
 	@echo Building $(PROG)
@@ -37,16 +38,20 @@ $(LIB): $(SRC) $(HEADERS) Makefile
 	gcc-ar cr $(LIB) *.o
 	@echo -e "$(LIB) OK\n"
 
-test: $(LIB)
+$(TEST): $(LIB) test.c
 	@echo Building $(TEST)
 	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
-	@./$(TEST) && echo -e "Test OK\n"
+
+.PHONY: test
+test: $(TEST)
+	@echo "Test needs sudo for promiscuous network access..."
+	@sudo ./$(TEST) && echo -e "Test OK\n"
 
 cppcheck:
-	cppcheck --enable=warning,performance,portability .
+	cppcheck --enable=warning,performance,portability --force .
 
-clang-analyze:
-	scan-build make .
+clang-analyze: clean
+	scan-build -v make
 
 clean:
 	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
