@@ -251,7 +251,9 @@ JT = (function (my) {
       var height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scale.linear().range([0, width]);
-      yScale = d3.scale.linear().range([height, 0]);
+      //yScale = d3.scale.linear().range([height, 0]);
+      //yScale = d3.scale.log().clamp(true).range([height, 1]);
+      yScale = d3.scale.pow().exponent(0.5).clamp(true).range([height, 1]);
 
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
