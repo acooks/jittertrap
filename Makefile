@@ -24,6 +24,7 @@ CFLAGS_HARDENED = \
 
 CFLAGS := -g -Wall -pedantic -std=c11 $(CFLAGS_HARDENED) $(CFLAGS)
 
+.PHONY: all
 all: $(LIB) $(TEST) $(PROG)
 
 $(PROG): $(LIB) $(SRC) $(HEADERS) Makefile main.c
