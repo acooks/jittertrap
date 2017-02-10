@@ -14,6 +14,6 @@
  */
 
 #define INTERVAL_COUNT 8
-#define MAX_FLOW_COUNT 20
+#define MAX_FLOW_COUNT 10
 
 #endif

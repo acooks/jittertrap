@@ -197,6 +197,7 @@ void handle_io(struct tt_thread_info *ti)
 {
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
 	int ch, stop = 0;
+	const char *errstr = NULL;
 
 	initscr();            /* Start curses mode              */
 	raw();                /* Line buffering disabled        */
@@ -237,8 +238,7 @@ void handle_io(struct tt_thread_info *ti)
 		nanosleep(&print_timeout, NULL);
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
-			mvprintw(ERR_LINE_OFFSET, 0, "%20s",
-			         "Interval thread died.");
+			errstr = "Interval thread died.";
 			stop = 1;
 		}
 	}
@@ -249,13 +249,20 @@ void handle_io(struct tt_thread_info *ti)
 	endwin();
 
 	pthread_cancel(ti->thread_id);
+
+	if (errstr) {
+		fprintf(stderr, "%s\n", errstr);
+	}
 }
 
 void init_thread(struct tt_thread_info *ti)
 {
 	int err;
 
-	tt_intervals_init(ti);
+	err = tt_intervals_init(ti);
+	if (err) {
+		handle_error_en(err, "tt intervals init");
+	}
 
 	err = pthread_attr_init(&ti->attr);
 	if (err) {
@@ -295,7 +302,7 @@ int main(int argc, char *argv[])
 	void *res;
 	pthread_join(ti.thread_id, &res);
 
-	free(ti.t5);
+	tt_intervals_free(&ti);
 
 	return 0;
 }
