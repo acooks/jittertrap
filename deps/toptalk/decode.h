@@ -26,6 +26,9 @@ struct hdr_ethernet {
 int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
                     struct flow_pkt *pkt, char *errstr);
 
+int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
+                     struct flow_pkt *pkt, char *errstr);
+
 /* IP */
 struct hdr_ipv4 {
 	uint8_t ip_vhl;        /* version << 4 | header length >> 2 */

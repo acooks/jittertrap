@@ -7,12 +7,16 @@ TESTDIRS = $(SUBDIRS:%=test-%)
 
 .PHONY: all $(SUBDIRS)
 
+
 all: $(SUBDIRS)
 	@echo "Done."
 
-$(SUBDIRS): %: messages make.config
+$(SUBDIRS):
 	@echo "Making $@"
 	@$(MAKE) --silent -C $@
+
+server: | messages deps/toptalk
+cli-client: | messages
 
 update-cbuffer:
 	git subtree split --prefix deps/cbuffer --annotate='split ' --rejoin

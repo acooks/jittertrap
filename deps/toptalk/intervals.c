@@ -33,14 +33,29 @@ struct flow_pkt_list {
 	struct flow_pkt_list *next, *prev;
 };
 
+
+typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
+                            const uint8_t *wirebits,
+                            struct flow_pkt *pkt,
+                            char *errstr);
+
+/* userdata for callback used in pcap_dispatch */
+struct pcap_handler_user {
+	pcap_decoder decoder; /* callback / function pointer */
+	struct {
+		int err;
+		char errstr[DECODE_ERRBUF_SIZE];
+	} result;
+};
+
 struct pcap_info {
 	pcap_t *handle;
 	int selectable_fd;
+	struct pcap_handler_user decoder_cbdata;
 };
 
-struct pcap_handler_result {
-	int err;
-	char errstr[DECODE_ERRBUF_SIZE];
+struct tt_thread_private {
+	struct pcap_info pi;
 };
 
 /* long, continuous sliding window tracking top flows */
@@ -59,8 +74,8 @@ static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 static struct timeval ref_window_size;
 
 static struct {
-	int64_t bytes;
-	int64_t packets;
+	unsigned int bytes;
+	unsigned int packets;
 } totals;
 
 static void clear_table(int table_idx)
@@ -158,16 +173,10 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			          sizeof(struct flow), fte);
 			assert(fte);
 			fte->f.bytes -= iter->pkt.flow_rec.bytes;
-			assert(fte->f.bytes >= 0);
-
 			fte->f.packets -= iter->pkt.flow_rec.packets;
-			assert(fte->f.packets >= 0);
 
 			totals.bytes -= iter->pkt.flow_rec.bytes;
-			assert(totals.bytes >= 0);
-
 			totals.packets -= iter->pkt.flow_rec.packets;
-			assert(totals.packets >= 0);
 
 			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
@@ -192,13 +201,10 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 		         fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
-		fte->f.packets += pkt->flow_rec.packets;
 	}
 
 	totals.bytes += pkt->flow_rec.bytes;
-	assert(totals.bytes >= 0);
 	totals.packets += pkt->flow_rec.packets;
-	assert(totals.packets >= 0);
 }
 
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
@@ -217,7 +223,6 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
-		fte->f.packets += pkt->flow_rec.packets;
 	}
 }
 
@@ -242,7 +247,6 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		if (!fti) {
 			/* table doesn't have anything in it yet */
 			st_flows[i].bytes = 0;
-			st_flows[i].packets = 0;
 			continue;
 		}
 
@@ -251,14 +255,10 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		          sizeof(struct flow), te);
 
 		st_flows[i].bytes = te ? te->f.bytes : 0;
-		st_flows[i].packets = te ? te->f.packets : 0;
 
 		/* convert to bytes per second */
 		st_flows[i].bytes =
 		    rate_calc(tt_intervals[i], st_flows[i].bytes);
-		/* convert to packets per second */
-		st_flows[i].packets =
-		    rate_calc(tt_intervals[i], st_flows[i].packets);
 	}
 }
 
@@ -294,11 +294,7 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
-	assert(t5->total_bytes >= 0);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
-	assert(t5->total_packets >= 0);
-	assert(((t5->total_bytes > 0) && (t5->total_packets > 0))
-		|| ((t5->total_bytes == 0) && (t5->total_packets == 0)));
 }
 
 int tt_get_flow_count()
@@ -314,28 +310,23 @@ void tt_update_ref_window_size(struct timeval t)
 static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                           const uint8_t *wirebits)
 {
-	struct pcap_handler_result *result = (struct pcap_handler_result *)user;
-	static const struct flow_pkt zp = { 0 };
-	struct flow_pkt *pkt;
+	struct pcap_handler_user *cbdata = (struct pcap_handler_user *)user;
 	char errstr[DECODE_ERRBUF_SIZE];
+	struct flow_pkt pkt = { 0 };
 
-	pkt = malloc(sizeof(struct flow_pkt));
-	*pkt = zp;
-
-	if (0 == decode_ethernet(pcap_hdr, wirebits, pkt, errstr)) {
-		update_stats_tables(pkt);
-		result->err = 0;
+	if (0 == cbdata->decoder(pcap_hdr, wirebits, &pkt, errstr)) {
+		update_stats_tables(&pkt);
+		cbdata->result.err = 0;
 	} else {
-		result->err = -1;
-		snprintf(result->errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
+		cbdata->result.err = -1;
+		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
 	}
-
-	free(pkt);
 }
 
 static int init_pcap(char **dev, struct pcap_info *pi)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
+	int dlt; /* pcap data link type */
 
 	if (*dev == NULL) {
 		*dev = pcap_lookupdev(errbuf);
@@ -352,7 +343,15 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		return (2);
 	}
 
-	if (pcap_datalink(pi->handle) != DLT_EN10MB) {
+	dlt = pcap_datalink(pi->handle);
+	switch (dlt) {
+	case DLT_EN10MB:
+		pi->decoder_cbdata.decoder = decode_ethernet;
+		break;
+	case DLT_LINUX_SLL:
+		pi->decoder_cbdata.decoder = decode_linux_sll;
+		break;
+	default:
 		fprintf(stderr, "Device %s doesn't provide Ethernet headers - "
 		                "not supported\n",
 		        *dev);
@@ -369,6 +368,12 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		fprintf(stderr, "pcap handle not selectable.\n");
 		return (2);
 	}
+	return 0;
+}
+
+static int free_pcap(struct pcap_info *pi)
+{
+	pcap_close(pi->handle);
 	return 0;
 }
 
@@ -419,31 +424,34 @@ static int init_realtime(struct tt_thread_info *ti)
 
 void *tt_intervals_run(void *p)
 {
-	int err;
-	struct pcap_info pi;
-	struct pcap_handler_result result;
+	struct pcap_handler_user *cbdata;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
 	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
+	assert(ti);
+
 	init_realtime(ti);
 
-	err = init_pcap(&(ti->dev), &pi);
-	if (err) {
-		handle_error_en(err, "pcap init");
-	}
-	assert(pi.handle);
-	assert(pi.selectable_fd);
+	assert(ti->priv);
+	assert(ti->priv->pi.handle);
+	assert(ti->priv->pi.selectable_fd);
+	assert(ti->priv->pi.decoder_cbdata.decoder);
+
+	cbdata = &ti->priv->pi.decoder_cbdata;
 
 	struct pollfd fds[] = {
-		{.fd = pi.selectable_fd, .events = POLLIN, .revents = 0 }
+		{ .fd = ti->priv->pi.selectable_fd,
+		  .events = POLLIN,
+		  .revents = 0
+		}
 	};
 
 	while (1) {
 		if (ppoll(fds, 1, &poll_timeout, NULL)) {
 			int cnt, max = 100000;
-			cnt = pcap_dispatch(pi.handle, max, handle_packet,
-			                    (u_char *)&result);
-			if (cnt && result.err) {
+			cnt = pcap_dispatch(ti->priv->pi.handle, max,
+			                    handle_packet, (u_char *)cbdata);
+			if (cnt && cbdata->result.err) {
 				/* FIXME: think of an elegant way to
 				 * get the errors out of this thread. */
 				ti->decode_errors++;
@@ -461,17 +469,50 @@ void *tt_intervals_run(void *p)
 	}
 
 	/* close the pcap session */
-	pcap_close(pi.handle);
+	pcap_close(ti->priv->pi.handle);
 	return NULL;
 }
 
-void tt_intervals_init(struct tt_thread_info *ti)
+int tt_intervals_init(struct tt_thread_info *ti)
 {
+	int err;
+
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
-	ti->t5 = malloc(sizeof(struct tt_top_flows));
-	memset(ti->t5, 0, sizeof(struct tt_top_flows));
+	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
+	if (!ti->t5) { return 1; }
+
 	pthread_mutex_init(&(ti->t5_mutex), NULL);
+
+	ti->priv = calloc(1, sizeof(struct tt_thread_private));
+	if (!ti->priv) { goto cleanup1; }
+
+	err = init_pcap(&(ti->dev), &(ti->priv->pi));
+	if (err) {
+		errno = err;
+		perror("init_pcap failed");
+		goto cleanup;
+	}
+
+	return 0;
+
+cleanup:
+	free(ti->priv);
+cleanup1:
+	free(ti->t5);
+	return 1;
+}
+
+int tt_intervals_free(struct tt_thread_info *ti)
+{
+	assert(ti);
+	assert(ti->priv);
+	assert(ti->t5);
+
+	free_pcap(&(ti->priv->pi));
+	free(ti->priv);
+	free(ti->t5);
+	return 0;
 }

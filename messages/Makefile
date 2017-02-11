@@ -24,22 +24,31 @@ HEADERS = \
  include/jt_msg_sample_period.h \
  include/jt_msg_set_netem.h \
 
+OBJECTS += jt_msg_stats.o
+OBJECTS += jt_msg_toptalk.o
+OBJECTS += jt_msg_list_ifaces.o
+OBJECTS += jt_msg_select_iface.o
+OBJECTS += jt_msg_netem_params.o
+OBJECTS += jt_msg_sample_period.o
+OBJECTS += jt_msg_set_netem.o
+OBJECTS += jt_messages.o
+
 INCLUDES = \
  -I . \
  -I include \
  -I ../deps/toptalk
 
 LFLAGS = -ljansson
-CFLAGS = -W -Wall -pedantic -std=c11 -g $(CFLAGS_EXTRA)
+CFLAGS := -pthread $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
 
-$(LIB): compile lib test-packing Makefile
+.PHONY: all
+all: $(LIB) test-packing
+
+$(OBJECTS): %.o: src/%.c include/%.h Makefile ../make.config
+	$(COMPILE.c) $< -o $@
 
 
-compile: $(SOURCES) $(HEADERS)
-	$(CC) -c $(SOURCES) $(INCLUDES) $(CFLAGS) $(DEFINES)
-
-
-lib: compile
+$(LIB): $(OBJECTS) Makefile
 	gcc-ar cr $(LIB) *.o
 
 
@@ -47,7 +56,7 @@ indent:
 	clang-format -style=file -i $(SOURCES) $(HEADERS)
 
 
-test-packing: lib test/test_messages.c
+test-packing: $(LIB) test/test_messages.c
 	$(CC) test/test_messages.c $(SOURCES) $(INCLUDES) -o $@ $(CFLAGS) -O0 $(LFLAGS) $(DEFINES)
 
 

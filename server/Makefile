@@ -55,6 +55,23 @@ HEADERS = \
  slist.h \
  intervals_user.h \
 
+OBJECTS += compute_thread.o
+OBJECTS += server-main.o
+OBJECTS += proto.o
+OBJECTS += proto-http.o
+OBJECTS += proto-jittertrap.o
+OBJECTS += mq_msg_ws.o
+OBJECTS += mq_msg_stats.o
+OBJECTS += mq_msg_tt.o
+OBJECTS += jt_server_message_handler.o
+OBJECTS += timeywimey.o
+OBJECTS += sampling_thread.o
+OBJECTS += tt_thread.o
+OBJECTS += sample_buf.o
+OBJECTS += netem.o
+OBJECTS += slist.o
+OBJECTS += intervals_user.o
+
 
 MESSAGEHEADERS = \
  ../messages/include/jt_message_types.h \
@@ -80,10 +97,10 @@ PKGCONFIG_LIBNL = \
 TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
-LFLAGS = -lwebsockets -ljansson -lm -lpcap
-CFLAGS = -W -Wall -std=c11 -g -pthread $(CFLAGS_EXTRA)
+LDFLAGS = -lwebsockets -ljansson -lm -lpcap
+CFLAGS := -pthread $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
 
-
+.PHONY: all
 all: $(PROG) Makefile ../make.config
 	@echo -----------------------------------
 	@echo Sample period: $(SAMPLE_PERIOD_US)us
@@ -92,8 +109,11 @@ all: $(PROG) Makefile ../make.config
 	@echo Allowed Interfaces: $(ALLOWED_IFACES)
 	@echo -----------------------------------
 
-$(PROG): $(SOURCES) $(HEADERS) $(MESSAGES) $(MAKEDEPENDS)
-	$(CC) $(SOURCES) $(INCLUDES) $(TOPTALK_LIB) $(MESSAGES) -o $@ $(CFLAGS) $(LFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
+%.o: %.c %.h Makefile ../make.config make.config
+	$(COMPILE.c) $(DEFINES) $< -o $@
+
+$(PROG): $(OBJECTS) $(TOPTALK_LIB) $(MESSAGES)
+	$(CC) $(OBJECTS) $(INCLUDES) $(TOPTALK_LIB) $(MESSAGES) -o $(PROG) $(CFLAGS) $(LDFLAGS) $(DEFINES) $(PKGCONFIG_LIBNL)
 
 
 indent:
@@ -133,5 +153,5 @@ test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 	$(CC) -o test-toptalk $(TOPTALK_TEST_SOURCES) $(TOPTALK_LIB) $(INCLUDES) $(CFLAGS) -O0 $(DEFINES) -lpcap
 
 clean:
-	rm $(PROG) || true
+	rm $(PROG) *.o || true
 	rm test-mq test-mq-mt test-multi-mq || true

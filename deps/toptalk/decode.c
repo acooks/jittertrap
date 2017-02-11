@@ -3,6 +3,7 @@
 #include <time.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
+#include <pcap/sll.h>
 
 #include "flow.h"
 #include "decode.h"
@@ -45,6 +46,34 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 		         "EtherType [0x%04x] ignored", ntohs(ethernet->type));
 		ret = -1;
 		break;
+	}
+	return ret;
+}
+
+int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
+                     struct flow_pkt *pkt, char *errstr)
+{
+	const struct sll_header *sll;
+	int ret;
+
+	pkt->timestamp.tv_sec = h->ts.tv_sec;
+	pkt->timestamp.tv_usec = h->ts.tv_usec;
+	pkt->flow_rec.bytes = h->len;
+	pkt->flow_rec.packets = 1;
+
+	sll = (struct sll_header *)wirebits;
+	switch (ntohs(sll->sll_protocol)) {
+	case ETHERTYPE_IP:
+		ret = decode_ip4(wirebits + SLL_HDR_LEN, pkt, errstr);
+		break;
+	case ETHERTYPE_IPV6:
+		ret = decode_ip6(wirebits + SLL_HDR_LEN, pkt, errstr);
+		break;
+	default:
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "sll proto: %x. Linux 'cooked' decoding is TODO (in progress).",
+		         ntohs(sll->sll_protocol));
+		ret = -1;
 	}
 	return ret;
 }
