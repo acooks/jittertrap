@@ -17,7 +17,6 @@
 #include "decode.h"
 #include "timeywimey.h"
 
-#include "intervals_user.h"
 #include "intervals.h"
 
 struct flow_hash {

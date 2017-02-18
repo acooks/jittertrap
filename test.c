@@ -5,7 +5,6 @@
 #include <errno.h>
 
 #include "flow.h"
-#include "intervals_user.h"
 #include "intervals.h"
 
 int main(int argc, char *argv[])

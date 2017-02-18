@@ -7,7 +7,6 @@
 
 #include "flow.h"
 
-#include "intervals_user.h"
 #include "intervals.h"
 
 static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
