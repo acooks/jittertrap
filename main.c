@@ -41,7 +41,7 @@ static char * const intervalunits[] = {
 /* two displayed intervals */
 int interval1 = 4, interval2 = 3;
 
-void update_interval(int updown)
+void update_interval(struct tt_thread_info *ti, int updown)
 {
 	if ((0 > updown) && (interval2 > 0)) {
 		interval1--;
@@ -52,7 +52,7 @@ void update_interval(int updown)
 	} else {
 		mvprintw(ERR_LINE_OFFSET, 1, "Requested interval invalid.");
 	}
-	tt_update_ref_window_size(tt_intervals[interval1]);
+	tt_update_ref_window_size(ti, tt_intervals[interval1]);
 }
 
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
@@ -225,11 +225,11 @@ void handle_io(struct tt_thread_info *ti)
 				stop = 1;
 				break;
 			case '-':
-				update_interval(-1);
+				update_interval(ti, -1);
 				break;
 			case '=':
 			case '+':
-				update_interval(1);
+				update_interval(ti, 1);
 				break;
 			}
 		}

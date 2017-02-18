@@ -38,7 +38,7 @@ struct tt_thread_info {
 	struct tt_thread_private *priv;
 };
 
-void tt_update_ref_window_size(struct timeval t);
+void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t);
 void tt_get_top5(struct tt_top_flows *t5);
 int tt_get_flow_count();
 void *tt_intervals_run(void *p);

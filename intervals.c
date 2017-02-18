@@ -301,9 +301,11 @@ int tt_get_flow_count()
 	return HASH_CNT(r_hh, flow_ref_table);
 }
 
-void tt_update_ref_window_size(struct timeval t)
+void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t)
 {
+	pthread_mutex_lock(&ti->t5_mutex);
 	ref_window_size = t;
+	pthread_mutex_unlock(&ti->t5_mutex);
 }
 
 static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
@@ -475,6 +477,7 @@ void *tt_intervals_run(void *p)
 int tt_intervals_init(struct tt_thread_info *ti)
 {
 	int err;
+	pthread_mutex_init(&(ti->t5_mutex), NULL);
 
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
@@ -482,8 +485,6 @@ int tt_intervals_init(struct tt_thread_info *ti)
 
 	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
 	if (!ti->t5) { return 1; }
-
-	pthread_mutex_init(&(ti->t5_mutex), NULL);
 
 	ti->priv = calloc(1, sizeof(struct tt_thread_private));
 	if (!ti->priv) { goto cleanup1; }
