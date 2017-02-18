@@ -65,8 +65,8 @@ int tt_thread_restart(char * iface)
 	assert(!err);
         pthread_setname_np(ti.thread_id, ti.thread_name);
 
-	tt_update_ref_window_size(tt_intervals[0]);
-	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
+	tt_update_ref_window_size(&ti, tt_intervals[0]);
+	tt_update_ref_window_size(&ti, tt_intervals[INTERVAL_COUNT - 1]);
 
 	return 0;
 }
