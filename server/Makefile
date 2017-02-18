@@ -14,6 +14,8 @@ DEFINES = \
  -DRT_CPU=$(RT_CPU) \
  -DMAX_JSON_MSG_LEN=$(MAX_JSON_MSG_LEN) \
  -DMAX_JSON_TOKEN_LEN=$(MAX_JSON_TOKEN_LEN) \
+ -DMAX_FLOW_COUNT=$(MAX_FLOW_COUNT) \
+ -DINTERVAL_COUNT=$(INTERVAL_COUNT) \
  -D_GNU_SOURCE \
 
 
@@ -53,7 +55,6 @@ HEADERS = \
  tt_thread.h \
  sample_buf.h \
  slist.h \
- intervals_user.h \
 
 OBJECTS += compute_thread.o
 OBJECTS += server-main.o

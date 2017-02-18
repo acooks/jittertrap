@@ -1,6 +1,10 @@
 
 include make.config
 
+DEFINES += "-DMAX_FLOW_COUNT=$(MAX_FLOW_COUNT)"
+DEFINES += "-DINTERVAL_COUNT=$(INTERVAL_COUNT)"
+export DEFINES
+
 SUBDIRS = deps/toptalk messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 TESTDIRS = $(SUBDIRS:%=test-%)

@@ -12,7 +12,6 @@
 #include "mq_msg_tt.h"
 
 #include "flow.h"
-#include "intervals_user.h"
 #include "intervals.h"
 
 #include "tt_thread.h"
