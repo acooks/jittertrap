@@ -7,7 +7,11 @@
 #include "decode.h"
 
 
-/* INTERVAL_COUNT must be defined in intervals_user.h */
+/* ================================= NOTE: ===================================
+ * INTERVAL_COUNT and MAX_FLOW_COUNT must be defined by the user at compile
+ * time using CFLAGS like -DINTERVAL_COUNT=nnn and -DMAX_FLOW_COUNT=mmm
+ */
+
 /* intvervals[] must be defined in intervals_user.c */
 extern struct timeval const tt_intervals[INTERVAL_COUNT];
 
@@ -34,7 +38,7 @@ struct tt_thread_info {
 	struct tt_thread_private *priv;
 };
 
-void tt_update_ref_window_size(struct timeval t);
+void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t);
 void tt_get_top5(struct tt_top_flows *t5);
 int tt_get_flow_count();
 void *tt_intervals_run(void *p);

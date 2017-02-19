@@ -5,7 +5,6 @@
 #include <errno.h>
 
 #include "flow.h"
-#include "intervals_user.h"
 #include "intervals.h"
 
 int main(int argc, char *argv[])
@@ -40,8 +39,8 @@ int main(int argc, char *argv[])
 		handle_error_en(err, "pthread_create");
 	}
 
-	tt_update_ref_window_size(tt_intervals[0]);
-	tt_update_ref_window_size(tt_intervals[INTERVAL_COUNT - 1]);
+	tt_update_ref_window_size(&ti, tt_intervals[0]);
+	tt_update_ref_window_size(&ti, tt_intervals[INTERVAL_COUNT - 1]);
 
 	/* check if the thread is still alive */
 	if (EBUSY != pthread_tryjoin_np(ti.thread_id, &res)) {
