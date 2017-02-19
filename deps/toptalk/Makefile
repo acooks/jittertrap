@@ -12,7 +12,19 @@ HEADERS = \
  decode.h \
  flow.h \
  intervals.h \
- intervals_user.h
+
+ifndef INTERVAL_COUNT
+INTERVAL_COUNT = 8
+endif
+
+ifndef MAX_FLOW_COUNT
+MAX_FLOW_COUNT = 10
+endif
+
+ifndef DEFINES
+DEFINES += -DMAX_FLOW_COUNT=$(MAX_FLOW_COUNT)
+DEFINES += -DINTERVAL_COUNT=$(INTERVAL_COUNT)
+endif
 
 LFLAGS = -lpcap -lcurses -lrt -lpthread
 
@@ -22,7 +34,7 @@ CFLAGS_HARDENED = \
  --param ssp-buffer-size=4 \
  -fPIE -pie -Wl,-z,relro,-z,now
 
-CFLAGS := -g -Wall -pedantic -std=c11 $(CFLAGS_HARDENED) $(CFLAGS)
+CFLAGS := -g -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS)
 
 .PHONY: all
 all: $(LIB) $(TEST) $(PROG)
