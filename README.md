@@ -1,27 +1,27 @@
 ## JitterTrap
 
-<a href="https://scan.coverity.com/projects/4088">
-  <img alt="Coverity Scan Build Status"
-       src="https://scan.coverity.com/projects/4088/badge.svg"/>
-</a>
+[![Coverity Status](https://scan.coverity.com/projects/4088/badge.svg)](https://scan.coverity.com/projects/4088)
 [![Build Status](https://travis-ci.org/acooks/jittertrap.svg)](https://travis-ci.org/acooks/jittertrap)
 [![Code Climate](https://codeclimate.com/github/acooks/jittertrap/badges/gpa.svg)](https://codeclimate.com/github/acooks/jittertrap)
 
 JitterTrap is a network measurement and impairment tool for developers of real-time applications and devices.
 
 It has two broad areas of use:
-* detection and measurement of unexpected delays, introduced by the device or application under test. That is, characterising the source behaviour with respect to throughput, packet rates, jitter.
-* introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, characterising the behaviour of the destination, with respect to delay, jitter and loss.
+* detection and measurement of unexpected delays, introduced by the device or application under test. That is, **characterising the source behaviour** with respect to throughput, packet rates, jitter.
+* introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, **characterising the behaviour of the destination**, with respect to delay, jitter and loss.
 
-The user interface is implemented as a web application.  
+The user interface is implemented as a web application. ![Have a look at the demo](http://demo.jittertrap.net) hosted on a t2.micro instance at AWS Sydney. (Performance is highly variable.)
+
+Or try this old demo video:
 [![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
 
-Help is available from help@jittertrap.net
+
+Help is available from help@jittertrap.net, or create a github issue.
 
 
 ## Installing JitterTrap
 
-Packaging is in progress. We're aiming for Fedora and Ubuntu. If you'd like to help, send email to packaging@jittertrap.net.
+We're aiming to release packages for Fedora, Ubuntu and OpenWRT and **would appreciate help with that**.
 
 ## Building JitterTrap
 ### Dependencies
