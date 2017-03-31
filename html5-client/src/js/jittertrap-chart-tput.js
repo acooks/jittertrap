@@ -24,19 +24,18 @@ JT = (function (my) {
     };
 
     var size = { width: 960, height: 300 };
-    var xScale = d3.scale.linear().range([0, size.width]);
-    var yScale = d3.scale.linear().range([size.height, 0]);
+    var xScale = d3.scaleLinear().range([0, size.width]);
+    var yScale = d3.scaleLinear().range([size.height, 0]);
 
-    var xAxis = d3.svg.axis();
-    var yAxis = d3.svg.axis();
-    var xGrid = d3.svg.axis();
-    var yGrid = d3.svg.axis();
-
-    var line = d3.svg
-          .line()
+    var xAxis = d3.axisBottom();
+    var yAxis = d3.axisLeft();
+    var xGrid = d3.axisBottom();
+    var yGrid = d3.axisLeft();
+    
+    var line = d3.line()
           .x(function(d) { return xScale(d.timestamp); })
           .y(function(d) { return yScale(d.value); })
-          .interpolate("basis");
+          .curve(d3.curveBasis);
 
     var svg = {};
 
@@ -50,24 +49,21 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scale.linear().range([0, width]);
-      yScale = d3.scale.linear().range([height, 0]);
+      xScale = d3.scaleLinear().range([0, width]);
+      yScale = d3.scaleLinear().range([height, 0]);
 
-      xAxis = d3.svg.axis()
+      xAxis = d3.axisBottom()
               .scale(xScale)
-              .ticks(10)
-              .orient("bottom");
+              .ticks(10);
 
-      yAxis = d3.svg.axis()
+      yAxis = d3.axisLeft()
               .scale(yScale)
-              .ticks(5)
-              .orient("left");
+              .ticks(5);
 
-      line = d3.svg
-          .line()
+      line = d3.line()
           .x(function(d) { return xScale(d.timestamp); })
           .y(function(d) { return yScale(d.value); })
-          .interpolate("basis");
+          .curve(d3.curveBasis);
 
       svg.attr("width", width + margin.left + margin.right)
          .attr("height", height + margin.top + margin.bottom);
@@ -109,27 +105,11 @@ JT = (function (my) {
       graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
-        .call(xGrid)
-        .attr(
-             {
-               "fill" : "none",
-               "shape-rendering" : "crispEdges",
-               "stroke" : "grey",
-               "opacity": 0.4,
-               "stroke-width" : "1px"
-             });
+        .call(xGrid);
 
       graph.append("g")
         .attr("class", "yGrid")
-        .call(yGrid)
-        .attr(
-             {
-               "fill" : "none",
-               "shape-rendering" : "crispEdges",
-               "stroke" : "grey",
-               "opacity": 0.4,
-               "stroke-width" : "1px"
-             });
+        .call(yGrid);
 
       graph.append("path")
          .datum(chartData)
@@ -144,18 +124,16 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scale.linear().range([0, width]);
-      yScale = d3.scale.linear().range([height, 0]);
+      xScale = d3.scaleLinear().range([0, width]);
+      yScale = d3.scaleLinear().range([height, 0]);
 
-      xAxis = d3.svg.axis()
+      xAxis = d3.axisBottom()
               .scale(xScale)
-              .ticks(10)
-              .orient("bottom");
+              .ticks(10);
 
-      yAxis = d3.svg.axis()
+      yAxis = d3.axisLeft()
               .scale(yScale)
-              .ticks(5)
-              .orient("left");
+              .ticks(5);
 
       /* Scale the range of the data again */
       xScale.domain(d3.extent(chartData, function(d) {
@@ -166,16 +144,14 @@ JT = (function (my) {
         return d.value;
       })]);
 
-      xGrid = d3.svg.axis()
+      xGrid = d3.axisBottom()
           .scale(xScale)
-           .orient("bottom")
            .tickSize(-height)
            .ticks(10)
            .tickFormat("");
 
-      yGrid = d3.svg.axis()
+      yGrid = d3.axisLeft()
           .scale(yScale)
-           .orient("left")
            .tickSize(-width)
            .ticks(5)
            .tickFormat("");

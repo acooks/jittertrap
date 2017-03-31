@@ -28,25 +28,23 @@ JT = (function (my) {
     };
 
     var size = { width: 960, height: 700 };
-    var xScale = d3.scale.linear();
-    var yScale = d3.scale.linear();
-    var colorScale = d3.scale.category10();
-    var xAxis = d3.svg.axis();
-    var yAxis = d3.svg.axis();
-    var xGrid = d3.svg.axis();
-    var yGrid = d3.svg.axis();
-    var area = d3.svg.area();
+    var xScale = d3.scaleLinear();
+    var yScale = d3.scaleLinear();
+    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    var xAxis = d3.axisBottom();
+    var yAxis = d3.axisLeft();
+    var xGrid = d3.axisBottom();
+    var yGrid = d3.axisLeft();
+    var area = d3.area();
 
 /*
     // DEBUG line
     var line = d3.svg.line();
 */
 
-    var stack = d3.layout.stack()
-                .offset("zero")
-                .values(function(flow) { return flow.values; })
-                .x(function(d) { return d.ts; })
-                .y(function(d) { return d.bytes; });
+    var stack = d3.stack()
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
 
     /* Make a displayable title from the flow key */
     var key2legend = function (fkey) {
@@ -76,29 +74,25 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scale.linear().range([0, width]);
-      yScale = d3.scale.linear().range([height, 0]);
+      xScale = d3.scaleLinear().range([0, width]);
+      yScale = d3.scaleLinear().range([height, 0]);
 
-      xAxis = d3.svg.axis()
+      xAxis = d3.axisBottom()
               .scale(xScale)
-              .ticks(10)
-              .orient("bottom");
+              .ticks(10);
 
-      yAxis = d3.svg.axis()
+      yAxis = d3.axisLeft()
               .scale(yScale)
-              .ticks(5)
-              .orient("left");
+              .ticks(5);
 
-      xGrid = d3.svg.axis()
+      xGrid = d3.axisBottom()
           .scale(xScale)
-           .orient("bottom")
            .tickSize(-height)
            .ticks(10)
            .tickFormat("");
 
-      yGrid = d3.svg.axis()
+      yGrid = d3.axisLeft()
           .scale(yScale)
-           .orient("left")
            .tickSize(-width)
            .ticks(5)
            .tickFormat("");
@@ -151,27 +145,11 @@ JT = (function (my) {
       graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
-        .call(xGrid)
-        .attr(
-             {
-               "fill" : "none",
-               "shape-rendering" : "crispEdges",
-               "stroke" : "grey",
-               "opacity": 0.4,
-               "stroke-width" : "1px"
-             });
+        .call(xGrid);
 
       graph.append("g")
         .attr("class", "yGrid")
-        .call(yGrid)
-        .attr(
-             {
-               "fill" : "none",
-               "shape-rendering" : "crispEdges",
-               "stroke" : "grey",
-               "opacity": 0.4,
-               "stroke-width" : "1px"
-             });
+        .call(yGrid);
 
       graph.append("g")
          .attr("id", "flows");
@@ -242,7 +220,35 @@ JT = (function (my) {
       return maxSlice;
     };
 
+    /* Reformat chartData to work with the new d3 v4 API
+     * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
+    var formatData = function(chartData) {
+      var bins = [];
 
+      for (var key in chartData)
+      {
+	  	  var row = chartData[key];
+        for (var val in row.values)
+        {
+          var o = row.values[val];
+
+          var prevTsIndex = bins.map(function (d) { return d.ts }).indexOf(o.ts);
+          if (prevTsIndex == -1) // create new ts row
+          {
+            bins.push({
+              "ts": o.ts, 
+              [row.fkey]: o.bytes // use var as key
+            });
+          } else { // update current row with key
+            if (bins[prevTsIndex][row.fkey]) 
+              bins[prevTsIndex][row.fkey] += o.bytes;
+            else
+              bins[prevTsIndex][row.fkey] = o.bytes;
+          }
+	  	  }
+      }
+      return bins;
+    }
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
@@ -250,10 +256,10 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scale.linear().range([0, width]);
+      xScale = d3.scaleLinear().range([0, width]);
       //yScale = d3.scale.linear().range([height, 0]);
       //yScale = d3.scale.log().clamp(true).range([height, 1]);
-      yScale = d3.scale.pow().exponent(0.5).clamp(true).range([height, 1]);
+      yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 1]);
 
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
@@ -283,13 +289,18 @@ JT = (function (my) {
 
       var fkeys = chartData.map(function(f) { return f.fkey; });
       colorScale.domain(fkeys);
-      var stackedChartData = stack(chartData);
 
-      area = d3.svg.area()
-               .interpolate("monotone")
-               .x(function (d) { return xScale(d.ts); })
-               .y0(function (d) { return yScale(d.y0); })
-               .y1(function (d) { return yScale(d.y0 + d.y); });
+      stack.keys(fkeys);
+
+      // Format the data, so they're flat arrays
+      var stackedChartData = stack(
+        formatData(chartData));
+
+      area = d3.area()
+	             .curve(d3.curveMonotoneX)
+               .x(function (d) { return xScale(d.data.ts); })
+               .y0(function (d) { return yScale(d[0]); })
+               .y1(function (d) { return yScale(d[0] + d[1]); });
 
       svg.select("#flows").selectAll(".layer").remove();
 
@@ -297,8 +308,8 @@ JT = (function (my) {
          .data(stackedChartData)
        .enter().append("path")
          .attr("class", "layer")
-         .attr("d", function(d) { return area(d.values); })
-         .style("fill", function(d, i) { return colorScale(d.fkey); });
+         .attr("d", area)
+         .style("fill", function(d, i) { return colorScale(d.key); });
 
 
       // distribution bar
@@ -319,12 +330,13 @@ JT = (function (my) {
         return new_d;
       });
 
-      var x = d3.scale.linear()
+      var x = d3.scaleLinear()
                       .rangeRound([0, width])
                       .domain([0,tbytes]);
 
-      var y = d3.scale.ordinal()
-                      .rangeRoundBands([0, 10], .3);
+      var y = d3.scaleBand()
+                      .range([0, 10])
+                      .round(.3);
 
       var barsbox = svg.select("#barsbox");
       barsbox.selectAll(".subbar").remove();
@@ -333,7 +345,7 @@ JT = (function (my) {
                     .enter().append("g").attr("class", "subbar");
 
       bars.append("rect")
-          .attr("height", y.rangeBand())
+          .attr("height", 23)
           .attr("y", 9)
           .attr("x", function(d) { return x(d.x0); })
           .attr("width", function(d) { return x(d.x1) - x(d.x0); })

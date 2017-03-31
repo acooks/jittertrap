@@ -6,6 +6,26 @@
   shape-rendering: crispEdges;
 }
 
+.tick {
+  opacity: 0.4;
+}
+
+.xGrid {
+  fill: none;
+  shape-rendering: "crispEdges";
+  stroke: "grey";
+  opacity: 0.4;
+  stroke-width: "1px";
+}
+
+.yGrid {
+  fill: none;
+  shape-rendering: "crispEdges";
+  stroke: "grey";
+  opacity: 0.4;
+  stroke-width: "1px";
+}
+
 .line {
   fill: none;
   stroke: steelblue;
