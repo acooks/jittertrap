@@ -297,7 +297,7 @@ JT = (function (my) {
         formatData(chartData));
 
       area = d3.area()
-	             .curve(d3.curveMonotoneX)
+               .curve(d3.curveMonotoneX)
                .x(function (d) { return xScale(d.data.ts); })
                .y0(function (d) { return yScale(d[0]); })
                .y1(function (d) { return yScale(d[0] + d[1]); });
