@@ -233,7 +233,7 @@ JT = (function (my) {
           var o = row.values[val];
 
           var prevTsIndex = bins.map(function (d) { return d.ts }).indexOf(o.ts);
-          if (prevTsIndex == -1) // create new ts row
+          if (prevTsIndex === -1) // create new ts row
           {
             bins.push({
               "ts": o.ts, 

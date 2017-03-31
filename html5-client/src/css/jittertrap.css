@@ -12,18 +12,18 @@
 
 .xGrid {
   fill: none;
-  shape-rendering: "crispEdges";
-  stroke: "grey";
+  shape-rendering: crispEdges;
+  stroke: grey;
   opacity: 0.4;
-  stroke-width: "1px";
+  stroke-width: 1px;
 }
 
 .yGrid {
   fill: none;
-  shape-rendering: "crispEdges";
-  stroke: "grey";
+  shape-rendering: crispEdges;
+  stroke: grey;
   opacity: 0.4;
-  stroke-width: "1px";
+  stroke-width: 1px;
 }
 
 .line {
