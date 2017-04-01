@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <poll.h>
 #include <errno.h>
+#include <syslog.h>
 
 #include "utlist.h"
 #include "uthash.h"
@@ -402,15 +403,14 @@ static void set_affinity(struct tt_thread_info *ti)
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread [%s] priority [%d] CPU affinity: ",
-	       ti->thread_name,
-	       ti->thread_prio);
+	char buff[64];
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			printf(" CPU%d", j);
+			snprintf(buff, sizeof(buff), " CPU%d", j);
 		}
 	}
-	printf("\n");
+	syslog(LOG_DEBUG, "[RT thread %s] priority [%d] CPU affinity: %s",
+		ti->thread_name, ti->thread_prio, buff);
 }
 
 static int init_realtime(struct tt_thread_info *ti)
@@ -460,7 +460,7 @@ void *tt_intervals_run(void *p)
 		} else {
 			/* poll timeout */
 			if (fds[0].revents) {
-				fprintf(stderr, "error. revents: %x\n",
+				syslog(LOG_INFO, "error. revents: %x\n",
 				        fds[0].revents);
 			}
 		}
