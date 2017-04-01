@@ -3,6 +3,7 @@
 #include <sched.h>
 #include <errno.h>
 #include <pthread.h>
+#include <syslog.h>
 
 #include <jansson.h>
 
@@ -161,15 +162,15 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread [%s] priority [%d] CPU affinity: ",
-	       iti.thread_name, iti.thread_prio);
-
+	char buff[64];
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			printf(" CPU%d", j);
+			snprintf(buff, sizeof(buff), " CPU%d", j);
 		}
 	}
-	printf("\n");
+
+	syslog(LOG_DEBUG, "[RT thread %s] priority [%d] CPU affinity: %s",
+		iti.thread_name, iti.thread_prio, buff);
 }
 
 static int init_realtime(void)

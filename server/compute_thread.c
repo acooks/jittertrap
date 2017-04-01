@@ -13,6 +13,7 @@
 #include <stdint.h>   /* for types like uint64_t */
 #include <inttypes.h> /* for printf macros like PRId64 */
 #include <math.h>     /* for ceill */
+#include <syslog.h>
 
 #include "jittertrap.h"
 #include "iface_stats.h"
@@ -157,7 +158,7 @@ calc_whoosh_err(struct slist *list, struct mq_stats_msg *m, int decim8)
 	if ((decim8 == decs[DECIMATIONS_COUNT - 1]) &&
 	    ((whoosh_max >= 0.1 * m->interval_ns) ||
 	     (m->sd_whoosh >= m->interval_ns))) {
-		fprintf(stderr, "sampling jitter! mean: %10" PRId32
+		syslog(LOG_INFO, "sampling jitter! mean: %10" PRId32
 		                " max: %10" PRId32 " sd: %10" PRId32 "\n",
 		        m->mean_whoosh, m->max_whoosh, m->sd_whoosh);
 	}
@@ -361,14 +362,15 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread [%s] priority [%d] CPU affinity: ",
-		thread_info.thread_name, thread_info.thread_prio);
+	char buff[64];
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			printf(" CPU%d", j);
+			snprintf(buff, sizeof(buff), " CPU%d", j);
 		}
 	}
-	printf("\n");
+
+	syslog(LOG_DEBUG, "[RT thread %s] priority [%d] CPU affinity: %s",
+		thread_info.thread_name, thread_info.thread_prio, buff);
 }
 
 static int init_realtime(void)

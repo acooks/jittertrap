@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <syslog.h>
 
 #include <jansson.h>
 #include "jittertrap.h"
@@ -61,13 +62,13 @@ static int select_iface(void *data)
 	char(*iface)[MAX_IFACE_LEN] = data;
 
 	if (!is_iface_allowed(*iface)) {
-		fprintf(stderr, "ignoring request to switch to iface: [%s] - "
+		syslog(LOG_ERR, "ignoring request to switch to iface: [%s] - "
 		                "iface not in allowed list: [%s]\n",
 		        *iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
 		return -1;
 	}
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
-	printf("switching to iface: [%s]\n", *iface);
+	syslog(LOG_INFO, "switching to iface: [%s]\n", *iface);
 	sample_iface(*iface);
 	tt_thread_restart(*iface);
 
@@ -202,13 +203,14 @@ int jt_srv_send_iface_list()
 		free(il);
 		return -1;
 	} else {
-		printf("available ifaces: ");
+		char buff[64];
 		do {
-			printf(" %s", *iface);
+			snprintf(buff, sizeof(buff), " %s", *iface);
 			(il->count)++;
 			iface++;
 		} while (*iface);
-		printf("\n");
+		
+		syslog(LOG_INFO, "available ifaces: %s", buff);
 	}
 
 	il->ifaces = malloc(il->count * MAX_IFACE_LEN);
@@ -349,7 +351,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 
 	root = json_loads(in, 0, &error);
 	if (!root) {
-		fprintf(stderr, "error: on line %d: %s\n", error.line,
+		syslog(LOG_ERR, "error: on line %d: %s\n", error.line,
 		        error.text);
 		return -1;
 	}
@@ -370,7 +372,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 
 		if (err) {
 			// type matched, but unpack failed.
-			fprintf(stderr, "[%s] type match, unpack failed.\n",
+			syslog(LOG_ERR, "[%s] type match, unpack failed.\n",
 			        jt_messages[*msg_type].key);
 			break;
 		}
@@ -392,7 +394,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 
 		return err;
 	}
-	fprintf(stderr, "couldn't unpack message: %s\n", in);
+	syslog(LOG_ERR, "couldn't unpack message: %s\n", in);
 	json_decref(root);
 	return -1;
 }

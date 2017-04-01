@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <syslog.h>
 
 #include <libwebsockets.h>
 
@@ -28,7 +29,7 @@ void dump_handshake_info(struct lws *wsi)
 
 		lws_hdr_copy(wsi, buf, sizeof buf, n);
 
-		fprintf(stderr, "    %s = %s\n", (char *)c, buf);
+		syslog(LOG_INFO, "    %s = %s", (char *)c, buf);
 		n++;
 	} while (c);
 }

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include <jansson.h>
+#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -24,7 +25,7 @@ int jt_select_iface_free(void *data)
 int jt_select_iface_printer(void *data)
 {
 	char(*iface)[MAX_IFACE_LEN] = data;
-	printf("Selected Iface %s\n", *iface);
+	syslog(LOG_INFO, "Selected Iface %s\n", *iface);
 	return 0;
 }
 

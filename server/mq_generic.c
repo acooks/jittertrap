@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <syslog.h>
 #include <pthread.h>
 
 #include "mq_generic.h"
@@ -39,7 +40,7 @@ int NS(init)()
 	pthread_mutex_lock(&mq_mutex);
 	assert(!queue);
 	if (0 == consumer_count) {
-		printf("creating new queue for %d messages of %lu bytes each\n",
+		syslog(LOG_INFO, "creating new queue for %d messages of %lu bytes each\n",
 		       MAX_Q_DEPTH - 1, sizeof(struct NS(msg)));
 
 		queue = malloc(BUF_BYTE_LEN);
@@ -97,7 +98,7 @@ int NS(consumer_subscribe)(unsigned long *subscriber_id)
 
 	pthread_mutex_unlock(&mq_mutex);
 
-	printf("consumer %lu joined\n", *subscriber_id);
+	syslog(LOG_INFO, "consumer %lu joined\n", *subscriber_id);
 
 	return 0;
 }
@@ -119,7 +120,7 @@ int NS(consumer_unsubscribe)(unsigned long subscriber_id)
 
 	pthread_mutex_unlock(&mq_mutex);
 
-	printf("consumer %lu left\n", subscriber_id);
+	syslog(LOG_INFO, "consumer %lu left\n", subscriber_id);
 
 	return 0;
 }

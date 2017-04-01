@@ -1,6 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include <jansson.h>
+#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -25,10 +26,11 @@ int jt_iface_list_printer(void *data)
 	int i;
 	struct jt_iface_list *il = (struct jt_iface_list *)data;
 
-	printf("Iface list:\n");
+	char buff[128];
 	for (i = 0; i < il->count; i++) {
-		printf("\t%s\n", il->ifaces[i]);
+		snprintf(buff, sizeof(buff), "\t%s\n", il->ifaces[i]);
 	}
+	syslog(LOG_INFO, "Iface list: %s", buff);
 	return 0;
 }
 
