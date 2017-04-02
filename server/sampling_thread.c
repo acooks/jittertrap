@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <syslog.h>
 
 #include <linux/types.h>
 #include <netlink/netlink.h>
@@ -208,14 +209,19 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	printf("RT thread [%s] priority [%d] CPU affinity: ",
-	       thread_info.thread_name, thread_info.thread_prio);
+	char buff[64] = {0};
+	char *offset = buff;
+	int blen = sizeof(buff);
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			printf(" CPU%d", j);
+			snprintf(offset, blen, "CPU%d ", j);
+			blen -= strlen(offset);
+			offset += strlen(offset);
 		}
 	}
-	printf("\n");
+
+	syslog(LOG_DEBUG, "[RT thread %s] priority [%d] CPU affinity: %s",
+		thread_info.thread_name, thread_info.thread_prio, buff);
 }
 
 static int init_realtime(void)

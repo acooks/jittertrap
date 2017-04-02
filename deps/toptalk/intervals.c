@@ -380,7 +380,7 @@ static int free_pcap(struct pcap_info *pi)
 
 static void set_affinity(struct tt_thread_info *ti)
 {
-	int s, j;
+	int s;
 	cpu_set_t cpuset;
 	pthread_t thread;
 	thread = pthread_self();
@@ -402,15 +402,18 @@ static void set_affinity(struct tt_thread_info *ti)
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
+    /*
+	int j;
 	printf("RT thread [%s] priority [%d] CPU affinity: ",
-	       ti->thread_name,
-	       ti->thread_prio);
-	for (j = 0; j < CPU_SETSIZE; j++) {
-		if (CPU_ISSET(j, &cpuset)) {
-			printf(" CPU%d", j);
-		}
-	}
-	printf("\n");
+ 	       ti->thread_name,
+ 	       ti->thread_prio);
+  	for (j = 0; j < CPU_SETSIZE; j++) {
+  		if (CPU_ISSET(j, &cpuset)) {
+ 			printf(" CPU%d", j);
+  		}
+  	}
+ 	printf("\n"); 
+	*/
 }
 
 static int init_realtime(struct tt_thread_info *ti)
@@ -460,7 +463,7 @@ void *tt_intervals_run(void *p)
 		} else {
 			/* poll timeout */
 			if (fds[0].revents) {
-				fprintf(stderr, "error. revents: %x\n",
+					fprintf(stderr, "error. revents: %x\n",
 				        fds[0].revents);
 			}
 		}

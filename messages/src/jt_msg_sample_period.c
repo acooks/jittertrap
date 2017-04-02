@@ -1,6 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include <jansson.h>
+#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -21,7 +22,7 @@ int jt_sample_period_free(void *data)
 int jt_sample_period_printer(void *data)
 {
 	int *sp = data;
-	printf("Sampling period: %d\n", *sp);
+	syslog(LOG_INFO, "Sampling period: %d\n", *sp);
 	return 0;
 }
 

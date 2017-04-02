@@ -62,7 +62,7 @@ void sighandler(int sig __attribute__((unused)))
 
 static struct option options[] = {
 	{ "help", no_argument, NULL, 'h' },
-	{ "debug", required_argument, NULL, 'd' },
+	{ "debug", required_argument, NULL, '1' },
 	{ "port", required_argument, NULL, 'p' },
 	{ "ssl", no_argument, NULL, 's' },
 	{ "interface", required_argument, NULL, 'i' },
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 	int opts = 0;
 	char interface_name[128] = "";
 	const char *iface = NULL;
-	int syslog_options = LOG_PID | LOG_PERROR;
+	int syslog_options = LOG_PID;
 	struct lws_context_creation_info info;
 
 	int debug_level = 7;
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 	info.port = WEB_SERVER_PORT;
 
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "eci:hsap:d:Dr:", options, NULL);
+		n = getopt_long(argc, argv, "eci:hsap:dDr:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -119,8 +119,13 @@ int main(int argc, char **argv)
 			syslog_options &= ~LOG_PERROR;
 			break;
 #endif
-		case 'd':
+		/* opt that wont be a short opt either - for long --debug */
+		case '1':
 			debug_level = atoi(optarg);
+			/* print if changing debugging level */
+			/* no break */
+		case 'd':
+			syslog_options |= LOG_PERROR;
 			break;
 		case 's':
 			use_ssl = 1;
@@ -140,8 +145,6 @@ int main(int argc, char **argv)
 			break;
 		case 'r':
 			resource_path = optarg;
-			printf("Setting resource path to \"%s\"\n",
-			       resource_path);
 			break;
 		case 'h':
 			fprintf(stderr,
@@ -168,14 +171,14 @@ int main(int argc, char **argv)
 
 	/* we will only try to log things according to our debug_level */
 	setlogmask(LOG_UPTO(LOG_DEBUG));
-	openlog("lwsts", syslog_options, LOG_DAEMON);
+	openlog("jt-server", syslog_options, LOG_DAEMON);
 
 	/* tell the library what debug level to emit and to send it to syslog */
 	lws_set_log_level(debug_level, lwsl_emit_syslog);
 
 	lwsl_notice("jittertrap server\n");
 
-	printf("Using resource path \"%s\"\n", resource_path);
+	lwsl_notice("Using resource path \"%s\"\n", resource_path);
 
 	info.iface = iface;
 	info.protocols = protocols;
