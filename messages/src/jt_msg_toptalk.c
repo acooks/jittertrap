@@ -14,10 +14,10 @@
 #include "jt_msg_toptalk.h"
 
 static const char *tt_test_msg =
-    "{\"msg\":\"tt\","
+    "{\"msg\":\"toptalk\","
     " \"p\":{\"tflows\":5, \"tbytes\": 9999, \"tpackets\": 888,"
     " \"interval_ns\": 123,"
-    " \"timestamp\": {\"tv_sec\": 123, \"tv_nsec\": 456},"
+    " \"timestamp\": {\"tv_sec\": \"                123\", \"tv_nsec\": \"      456\"},"
     " \"flows\": ["
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32000, \"dport\":32000, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32001, \"dport\":32001, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
@@ -84,13 +84,13 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 	}
 
 	t = json_object_get(timestamp, "tv_sec");
-	if (!json_is_integer(t)) {
+	if (!json_is_string(t)) {
 		goto unpack_fail;
 	}
 	tt->timestamp.tv_sec = json_integer_value(t);
 
 	t = json_object_get(timestamp, "tv_nsec");
-	if (!json_is_integer(t)) {
+	if (!json_is_string(t)) {
 		goto unpack_fail;
 	}
 	tt->timestamp.tv_nsec = json_integer_value(t);
