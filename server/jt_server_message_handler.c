@@ -203,13 +203,16 @@ int jt_srv_send_iface_list()
 		free(il);
 		return -1;
 	} else {
-		char buff[64];
+		char buff[128] = {0};
+		char *offset = buff;
 		do {
-			snprintf(buff, sizeof(buff), " %s", *iface);
+			snprintf(offset, sizeof(buff) - (offset - buff), " %s",
+			         *iface);
+			offset = offset + strlen(*iface) + 1;
 			(il->count)++;
 			iface++;
 		} while (*iface);
-		
+
 		syslog(LOG_INFO, "available ifaces: %s", buff);
 	}
 
