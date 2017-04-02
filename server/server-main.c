@@ -119,11 +119,11 @@ int main(int argc, char **argv)
 			syslog_options &= ~LOG_PERROR;
 			break;
 #endif
-		// opt that wont be a short opt either - for long --debug
+		/* opt that wont be a short opt either - for long --debug */
 		case '1':
 			debug_level = atoi(optarg);
-			// print if changing debugging level
-			// no break
+			/* print if changing debugging level */
+			/* no break */
 		case 'd':
 			syslog_options |= LOG_PERROR;
 			break;
