@@ -26,10 +26,15 @@ int jt_iface_list_printer(void *data)
 	int i;
 	struct jt_iface_list *il = (struct jt_iface_list *)data;
 
-	char buff[128];
+	char buff[128] = {0};
+	char *offset = buff;
+	int blen = sizeof(buff);
 	for (i = 0; i < il->count; i++) {
-		snprintf(buff, sizeof(buff), "\t%s\n", il->ifaces[i]);
+		snprintf(offset, blen, "%s ", il->ifaces[i]);
+		blen -= strlen(offset);
+		offset += strlen(offset);
 	}
+
 	syslog(LOG_INFO, "Iface list: %s", buff);
 	return 0;
 }

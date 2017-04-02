@@ -205,10 +205,12 @@ int jt_srv_send_iface_list()
 	} else {
 		char buff[128] = {0};
 		char *offset = buff;
+		int blen = sizeof(buff);
 		do {
-			snprintf(offset, sizeof(buff) - (offset - buff), " %s",
-			         *iface);
-			offset = offset + strlen(*iface) + 1;
+			snprintf(offset, blen, "%s ", *iface);
+			blen -= strlen(offset);
+			offset += strlen(offset);
+
 			(il->count)++;
 			iface++;
 		} while (*iface);

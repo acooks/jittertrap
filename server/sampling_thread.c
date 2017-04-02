@@ -209,12 +209,17 @@ static void set_affinity()
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-	char buff[64];
+	char buff[64] = {0};
+	char *offset = buff;
+	int blen = sizeof(buff);
 	for (j = 0; j < CPU_SETSIZE; j++) {
 		if (CPU_ISSET(j, &cpuset)) {
-			snprintf(buff, sizeof(buff), " CPU%d", j);
+			snprintf(offset, blen, "CPU%d ", j);
+			blen -= strlen(offset);
+			offset += strlen(offset);
 		}
 	}
+
 	syslog(LOG_DEBUG, "[RT thread %s] priority [%d] CPU affinity: %s",
 		thread_info.thread_name, thread_info.thread_prio, buff);
 }
