@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 	info.port = WEB_SERVER_PORT;
 
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "eci:hsap:dDr:", options, NULL);
+		n = getopt_long(argc, argv, "ci:hsp:dDr:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
