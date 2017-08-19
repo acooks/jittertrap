@@ -10,7 +10,7 @@ It has two broad areas of use:
 * detection and measurement of unexpected delays, introduced by the device or application under test. That is, **characterising the source behaviour** with respect to throughput, packet rates, jitter.
 * introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, **characterising the behaviour of the destination**, with respect to delay, jitter and loss.
 
-The user interface is implemented as a web application. ![Have a look at the demo](http://demo.jittertrap.net) hosted on a t2.micro instance at AWS Sydney. (Performance is highly variable.)
+The user interface is implemented as a web application. [Have a look at the demo](http://demo.jittertrap.net) hosted on a t2.micro instance at AWS Sydney. (Performance is highly variable.)
 
 Or try this old demo video:
 [![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
