@@ -108,13 +108,13 @@ static int init_nl(void)
 {
 	/* Allocate and initialize a new netlink handle */
 	if (!(nl_sock = nl_socket_alloc())) {
-		fprintf(stderr, "Failed to alloc netlink socket\n");
+		syslog(LOG_ERR, "Failed to alloc netlink socket\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Bind and connect socket to protocol, NETLINK_ROUTE in our case. */
 	if (nl_connect(nl_sock, NETLINK_ROUTE) < 0) {
-		fprintf(stderr, "Failed to connect to kernel\n");
+		syslog(LOG_ERR, "Failed to connect to kernel\n");
 		return -EOPNOTSUPP;
 	}
 
@@ -130,7 +130,7 @@ static int read_counters(const char *iface, struct sample *stats)
 
 	/* iface index zero means use the iface name */
 	if (rtnl_link_get_kernel(nl_sock, 0, iface, &link) < 0) {
-		fprintf(stderr, "unknown interface/link name: %s\n", iface);
+		syslog(LOG_ERR, "unknown interface/link name: %s\n", iface);
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}

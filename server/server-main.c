@@ -97,10 +97,10 @@ int main(int argc, char **argv)
 	int opts = 0;
 	char interface_name[128] = "";
 	const char *iface = NULL;
-	int syslog_options = LOG_PID;
+	int syslog_options = LOG_PID | LOG_PERROR;
 	struct lws_context_creation_info info;
 
-	int debug_level = 7;
+	int debug_level = LOG_WARNING;
 #ifndef LWS_NO_DAEMONIZE
 	int daemonize = 0;
 #endif
@@ -122,10 +122,13 @@ int main(int argc, char **argv)
 		/* opt that wont be a short opt either - for long --debug */
 		case '1':
 			debug_level = atoi(optarg);
-			/* print if changing debugging level */
-			/* no break */
+			debug_level =
+			    (debug_level > LOG_DEBUG) ? LOG_DEBUG : debug_level;
+			debug_level =
+			    (debug_level < LOG_EMERG) ? LOG_DEBUG : debug_level;
+			break;
 		case 'd':
-			syslog_options |= LOG_PERROR;
+			debug_level = LOG_DEBUG;
 			break;
 		case 's':
 			use_ssl = 1;
@@ -149,7 +152,7 @@ int main(int argc, char **argv)
 		case 'h':
 			fprintf(stderr,
 			        "Usage: " PROGNAME "[--port=<p>] [--ssl] "
-			        "[-d <log bitfield>] "
+			        "[-d <log level>]"
 			        "[--resource_path <path>]\n");
 			exit(1);
 		}
@@ -170,15 +173,14 @@ int main(int argc, char **argv)
 	signal(SIGINT, sighandler);
 
 	/* we will only try to log things according to our debug_level */
-	setlogmask(LOG_UPTO(LOG_DEBUG));
+	setlogmask(LOG_UPTO(debug_level));
 	openlog("jt-server", syslog_options, LOG_DAEMON);
 
 	/* tell the library what debug level to emit and to send it to syslog */
-	lws_set_log_level(debug_level, lwsl_emit_syslog);
+	lws_set_log_level(LOG_UPTO(debug_level), lwsl_emit_syslog);
 
-	lwsl_notice("jittertrap server\n");
-
-	lwsl_notice("Using resource path \"%s\"\n", resource_path);
+	syslog(LOG_NOTICE, "jittertrap server\n");
+	syslog(LOG_INFO, "Using resource path \"%s\"\n", resource_path);
 
 	info.iface = iface;
 	info.protocols = protocols;
@@ -189,14 +191,14 @@ int main(int argc, char **argv)
 		info.ssl_private_key_filepath = NULL;
 	} else {
 		if (strlen(resource_path) > sizeof(cert_path) - 32) {
-			lwsl_err("resource path too long\n");
+			syslog(LOG_ERR, "resource path too long\n");
 			return -1;
 		}
 		sprintf(cert_path, "%s/libwebsockets-test-server.pem",
 		        resource_path);
 
 		if (strlen(resource_path) > sizeof(key_path) - 32) {
-			lwsl_err("resource path too long\n");
+			syslog(LOG_ERR, "resource path too long\n");
 			return -1;
 		}
 		sprintf(key_path, "%s/libwebsockets-test-server.key.pem",
@@ -211,7 +213,7 @@ int main(int argc, char **argv)
 
 	context = lws_create_context(&info);
 	if (context == NULL) {
-		lwsl_err("libwebsocket init failed\n");
+		syslog(LOG_ERR, "libwebsocket init failed\n");
 		return -1;
 	}
 
@@ -239,7 +241,7 @@ int main(int argc, char **argv)
 
 	lws_context_destroy(context);
 
-	lwsl_notice("jittertrap server exited cleanly\n");
+	syslog(LOG_INFO, "jittertrap server exited cleanly\n");
 
 	closelog();
 

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
+#include <syslog.h>
 #include <libwebsockets.h>
 
 #include "proto.h"
@@ -54,21 +55,21 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 	switch (reason) {
 	case LWS_CALLBACK_CLOSED:
 		if (!pss->consumer_id) {
-			lwsl_err("no consumer to unsubscribe.\n");
+			syslog(LOG_ERR, "no consumer to unsubscribe.\n");
 		} else {
 			err = mq_ws_consumer_unsubscribe(pss->consumer_id);
 			if (err) {
-				lwsl_err("mq consumer unsubscribe failed.\n");
+				syslog(LOG_ERR,
+				       "mq consumer unsubscribe failed.\n");
 			}
 		}
 		break;
 
 	case LWS_CALLBACK_ESTABLISHED:
-		lwsl_info("callback_jt: "
-		          "LWS_CALLBACK_ESTABLISHED\n");
+		syslog(LOG_INFO, "callback_jt: LWS_CALLBACK_ESTABLISHED\n");
 		err = mq_ws_consumer_subscribe(&(pss->consumer_id));
 		if (err) {
-			lwsl_err("mq consumer subscription failed.\n");
+			syslog(LOG_ERR, "mq consumer subscription failed.\n");
 			return -1;
 		}
 		jt_srv_send_iface_list();

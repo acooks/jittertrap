@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <syslog.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
 #include <netlink/cache.h>
@@ -27,25 +28,25 @@ int netem_init()
 {
 	/* Allocate and initialize a new netlink handle */
 	if (!(sock = nl_socket_alloc())) {
-		fprintf(stderr, "Failed to alloc netlink socket\n");
+		syslog(LOG_ERR, "Failed to alloc netlink socket\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Bind and connect socket to protocol, NETLINK_ROUTE in our case. */
 	if (nl_connect(sock, NETLINK_ROUTE) < 0) {
-		fprintf(stderr, "Failed to connect to kernel\n");
+		syslog(LOG_ERR, "Failed to connect to kernel\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Retrieve a list of all available interfaces and populate cache. */
 	if (rtnl_link_alloc_cache(sock, AF_UNSPEC, &link_cache) < 0) {
-		fprintf(stderr, "Error creating link cache\n");
+		syslog(LOG_ERR, "Error creating link cache\n");
 		return -EOPNOTSUPP;
 	}
 
 	/* Retrieve a list of all available qdiscs and populate cache. */
 	if (rtnl_qdisc_alloc_cache(sock, &qdisc_cache) < 0) {
-		fprintf(stderr, "Error creating qdisc cache\n");
+		syslog(LOG_ERR, "Error creating qdisc cache\n");
 		return -EOPNOTSUPP;
 	}
 
@@ -167,26 +168,26 @@ int netem_get_params(char *iface, struct netem_params *params)
 
 	pthread_mutex_lock(&nl_sock_mutex);
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
-		fprintf(stderr, "Unable to resync link cache: %s\n",
-		        nl_geterror(err));
+		syslog(LOG_ERR, "Unable to resync link cache: %s\n",
+		       nl_geterror(err));
 		goto cleanup;
 	}
 
 	if ((err = nl_cache_refill(sock, qdisc_cache)) < 0) {
-		fprintf(stderr, "Unable to resync link cache: %s\n",
+		syslog(LOG_ERR, "Unable to resync link cache: %s\n",
 		        nl_geterror(err));
 		goto cleanup;
 	}
 
 	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(link_cache, iface)) == NULL) {
-		fprintf(stderr, "unknown interface/link name.\n");
+		syslog(LOG_ERR, "unknown interface/link name: %s\n", iface);
 		goto cleanup;
 	}
 
 	if (!(filter_qdisc = rtnl_qdisc_alloc())) {
 		/* OOM error */
-		fprintf(stderr, "couldn't alloc qdisc\n");
+		syslog(LOG_ERR, "couldn't alloc qdisc\n");
 		goto cleanup_link;
 	}
 
@@ -202,19 +203,19 @@ int netem_get_params(char *iface, struct netem_params *params)
 	}
 
 	if (0 > (delay = rtnl_netem_get_delay(found_qdisc))) {
-		fprintf(stderr, "couldn't get delay for iface: %s\n", iface);
+		syslog(LOG_ERR, "couldn't get delay for iface: %s\n", iface);
 		goto cleanup_qdisc;
 	}
 	params->delay = (double)delay / 1000;
 
 	if (0 > (jitter = rtnl_netem_get_jitter(found_qdisc))) {
-		fprintf(stderr, "couldn't get jitter for iface: %s\n", iface);
+		syslog(LOG_ERR, "couldn't get jitter for iface: %s\n", iface);
 		goto cleanup_qdisc;
 	}
 	params->jitter = (double)jitter / 1000;
 
 	if (0 > (loss = rtnl_netem_get_loss(found_qdisc))) {
-		fprintf(stderr, "couldn't get loss for iface: %s\n", iface);
+		syslog(LOG_ERR, "couldn't get loss for iface: %s\n", iface);
 		goto cleanup_qdisc;
 	}
 	/* loss is specified in 10ths of a percent, ie. 1 ==> 0.1% */
@@ -247,14 +248,14 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(link_cache, iface)) == NULL) {
-		fprintf(stderr, "unknown interface/link name.\n");
+		syslog(LOG_ERR, "unknown interface/link name.\n");
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}
 
 	if (!(qdisc = rtnl_qdisc_alloc())) {
 		/* OOM error */
-		fprintf(stderr, "couldn't alloc qdisc\n");
+		syslog(LOG_ERR, "couldn't alloc qdisc\n");
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}
@@ -276,14 +277,14 @@ int netem_set_params(const char *iface, struct netem_params *params)
 	rtnl_qdisc_put(qdisc);
 
 	if (err < 0) {
-		fprintf(stderr, "Unable to add qdisc: %s\n", nl_geterror(err));
+		syslog(LOG_ERR, "Unable to add qdisc: %s\n", nl_geterror(err));
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return err;
 	}
 
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
-		fprintf(stderr, "Unable to resync link cache: %s\n",
-		        nl_geterror(err));
+		syslog(LOG_ERR, "Unable to resync link cache: %s\n",
+		       nl_geterror(err));
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}

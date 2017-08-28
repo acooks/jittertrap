@@ -139,12 +139,12 @@ FIXME: this does not do what we need, but something like this is needed.
 		} else /* default file to serve */
 			strcat(buf, "/index.html");
 		buf[sizeof(buf) - 1] = '\0';
-		lwsl_info("get %s\n", buf);
+		syslog(LOG_INFO, "get %s\n", buf);
 
 		/* refuse to serve files we don't understand */
 		mimetype = get_mimetype(buf);
 		if (!mimetype) {
-			lwsl_err("Unknown mimetype for %s\n", buf);
+			syslog(LOG_ERR, "Unknown mimetype for %s\n", buf);
 			lws_return_http_status(
 			    wsi, HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE, NULL);
 			return -1;
@@ -193,13 +193,13 @@ FIXME: this does not do what we need, but something like this is needed.
 		if (len < 20)
 			buf[len] = '\0';
 
-		lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s... len %d\n",
-		            (const char *)buf, (int)len);
+		syslog(LOG_NOTICE, "LWS_CALLBACK_HTTP_BODY: %s... len %d\n",
+		       (const char *)buf, (int)len);
 
 		break;
 
 	case LWS_CALLBACK_HTTP_BODY_COMPLETION:
-		lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
+		syslog(LOG_NOTICE, "LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
 		/* the whole of the sent body arrived,
 		 * close or reuse the connection */
 		lws_return_http_status(wsi, HTTP_STATUS_OK, NULL);
@@ -321,8 +321,8 @@ FIXME: this does not do what we need, but something like this is needed.
 	case LWS_CALLBACK_ADD_POLL_FD:
 
 		if (count_pollfds >= max_poll_elements) {
-			lwsl_err("LWS_CALLBACK_ADD_POLL_FD: "
-			         "too many sockets to track\n");
+			syslog(LOG_ERR, "LWS_CALLBACK_ADD_POLL_FD: "
+			       "too many sockets to track\n");
 			return 1;
 		}
 

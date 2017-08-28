@@ -62,9 +62,10 @@ static int select_iface(void *data)
 	char(*iface)[MAX_IFACE_LEN] = data;
 
 	if (!is_iface_allowed(*iface)) {
-		syslog(LOG_ERR, "ignoring request to switch to iface: [%s] - "
-		                "iface not in allowed list: [%s]\n",
-		        *iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		syslog(LOG_WARNING,
+		       "ignoring request to switch to iface: [%s] - "
+		       "iface not in allowed list: [%s]\n",
+		       *iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
 		return -1;
 	}
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
@@ -84,9 +85,9 @@ static void get_first_iface(char *iface)
 	char **i = ifaces;
 	assert(NULL != i);
 	if (NULL == *i) {
-		fprintf(stderr, "No interfaces available. "
-		                "Allowed interfaces (compile-time): %s\n",
-		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		syslog(LOG_WARNING, "No interfaces available. "
+		       "Allowed interfaces (compile-time): %s\n",
+		       EXPAND_AND_QUOTE(ALLOWED_IFACES));
 	}
 	snprintf(iface, MAX_IFACE_LEN, "%s", *i);
 
