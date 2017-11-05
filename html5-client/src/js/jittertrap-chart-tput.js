@@ -60,6 +60,18 @@ JT = (function (my) {
               .scale(yScale)
               .ticks(5);
 
+      xGrid = d3.axisBottom()
+              .scale(xScale)
+              .tickSize(-height)
+              .ticks(10)
+              .tickFormat("");
+
+      yGrid = d3.axisLeft()
+              .scale(yScale)
+              .tickSize(-width)
+              .ticks(5)
+              .tickFormat("");
+
       line = d3.line()
           .x(function(d) { return xScale(d.timestamp); })
           .y(function(d) { return yScale(d.value); })
