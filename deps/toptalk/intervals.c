@@ -73,8 +73,8 @@ static struct timeval interval_start[INTERVAL_COUNT] = { 0 };
 static struct timeval ref_window_size;
 
 static struct {
-	unsigned int bytes;
-	unsigned int packets;
+	int64_t bytes;
+	int64_t packets;
 } totals;
 
 static void clear_table(int table_idx)
@@ -172,10 +172,16 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			          sizeof(struct flow), fte);
 			assert(fte);
 			fte->f.bytes -= iter->pkt.flow_rec.bytes;
+			assert(fte->f.bytes >= 0);
+
 			fte->f.packets -= iter->pkt.flow_rec.packets;
+			assert(fte->f.packets >= 0);
 
 			totals.bytes -= iter->pkt.flow_rec.bytes;
+			assert(totals.bytes >= 0);
+
 			totals.packets -= iter->pkt.flow_rec.packets;
+			assert(totals.packets >= 0);
 
 			if (0 == fte->f.bytes) {
 				HASH_DELETE(r_hh, flow_ref_table, fte);
@@ -200,10 +206,13 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 		         fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
+		fte->f.packets += pkt->flow_rec.packets;
 	}
 
 	totals.bytes += pkt->flow_rec.bytes;
+	assert(totals.bytes >= 0);
 	totals.packets += pkt->flow_rec.packets;
+	assert(totals.packets >= 0);
 }
 
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
@@ -222,6 +231,7 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
+		fte->f.packets += pkt->flow_rec.packets;
 	}
 }
 
@@ -246,6 +256,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		if (!fti) {
 			/* table doesn't have anything in it yet */
 			st_flows[i].bytes = 0;
+			st_flows[i].packets = 0;
 			continue;
 		}
 
@@ -254,10 +265,14 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		          sizeof(struct flow), te);
 
 		st_flows[i].bytes = te ? te->f.bytes : 0;
+		st_flows[i].packets = te ? te->f.packets : 0;
 
 		/* convert to bytes per second */
 		st_flows[i].bytes =
 		    rate_calc(tt_intervals[i], st_flows[i].bytes);
+		/* convert to packets per second */
+		st_flows[i].packets =
+		    rate_calc(tt_intervals[i], st_flows[i].packets);
 	}
 }
 
@@ -293,7 +308,11 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
+	assert(t5->total_bytes >= 0);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
+	assert(t5->total_packets >= 0);
+	assert(((t5->total_bytes > 0) && (t5->total_packets > 0))
+		|| ((t5->total_bytes == 0) && (t5->total_packets == 0)));
 }
 
 int tt_get_flow_count()
