@@ -193,11 +193,25 @@ void print_top_n(struct tt_top_flows *t5)
 	}
 }
 
+void stamp_datetime(char *buf, size_t len, struct timespec t)
+{
+	time_t timer;
+	struct tm* tm_info;
+
+	time(&timer);
+	tm_info = localtime(&timer);
+
+	strftime(buf, len - 4, "%Y-%m-%d %H:%M:%S", tm_info);
+	snprintf(buf + strlen(buf), 4, ".%02.0f", t.tv_nsec / 1E7);
+}
+
 void handle_io(struct tt_thread_info *ti)
 {
+	struct timespec t1;
 	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
 	int ch, stop = 0;
 	const char *errstr = NULL;
+	char datetime[26];
 
 	initscr();            /* Start curses mode              */
 	raw();                /* Line buffering disabled        */
@@ -205,12 +219,16 @@ void handle_io(struct tt_thread_info *ti)
 	noecho();             /* Don't echo() while we do getch */
 	nodelay(stdscr, TRUE);
 
-	mvprintw(0, 0, "Device:");
+	mvprintw(1, 0, "Device:");
 	attron(A_BOLD);
-	mvprintw(0, 10, "%s\n", ti->dev);
+	mvprintw(1, 10, "%s\n", ti->dev);
 	attroff(A_BOLD);
 
 	while (!stop) {
+		clock_gettime(CLOCK_REALTIME, &t1);
+		stamp_datetime(datetime, sizeof(datetime), t1);
+		mvprintw(0, 0, "%s", datetime);
+
 		pthread_mutex_lock(&ti->t5_mutex);
 		print_top_n(ti->t5);
 		pthread_mutex_unlock(&ti->t5_mutex);
