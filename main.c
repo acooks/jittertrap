@@ -55,28 +55,34 @@ void update_interval(struct tt_thread_info *ti, int updown)
 	tt_update_ref_window_size(ti, tt_intervals[interval1]);
 }
 
+void range(int v, int *byteunit, int *div)
+{
+	if (v > 1E10) {
+		*byteunit = GBPS;
+		*div = 1E9;
+	} else if (v > 1E7) {
+		*byteunit = MBPS;
+		*div = 1E6;
+	} else if (v > 1E4) {
+		*byteunit = KBPS;
+		*div = 1E3;
+	} else {
+		*byteunit = BPS;
+		*div = 1;
+	}
+}
+
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
                struct timeval interval2)
 {
 	char const *byteunit;
-	int div;
+	int unit, div;
 
 	float dt1 = interval1.tv_sec + (float)interval1.tv_usec / (float)1E6;
 	float dt2 = interval2.tv_sec + (float)interval2.tv_usec / (float)1E6;
 
-	if (tp1 > 1E9) {
-		byteunit = byteunits[GBPS];
-		div = 1E9;
-	} else if (tp1 > 1E6) {
-		byteunit = byteunits[MBPS];
-		div = 1E6;
-	} else if (tp1 > 1E3) {
-		byteunit = byteunits[KBPS];
-		div = 1E3;
-	} else {
-		byteunit = byteunits[BPS];
-		div = 1;
-	}
+	range(tp1, &unit, &div);
+	byteunit = byteunits[unit];
 
 #if DEBUG
 	mvprintw(DEBUG_LINE_OFFSET, 1,
