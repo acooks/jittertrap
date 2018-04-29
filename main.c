@@ -144,9 +144,13 @@ void print_top_n(struct tt_top_flows *t5)
 	char ip_dst[16];
 	char ip6_src[40];
 	char ip6_dst[40];
+	int div, unit;
+	char const *byteunit;
 
+	range(t5->total_bytes, &unit, &div);
+	byteunit = byteunits[unit];
 	mvprintw(0, 50, "%5d active flows", t5->flow_count);
-	mvprintw(1, 50, "%5d B/s", t5->total_bytes);
+	mvprintw(1, 50, "%5d %s    ", t5->total_bytes / div, byteunit);
 	mvprintw(2, 50, "%5d Pkts/s", t5->total_packets);
 
 	/* Clear the table */
@@ -156,7 +160,6 @@ void print_top_n(struct tt_top_flows *t5)
 	}
 
 	for (int i = 0; i < t5->flow_count && i < MAX_FLOW_COUNT; i++) {
-		int div = 1;
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);
 		struct flow_record *fte2 = &(t5->flow[i][interval2]);
 
