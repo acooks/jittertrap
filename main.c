@@ -204,6 +204,10 @@ void handle_io(struct tt_thread_info *ti)
 	struct timespec t1;
 	struct timespec print_deadline,
 	                print_interval = {.tv_sec = 0, .tv_nsec = 1E8};
+#if DEBUG
+	struct timespec t2, td, print_deadline_ext,
+	                print_gracetime = {.tv_sec = 0, .tv_nsec = 1E6};
+#endif
 	int ch, stop = 0;
 	const char *errstr = NULL;
 	char datetime[26];
@@ -251,6 +255,16 @@ void handle_io(struct tt_thread_info *ti)
 		print_deadline = ts_add(t1, print_interval);
 		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME,
 		                &print_deadline, NULL);
+
+#if DEBUG
+		clock_gettime(CLOCK_REALTIME, &t2);
+		print_deadline_ext = ts_add(print_deadline, print_gracetime);
+		td = ts_absdiff(t2, t1);
+		if (ts_cmp(t2, print_deadline_ext) > 0)
+			mvprintw(DEBUG_LINE_OFFSET, 0,
+			         "screen froze for %ld.%09ld seconds\n",
+			         td.tv_sec, td.tv_nsec);
+#endif
 
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
