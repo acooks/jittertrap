@@ -111,6 +111,26 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	return div;
 }
 
+void print_flow(int row, char *src, char *dst, struct flow_record *fte1,
+		struct flow_record *fte2, int div)
+{
+	mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
+	mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
+	         src);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
+	         dst);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
+	         fte1->flow.sport);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
+	         fte1->flow.dport);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
+	         protos[fte1->flow.proto]);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
+	         fte1->bytes / div, fte2->bytes / div);
+	mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+}
+
 void print_top_n(struct tt_top_flows *t5)
 {
 	int row = 3;
@@ -148,40 +168,12 @@ void print_top_n(struct tt_top_flows *t5)
 
 		switch (fte1->flow.ethertype) {
 		case ETHERTYPE_IP:
-			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
-			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
-			         ip_src);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
-			         ip_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         fte1->flow.sport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         fte1->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[fte1->flow.proto]);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->bytes / div, fte2->bytes / div);
-			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			print_flow(row, ip_src, ip_dst, fte1, fte2, div);
 			row += 3;
 			break;
 
 		case ETHERTYPE_IPV6:
-			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
-			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
-			         ip6_src);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
-			         ip6_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         fte1->flow.sport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         fte1->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[fte1->flow.proto]);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->bytes / div, fte2->bytes / div);
-			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			print_flow(row, ip6_src, ip6_dst, fte1, fte2, div);
 			row += 3;
 			break;
 		default:
