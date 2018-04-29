@@ -143,30 +143,32 @@ static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
 	return (f2->f.bytes - f1->f.bytes);
 }
 
-static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt)
+static int has_aged(struct timeval t1, struct timeval now)
 {
-	struct timeval diff;
+	struct timeval expiretime = tv_add(t1, ref_window_size);
 
-	diff = tv_absdiff(new_pkt->timestamp, old_pkt->timestamp);
+	return (tv_cmp(expiretime, now) < 0);
 
-	return (0 < tv_cmp(diff, ref_window_size));
 }
 
 static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
 	struct flow_pkt_list *ple, *tmp, *iter;
+	struct timeval now;
 
 	/* keep a list of packets, used for sliding window byte counts */
 	ple = malloc(sizeof(struct flow_pkt_list));
 	ple->pkt = *pkt;
 	DL_APPEND(pkt_list_ref_head, ple);
 
+	gettimeofday(&now, NULL);
+
 	/* expire packets where time diff between current (ple) and prev (iter)
 	 * is more than max_age */
 	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
 	{
-		if (has_aged(&(ple->pkt), &(iter->pkt))) {
+		if (has_aged(iter->pkt.timestamp, now)) {
 			HASH_FIND(r_hh, flow_ref_table,
 			          &(iter->pkt.flow_rec.flow),
 			          sizeof(struct flow), fte);
