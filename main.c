@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include "flow.h"
-
+#include "timeywimey.h"
 #include "intervals.h"
 
 static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
@@ -208,7 +208,8 @@ void stamp_datetime(char *buf, size_t len, struct timespec t)
 void handle_io(struct tt_thread_info *ti)
 {
 	struct timespec t1;
-	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
+	struct timespec print_deadline,
+	                print_interval = {.tv_sec = 0, .tv_nsec = 1E8};
 	int ch, stop = 0;
 	const char *errstr = NULL;
 	char datetime[26];
@@ -253,7 +254,10 @@ void handle_io(struct tt_thread_info *ti)
 			}
 		}
 
-		nanosleep(&print_timeout, NULL);
+		print_deadline = ts_add(t1, print_interval);
+		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME,
+		                &print_deadline, NULL);
+
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
 			errstr = "Interval thread died.";
