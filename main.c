@@ -84,12 +84,6 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	range(tp1, &unit, &div);
 	byteunit = byteunits[unit];
 
-#if DEBUG
-	mvprintw(DEBUG_LINE_OFFSET, 1,
-	         "tp1: %d byteunit:%s div:%d",
-	         tp1, byteunit, div);
-#endif
-
 	attron(A_BOLD);
 	mvprintw(TOP_N_LINE_OFFSET, 1, "%51s", "Source|SPort|Proto");
 	mvprintw(TOP_N_LINE_OFFSET + 1, 1, "%46s", "Destination|DPort|");
