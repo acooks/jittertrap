@@ -151,21 +151,18 @@ static int has_aged(struct timeval t1, struct timeval now)
 
 }
 
-static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
+/*
+ * remove the expired packets from the flow reference table,
+ * and update totals for the sliding window reference interval
+ */
+static void expire_old_packets()
 {
 	struct flow_hash *fte;
-	struct flow_pkt_list *ple, *tmp, *iter;
+	struct flow_pkt_list *tmp, *iter;
 	struct timeval now;
-
-	/* keep a list of packets, used for sliding window byte counts */
-	ple = malloc(sizeof(struct flow_pkt_list));
-	ple->pkt = *pkt;
-	DL_APPEND(pkt_list_ref_head, ple);
 
 	gettimeofday(&now, NULL);
 
-	/* expire packets where time diff between current (ple) and prev (iter)
-	 * is more than max_age */
 	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
 	{
 		if (has_aged(iter->pkt.timestamp, now)) {
@@ -195,6 +192,23 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 			break;
 		}
 	}
+}
+
+/*
+ * add the packet to the flow reference table.
+ *
+ * The reference table stores all the flows observed in a sliding window that
+ * is as long as the longest of the period-on-period-type intervals.
+ */
+static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
+{
+	struct flow_hash *fte;
+	struct flow_pkt_list *ple;
+
+	/* keep a list of packets, used for sliding window byte counts */
+	ple = malloc(sizeof(struct flow_pkt_list));
+	ple->pkt = *pkt;
+	DL_APPEND(pkt_list_ref_head, ple);
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
@@ -217,6 +231,10 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 	assert(totals.packets >= 0);
 }
 
+/*
+ * add the packet to the period-on-period interval table for the selected
+ * time series / interval.
+ */
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 {
 	struct flow_hash *fte;
@@ -280,6 +298,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 static void update_stats_tables(struct flow_pkt *pkt)
 {
+	expire_old_packets();
 	update_sliding_window_flow_ref(pkt);
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
