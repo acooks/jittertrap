@@ -316,6 +316,7 @@ void tt_get_top5(struct tt_top_flows *t5)
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
 
 	gettimeofday(&now, NULL);
+	expire_old_packets();
 	expire_old_interval_tables(now);
 
 	/* for each of the top 5 flow in the reference table,
