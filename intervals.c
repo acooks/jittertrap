@@ -200,7 +200,7 @@ static void expire_old_packets()
  * The reference table stores all the flows observed in a sliding window that
  * is as long as the longest of the period-on-period-type intervals.
  */
-static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
+static void add_flow_to_ref_table(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
 	struct flow_pkt_list *ple;
@@ -299,7 +299,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 static void update_stats_tables(struct flow_pkt *pkt)
 {
 	expire_old_packets();
-	update_sliding_window_flow_ref(pkt);
+	add_flow_to_ref_table(pkt);
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		add_flow_to_interval(pkt, i);
