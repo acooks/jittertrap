@@ -307,6 +307,17 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	expire_old_interval_tables(pkt->timestamp);
 }
 
+#define DEBUG 1
+#if DEBUG
+static void dbg_per_second(struct tt_top_flows *t5)
+{
+	double dt = ref_window_size.tv_sec + ref_window_size.tv_usec * 1E-6;
+
+	printf("\rref window: %f, flows:  %ld total bytes:   %ld, Bps: %lu total packets: %ld, pps: %lu\n",
+	dt, t5->flow_count, totals.bytes, t5->total_bytes, totals.packets, t5->total_packets);
+}
+#endif
+
 void tt_get_top5(struct tt_top_flows *t5)
 {
 	struct timeval now;
@@ -330,11 +341,24 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
-	assert(t5->total_bytes >= 0);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
-	assert(t5->total_packets >= 0);
-	assert(((t5->total_bytes > 0) && (t5->total_packets > 0))
-		|| ((t5->total_bytes == 0) && (t5->total_packets == 0)));
+
+#if DEBUG
+	if (t5->flow_count == 0 &&
+	    (t5->total_bytes > 0 || t5->total_packets > 0)) {
+		fprintf(stderr, "logic error in %s. flows is 0, but bytes and packets are > 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	} else if (t5->flow_count > 0 && totals.bytes == 0) {
+		fprintf(stderr, "logic error in %s. flows is >0, but bytes are 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	} else if (t5->flow_count > 0 && totals.packets == 0) {
+		fprintf(stderr, "logic error in %s. flows is >0, but packets are 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	}
+#endif
 }
 
 int tt_get_flow_count()
