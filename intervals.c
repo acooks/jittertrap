@@ -151,6 +151,56 @@ static int has_aged(struct timeval t1, struct timeval now)
 
 }
 
+static void clear_ref_table(void)
+{
+	struct flow_hash *fte;
+	struct flow_pkt_list *tmp, *iter;
+
+	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
+	{
+		HASH_FIND(r_hh, flow_ref_table,
+		          &(iter->pkt.flow_rec.flow),
+		          sizeof(struct flow), fte);
+		assert(fte);
+		fte->f.bytes -= iter->pkt.flow_rec.bytes;
+		assert(fte->f.bytes >= 0);
+
+		fte->f.packets -= iter->pkt.flow_rec.packets;
+		assert(fte->f.packets >= 0);
+
+		totals.bytes -= iter->pkt.flow_rec.bytes;
+		assert(totals.bytes >= 0);
+
+		totals.packets -= iter->pkt.flow_rec.packets;
+		assert(totals.packets >= 0);
+
+		if (0 == fte->f.bytes) {
+			HASH_DELETE(r_hh, flow_ref_table, fte);
+		}
+
+		DL_DELETE(pkt_list_ref_head, iter);
+		free(iter);
+	}
+
+	assert(totals.packets == 0);
+	assert(totals.bytes == 0);
+}
+
+/*
+ * Clear all the flow tables (reference table and interval tables), to purge
+ * stale flows when restarting the thread (eg. switching interfaces)
+ */
+void clear_all_tables(void)
+{
+	/* clear ref table */
+	clear_ref_table();
+
+	/* clear interval tables */
+	for (int i = 0; i < INTERVAL_COUNT; i++)
+		clear_table(i);
+}
+
+
 /*
  * remove the expired packets from the flow reference table,
  * and update totals for the sliding window reference interval
@@ -575,6 +625,8 @@ int tt_intervals_free(struct tt_thread_info *ti)
 	assert(ti);
 	assert(ti->priv);
 	assert(ti->t5);
+
+	clear_all_tables();
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
