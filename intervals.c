@@ -425,7 +425,7 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 		cbdata->result.err = 0;
 	} else {
 		cbdata->result.err = -1;
-		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
+		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE, "%s", errstr);
 	}
 }
 
