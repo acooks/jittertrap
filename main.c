@@ -97,16 +97,16 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 
 	if (dt1 > 1) {
 		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
-		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         "%4s @%4.f%2s|%4s @%4.f%2s",
 		         byteunit, dt1, intervalunits[SECONDS],
 		         byteunit, dt2, intervalunits[SECONDS]);
 	} else {
 		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
-		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         "%4s @%4.f%2s|%4s @%4.f%2s",
 		         byteunit, dt1 * 1E3, intervalunits[MILLISECONDS],
 		         byteunit, dt2 * 1E3, intervalunits[MILLISECONDS]);
 	}
-	mvaddch(TOP_N_LINE_OFFSET + 1, 58, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 59, ACS_VLINE);
 
 	attroff(A_BOLD);
 	return div;
