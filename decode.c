@@ -3,6 +3,7 @@
 #include <time.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
+#include <netinet/ip_icmp.h>
 #include <pcap/sll.h>
 
 #include "flow.h"
@@ -186,9 +187,18 @@ int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 	(void)errstr;
 	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_ICMP;
-	/* ICMP doesn't have ports, but we depend on that for the flow */
-	pkt->flow_rec.flow.sport = 0;
-	pkt->flow_rec.flow.dport = 0;
+
+	/* ICMP doesn't have ports, but we depend on that for the flow  */
+	if (packet->type == ICMP_ECHO) {
+		pkt->flow_rec.flow.dport = (ICMP_ECHO << 8) | packet->code;
+		pkt->flow_rec.flow.sport = ntohl(packet->hdr_data) >> 16;
+	} else if (packet->type == ICMP_ECHOREPLY) {
+		pkt->flow_rec.flow.sport = (ICMP_ECHO << 8) | packet->code;
+		pkt->flow_rec.flow.dport = ntohl(packet->hdr_data) >> 16;
+	} else {
+		pkt->flow_rec.flow.sport = packet->type;
+		pkt->flow_rec.flow.dport = packet->hdr_data;
+	}
 	return 0;
 }
 
