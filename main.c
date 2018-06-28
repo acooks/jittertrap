@@ -43,6 +43,7 @@ int interval1 = 4, interval2 = 3;
 
 void update_interval(struct tt_thread_info *ti, int updown)
 {
+	mvprintw(ERR_LINE_OFFSET, 0, "%50s", " ");
 	if ((0 > updown) && (interval2 > 0)) {
 		interval1--;
 		interval2--;
