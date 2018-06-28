@@ -148,38 +148,72 @@ static int has_aged(struct timeval t1, struct timeval now)
 	struct timeval expiretime = tv_add(t1, ref_window_size);
 
 	return (tv_cmp(expiretime, now) < 0);
-
 }
+
+static void delete_pkt_from_ref_table(struct flow_record *fr)
+{
+	struct flow_hash *fte;
+
+	HASH_FIND(r_hh, flow_ref_table,
+	          &(fr->flow),
+	          sizeof(struct flow), fte);
+	assert(fte);
+
+	fte->f.bytes -= fr->bytes;
+	fte->f.packets -= fr->packets;
+
+	assert(fte->f.bytes >= 0);
+	assert(fte->f.packets >= 0);
+
+	if (0 == fte->f.bytes) {
+		HASH_DELETE(r_hh, flow_ref_table, fte);
+	}
+}
+
+/* remove pkt from the sliding window packet list as well as reference table */
+static void delete_pkt(struct flow_pkt_list *le)
+{
+	delete_pkt_from_ref_table(&le->pkt.flow_rec);
+
+	totals.bytes -= le->pkt.flow_rec.bytes;
+	totals.packets -= le->pkt.flow_rec.packets;
+
+	assert(totals.bytes >= 0);
+	assert(totals.packets >= 0);
+
+	DL_DELETE(pkt_list_ref_head, le);
+	free(le);
+}
+
+/*
+ * remove the expired packets from the flow reference table,
+ * and update totals for the sliding window reference interval
+ */
+static void expire_old_packets()
+{
+	struct flow_pkt_list *tmp, *iter;
+	struct timeval now;
+
+	gettimeofday(&now, NULL);
+
+	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
+	{
+		if (has_aged(iter->pkt.timestamp, now)) {
+			delete_pkt(iter);
+		} else {
+			break;
+		}
+	}
+}
+
 
 static void clear_ref_table(void)
 {
-	struct flow_hash *fte;
 	struct flow_pkt_list *tmp, *iter;
 
 	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
 	{
-		HASH_FIND(r_hh, flow_ref_table,
-		          &(iter->pkt.flow_rec.flow),
-		          sizeof(struct flow), fte);
-		assert(fte);
-		fte->f.bytes -= iter->pkt.flow_rec.bytes;
-		assert(fte->f.bytes >= 0);
-
-		fte->f.packets -= iter->pkt.flow_rec.packets;
-		assert(fte->f.packets >= 0);
-
-		totals.bytes -= iter->pkt.flow_rec.bytes;
-		assert(totals.bytes >= 0);
-
-		totals.packets -= iter->pkt.flow_rec.packets;
-		assert(totals.packets >= 0);
-
-		if (0 == fte->f.bytes) {
-			HASH_DELETE(r_hh, flow_ref_table, fte);
-		}
-
-		DL_DELETE(pkt_list_ref_head, iter);
-		free(iter);
+		delete_pkt(iter);
 	}
 
 	assert(totals.packets == 0);
@@ -198,50 +232,6 @@ void clear_all_tables(void)
 	/* clear interval tables */
 	for (int i = 0; i < INTERVAL_COUNT; i++)
 		clear_table(i);
-}
-
-
-/*
- * remove the expired packets from the flow reference table,
- * and update totals for the sliding window reference interval
- */
-static void expire_old_packets()
-{
-	struct flow_hash *fte;
-	struct flow_pkt_list *tmp, *iter;
-	struct timeval now;
-
-	gettimeofday(&now, NULL);
-
-	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
-	{
-		if (has_aged(iter->pkt.timestamp, now)) {
-			HASH_FIND(r_hh, flow_ref_table,
-			          &(iter->pkt.flow_rec.flow),
-			          sizeof(struct flow), fte);
-			assert(fte);
-			fte->f.bytes -= iter->pkt.flow_rec.bytes;
-			assert(fte->f.bytes >= 0);
-
-			fte->f.packets -= iter->pkt.flow_rec.packets;
-			assert(fte->f.packets >= 0);
-
-			totals.bytes -= iter->pkt.flow_rec.bytes;
-			assert(totals.bytes >= 0);
-
-			totals.packets -= iter->pkt.flow_rec.packets;
-			assert(totals.packets >= 0);
-
-			if (0 == fte->f.bytes) {
-				HASH_DELETE(r_hh, flow_ref_table, fte);
-			}
-
-			DL_DELETE(pkt_list_ref_head, iter);
-			free(iter);
-		} else {
-			break;
-		}
-	}
 }
 
 /*
