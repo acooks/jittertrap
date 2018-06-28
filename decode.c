@@ -174,7 +174,6 @@ int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt, char *errstr)
 int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt, char *errstr)
 {
 	(void)errstr;
-	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_UDP;
 	pkt->flow_rec.flow.sport = ntohs(packet->sport);
 	pkt->flow_rec.flow.dport = ntohs(packet->dport);
