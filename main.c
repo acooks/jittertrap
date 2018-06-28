@@ -181,7 +181,7 @@ void print_top_n(struct tt_top_flows *t5)
 			row += 3;
 			break;
 		default:
-			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+			mvprintw(ERR_LINE_OFFSET, 0, "%50s", " ");
 			mvprintw(ERR_LINE_OFFSET, 0, "Unknown ethertype: %d",
 			         fte1->flow.ethertype);
 		}
