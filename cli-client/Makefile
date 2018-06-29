@@ -33,7 +33,7 @@ INCLUDES = \
  -I ../messages/include/ \
 
 LFLAGS = -lwebsockets -ljansson
-CFLAGS = -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS_EXTRA)
+CFLAGS := -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS)
 
 MESSAGES = ../messages/jt-messages.a
 
