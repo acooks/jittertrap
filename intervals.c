@@ -167,6 +167,7 @@ static void delete_pkt_from_ref_table(struct flow_record *fr)
 
 	if (0 == fte->f.bytes) {
 		HASH_DELETE(r_hh, flow_ref_table, fte);
+		free(fte);
 	}
 }
 
