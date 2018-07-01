@@ -346,7 +346,6 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		add_flow_to_interval(pkt, i);
 	}
-	expire_old_interval_tables(pkt->timestamp);
 }
 
 #define DEBUG 1
