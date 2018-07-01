@@ -97,7 +97,10 @@ int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt,
                char *errstr);
 
 struct hdr_icmp {
-	uint8_t todo;
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint32_t hdr_data; /* purpose depends on type field */
 } __attribute__((__packed__));
 
 int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,

@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include "flow.h"
-
+#include "timeywimey.h"
 #include "intervals.h"
 
 static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
@@ -43,6 +43,7 @@ int interval1 = 4, interval2 = 3;
 
 void update_interval(struct tt_thread_info *ti, int updown)
 {
+	mvprintw(ERR_LINE_OFFSET, 0, "%50s", " ");
 	if ((0 > updown) && (interval2 > 0)) {
 		interval1--;
 		interval2--;
@@ -55,34 +56,34 @@ void update_interval(struct tt_thread_info *ti, int updown)
 	tt_update_ref_window_size(ti, tt_intervals[interval1]);
 }
 
+void range(int v, int *byteunit, int *div)
+{
+	if (v > 1E10) {
+		*byteunit = GBPS;
+		*div = 1E9;
+	} else if (v > 1E7) {
+		*byteunit = MBPS;
+		*div = 1E6;
+	} else if (v > 1E4) {
+		*byteunit = KBPS;
+		*div = 1E3;
+	} else {
+		*byteunit = BPS;
+		*div = 1;
+	}
+}
+
 int print_hdrs(int tp1, struct timeval interval1, int tp2,
                struct timeval interval2)
 {
 	char const *byteunit;
-	int div;
+	int unit, div;
 
 	float dt1 = interval1.tv_sec + (float)interval1.tv_usec / (float)1E6;
 	float dt2 = interval2.tv_sec + (float)interval2.tv_usec / (float)1E6;
 
-	if (tp1 > 1E9) {
-		byteunit = byteunits[GBPS];
-		div = 1E9;
-	} else if (tp1 > 1E6) {
-		byteunit = byteunits[MBPS];
-		div = 1E6;
-	} else if (tp1 > 1E3) {
-		byteunit = byteunits[KBPS];
-		div = 1E3;
-	} else {
-		byteunit = byteunits[BPS];
-		div = 1;
-	}
-
-#if DEBUG
-	mvprintw(DEBUG_LINE_OFFSET, 1,
-	         "tp1: %d byteunit:%s div:%d",
-	         tp1, byteunit, div);
-#endif
+	range(tp1, &unit, &div);
+	byteunit = byteunits[unit];
 
 	attron(A_BOLD);
 	mvprintw(TOP_N_LINE_OFFSET, 1, "%51s", "Source|SPort|Proto");
@@ -96,19 +97,39 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 
 	if (dt1 > 1) {
 		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
-		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         "%4s @%4.f%2s|%4s @%4.f%2s",
 		         byteunit, dt1, intervalunits[SECONDS],
 		         byteunit, dt2, intervalunits[SECONDS]);
 	} else {
 		mvprintw(TOP_N_LINE_OFFSET + 1, TP1_COL,
-		         "%4s @%3.f%s|%4s @%3.f%2s",
+		         "%4s @%4.f%2s|%4s @%4.f%2s",
 		         byteunit, dt1 * 1E3, intervalunits[MILLISECONDS],
 		         byteunit, dt2 * 1E3, intervalunits[MILLISECONDS]);
 	}
-	mvaddch(TOP_N_LINE_OFFSET + 1, 58, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 59, ACS_VLINE);
 
 	attroff(A_BOLD);
 	return div;
+}
+
+void print_flow(int row, char *src, char *dst, struct flow_record *fte1,
+		struct flow_record *fte2, int div)
+{
+	mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
+	mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
+	         src);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
+	         dst);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
+	         fte1->flow.sport);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
+	         fte1->flow.dport);
+	mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
+	         protos[fte1->flow.proto]);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
+	         fte1->bytes / div, fte2->bytes / div);
+	mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 }
 
 void print_top_n(struct tt_top_flows *t5)
@@ -118,9 +139,13 @@ void print_top_n(struct tt_top_flows *t5)
 	char ip_dst[16];
 	char ip6_src[40];
 	char ip6_dst[40];
+	int div, unit;
+	char const *byteunit;
 
+	range(t5->total_bytes, &unit, &div);
+	byteunit = byteunits[unit];
 	mvprintw(0, 50, "%5d active flows", t5->flow_count);
-	mvprintw(1, 50, "%5d B/s", t5->total_bytes);
+	mvprintw(1, 50, "%5d %s    ", t5->total_bytes / div, byteunit);
 	mvprintw(2, 50, "%5d Pkts/s", t5->total_packets);
 
 	/* Clear the table */
@@ -130,7 +155,6 @@ void print_top_n(struct tt_top_flows *t5)
 	}
 
 	for (int i = 0; i < t5->flow_count && i < MAX_FLOW_COUNT; i++) {
-		int div = 1;
 		struct flow_record *fte1 = &(t5->flow[i][interval1]);
 		struct flow_record *fte2 = &(t5->flow[i][interval2]);
 
@@ -148,55 +172,46 @@ void print_top_n(struct tt_top_flows *t5)
 
 		switch (fte1->flow.ethertype) {
 		case ETHERTYPE_IP:
-			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
-			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
-			         ip_src);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
-			         ip_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         fte1->flow.sport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         fte1->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[fte1->flow.proto]);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->bytes / div, fte2->bytes / div);
-			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			print_flow(row, ip_src, ip_dst, fte1, fte2, div);
 			row += 3;
 			break;
 
 		case ETHERTYPE_IPV6:
-			mvaddch(TOP_N_LINE_OFFSET + row + 0, 0, ACS_ULCORNER);
-			mvaddch(TOP_N_LINE_OFFSET + row + 1, 0, ACS_LLCORNER);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 1, "%39s",
-			         ip6_src);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 1, "%39s",
-			         ip6_dst);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 40, "%6d",
-			         fte1->flow.sport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 40, "%6d",
-			         fte1->flow.dport);
-			mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
-			         protos[fte1->flow.proto]);
-			mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
-			         fte1->bytes / div, fte2->bytes / div);
-			mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
+			print_flow(row, ip6_src, ip6_dst, fte1, fte2, div);
 			row += 3;
 			break;
 		default:
-			mvprintw(ERR_LINE_OFFSET, 0, "%80s", " ");
+			mvprintw(ERR_LINE_OFFSET, 0, "%50s", " ");
 			mvprintw(ERR_LINE_OFFSET, 0, "Unknown ethertype: %d",
 			         fte1->flow.ethertype);
 		}
 	}
 }
 
+void stamp_datetime(char *buf, size_t len, struct timespec t)
+{
+	time_t timer;
+	struct tm* tm_info;
+
+	time(&timer);
+	tm_info = localtime(&timer);
+
+	strftime(buf, len - 4, "%Y-%m-%d %H:%M:%S", tm_info);
+	snprintf(buf + strlen(buf), 4, ".%02.0f", t.tv_nsec / 1E7);
+}
+
 void handle_io(struct tt_thread_info *ti)
 {
-	struct timespec print_timeout = {.tv_sec = 0, .tv_nsec = 2E8 };
+	struct timespec t1;
+	struct timespec print_deadline,
+	                print_interval = {.tv_sec = 0, .tv_nsec = 1E8};
+#if DEBUG
+	struct timespec t2, td, print_deadline_ext,
+	                print_gracetime = {.tv_sec = 0, .tv_nsec = 1E6};
+#endif
 	int ch, stop = 0;
 	const char *errstr = NULL;
+	char datetime[26];
 
 	initscr();            /* Start curses mode              */
 	raw();                /* Line buffering disabled        */
@@ -204,12 +219,16 @@ void handle_io(struct tt_thread_info *ti)
 	noecho();             /* Don't echo() while we do getch */
 	nodelay(stdscr, TRUE);
 
-	mvprintw(0, 0, "Device:");
+	mvprintw(1, 0, "Device:");
 	attron(A_BOLD);
-	mvprintw(0, 10, "%s\n", ti->dev);
+	mvprintw(1, 10, "%s\n", ti->dev);
 	attroff(A_BOLD);
 
 	while (!stop) {
+		clock_gettime(CLOCK_REALTIME, &t1);
+		stamp_datetime(datetime, sizeof(datetime), t1);
+		mvprintw(0, 0, "%s", datetime);
+
 		pthread_mutex_lock(&ti->t5_mutex);
 		print_top_n(ti->t5);
 		pthread_mutex_unlock(&ti->t5_mutex);
@@ -234,7 +253,20 @@ void handle_io(struct tt_thread_info *ti)
 			}
 		}
 
-		nanosleep(&print_timeout, NULL);
+		print_deadline = ts_add(t1, print_interval);
+		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME,
+		                &print_deadline, NULL);
+
+#if DEBUG
+		clock_gettime(CLOCK_REALTIME, &t2);
+		print_deadline_ext = ts_add(print_deadline, print_gracetime);
+		td = ts_absdiff(t2, t1);
+		if (ts_cmp(t2, print_deadline_ext) > 0)
+			mvprintw(DEBUG_LINE_OFFSET, 0,
+			         "screen froze for %ld.%09ld seconds\n",
+			         td.tv_sec, td.tv_nsec);
+#endif
+
 		void *ret;
 		if (EBUSY != pthread_tryjoin_np(ti->thread_id, &ret)) {
 			errstr = "Interval thread died.";

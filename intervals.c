@@ -114,18 +114,19 @@ static void clear_table(int table_idx)
 	incomplete_flow_tables[table_idx] = NULL;
 }
 
+/* initialise interval start and end times */
+static void init_intervals(struct timeval now)
+{
+	for (int i = 0; i < INTERVAL_COUNT; i++) {
+		interval_start[i] = now;
+		interval_end[i] = tv_add(interval_start[i], tt_intervals[i]);
+	}
+}
+
 static void expire_old_interval_tables(struct timeval now)
 {
-	struct timeval tz = { 0 };
-
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		struct timeval interval = tt_intervals[i];
-
-		/* at start-up, end is still zero. initialise it. */
-		if (0 == tv_cmp(tz, interval_end[i])) {
-			interval_start[i] = now;
-			interval_end[i] = tv_add(interval_start[i], interval);
-		}
 
 		/* interval elapsed? */
 		if (0 < tv_cmp(now, interval_end[i])) {
@@ -143,56 +144,115 @@ static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
 	return (f2->f.bytes - f1->f.bytes);
 }
 
-static int has_aged(struct flow_pkt *new_pkt, struct flow_pkt *old_pkt)
+/* t1 is the packet timestamp; deadline is the end of the current tick */
+static int has_aged(struct timeval t1, struct timeval deadline)
 {
-	struct timeval diff;
+	struct timeval expiretime = tv_add(t1, ref_window_size);
 
-	diff = tv_absdiff(new_pkt->timestamp, old_pkt->timestamp);
-
-	return (0 < tv_cmp(diff, ref_window_size));
+	return (tv_cmp(expiretime, deadline) < 0);
 }
 
-static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
+static void delete_pkt_from_ref_table(struct flow_record *fr)
 {
 	struct flow_hash *fte;
-	struct flow_pkt_list *ple, *tmp, *iter;
+
+	HASH_FIND(r_hh, flow_ref_table,
+	          &(fr->flow),
+	          sizeof(struct flow), fte);
+	assert(fte);
+
+	fte->f.bytes -= fr->bytes;
+	fte->f.packets -= fr->packets;
+
+	assert(fte->f.bytes >= 0);
+	assert(fte->f.packets >= 0);
+
+	if (0 == fte->f.bytes) {
+		HASH_DELETE(r_hh, flow_ref_table, fte);
+		free(fte);
+	}
+}
+
+/* remove pkt from the sliding window packet list as well as reference table */
+static void delete_pkt(struct flow_pkt_list *le)
+{
+	delete_pkt_from_ref_table(&le->pkt.flow_rec);
+
+	totals.bytes -= le->pkt.flow_rec.bytes;
+	totals.packets -= le->pkt.flow_rec.packets;
+
+	assert(totals.bytes >= 0);
+	assert(totals.packets >= 0);
+
+	DL_DELETE(pkt_list_ref_head, le);
+	free(le);
+}
+
+/*
+ * remove the expired packets from the flow reference table,
+ * and update totals for the sliding window reference interval
+ *
+ * NB: this must be called in both the packet receive and stats calculation
+ * paths, because the total bytes/packets depend on the pkt_list and we don't
+ * want to walk the whole list and redo the sum on every tick.
+ */
+static void expire_old_packets(struct timeval deadline)
+{
+	struct flow_pkt_list *tmp, *iter;
+
+	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
+	{
+		if (has_aged(iter->pkt.timestamp, deadline)) {
+			delete_pkt(iter);
+		} else {
+			break;
+		}
+	}
+}
+
+
+static void clear_ref_table(void)
+{
+	struct flow_pkt_list *tmp, *iter;
+
+	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
+	{
+		delete_pkt(iter);
+	}
+
+	assert(totals.packets == 0);
+	assert(totals.bytes == 0);
+}
+
+/*
+ * Clear all the flow tables (reference table and interval tables), to purge
+ * stale flows when restarting the thread (eg. switching interfaces)
+ */
+void clear_all_tables(void)
+{
+	/* clear ref table */
+	clear_ref_table();
+
+	/* clear interval tables */
+	for (int i = 0; i < INTERVAL_COUNT; i++)
+		clear_table(i);
+}
+
+/*
+ * add the packet to the flow reference table.
+ *
+ * The reference table stores all the flows observed in a sliding window that
+ * is as long as the longest of the period-on-period-type intervals.
+ */
+static void add_flow_to_ref_table(struct flow_pkt *pkt)
+{
+	struct flow_hash *fte;
+	struct flow_pkt_list *ple;
 
 	/* keep a list of packets, used for sliding window byte counts */
 	ple = malloc(sizeof(struct flow_pkt_list));
 	ple->pkt = *pkt;
 	DL_APPEND(pkt_list_ref_head, ple);
-
-	/* expire packets where time diff between current (ple) and prev (iter)
-	 * is more than max_age */
-	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
-	{
-		if (has_aged(&(ple->pkt), &(iter->pkt))) {
-			HASH_FIND(r_hh, flow_ref_table,
-			          &(iter->pkt.flow_rec.flow),
-			          sizeof(struct flow), fte);
-			assert(fte);
-			fte->f.bytes -= iter->pkt.flow_rec.bytes;
-			assert(fte->f.bytes >= 0);
-
-			fte->f.packets -= iter->pkt.flow_rec.packets;
-			assert(fte->f.packets >= 0);
-
-			totals.bytes -= iter->pkt.flow_rec.bytes;
-			assert(totals.bytes >= 0);
-
-			totals.packets -= iter->pkt.flow_rec.packets;
-			assert(totals.packets >= 0);
-
-			if (0 == fte->f.bytes) {
-				HASH_DELETE(r_hh, flow_ref_table, fte);
-			}
-
-			DL_DELETE(pkt_list_ref_head, iter);
-			free(iter);
-		} else {
-			break;
-		}
-	}
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
@@ -215,6 +275,10 @@ static void update_sliding_window_flow_ref(struct flow_pkt *pkt)
 	assert(totals.packets >= 0);
 }
 
+/*
+ * add the packet to the period-on-period interval table for the selected
+ * time series / interval.
+ */
 static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 {
 	struct flow_hash *fte;
@@ -278,24 +342,45 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 static void update_stats_tables(struct flow_pkt *pkt)
 {
-	update_sliding_window_flow_ref(pkt);
+	/*
+	 * expire the old packets in the receive path
+	 * NB: must be called in stats path as well.
+	 */
+	expire_old_packets(pkt->timestamp);
+
+	add_flow_to_ref_table(pkt);
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		add_flow_to_interval(pkt, i);
 	}
-	expire_old_interval_tables(pkt->timestamp);
 }
 
-void tt_get_top5(struct tt_top_flows *t5)
+#define DEBUG 1
+#if DEBUG
+static void dbg_per_second(struct tt_top_flows *t5)
 {
-	struct timeval now;
+	double dt = ref_window_size.tv_sec + ref_window_size.tv_usec * 1E-6;
+
+	printf("\rref window: %f, flows:  %ld total bytes:   %ld, Bps: %lu total packets: %ld, pps: %lu\n",
+	dt, t5->flow_count, totals.bytes, t5->total_bytes, totals.packets, t5->total_packets);
+}
+#endif
+
+static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
+{
 	struct flow_hash *rfti; /* reference flow table iter */
 
 	/* sort the flow reference table */
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
 
-	gettimeofday(&now, NULL);
-	expire_old_interval_tables(now);
+	/*
+	 * expire old packets in the output path
+	 * NB: must be called in packet receive path as well.
+	 */
+	expire_old_packets(deadline);
+
+	/* check if the interval is complete and then rotate tables */
+	expire_old_interval_tables(deadline);
 
 	/* for each of the top 5 flow in the reference table,
 	 * fill the counts from the short-interval flow tables */
@@ -308,11 +393,24 @@ void tt_get_top5(struct tt_top_flows *t5)
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
-	assert(t5->total_bytes >= 0);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
-	assert(t5->total_packets >= 0);
-	assert(((t5->total_bytes > 0) && (t5->total_packets > 0))
-		|| ((t5->total_bytes == 0) && (t5->total_packets == 0)));
+
+#if DEBUG
+	if (t5->flow_count == 0 &&
+	    (t5->total_bytes > 0 || t5->total_packets > 0)) {
+		fprintf(stderr, "logic error in %s. flows is 0, but bytes and packets are > 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	} else if (t5->flow_count > 0 && totals.bytes == 0) {
+		fprintf(stderr, "logic error in %s. flows is >0, but bytes are 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	} else if (t5->flow_count > 0 && totals.packets == 0) {
+		fprintf(stderr, "logic error in %s. flows is >0, but packets are 0\n", __func__);
+		dbg_per_second(t5);
+		assert(0);
+	}
+#endif
 }
 
 int tt_get_flow_count()
@@ -339,7 +437,7 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 		cbdata->result.err = 0;
 	} else {
 		cbdata->result.err = -1;
-		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE - 1, "%s", errstr);
+		snprintf(cbdata->result.errstr, DECODE_ERRBUF_SIZE, "%s", errstr);
 	}
 }
 
@@ -399,7 +497,7 @@ static int free_pcap(struct pcap_info *pi)
 
 static void set_affinity(struct tt_thread_info *ti)
 {
-	int s;
+	int s, j;
 	cpu_set_t cpuset;
 	pthread_t thread;
 	thread = pthread_self();
@@ -421,18 +519,15 @@ static void set_affinity(struct tt_thread_info *ti)
 		handle_error_en(s, "pthread_getaffinity_np");
 	}
 
-    /*
-	int j;
 	printf("RT thread [%s] priority [%d] CPU affinity: ",
- 	       ti->thread_name,
- 	       ti->thread_prio);
-  	for (j = 0; j < CPU_SETSIZE; j++) {
-  		if (CPU_ISSET(j, &cpuset)) {
- 			printf(" CPU%d", j);
-  		}
-  	}
- 	printf("\n"); 
-	*/
+	       ti->thread_name,
+	       ti->thread_prio);
+	for (j = 0; j < CPU_SETSIZE; j++) {
+		if (CPU_ISSET(j, &cpuset)) {
+			printf(" CPU%d", j);
+		}
+	}
+	printf("\n");
 }
 
 static int init_realtime(struct tt_thread_info *ti)
@@ -445,11 +540,19 @@ static int init_realtime(struct tt_thread_info *ti)
 	return 0;
 }
 
+static struct timeval ts_to_tv(struct timespec t_in)
+{
+	struct timeval t_out;
+
+	t_out.tv_sec = t_in.tv_sec;
+	t_out.tv_usec = t_in.tv_nsec / 1000;
+	return t_out;
+}
+
 void *tt_intervals_run(void *p)
 {
 	struct pcap_handler_user *cbdata;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
-	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
 	assert(ti);
 
@@ -462,33 +565,46 @@ void *tt_intervals_run(void *p)
 
 	cbdata = &ti->priv->pi.decoder_cbdata;
 
-	struct pollfd fds[] = {
-		{ .fd = ti->priv->pi.selectable_fd,
-		  .events = POLLIN,
-		  .revents = 0
-		}
-	};
+	struct timespec deadline;
+	struct timespec interval = { .tv_sec = 0, .tv_nsec = 1E6 };
+
+	clock_gettime(CLOCK_MONOTONIC, &deadline);
+	init_intervals(ts_to_tv(deadline));
+
+	/*
+	 * We need the 1ms tick for the stats update!
+	 * The 1ms has to be split between receiving packets and
+	 * stats calculations, as follows:
+	 *
+	 * max pcap_dispatch + tt_get_top5 + mutex contention < 1ms tick
+	 *            ~500us +      ~500ms +              ??? < 1ms
+	 *
+	 * If pcap_dispatch or tt_get_top5 takes too long,
+	 * the deadline will be missed and the stats will be wrong.
+	 *
+	 * 1Gbps Ethernet line rate is 1.5Mpps - 666ns/pkt
+	 * Say the time budget for processing packets is
+	 * roughly 500ns/pkt (should be less, but unknown and
+	 * machine dependent), then to cap the processing to
+	 * 500us total is 1000pkts.
+	 */
+	int cnt, max = 1000;
 
 	while (1) {
-		if (ppoll(fds, 1, &poll_timeout, NULL)) {
-			int cnt, max = 100000;
-			cnt = pcap_dispatch(ti->priv->pi.handle, max,
-			                    handle_packet, (u_char *)cbdata);
-			if (cnt && cbdata->result.err) {
-				/* FIXME: think of an elegant way to
-				 * get the errors out of this thread. */
-				ti->decode_errors++;
-			}
-		} else {
-			/* poll timeout */
-			if (fds[0].revents) {
-					fprintf(stderr, "error. revents: %x\n",
-				        fds[0].revents);
-			}
-		}
+		deadline = ts_add(deadline, interval);
+
 		pthread_mutex_lock(&ti->t5_mutex);
-		tt_get_top5(ti->t5);
+		tt_get_top5(ti->t5, ts_to_tv(deadline));
 		pthread_mutex_unlock(&ti->t5_mutex);
+
+		cnt = pcap_dispatch(ti->priv->pi.handle, max,
+		                    handle_packet, (u_char *)cbdata);
+		if (cnt && cbdata->result.err) {
+			/* FIXME: think of an elegant way to
+			 * get the errors out of this thread. */
+			ti->decode_errors++;
+		}
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL);
 	}
 
 	/* close the pcap session */
@@ -532,6 +648,8 @@ int tt_intervals_free(struct tt_thread_info *ti)
 	assert(ti);
 	assert(ti->priv);
 	assert(ti->t5);
+
+	clear_all_tables();
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
