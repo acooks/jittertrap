@@ -539,11 +539,19 @@ static int init_realtime(struct tt_thread_info *ti)
 	return 0;
 }
 
+static struct timeval ts_to_tv(struct timespec t_in)
+{
+	struct timeval t_out;
+
+	t_out.tv_sec = t_in.tv_sec;
+	t_out.tv_usec = t_in.tv_nsec / 1000;
+	return t_out;
+}
+
 void *tt_intervals_run(void *p)
 {
 	struct pcap_handler_user *cbdata;
 	struct tt_thread_info *ti = (struct tt_thread_info *)p;
-	struct timespec poll_timeout = {.tv_sec = 0, .tv_nsec = 1E8 };
 
 	assert(ti);
 
@@ -556,37 +564,46 @@ void *tt_intervals_run(void *p)
 
 	cbdata = &ti->priv->pi.decoder_cbdata;
 
-	struct pollfd fds[] = {
-		{ .fd = ti->priv->pi.selectable_fd,
-		  .events = POLLIN,
-		  .revents = 0
-		}
-	};
+	struct timespec deadline;
+	struct timespec interval = { .tv_sec = 0, .tv_nsec = 1E6 };
 
-	struct timeval deadline;
-	gettimeofday(&deadline, NULL);
-	init_intervals(deadline);
+	clock_gettime(CLOCK_MONOTONIC, &deadline);
+	init_intervals(ts_to_tv(deadline));
+
+	/*
+	 * We need the 1ms tick for the stats update!
+	 * The 1ms has to be split between receiving packets and
+	 * stats calculations, as follows:
+	 *
+	 * max pcap_dispatch + tt_get_top5 + mutex contention < 1ms tick
+	 *            ~500us +      ~500ms +              ??? < 1ms
+	 *
+	 * If pcap_dispatch or tt_get_top5 takes too long,
+	 * the deadline will be missed and the stats will be wrong.
+	 *
+	 * 1Gbps Ethernet line rate is 1.5Mpps - 666ns/pkt
+	 * Say the time budget for processing packets is
+	 * roughly 500ns/pkt (should be less, but unknown and
+	 * machine dependent), then to cap the processing to
+	 * 500us total is 1000pkts.
+	 */
+	int cnt, max = 1000;
 
 	while (1) {
-		if (ppoll(fds, 1, &poll_timeout, NULL)) {
-			int cnt, max = 100000;
-			cnt = pcap_dispatch(ti->priv->pi.handle, max,
-			                    handle_packet, (u_char *)cbdata);
-			if (cnt && cbdata->result.err) {
-				/* FIXME: think of an elegant way to
-				 * get the errors out of this thread. */
-				ti->decode_errors++;
-			}
-		} else {
-			/* poll timeout */
-			if (fds[0].revents) {
-				fprintf(stderr, "error. revents: %x\n",
-				        fds[0].revents);
-			}
-		}
+		deadline = ts_add(deadline, interval);
+
 		pthread_mutex_lock(&ti->t5_mutex);
-		tt_get_top5(ti->t5, deadline);
+		tt_get_top5(ti->t5, ts_to_tv(deadline));
 		pthread_mutex_unlock(&ti->t5_mutex);
+
+		cnt = pcap_dispatch(ti->priv->pi.handle, max,
+		                    handle_packet, (u_char *)cbdata);
+		if (cnt && cbdata->result.err) {
+			/* FIXME: think of an elegant way to
+			 * get the errors out of this thread. */
+			ti->decode_errors++;
+		}
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL);
 	}
 
 	/* close the pcap session */
