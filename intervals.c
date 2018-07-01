@@ -365,21 +365,21 @@ static void dbg_per_second(struct tt_top_flows *t5)
 }
 #endif
 
-void tt_get_top5(struct tt_top_flows *t5)
+static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 {
-	struct timeval now;
 	struct flow_hash *rfti; /* reference flow table iter */
 
 	/* sort the flow reference table */
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
 
-	gettimeofday(&now, NULL);
 	/*
 	 * expire old packets in the output path
 	 * NB: must be called in packet receive path as well.
 	 */
-	expire_old_packets(now);
-	expire_old_interval_tables(now);
+	expire_old_packets(deadline);
+
+	/* check if the interval is complete and then rotate tables */
+	expire_old_interval_tables(deadline);
 
 	/* for each of the top 5 flow in the reference table,
 	 * fill the counts from the short-interval flow tables */
@@ -585,7 +585,7 @@ void *tt_intervals_run(void *p)
 			}
 		}
 		pthread_mutex_lock(&ti->t5_mutex);
-		tt_get_top5(ti->t5);
+		tt_get_top5(ti->t5, deadline);
 		pthread_mutex_unlock(&ti->t5_mutex);
 	}
 
