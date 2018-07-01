@@ -144,11 +144,12 @@ static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
 	return (f2->f.bytes - f1->f.bytes);
 }
 
-static int has_aged(struct timeval t1, struct timeval now)
+/* t1 is the packet timestamp; deadline is the end of the current tick */
+static int has_aged(struct timeval t1, struct timeval deadline)
 {
 	struct timeval expiretime = tv_add(t1, ref_window_size);
 
-	return (tv_cmp(expiretime, now) < 0);
+	return (tv_cmp(expiretime, deadline) < 0);
 }
 
 static void delete_pkt_from_ref_table(struct flow_record *fr)
