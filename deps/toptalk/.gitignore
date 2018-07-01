@@ -2,3 +2,7 @@
 *~
 cscope*.out
 toptalk
+test-toptalk
+*.o
+*.a
+*.patch

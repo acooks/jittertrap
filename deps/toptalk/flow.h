@@ -2,7 +2,7 @@
 #define FLOW_H
 
 struct flow {
-	int ethertype;
+	uint16_t ethertype;
 	union {
 		struct {
 			struct in_addr src_ip;
