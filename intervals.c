@@ -190,17 +190,18 @@ static void delete_pkt(struct flow_pkt_list *le)
 /*
  * remove the expired packets from the flow reference table,
  * and update totals for the sliding window reference interval
+ *
+ * NB: this must be called in both the packet receive and stats calculation
+ * paths, because the total bytes/packets depend on the pkt_list and we don't
+ * want to walk the whole list and redo the sum on every tick.
  */
-static void expire_old_packets()
+static void expire_old_packets(struct timeval deadline)
 {
 	struct flow_pkt_list *tmp, *iter;
-	struct timeval now;
-
-	gettimeofday(&now, NULL);
 
 	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
 	{
-		if (has_aged(iter->pkt.timestamp, now)) {
+		if (has_aged(iter->pkt.timestamp, deadline)) {
 			delete_pkt(iter);
 		} else {
 			break;
@@ -340,7 +341,12 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 static void update_stats_tables(struct flow_pkt *pkt)
 {
-	expire_old_packets();
+	/*
+	 * expire the old packets in the receive path
+	 * NB: must be called in stats path as well.
+	 */
+	expire_old_packets(pkt->timestamp);
+
 	add_flow_to_ref_table(pkt);
 
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
@@ -368,7 +374,11 @@ void tt_get_top5(struct tt_top_flows *t5)
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
 
 	gettimeofday(&now, NULL);
-	expire_old_packets();
+	/*
+	 * expire old packets in the output path
+	 * NB: must be called in packet receive path as well.
+	 */
+	expire_old_packets(now);
 	expire_old_interval_tables(now);
 
 	/* for each of the top 5 flow in the reference table,
