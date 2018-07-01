@@ -114,18 +114,19 @@ static void clear_table(int table_idx)
 	incomplete_flow_tables[table_idx] = NULL;
 }
 
+/* initialise interval start and end times */
+static void init_intervals(struct timeval now)
+{
+	for (int i = 0; i < INTERVAL_COUNT; i++) {
+		interval_start[i] = now;
+		interval_end[i] = tv_add(interval_start[i], tt_intervals[i]);
+	}
+}
+
 static void expire_old_interval_tables(struct timeval now)
 {
-	struct timeval tz = { 0 };
-
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		struct timeval interval = tt_intervals[i];
-
-		/* at start-up, end is still zero. initialise it. */
-		if (0 == tv_cmp(tz, interval_end[i])) {
-			interval_start[i] = now;
-			interval_end[i] = tv_add(interval_start[i], interval);
-		}
 
 		/* interval elapsed? */
 		if (0 < tv_cmp(now, interval_end[i])) {
@@ -552,6 +553,10 @@ void *tt_intervals_run(void *p)
 		  .revents = 0
 		}
 	};
+
+	struct timeval deadline;
+	gettimeofday(&deadline, NULL);
+	init_intervals(deadline);
 
 	while (1) {
 		if (ppoll(fds, 1, &poll_timeout, NULL)) {
