@@ -43,7 +43,7 @@ JT = (function (my) {
 */
 
     var stack = d3.stack()
-                .order(d3.stackOrderNone)
+                .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
     /* Make a displayable title from the flow key */
