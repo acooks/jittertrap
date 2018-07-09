@@ -55,10 +55,8 @@ int main(int argc, char **argv)
 	const char *address;
 	struct lws *wsi_jt;
 	int ietf_version = -1; /* latest */
-	struct lws_context_creation_info info;
-	struct lws_client_connect_info ccinfo;
-
-	memset(&info, 0, sizeof info);
+	struct lws_context_creation_info info = {0};
+	struct lws_client_connect_info ccinfo = {0};
 
 	fprintf(stderr, "jittertrap test client\n");
 
