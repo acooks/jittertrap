@@ -355,7 +355,7 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	}
 }
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 static void dbg_per_second(struct tt_top_flows *t5)
 {
