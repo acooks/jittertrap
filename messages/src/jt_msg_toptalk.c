@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <jansson.h>
 #include <inttypes.h>
-#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -29,13 +28,14 @@ static const char *tt_test_msg =
 
 const char* jt_toptalk_test_msg_get() { return tt_test_msg; }
 
-int jt_toptalk_printer(void *data)
+int jt_toptalk_printer(void *data, char *out, int len)
 {
 	struct jt_msg_toptalk *t = (struct jt_msg_toptalk*)data;
 
-	syslog(LOG_INFO, "\r t:%ld.%09ld fc:%"PRId32", b: %"PRId64", p:%"PRId64"\n",
-	       t->timestamp.tv_sec, t->timestamp.tv_nsec, t->tflows, t->tbytes,
-	       t->tpackets);
+	snprintf(out, len,
+	         "t:%ld.%09ld fc:%"PRId32", b: %"PRId64", p:%"PRId64"",
+	         t->timestamp.tv_sec, t->timestamp.tv_nsec, t->tflows, t->tbytes,
+	         t->tpackets);
 	return 0;
 }
 

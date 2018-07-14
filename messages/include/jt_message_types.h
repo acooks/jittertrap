@@ -58,6 +58,9 @@ typedef int (*jt_unpacker_t)(json_t *root, void **data);
  */
 typedef int (*jt_consumer_t)(void *data);
 
+
+typedef int (*jt_print_t)(void *data, char *out, int len);
+
 typedef const char *(*jt_test_msg_getter_t)(void);
 
 struct jt_msg_type
@@ -66,7 +69,7 @@ struct jt_msg_type
 	const char *key;
 	jt_packer_t to_json_string;
 	jt_unpacker_t to_struct;
-	jt_consumer_t print;
+	jt_print_t print;
 	jt_consumer_t free;
 	jt_test_msg_getter_t get_test_msg;
 };

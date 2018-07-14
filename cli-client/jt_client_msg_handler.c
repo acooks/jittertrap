@@ -10,6 +10,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 	int err;
 	void *data;
 	const int *msg_type;
+	char printable[128];
 
 	root = json_loads(in, 0, &error);
 	if (!root) {
@@ -36,7 +37,20 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 			break;
 		}
 
-		jt_messages[*msg_type].print(data);
+		jt_messages[*msg_type].print(data, printable,
+		                             sizeof(printable));
+
+		switch (*msg_type) {
+		case JT_MSG_TOPTALK_V1:
+			/* FIXME: printable doesn't look very usable yet. */
+			break;
+		case JT_MSG_STATS_V1:
+			printf("\r%s", printable);
+			break;
+		default:
+			printf("%s\n", printable);
+		}
+
 		json_decref(root);
 		return 0;
 	}

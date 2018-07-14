@@ -3,7 +3,7 @@
 
 int jt_netem_params_packer(void *data, char **out);
 int jt_netem_params_unpacker(json_t *root, void **data);
-int jt_netem_params_printer(void *data);
+int jt_netem_params_printer(void *data, char *out, int len);
 int jt_netem_params_free(void *data);
 const char *jt_netem_params_test_msg_get(void);
 

@@ -1,7 +1,6 @@
 #include <string.h>
 #include <assert.h>
 #include <jansson.h>
-#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -24,14 +23,14 @@ int jt_netem_params_free(void *data)
 	return 0;
 }
 
-int jt_netem_params_printer(void *data)
+int jt_netem_params_printer(void *data, char *out, int len)
 {
 	struct jt_msg_netem_params *p = data;
 
-	syslog(LOG_INFO, "Impairment params: "
-	       "\tInterface:  %s"
-	       "\tDelay:      %dms"
-	       "\tJitter:  +/-%dms"
+	snprintf(out, len, "Impairment params:\n"
+	       "\tInterface:  %s\n"
+	       "\tDelay:      %dms\n"
+	       "\tJitter:  +/-%dms\n"
 	       "\tLoss:       %d",
 	       p->iface, p->delay, p->jitter, p->loss);
 	return 0;

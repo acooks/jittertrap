@@ -364,8 +364,10 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 
 	// iterate over array of msg types using pointer arithmetic.
 	for (msg_type = msg_type_arr; *msg_type != JT_MSG_END; msg_type++) {
-		// check if the message type matches.
+		char printable[1024];
 		int err;
+
+		// check if the message type matches.
 		err = jt_msg_match_type(root, *msg_type);
 		if (err) {
 			// type doesn't match, try the next.
@@ -383,7 +385,8 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 			break;
 		}
 
-		jt_messages[*msg_type].print(data);
+		jt_messages[*msg_type].print(data, printable, sizeof(printable));
+		syslog(LOG_DEBUG, "MSG received: %s", printable);
 
 		switch (*msg_type) {
 		case JT_MSG_SELECT_IFACE_V1:

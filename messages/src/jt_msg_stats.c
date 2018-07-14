@@ -6,7 +6,6 @@
 #include <assert.h>
 #include <jansson.h>
 #include <inttypes.h>
-#include <syslog.h>
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
@@ -33,11 +32,11 @@ int jt_stats_free(void *data)
 	return 0;
 }
 
-int jt_stats_printer(void *data)
+int jt_stats_printer(void *data, char *out, int len)
 {
 	struct jt_msg_stats *stats = (struct jt_msg_stats *)data;
 
-	syslog(LOG_INFO, "\rT: %"PRId64".%09"PRId64", Rx: %10"PRId64" Tx: %10"PRId64" PtkRx: %10"PRId32" PktTx: %10"PRId32" E: %10"PRId32,
+	snprintf(out, len, "T: %"PRId64".%09"PRId64", Rx: %10"PRId64" Tx: %10"PRId64" PtkRx: %10"PRId32" PktTx: %10"PRId32" E: %10"PRId32,
 	       stats->timestamp.tv_sec,
 	       stats->timestamp.tv_nsec,
 	       stats->mean_rx_bytes,
