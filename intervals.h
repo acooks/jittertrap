@@ -16,6 +16,7 @@
 extern struct timeval const tt_intervals[INTERVAL_COUNT];
 
 struct tt_top_flows {
+	struct timeval timestamp;
 	int64_t flow_count;
 	int64_t total_bytes;
 	int64_t total_packets;
