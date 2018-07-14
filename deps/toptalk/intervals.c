@@ -394,6 +394,7 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
+	t5->timestamp = deadline;
 
 #if DEBUG
 	if (t5->flow_count == 0 &&

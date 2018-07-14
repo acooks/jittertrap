@@ -78,7 +78,8 @@ m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 {
 	struct jt_msg_toptalk *m = &msg->m;
 
-	clock_gettime(CLOCK_MONOTONIC, &m->timestamp);
+	m->timestamp.tv_sec = ttf->timestamp.tv_sec;
+	m->timestamp.tv_nsec = ttf->timestamp.tv_usec * 1000;
 
 	m->interval_ns = tt_intervals[interval].tv_sec * 1E9
 		+ tt_intervals[interval].tv_usec * 1E3;
