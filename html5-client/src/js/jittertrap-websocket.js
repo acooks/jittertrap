@@ -98,7 +98,7 @@ JT = (function (my) {
     sock = new WebSocket(uri, "jittertrap");
 
     sock.onopen = function(evt) {
-      sock.send("open!");
+      sock.send("");
     };
 
     sock.onclose = function(evt) {
