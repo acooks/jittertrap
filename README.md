@@ -41,10 +41,6 @@ Run-time dependencies:
 
 
 #### Ubuntu  
-libwebsockets packages are available for Xenial Xerus and later. Backports might be available from [this ppa](https://launchpad.net/~acooks/+archive/ubuntu/libwebsockets6)
-
-    sudo apt-add-repository ppa:acooks/libwebsockets6
-    sudo apt-get update
 
 Build dependencies:
 
