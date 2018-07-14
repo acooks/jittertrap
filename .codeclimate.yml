@@ -52,4 +52,5 @@ plugins:
     enabled: true
 exclude_patterns:
 - "html5-client/deps/js/*"
+- "html5-client/deps/css/*"
 - "*deps/*"
