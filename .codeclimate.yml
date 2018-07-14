@@ -1,29 +1,17 @@
----
-engines:
+version: "2"
+plugins:
   csslint:
     enabled: true
   duplication:
     enabled: true
     config:
       languages:
-      - ruby
       - javascript
-      - python
-      - php
   eslint:
     enabled: true
   fixme:
     enabled: true
-ratings:
-  paths:
-  - "**.css"
-  - "**.inc"
-  - "**.js"
-  - "**.jsx"
-  - "**.module"
-  - "**.php"
-  - "**.py"
-  - "**.rb"
-exclude_paths:
-- html5-client/deps/*
+  gnu-complexity:
+    enabled: true
+exclude_patterns:
 - "*deps/*"
