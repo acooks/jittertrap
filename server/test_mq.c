@@ -31,7 +31,7 @@ int string_copier(struct mq_ws_msg *m, void *data)
 	assert(data);
 
 	s = (char *)data;
-	sprintf(s, m->m);
+	sprintf(s, "%s", m->m);
 	return 0;
 }
 
