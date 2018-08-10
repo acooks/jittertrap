@@ -63,4 +63,6 @@ Build:
 
 Run:
 
-    sudo ./server/jt-server --resource_path html5-client/output/
+    sudo ./server/jt-server --port 8080 --resource_path html5-client/output/
+
+Now point your web browser to the user interface, eg. http://localhost:8080/
