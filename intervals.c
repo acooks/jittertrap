@@ -446,9 +446,23 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int dlt; /* pcap data link type */
+	pcap_if_t *alldevs;
 
-	if (*dev == NULL) {
-		*dev = pcap_lookupdev(errbuf);
+	if (!*dev) {
+		int err = pcap_findalldevs(&alldevs, errbuf);
+		if (err) {
+			fprintf(stderr, "Couldn't list devices: %s\n", errbuf);
+			return 1;
+		}
+
+		if (!alldevs) {
+			fprintf(stderr,
+			        "No devices available. Check permissions.\n");
+			return 1;
+		}
+
+		*dev = strdup(alldevs->name);
+		pcap_freealldevs(alldevs);
 	}
 
 	if (*dev == NULL) {
