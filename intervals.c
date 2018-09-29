@@ -467,13 +467,13 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 
 	if (*dev == NULL) {
 		fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
-		return (2);
+		return 1;
 	}
 
 	pi->handle = pcap_open_live(*dev, BUFSIZ, 1, 0, errbuf);
 	if (pi->handle == NULL) {
-		fprintf(stderr, "Couldn't open device %s: %s\n", *dev, errbuf);
-		return (2);
+		fprintf(stderr, "Couldn't open device %s\n", errbuf);
+		return 1;
 	}
 
 	dlt = pcap_datalink(pi->handle);
@@ -488,18 +488,18 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		fprintf(stderr, "Device %s doesn't provide Ethernet headers - "
 		                "not supported\n",
 		        *dev);
-		return (2);
+		return 1;
 	}
 
 	if (pcap_setnonblock(pi->handle, 1, errbuf) != 0) {
 		fprintf(stderr, "Non-blocking mode failed: %s\n", errbuf);
-		return (2);
+		return 1;
 	}
 
 	pi->selectable_fd = pcap_get_selectable_fd(pi->handle);
 	if (-1 == pi->selectable_fd) {
 		fprintf(stderr, "pcap handle not selectable.\n");
-		return (2);
+		return 1;
 	}
 	return 0;
 }
@@ -643,11 +643,8 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	if (!ti->priv) { goto cleanup1; }
 
 	err = init_pcap(&(ti->dev), &(ti->priv->pi));
-	if (err) {
-		errno = err;
-		perror("init_pcap failed");
+	if (err)
 		goto cleanup;
-	}
 
 	return 0;
 

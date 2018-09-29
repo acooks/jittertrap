@@ -292,7 +292,8 @@ void init_thread(struct tt_thread_info *ti)
 
 	err = tt_intervals_init(ti);
 	if (err) {
-		handle_error_en(err, "tt intervals init");
+		/* pcap doesn't return a proper errno, but prints its own msg */
+		exit(EXIT_FAILURE);
 	}
 
 	err = pthread_attr_init(&ti->attr);
