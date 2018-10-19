@@ -33,11 +33,11 @@ We're aiming to release packages for Fedora, Ubuntu and OpenWRT and **would appr
 
 Build dependencies:  
 
-    sudo dnf install libnl3-devel jansson-devel libwebsockets-devel
+    sudo dnf install libnl3-devel jansson-devel libwebsockets-devel libpcap-devel
 
 Run-time dependencies:
 
-    sudo yum install libnl3 jansson libwebsockets
+    sudo dnf install libnl3 jansson libwebsockets libpcap
 
 
 #### Ubuntu  
