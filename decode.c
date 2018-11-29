@@ -106,6 +106,9 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	case IPPROTO_ICMPV6:
 		ret = decode_icmp6(next, pkt, errstr);
 		break;
+	case IPPROTO_ESP:
+		ret = decode_esp(next, pkt, errstr);
+		break;
 	default:
 		snprintf(errstr, DECODE_ERRBUF_SIZE,
 		         "*** Protocol [0x%02x] unknown", ip6_packet->next_hdr);
@@ -145,6 +148,9 @@ int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 		break;
 	case IPPROTO_IGMP:
 		ret = decode_igmp(next, pkt, errstr);
+		break;
+	case IPPROTO_ESP:
+		ret = decode_esp(next, pkt, errstr);
 		break;
 	default:
 		snprintf(errstr, DECODE_ERRBUF_SIZE,
@@ -219,6 +225,16 @@ int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 	(void)errstr;
 	(void)packet;
 	pkt->flow_rec.flow.proto = IPPROTO_ICMPV6;
+	pkt->flow_rec.flow.sport = 0;
+	pkt->flow_rec.flow.dport = 0;
+	return 0;
+}
+
+int decode_esp(const struct hdr_esp *packet, struct flow_pkt *pkt, char *errstr)
+{
+	(void)errstr;
+	(void)packet;
+	pkt->flow_rec.flow.proto = IPPROTO_ESP;
 	pkt->flow_rec.flow.sport = 0;
 	pkt->flow_rec.flow.dport = 0;
 	return 0;
