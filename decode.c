@@ -84,13 +84,25 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	int ret;
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
 	const struct hdr_ipv6 *ip6_packet = (const struct hdr_ipv6 *)packet;
+	uint8_t next_hdr, hdr_len;
 
 	pkt->flow_rec.flow.ethertype = ETHERTYPE_IPV6;
 	pkt->flow_rec.flow.src_ip6 = (ip6_packet->ip6_src);
 	pkt->flow_rec.flow.dst_ip6 = (ip6_packet->ip6_dst);
 
+	next_hdr = ip6_packet->next_hdr;
+
+	/* Optional headers */
+	switch (next_hdr) {
+	case IPPROTO_DSTOPTS: /* IPv6 Destination Options */
+		hdr_len = *((uint8_t*)next + 1);
+		next = (uint8_t*)next + hdr_len;
+		next_hdr = *((uint8_t*)next);
+		break;
+	}
+
 	/* Transport proto TCP/UDP/ICMP */
-	switch (ip6_packet->next_hdr) {
+	switch (next_hdr) {
 	case IPPROTO_TCP:
 		ret = decode_tcp(next, pkt, errstr);
 		break;
