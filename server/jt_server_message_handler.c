@@ -348,14 +348,14 @@ int jt_server_tick()
 	return 0;
 }
 
-static int jt_msg_handler(char *in, const int *msg_type_arr)
+static int jt_msg_handler(char *in, int len, const int *msg_type_arr)
 {
 	json_t *root;
 	json_error_t error;
 	void *data;
 	const int *msg_type;
 
-	root = json_loads(in, 0, &error);
+	root = json_loadb(in, len, 0, &error);
 	if (!root) {
 		syslog(LOG_ERR, "error: on line %d: %s\n", error.line,
 		        error.text);
@@ -409,7 +409,7 @@ static int jt_msg_handler(char *in, const int *msg_type_arr)
 }
 
 /* handle messages received from client in server */
-int jt_server_msg_receive(char *in)
+int jt_server_msg_receive(char *in, int len)
 {
-	return jt_msg_handler(in, &jt_msg_types_c2s[0]);
+	return jt_msg_handler(in, len, &jt_msg_types_c2s[0]);
 }

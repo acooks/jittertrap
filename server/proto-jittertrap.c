@@ -37,8 +37,7 @@ static int lws_writer(struct mq_ws_msg *m, void *data)
 }
 
 int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
-                        void *user, void *in,
-                        size_t len __attribute__((unused)))
+                        void *user, void *in, size_t len)
 {
 	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_JSON_MSG_LEN +
 	                  LWS_SEND_BUFFER_POST_PADDING];
@@ -95,7 +94,7 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
-		jt_server_msg_receive(in);
+		jt_server_msg_receive(in, len);
 		break;
 
 	/*

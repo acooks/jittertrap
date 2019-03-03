@@ -2,7 +2,7 @@
 #define JT_SERVER_MSG_HANDLER_H
 
 int jt_server_tick();
-int jt_server_msg_receive(char *in);
+int jt_server_msg_receive(char *in, int len);
 
 int jt_srv_send_iface_list();
 int jt_srv_send_select_iface();
