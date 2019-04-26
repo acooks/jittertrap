@@ -306,7 +306,7 @@ static int jt_init()
 		return -1;
 	}
 
-	err = mq_ws_init();
+	err = mq_ws_init("ws");
 	if (err) {
 		return -1;
 	}
@@ -316,8 +316,8 @@ static int jt_init()
 	select_iface(iface);
 	free(iface);
 
-	mq_tt_init();
-	mq_stats_init();
+	mq_tt_init("tt");
+	mq_stats_init("stats");
 	compute_thread_init();
 	intervals_thread_init();
 

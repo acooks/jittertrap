@@ -34,14 +34,16 @@ static int consumer_count = 0;
 
 /* lets start at non-zero to make sure our array indices are correct. */
 static unsigned long consumer_id_start = 42424242;
+static const char *qname;
 
-int NS(init)()
+int NS(init)(const char *mq_name)
 {
 	pthread_mutex_lock(&mq_mutex);
 	assert(!queue);
 	if (0 == consumer_count) {
-		syslog(LOG_INFO, "creating new queue for %d messages of %lu bytes each\n",
-		       MAX_Q_DEPTH - 1, sizeof(struct NS(msg)));
+		qname = mq_name;
+		syslog(LOG_INFO, "creating new queue (%s) holding up to %d messages of %lu bytes each\n",
+		       qname, MAX_Q_DEPTH - 1, sizeof(struct NS(msg)));
 
 		queue = malloc(BUF_BYTE_LEN);
 		assert(queue);
@@ -98,7 +100,7 @@ int NS(consumer_subscribe)(unsigned long *subscriber_id)
 
 	pthread_mutex_unlock(&mq_mutex);
 
-	syslog(LOG_INFO, "consumer %lu joined\n", *subscriber_id);
+	syslog(LOG_DEBUG, "consumer %lu joined queue %s\n", *subscriber_id, qname);
 
 	return 0;
 }
@@ -120,7 +122,7 @@ int NS(consumer_unsubscribe)(unsigned long subscriber_id)
 
 	pthread_mutex_unlock(&mq_mutex);
 
-	syslog(LOG_INFO, "consumer %lu left\n", subscriber_id);
+	syslog(LOG_INFO, "consumer %lu left queue %s\n", subscriber_id, qname);
 
 	return 0;
 }
