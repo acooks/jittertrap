@@ -6,8 +6,6 @@
 
 #include "mq_msg_ws.h"
 
-#define MAX_Q_DEPTH 16
-
 int message_producer(struct mq_ws_msg *m, void *data)
 {
 	int *d = (int *)data;
@@ -118,7 +116,7 @@ int test_produce_overflow()
 	err = mq_ws_consumer_subscribe(&id);
 	assert(!err);
 
-	for (i = 0; i < MAX_Q_DEPTH - 1; i++) {
+	for (i = 0; i < mq_ws_maxlen() - 1; i++) {
 		err = mq_ws_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}

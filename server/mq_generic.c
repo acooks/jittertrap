@@ -36,6 +36,11 @@ static int consumer_count = 0;
 static unsigned long consumer_id_start = 42424242;
 static const char *qname;
 
+int NS(maxlen)()
+{
+	return MAX_Q_DEPTH;
+}
+
 int NS(init)(const char *mq_name)
 {
 	pthread_mutex_lock(&mq_mutex);

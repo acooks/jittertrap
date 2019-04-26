@@ -19,6 +19,7 @@ typedef enum {
 
 struct NS(msg);
 
+int NS(maxlen)();
 int NS(init)(const char *mq_name);
 int NS(destroy)();
 int NS(consumer_subscribe)(unsigned long *subscriber_id);
