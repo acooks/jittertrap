@@ -3,6 +3,7 @@
 #include <time.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <pcap/sll.h>
 
@@ -89,6 +90,7 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	pkt->flow_rec.flow.ethertype = ETHERTYPE_IPV6;
 	pkt->flow_rec.flow.src_ip6 = (ip6_packet->ip6_src);
 	pkt->flow_rec.flow.dst_ip6 = (ip6_packet->ip6_dst);
+	pkt->flow_rec.flow.tclass = (htonl(ip6_packet->vcf) & 0x0fc00000) >> 20;
 
 	next_hdr = ip6_packet->next_hdr;
 
@@ -146,6 +148,7 @@ int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	pkt->flow_rec.flow.ethertype = ETHERTYPE_IP;
 	pkt->flow_rec.flow.src_ip = (ip4_packet->ip_src);
 	pkt->flow_rec.flow.dst_ip = (ip4_packet->ip_dst);
+	pkt->flow_rec.flow.tclass = IPTOS_DSCP(ip4_packet->ip_tos);
 
 	/* IP proto TCP/UDP/ICMP */
 	switch (ip4_packet->ip_p) {

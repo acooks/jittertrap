@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <ncurses.h>
 #include <pthread.h>
+#include <netinet/ip.h>
 #include <errno.h>
 
 #include "flow.h"
@@ -32,12 +33,36 @@ static char * const intervalunits[] = {
 	[SECONDS]      = "s "
 };
 
+static char const * const dscpvalues[] = {
+	[IPTOS_DSCP_AF11] = "AF11",
+	[IPTOS_DSCP_AF12] = "AF12",
+	[IPTOS_DSCP_AF13] = "AF13",
+	[IPTOS_DSCP_AF21] = "AF21",
+	[IPTOS_DSCP_AF22] = "AF22",
+	[IPTOS_DSCP_AF23] = "AF23",
+	[IPTOS_DSCP_AF31] = "AF31",
+	[IPTOS_DSCP_AF32] = "AF32",
+	[IPTOS_DSCP_AF33] = "AF33",
+	[IPTOS_DSCP_AF41] = "AF41",
+	[IPTOS_DSCP_AF42] = "AF42",
+	[IPTOS_DSCP_AF43] = "AF43",
+	[IPTOS_DSCP_EF]   = "EF",
+	[IPTOS_CLASS_CS0] = "CS0",
+	[IPTOS_CLASS_CS1] = "CS1",
+	[IPTOS_CLASS_CS2] = "CS2",
+	[IPTOS_CLASS_CS3] = "CS3",
+	[IPTOS_CLASS_CS4] = "CS4",
+	[IPTOS_CLASS_CS5] = "CS5",
+	[IPTOS_CLASS_CS6] = "CS6",
+	[IPTOS_CLASS_CS7] = "CS7"
+};
+
 
 #define ERR_LINE_OFFSET 2
 #define DEBUG_LINE_OFFSET 3
 #define TOP_N_LINE_OFFSET 5
-#define TP1_COL 47
-#define TP2_COL 59
+#define TP1_COL 53
+#define TP2_COL 64
 
 /* two displayed intervals */
 int interval1 = 4, interval2 = 3;
@@ -87,13 +112,16 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 	byteunit = byteunits[unit];
 
 	attron(A_BOLD);
-	mvprintw(TOP_N_LINE_OFFSET, 1, "%51s", "Source|SPort|Proto");
-	mvprintw(TOP_N_LINE_OFFSET + 1, 1, "%46s", "Destination|DPort|");
+	mvprintw(TOP_N_LINE_OFFSET, 1, "%52s", "Source|SPort|Proto|");
+	mvprintw(TOP_N_LINE_OFFSET + 1, 1, "%52s", "Destination|DPort|DSCP |");
 	mvaddch(TOP_N_LINE_OFFSET + 0, 40, ACS_VLINE);
 	mvaddch(TOP_N_LINE_OFFSET + 1, 40, ACS_VLINE);
 
 	mvaddch(TOP_N_LINE_OFFSET + 0, 46, ACS_VLINE);
 	mvaddch(TOP_N_LINE_OFFSET + 1, 46, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 0, 52, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 52, ACS_VLINE);
+
 
 
 	if (dt1 > 1) {
@@ -107,7 +135,7 @@ int print_hdrs(int tp1, struct timeval interval1, int tp2,
 		         byteunit, dt1 * 1E3, intervalunits[MILLISECONDS],
 		         byteunit, dt2 * 1E3, intervalunits[MILLISECONDS]);
 	}
-	mvaddch(TOP_N_LINE_OFFSET + 1, 59, ACS_VLINE);
+	mvaddch(TOP_N_LINE_OFFSET + 1, 65, ACS_VLINE);
 
 	attroff(A_BOLD);
 	return div;
@@ -128,7 +156,9 @@ void print_flow(int row, char *src, char *dst, struct flow_record *fte1,
 	         fte1->flow.dport);
 	mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 	         protos[fte1->flow.proto]);
-	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%10d %10d",
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%03s",
+	         dscpvalues[fte1->flow.tclass]);
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 55, "%10d  %10d",
 	         fte1->bytes / div, fte2->bytes / div);
 	mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 }

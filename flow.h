@@ -16,6 +16,7 @@ struct flow {
 	uint16_t sport;
 	uint16_t dport;
 	uint16_t proto;
+	uint8_t tclass;
 };
 
 struct flow_record {
