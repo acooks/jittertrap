@@ -14,7 +14,8 @@ static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
 	                                        [IPPROTO_ICMP] = "ICMP",
 	                                        [IPPROTO_ICMPV6] = "ICMP6",
 	                                        [IPPROTO_IP] = "IP",
-	                                        [IPPROTO_IGMP] = "IGMP" };
+	                                        [IPPROTO_IGMP] = "IGMP",
+						[IPPROTO_ESP] = "ESP" };
 
 enum speeds { BPS, KBPS, MBPS, GBPS };
 enum intervals { MILLISECONDS, SECONDS };
