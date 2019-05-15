@@ -51,7 +51,7 @@ struct hdr_ipv4 {
 int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
 
 struct hdr_ipv6 {
-	uint32_t version : 4, class : 8, flowlabel : 20;
+	uint32_t vcf;
 	uint16_t payload_len;
 	uint8_t next_hdr; /* like protocol in ipv4 */
 	uint8_t hop_limit;
