@@ -26,7 +26,7 @@ DEFINES += -DMAX_FLOW_COUNT=$(MAX_FLOW_COUNT)
 DEFINES += -DINTERVAL_COUNT=$(INTERVAL_COUNT)
 endif
 
-LDLIBS := -lpcap -lcurses -lrt -lpthread
+LFLAGS = -lpcap -lcurses -lrt -lpthread
 
 CFLAGS_HARDENED = \
  -fPIC \
@@ -41,7 +41,7 @@ all: $(LIB) $(TEST) $(PROG)
 
 $(PROG): $(LIB) $(SRC) $(HEADERS) Makefile main.c
 	@echo Building $(PROG)
-	$(CC) -o $(PROG) main.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+	$(CC) -o $(PROG) main.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
 	@echo -e "$(PROG) OK\n"
 
 $(LIB): $(SRC) $(HEADERS) Makefile
@@ -52,21 +52,18 @@ $(LIB): $(SRC) $(HEADERS) Makefile
 
 $(TEST): $(LIB) test.c
 	@echo Building $(TEST)
-	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
 
 .PHONY: test
 test: $(TEST)
 	@echo "Test needs sudo for promiscuous network access..."
 	@sudo ./$(TEST) && echo -e "Test OK\n"
 
-.PHONY: cppcheck
 cppcheck:
 	cppcheck --enable=warning,performance,portability --force .
 
-.PHONY: clang-analyze
 clang-analyze: clean
 	scan-build -v make
 
-.PHONY: clean
 clean:
 	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
