@@ -362,7 +362,7 @@ JT = (function (my) {
 
   var getFlowKey = function (interval, flow) {
     return interval + '/' + flow.src + '/' + flow.sport + '/' + flow.dst +
-           '/' + flow.dport + '/' + flow.proto;
+           '/' + flow.dport + '/' + flow.proto + '/' + flow.tclass;
   };
 
   var msgToFlows = function (msg, timestamp) {

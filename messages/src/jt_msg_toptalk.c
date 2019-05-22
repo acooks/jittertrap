@@ -19,11 +19,11 @@ static const char *tt_test_msg =
     " \"interval_ns\": 123,"
     " \"timestamp\": {\"tv_sec\": \"                123\", \"tv_nsec\": \"      456\"},"
     " \"flows\": ["
-    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32000, \"dport\":32000, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
-    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32001, \"dport\":32001, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
-    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32002, \"dport\":32002, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
-    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32003, \"dport\":32003, \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
-    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32004, \"dport\":32004, \"proto\": \"udp\", \"bytes\":100, \"packets\":10}"
+    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32000, \"dport\":32000, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"af11\" },"
+    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32001, \"dport\":32001, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"BE\"},"
+    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32002, \"dport\":32002, \"proto\": \"udp\", \"tclass\":\"EF\", \"bytes\":100, \"packets\":10},"
+    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32003, \"dport\":32003, \"tclass\":\"cs1\", \"proto\": \"udp\", \"bytes\":100, \"packets\":10},"
+    "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32004, \"dport\":32004, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"AF41\"}"
     "]}}";
 
 const char* jt_toptalk_test_msg_get() { return tt_test_msg; }
@@ -153,6 +153,12 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 		snprintf(tt->flows[i].proto, PROTO_LEN, "%s",
 		         json_string_value(t));
 
+		t = json_object_get(f, "tclass");
+		if (!json_is_string(t)) {
+			goto unpack_fail;
+		}
+		snprintf(tt->flows[i].tclass, TCLASS_LEN, "%s",
+		         json_string_value(t));
 	}
 
 	*data = tt;
@@ -214,6 +220,8 @@ int jt_toptalk_packer(void *data, char **out)
 		                    json_string(tt_msg->flows[i].dst));
 		json_object_set_new(flows[i], "proto",
 		                    json_string(tt_msg->flows[i].proto));
+		json_object_set_new(flows[i], "tclass",
+		                    json_string(tt_msg->flows[i].tclass));
 		json_array_append(flows_arr, flows[i]);
 	}
 

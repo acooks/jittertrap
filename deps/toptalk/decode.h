@@ -51,7 +51,7 @@ struct hdr_ipv4 {
 int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
 
 struct hdr_ipv6 {
-	uint32_t version : 4, class : 8, flowlabel : 20;
+	uint32_t vcf;
 	uint16_t payload_len;
 	uint8_t next_hdr; /* like protocol in ipv4 */
 	uint8_t hop_limit;
@@ -103,6 +103,12 @@ struct hdr_icmp {
 	uint32_t hdr_data; /* purpose depends on type field */
 } __attribute__((__packed__));
 
+
+struct hdr_esp {
+	uint32_t spi;
+	uint32_t seq;
+} __attribute__((__packed__));
+
 int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr);
 
@@ -112,4 +118,6 @@ int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                  char *errstr);
 
+int decode_esp(const struct hdr_esp *packet, struct flow_pkt *pkt,
+               char *errstr);
 #endif
