@@ -10,6 +10,7 @@ const char *jt_toptalk_test_msg_get();
 #define MAX_FLOWS 20
 #define ADDR_LEN 40
 #define PROTO_LEN 5
+#define TCLASS_LEN 5
 
 struct jt_msg_toptalk
 {
@@ -26,6 +27,7 @@ struct jt_msg_toptalk
 		char src[ADDR_LEN];
 		char dst[ADDR_LEN];
 		char proto[PROTO_LEN];
+		char tclass[TCLASS_LEN];
 	} flows[MAX_FLOWS];
 };
 

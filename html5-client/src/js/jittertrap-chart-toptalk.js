@@ -52,13 +52,15 @@ JT = (function (my) {
       var padsource = " ".repeat(15 - a[1].length);
       var padsport = " ".repeat(6 - a[2].length);
       var paddest = " ".repeat(15 - a[3].length);
-      var paddport = " ".repeat(6 - a[4].length);
-      var padproto = " ".repeat(7 - a[5].length);
+      var paddport = " ".repeat(9 - a[4].length);
+      var padproto = " ".repeat(8 - a[5].length);
+      var padtclass = " ".repeat(13 - a[6].length);
       return a[1] + padsource + " : "
              + a[2] + padsport
              + "   ->   "
              + a[3] + paddest + " : "
-             + a[4] + paddport + " " + padproto + a[5];
+             + a[4] + paddport + " │ " + padproto + a[5] + " │ "
+             + padtclass + a[6];
     };
 
     var svg = {};
@@ -184,7 +186,7 @@ JT = (function (my) {
 	   .style("text-anchor", "begin")
 	   .style("font-family" ,"monospace")
 	   .style("white-space", "pre")
-	   .text("Source          : Src Port ->   Destination     : Dst Port   Protocol")
+	   .text("Source          : Src Port ->   Destination     : Dst Port  │ Protocol │ Traffic Class")
              .attr("class", "legendheading")
              .attr("transform",
                     function(d, i) {

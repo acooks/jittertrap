@@ -1,4 +1,8 @@
 
+.legendheading {
+  font-weight: bold;
+}
+
 .axis path,
 .axis line {
   fill: none;

@@ -1,4 +1,5 @@
 #include <net/ethernet.h>
+#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sched.h>
 #include <errno.h>
@@ -40,6 +41,30 @@ static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
                                                 [IPPROTO_ICMPV6] = "ICMP6",
                                                 [IPPROTO_IP] = "IP",
                                                 [IPPROTO_IGMP] = "IGMP" };
+
+static char const * const dscpvalues[] = {
+        [IPTOS_DSCP_AF11] = "AF11",
+        [IPTOS_DSCP_AF12] = "AF12",
+        [IPTOS_DSCP_AF13] = "AF13",
+        [IPTOS_DSCP_AF21] = "AF21",
+        [IPTOS_DSCP_AF22] = "AF22",
+        [IPTOS_DSCP_AF23] = "AF23",
+        [IPTOS_DSCP_AF31] = "AF31",
+        [IPTOS_DSCP_AF32] = "AF32",
+        [IPTOS_DSCP_AF33] = "AF33",
+        [IPTOS_DSCP_AF41] = "AF41",
+        [IPTOS_DSCP_AF42] = "AF42",
+        [IPTOS_DSCP_AF43] = "AF43",
+        [IPTOS_DSCP_EF]   = "EF",
+        [IPTOS_CLASS_CS0] = "CS0",
+        [IPTOS_CLASS_CS1] = "CS1",
+        [IPTOS_CLASS_CS2] = "CS2",
+        [IPTOS_CLASS_CS3] = "CS3",
+        [IPTOS_CLASS_CS4] = "CS4",
+        [IPTOS_CLASS_CS5] = "CS5",
+        [IPTOS_CLASS_CS6] = "CS6",
+        [IPTOS_CLASS_CS7] = "CS7"
+};
 
 int tt_thread_restart(char * iface)
 {
@@ -99,6 +124,8 @@ m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 				inet_ntoa(ttf->flow[f][interval].flow.src_ip));
 		snprintf(m->flows[f].dst, ADDR_LEN, "%s",
 				inet_ntoa(ttf->flow[f][interval].flow.dst_ip));
+		snprintf(m->flows[f].tclass, TCLASS_LEN, "%s",
+		         dscpvalues[ttf->flow[f][interval].flow.tclass]);
 	}
 	return 0;
 }
