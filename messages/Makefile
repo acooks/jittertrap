@@ -47,6 +47,7 @@ CFLAGS_HARDENED = \
 CFLAGS := -Wall -Wpedantic -std=c11 -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
 LDLIBS := -ljansson $(LDLIBS)
 
+AR = gcc-ar
 
 .PHONY: all
 all: $(LIB) test-packing

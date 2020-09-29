@@ -7,6 +7,6 @@ int jt_sample_period_printer(void *data, char *out, int len);
 int jt_sample_period_free(void *data);
 const char *jt_sample_period_msg_get(void);
 
-int sample_period;
+extern int sample_period;
 
 #endif

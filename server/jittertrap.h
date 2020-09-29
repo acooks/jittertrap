@@ -33,7 +33,8 @@ static_assert(
                       *MESSAGES_PER_SECOND) " != (int)" xstr(USECS_PER_SECOND));
 
 /* for synchronization of netlink cache operations. */
-pthread_mutex_t nl_sock_mutex;
+extern pthread_mutex_t nl_sock_mutex;
+extern char g_selected_iface[MAX_IFACE_LEN];
 
 int jt_get_sample_period();
 int jt_set_iface(const char *iface);

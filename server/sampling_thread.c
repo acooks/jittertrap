@@ -39,6 +39,7 @@ struct sigaction sa;
 
 struct nl_sock *nl_sock;
 
+pthread_mutex_t nl_sock_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_iface_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_stats_mutex = PTHREAD_MUTEX_INITIALIZER;
 char *g_iface;

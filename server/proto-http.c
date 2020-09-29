@@ -17,7 +17,7 @@
 
 #include "proto.h"
 
-int max_poll_elements;
+int max_poll_elements = 10;
 
 #ifdef EXTERNAL_POLL
 struct pollfd *pollfds;

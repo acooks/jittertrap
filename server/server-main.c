@@ -21,10 +21,10 @@
 #define str(s) #s
 
 char *resource_path = xstr(WEB_SERVER_DOCUMENT_ROOT);
-int max_poll_elements;
 
 static volatile int force_exit = 0;
 static struct lws_context *context;
+
 
 /* list of supported protocols and callbacks */
 static struct lws_protocols protocols[] = {
@@ -64,9 +64,7 @@ static struct option options[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "debug", required_argument, NULL, '1' },
 	{ "port", required_argument, NULL, 'p' },
-	{ "ssl", no_argument, NULL, 's' },
 	{ "interface", required_argument, NULL, 'i' },
-	{ "closetest", no_argument, NULL, 'c' },
 #ifndef LWS_NO_DAEMONIZE
 	{ "daemonize", no_argument, NULL, 'D' },
 #endif
@@ -90,10 +88,7 @@ static const struct lws_extension exts[] = {
 
 int main(int argc, char **argv)
 {
-	char cert_path[1024];
-	char key_path[1024];
 	int n = 0;
-	int use_ssl = 0;
 	int opts = 0;
 	char interface_name[128] = "";
 	const char *iface = NULL;
@@ -130,9 +125,6 @@ int main(int argc, char **argv)
 		case 'd':
 			debug_level = LOG_DEBUG;
 			break;
-		case 's':
-			use_ssl = 1;
-			break;
 		case 'p':
 			info.port = atoi(optarg);
 			break;
@@ -141,17 +133,12 @@ int main(int argc, char **argv)
 			interface_name[(sizeof interface_name) - 1] = '\0';
 			iface = interface_name;
 			break;
-		case 'c':
-			close_testing = 1;
-			fprintf(stderr, " Close testing mode -- closes on "
-			                "client after 50 messages.\n");
-			break;
 		case 'r':
 			resource_path = optarg;
 			break;
 		case 'h':
 			fprintf(stderr,
-			        "Usage: " PROGNAME "[--port=<p>] [--ssl] "
+			        "Usage: " PROGNAME "[--port=<p>] "
 			        "[-d <log level>]"
 			        "[--resource_path <path>]\n");
 			exit(1);
@@ -186,27 +173,6 @@ int main(int argc, char **argv)
 	info.protocols = protocols;
 	info.extensions = exts;
 
-	if (!use_ssl) {
-		info.ssl_cert_filepath = NULL;
-		info.ssl_private_key_filepath = NULL;
-	} else {
-		if (strlen(resource_path) > sizeof(cert_path) - 32) {
-			syslog(LOG_ERR, "resource path too long\n");
-			return -1;
-		}
-		sprintf(cert_path, "%s/libwebsockets-test-server.pem",
-		        resource_path);
-
-		if (strlen(resource_path) > sizeof(key_path) - 32) {
-			syslog(LOG_ERR, "resource path too long\n");
-			return -1;
-		}
-		sprintf(key_path, "%s/libwebsockets-test-server.key.pem",
-		        resource_path);
-
-		info.ssl_cert_filepath = cert_path;
-		info.ssl_private_key_filepath = key_path;
-	}
 	info.gid = -1;
 	info.uid = -1;
 	info.options = opts;

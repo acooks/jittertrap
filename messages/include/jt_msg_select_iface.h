@@ -7,6 +7,6 @@ int jt_select_iface_printer(void *data, char *out, int len);
 int jt_select_iface_free(void *data);
 const char *jt_select_iface_test_msg_get(void);
 
-char (*iface)[MAX_IFACE_LEN];
+extern char (*iface)[MAX_IFACE_LEN];
 
 #endif

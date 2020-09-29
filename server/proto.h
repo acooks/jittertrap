@@ -11,9 +11,7 @@ enum protocol_ids {
 	PROTOCOL_TERMINATOR
 };
 
-int close_testing;
-
-char *resource_path;
+extern char *resource_path;
 
 void dump_handshake_info(struct lws *wsi);
 

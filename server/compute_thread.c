@@ -40,7 +40,6 @@ static struct {
 
 struct iface_stats *g_raw_samples;
 int g_unsent_frame_count = 0;
-char g_selected_iface[MAX_IFACE_LEN];
 
 struct slist *sample_list;
 int g_sample_count;
