@@ -22,7 +22,6 @@ DEFINES = \
 SOURCES = \
  server-main.c \
  proto.c \
- proto-http.c \
  proto-jittertrap.c \
  mq_msg_ws.c \
  mq_msg_stats.c \
@@ -40,7 +39,6 @@ SOURCES = \
 
 HEADERS = \
  proto.h \
- proto-http.h \
  proto-jittertrap.h \
  mq_generic.h \
  mq_msg_ws.h \
@@ -59,7 +57,6 @@ HEADERS = \
 OBJECTS += compute_thread.o
 OBJECTS += server-main.o
 OBJECTS += proto.o
-OBJECTS += proto-http.o
 OBJECTS += proto-jittertrap.o
 OBJECTS += mq_msg_ws.o
 OBJECTS += mq_msg_stats.o

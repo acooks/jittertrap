@@ -14,7 +14,6 @@
 #include <libwebsockets.h>
 
 #include "proto.h"
-#include "proto-http.h"
 #include "proto-jittertrap.h"
 
 #define xstr(s) str(s)
@@ -33,10 +32,7 @@ static struct lws_protocols protocols[] = {
 	    [PROTOCOL_HTTP] =
 	        {
 	            .name = "http-only",
-	            .callback = callback_http,
-	            .per_session_data_size =
-	                sizeof(struct per_session_data__http),
-	            .rx_buffer_size = 0, /* max frame size / rx buffer */
+	            .callback = lws_callback_http_dummy
 	        },
 	    [PROTOCOL_JITTERTRAP] =
 	        {
@@ -44,7 +40,8 @@ static struct lws_protocols protocols[] = {
 	            .callback = callback_jittertrap,
 	            .per_session_data_size =
 	                sizeof(struct per_session_data__jittertrap),
-	            .rx_buffer_size = 4000,
+	            .rx_buffer_size = 0,
+	            .tx_packet_size = 4000,
 	        },
 
 	    /* terminator */
@@ -84,6 +81,26 @@ static const struct lws_extension exts[] = {
 		"deflate_frame"
 	},
 	{ NULL, NULL, NULL /* terminator */ }
+};
+
+static struct lws_http_mount mount = {
+        .mount_next             = NULL,             /* linked-list "next" */
+        .mountpoint             = "/",              /* mountpoint URL */
+        .origin                 = "./mount-origin", /* serve from dir */
+        .def                    = "index.html",     /* default filename */
+        .protocol               = NULL,
+        .cgienv                 = NULL,
+        .extra_mimetypes        = NULL,
+        .interpret              = NULL,
+        .cgi_timeout            = 0,
+        .cache_max_age          = 0,
+        .auth_mask              = 0,
+        .cache_reusable         = 0,
+        .cache_revalidate       = 0,
+        .cache_intermediaries   = 0,
+        .origin_protocol        = LWSMPRO_FILE,     /* files in a dir */
+        .mountpoint_len         = 1,                /* char count */
+        .basic_auth_login_file  = NULL
 };
 
 int main(int argc, char **argv)
@@ -135,6 +152,7 @@ int main(int argc, char **argv)
 			break;
 		case 'r':
 			resource_path = optarg;
+			mount.origin = resource_path;
 			break;
 		case 'h':
 			fprintf(stderr,
@@ -172,7 +190,7 @@ int main(int argc, char **argv)
 	info.iface = iface;
 	info.protocols = protocols;
 	info.extensions = exts;
-
+	info.mounts = &mount;
 	info.gid = -1;
 	info.uid = -1;
 	info.options = opts;
@@ -188,21 +206,7 @@ int main(int argc, char **argv)
 		lws_callback_on_writable_all_protocol(
 		    context, &protocols[PROTOCOL_JITTERTRAP]);
 
-		/* FIXME: something is causing us to spin. This helps to
-		 * slow things down, but it's not a proper solution.
-		 */
-		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 1E5 };
-		nanosleep(&rqtp, NULL);
-
-		/*
-		 * takes care of the poll() and looping through finding who
-		 * needs service.
-		 *
-		 * If no socket needs service, it'll return anyway after
-		 * the number of ms in the second argument.
-		 */
-
-		n = lws_service(context, 1);
+		n = lws_service(context, 0);
 	}
 
 	lws_context_destroy(context);
