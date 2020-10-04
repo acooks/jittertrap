@@ -57,7 +57,7 @@ $(OBJECTS): %.o: src/%.c include/%.h Makefile ../make.config
 
 
 $(LIB): $(OBJECTS) Makefile
-	ar cr $(LIB) *.o
+	$(AR) cr $(LIB) *.o
 
 
 .PHONY: indent
