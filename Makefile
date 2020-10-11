@@ -26,7 +26,13 @@ DEFINES += -DMAX_FLOW_COUNT=$(MAX_FLOW_COUNT)
 DEFINES += -DINTERVAL_COUNT=$(INTERVAL_COUNT)
 endif
 
-LFLAGS = -lpcap -lcurses -lrt -lpthread
+PKGCONFIG_PCAP = $$(pkg-config --libs libpcap)
+PKGCONFIG_CURSES = $$(pkg-config --cflags --libs ncursesw)
+
+LDFLAGS := -lrt -lpthread \
+ $(PKGCONFIG_PCAP) \
+ $(PKGCONFIG_CURSES) \
+ $(LDFLAGS)
 
 CFLAGS_HARDENED = \
  -fPIC \
@@ -39,9 +45,12 @@ CFLAGS := -g -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS)
 .PHONY: all
 all: $(LIB) $(TEST) $(PROG)
 
+%.o: %.c %.h Makefile ../make.config make.config
+	$(COMPILE.c) $(DEFINES) $< -o $@
+
 $(PROG): $(LIB) $(SRC) $(HEADERS) Makefile main.c
 	@echo Building $(PROG)
-	$(CC) -o $(PROG) main.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
+	$(CC) -o $(PROG) main.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 	@echo -e "$(PROG) OK\n"
 
 $(LIB): $(SRC) $(HEADERS) Makefile
@@ -52,18 +61,21 @@ $(LIB): $(SRC) $(HEADERS) Makefile
 
 $(TEST): $(LIB) test.c
 	@echo Building $(TEST)
-	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LFLAGS) $(CFLAGS)
+	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
 .PHONY: test
 test: $(TEST)
 	@echo "Test needs sudo for promiscuous network access..."
 	@sudo ./$(TEST) && echo -e "Test OK\n"
 
+.PHONY: cppcheck
 cppcheck:
 	cppcheck --enable=warning,performance,portability --force .
 
+.PHONY: clang-analyze
 clang-analyze: clean
 	scan-build -v make
 
+.PHONY: clean
 clean:
 	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
