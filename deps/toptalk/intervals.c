@@ -470,7 +470,7 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		return 1;
 	}
 
-	pi->handle = pcap_open_live(*dev, BUFSIZ, 1, 0, errbuf);
+	pi->handle = pcap_open_live(*dev, BUFSIZ, 1, 3, errbuf);
 	if (pi->handle == NULL) {
 		fprintf(stderr, "Couldn't open device %s\n", errbuf);
 		return 1;
