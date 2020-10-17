@@ -3,41 +3,6 @@ language: c
 matrix:
   include:
     - os: linux
-      dist: xenial
-      compiler: gcc
-      addons:
-        apt:
-          update: true
-          packages:
-            - gcc
-            - clang
-            - make
-            - pkg-config
-            - libnl-3-dev
-            - libnl-route-3-dev
-            - libnl-genl-3-dev
-            - libjansson-dev
-            - libwebsockets-dev
-            - libpcap-dev
-    - os: linux
-      dist: xenial
-      compiler: clang
-      addons:
-        apt:
-          update: true
-          packages:
-            - gcc
-            - clang
-            - make
-            - pkg-config
-            - libnl-3-dev
-            - libnl-route-3-dev
-            - libnl-genl-3-dev
-            - libjansson-dev
-            - libwebsockets-dev
-            - libpcap-dev
-
-    - os: linux
       dist: bionic
       compiler: gcc
       addons:
