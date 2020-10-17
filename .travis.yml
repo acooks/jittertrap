@@ -54,6 +54,40 @@ matrix:
             - libjansson-dev
             - libwebsockets-dev
             - libpcap-dev
+    - os: linux
+      dist: focal
+      compiler: gcc
+      addons:
+        apt:
+          update: true
+          packages:
+            - gcc
+            - clang
+            - make
+            - pkgconf
+            - libnl-3-dev
+            - libnl-route-3-dev
+            - libnl-genl-3-dev
+            - libjansson-dev
+            - libwebsockets-dev
+            - libpcap-dev
+    - os: linux
+      dist: focal
+      compiler: clang
+      addons:
+        apt:
+          update: true
+          packages:
+            - gcc
+            - clang
+            - make
+            - pkgconf
+            - libnl-3-dev
+            - libnl-route-3-dev
+            - libnl-genl-3-dev
+            - libjansson-dev
+            - libwebsockets-dev
+            - libpcap-dev
 
 sudo: required
 
