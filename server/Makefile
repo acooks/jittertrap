@@ -143,7 +143,7 @@ test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEP
 	$(CC) -o test-multi-mq $(MQ_MULTI_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
 
 test-slist: test_slist.c slist.o
-	$(CC) -o test-slist test_slist.c slist.o
+	$(CC) -o test-slist test_slist.c slist.o $(CFLAGS) -O0 $(DEFINES)
 
 .PHONY: test
 test: test-mq test-mq-mt test-multi-mq test-slist
