@@ -57,6 +57,8 @@ matrix:
       env:
         global:
           - CC="/usr/bin/clang-7"
+          - LD="ld.gold"
+          - AR="llvm-ar"
 
 sudo: required
 
