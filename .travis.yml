@@ -44,7 +44,8 @@ matrix:
           update: true
           packages:
             - gcc
-            - clang
+            - clang-7
+            - llvm-7-dev
             - make
             - pkg-config
             - libnl-3-dev
@@ -53,6 +54,9 @@ matrix:
             - libjansson-dev
             - libwebsockets-dev
             - libpcap-dev
+      env:
+        global:
+          - CC="/usr/bin/clang-7"
 
 sudo: required
 
