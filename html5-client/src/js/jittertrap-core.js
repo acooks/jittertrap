@@ -450,7 +450,7 @@ JT = (function (my) {
 
   my.core.processTopTalkMsg = function (msg) {
     var interval = msg.interval_ns;
-    var tstamp = Number(msg.timestamp.tv_sec + "." + msg.timestamp.tv_nsec);
+    var tstamp = msg.timestamp.tv_sec + msg.timestamp.tv_nsec / 1E9;
 
     console.assert(!(Number.isNaN(tstamp)));
 
