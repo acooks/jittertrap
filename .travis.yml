@@ -55,10 +55,7 @@ matrix:
             - libwebsockets-dev
             - libpcap-dev
       env:
-        global:
-          - CC="/usr/bin/clang-7"
-          - LD="ld.gold"
-          - AR="llvm-ar"
+        - CC="/usr/bin/clang-7" LD="ld.gold" AR="llvm-ar"
 
 sudo: required
 
