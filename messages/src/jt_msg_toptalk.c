@@ -17,7 +17,7 @@ static const char *tt_test_msg =
     "{\"msg\":\"toptalk\","
     " \"p\":{\"tflows\":5, \"tbytes\": 9999, \"tpackets\": 888,"
     " \"interval_ns\": 123,"
-    " \"timestamp\": {\"tv_sec\": \"                123\", \"tv_nsec\": \"      456\"},"
+    " \"timestamp\": {\"tv_sec\": 123, \"tv_nsec\": 456},"
     " \"flows\": ["
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32000, \"dport\":32000, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"af11\" },"
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32001, \"dport\":32001, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"BE\"},"
