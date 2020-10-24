@@ -13,6 +13,8 @@
 
 #include "proto-jittertrap.h"
 
+static int consumer_count = 0;
+
 struct cb_data {
 	struct lws *wsi;
 	unsigned char *buf;
@@ -60,6 +62,10 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 			if (err) {
 				syslog(LOG_ERR,
 				       "mq consumer unsubscribe failed.\n");
+			} else {
+				consumer_count--;
+				if (0 == consumer_count)
+					jt_srv_pause();
 			}
 		}
 		break;
@@ -71,10 +77,12 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 			syslog(LOG_ERR, "mq consumer subscription failed.\n");
 			return -1;
 		}
+		consumer_count++;
 		jt_srv_send_iface_list();
 		jt_srv_send_select_iface();
 		jt_srv_send_netem_params();
 		jt_srv_send_sample_period();
+		jt_srv_resume();
 		break;
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:

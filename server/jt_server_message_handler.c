@@ -34,10 +34,12 @@
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
-enum { JT_STATE_STOPPING,
-       JT_STATE_STOPPED,
-       JT_STATE_STARTING,
-       JT_STATE_RUNNING,
+enum {
+	JT_STATE_STOPPING,
+	JT_STATE_STOPPED,
+	JT_STATE_STARTING,
+	JT_STATE_RUNNING,
+	JT_STATE_PAUSED
 };
 
 int g_jt_state = JT_STATE_STARTING;
@@ -329,6 +331,39 @@ static int jt_init()
 	return 0;
 }
 
+int jt_srv_pause()
+{
+	int err;
+
+	assert(JT_STATE_RUNNING == g_jt_state);
+
+	err = mq_stats_consumer_unsubscribe(stats_consumer_id);
+	assert(!err);
+
+	err = mq_tt_consumer_unsubscribe(tt_consumer_id);
+	assert(!err);
+
+	g_jt_state = JT_STATE_PAUSED;
+	return 0;
+}
+
+int jt_srv_resume()
+{
+	int err;
+
+	if (JT_STATE_PAUSED == g_jt_state) {
+		err = mq_stats_consumer_subscribe(&stats_consumer_id);
+		assert(!err);
+
+		err = mq_tt_consumer_subscribe(&tt_consumer_id);
+		assert(!err);
+
+		g_jt_state = JT_STATE_RUNNING;
+	}
+	assert(JT_STATE_RUNNING == g_jt_state);
+	return 0;
+}
+
 int jt_server_tick()
 {
 	switch (g_jt_state) {
@@ -343,6 +378,8 @@ int jt_server_tick()
 		/* queue a stats msg (if there is one) */
 		jt_srv_send_stats();
 		jt_srv_send_tt();
+		break;
+	case JT_STATE_PAUSED:
 		break;
 	}
 	return 0;

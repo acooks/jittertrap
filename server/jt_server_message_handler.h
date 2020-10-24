@@ -8,5 +8,6 @@ int jt_srv_send_iface_list();
 int jt_srv_send_select_iface();
 int jt_srv_send_netem_params();
 int jt_srv_send_sample_period();
-
+int jt_srv_resume();
+int jt_srv_pause();
 #endif
