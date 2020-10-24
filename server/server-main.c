@@ -206,7 +206,15 @@ int main(int argc, char **argv)
 		lws_callback_on_writable_all_protocol(
 		    context, &protocols[PROTOCOL_JITTERTRAP]);
 
-		n = lws_service(context, 0);
+               /*
+		*  FIXME:
+		*  The lws_service() timeout doesn't seem to work as expected.
+		*  This helps slow things down, but it's not a proper solution.
+                */
+		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 5E5 };
+		nanosleep(&rqtp, NULL);
+
+		n = lws_service(context, 1);
 	}
 
 	lws_context_destroy(context);
