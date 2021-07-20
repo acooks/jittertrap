@@ -31,6 +31,7 @@ static struct option options[] = { { "help", no_argument, NULL, 'h' },
 	                           { NULL, 0, 0, 0 } };
 
 static const struct lws_extension exts[] = {
+#ifndef LWS_WITHOUT_EXTENSIONS
         {
 		"permessage-deflate",
 		lws_extension_callback_pm_deflate,
@@ -41,6 +42,7 @@ static const struct lws_extension exts[] = {
 		lws_extension_callback_pm_deflate,
 		"deflate_frame"
 	},
+#endif
 	{ NULL, NULL, NULL /* terminator */ }
 };
 
