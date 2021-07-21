@@ -448,6 +448,9 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 		case JT_MSG_SET_NETEM_V1:
 			err = set_netem(data);
 			break;
+		case JT_MSG_HELLO_V1:
+			syslog(LOG_INFO, "new session");
+			break;
 		default:
 			/* no way to get here, right? */
 			assert(0);

@@ -13,6 +13,7 @@
 #include "jt_msg_netem_params.h"
 #include "jt_msg_sample_period.h"
 #include "jt_msg_set_netem.h"
+#include "jt_msg_hello.h"
 
 static const struct jt_msg_type jt_messages[] =
     {[JT_MSG_STATS_V1] = { .type = JT_MSG_STATS_V1,
@@ -72,6 +73,14 @@ static const struct jt_msg_type jt_messages[] =
 		               .print = jt_set_netem_printer,
 		               .free = jt_set_netem_free,
 		               .get_test_msg = jt_set_netem_test_msg_get },
+
+     [JT_MSG_HELLO_V1] = { .type = JT_MSG_HELLO_V1,
+	                   .key = "hello",
+		           .to_struct = jt_hello_unpacker,
+		           .to_json_string = jt_hello_packer,
+		           .print = jt_hello_printer,
+		           .free = jt_hello_free,
+		           .get_test_msg = jt_hello_test_msg_get },
 
      [JT_MSG_END] = {
 	     .type = JT_MSG_END, .key = NULL, .to_struct = NULL, .print = NULL

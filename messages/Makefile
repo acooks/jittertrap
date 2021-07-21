@@ -12,6 +12,7 @@ SOURCES = \
  src/jt_msg_netem_params.c \
  src/jt_msg_sample_period.c \
  src/jt_msg_set_netem.c \
+ src/jt_msg_hello.c \
  src/jt_messages.c \
 
 HEADERS = \
@@ -23,6 +24,7 @@ HEADERS = \
  include/jt_msg_netem_params.h \
  include/jt_msg_sample_period.h \
  include/jt_msg_set_netem.h \
+ include/jt_msg_hello.h \
 
 OBJECTS += jt_msg_stats.o
 OBJECTS += jt_msg_toptalk.o
@@ -31,6 +33,7 @@ OBJECTS += jt_msg_select_iface.o
 OBJECTS += jt_msg_netem_params.o
 OBJECTS += jt_msg_sample_period.o
 OBJECTS += jt_msg_set_netem.o
+OBJECTS += jt_msg_hello.o
 OBJECTS += jt_messages.o
 
 INCLUDES = \
