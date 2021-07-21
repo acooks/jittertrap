@@ -10,7 +10,6 @@
 
 #include "proto.h"
 
-static int deny_deflate;
 static int deny_mux;
 static volatile int force_exit = 0;
 static int longlived = 0;
@@ -25,26 +24,9 @@ static struct option options[] = { { "help", no_argument, NULL, 'h' },
 	                           { "port", required_argument, NULL, 'p' },
 	                           { "ssl", no_argument, NULL, 's' },
 	                           { "version", required_argument, NULL, 'v' },
-	                           { "undeflated", no_argument, NULL, 'u' },
 	                           { "nomux", no_argument, NULL, 'n' },
 	                           { "longlived", no_argument, NULL, 'l' },
 	                           { NULL, 0, 0, 0 } };
-
-static const struct lws_extension exts[] = {
-#ifndef LWS_WITHOUT_EXTENSIONS
-        {
-		"permessage-deflate",
-		lws_extension_callback_pm_deflate,
-		"permessage-deflate; client_max_window_bits"
-	},
-	{
-		"deflate-frame",
-		lws_extension_callback_pm_deflate,
-		"deflate_frame"
-	},
-#endif
-	{ NULL, NULL, NULL /* terminator */ }
-};
 
 
 int main(int argc, char **argv)
@@ -66,7 +48,7 @@ int main(int argc, char **argv)
 		goto usage;
 
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "nuv:hsp:d:l", options, NULL);
+		n = getopt_long(argc, argv, "nv:hsp:d:l", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -84,9 +66,6 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			ietf_version = atoi(optarg);
-			break;
-		case 'u':
-			deny_deflate = 1;
 			break;
 		case 'n':
 			deny_mux = 1;
@@ -132,7 +111,6 @@ int main(int argc, char **argv)
 	ccinfo.origin = address;
 	ccinfo.protocol = protocols[PROTOCOL_JITTERTRAP].name;
 	ccinfo.ietf_version_or_minus_one = ietf_version;
-	ccinfo.client_exts = exts;
 	wsi_jt = lws_client_connect_via_info(&ccinfo);
 
 	if (wsi_jt == NULL) {

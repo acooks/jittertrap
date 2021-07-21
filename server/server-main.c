@@ -69,21 +69,6 @@ static struct option options[] = {
 	{ NULL, 0, 0, 0 }
 };
 
-static const struct lws_extension exts[] = {
-#ifndef LWS_WITHOUT_EXTENSIONS
-	{
-		"permessage-deflate",
-		lws_extension_callback_pm_deflate,
-		"permessage-deflate"
-	},
-	{
-		"deflate-frame",
-		lws_extension_callback_pm_deflate,
-		"deflate_frame"
-	},
-#endif
-	{ NULL, NULL, NULL /* terminator */ }
-};
 
 static struct lws_http_mount mount = {
         .mount_next             = NULL,             /* linked-list "next" */
@@ -191,7 +176,6 @@ int main(int argc, char **argv)
 
 	info.iface = iface;
 	info.protocols = protocols;
-	info.extensions = exts;
 	info.mounts = &mount;
 	info.gid = -1;
 	info.uid = -1;
