@@ -385,17 +385,33 @@ int jt_server_tick()
 	return 0;
 }
 
-static int jt_msg_handler(char *in, int len, const int *msg_type_arr)
+static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 {
 	json_t *root;
 	json_error_t error;
 	void *data;
 	const int *msg_type;
+	char in_safe[1024];
 
-	root = json_loadb(in, len, 0, &error);
+	if (len <= 0) {
+		syslog(LOG_ERR, "error: message cannot have negative length");
+		return -1;
+	}
+
+	/* in_unsafe is not null-terminated and len doesn't include \0 */
+	if ((long unsigned int)len >= sizeof(in_safe)) {
+		snprintf(in_safe, sizeof(in_safe), "%s", in_unsafe);
+		syslog(LOG_DEBUG, "invalid message truncated and ignored: %s\n",
+			in_safe);
+		return -1;
+	}
+
+	snprintf(in_safe, len+1, "%s", in_unsafe);
+
+	root = json_loadb(in_safe, len, 0, &error);
 	if (!root) {
-		syslog(LOG_ERR, "error: on line %d: %s\n", error.line,
-		        error.text);
+		syslog(LOG_ERR, "error: %s loading message:%s\n",
+			error.text, in_safe);
 		return -1;
 	}
 
@@ -440,7 +456,7 @@ static int jt_msg_handler(char *in, int len, const int *msg_type_arr)
 
 		return err;
 	}
-	syslog(LOG_ERR, "couldn't unpack message: %s\n", in);
+	syslog(LOG_WARNING, "message received and ignored: %s\n", in_safe);
 	json_decref(root);
 	return -1;
 }
