@@ -414,7 +414,7 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 #endif
 }
 
-int tt_get_flow_count()
+int tt_get_flow_count(void)
 {
 	return HASH_CNT(r_hh, flow_ref_table);
 }

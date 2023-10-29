@@ -36,10 +36,6 @@ static int consumer_count = 0;
 static unsigned long consumer_id_start = 42424242;
 static const char *qname;
 
-int NS(maxlen)()
-{
-	return MAX_Q_DEPTH;
-}
 
 int NS(init)(const char *mq_name)
 {
@@ -61,7 +57,7 @@ int NS(init)(const char *mq_name)
 	return consumer_count;
 }
 
-int NS(destroy)()
+int NS(destroy)(void)
 {
 	pthread_mutex_lock(&mq_mutex);
 	assert(queue);
@@ -213,4 +209,9 @@ int NS(consume)(unsigned long id, NS(callback) cb, void *cb_data, int *cb_err)
 	consumer_ptrs[real_id] = next;
 	pthread_mutex_unlock(&mq_mutex);
 	return 0;
+}
+
+int NS(maxlen)(void)
+{
+	return MAX_Q_DEPTH;
 }

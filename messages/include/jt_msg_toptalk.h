@@ -5,7 +5,7 @@ int jt_toptalk_packer(void *data, char **out);
 int jt_toptalk_unpacker(json_t *root, void **data);
 int jt_toptalk_printer(void *data, char *out, int len);
 int jt_toptalk_free(void *data);
-const char *jt_toptalk_test_msg_get();
+const char *jt_toptalk_test_msg_get(void);
 
 #define MAX_FLOWS 20
 #define ADDR_LEN 40

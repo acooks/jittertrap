@@ -19,9 +19,8 @@ typedef enum {
 
 struct NS(msg);
 
-int NS(maxlen)();
 int NS(init)(const char *mq_name);
-int NS(destroy)();
+int NS(destroy)(void);
 int NS(consumer_subscribe)(unsigned long *subscriber_id);
 int NS(consumer_unsubscribe)(unsigned long subscriber_id);
 
@@ -29,4 +28,5 @@ typedef int (*NS(callback))(struct NS(msg) * m, void *data);
 
 int NS(produce)(NS(callback) cb, void *cb_data, int *cb_err);
 int NS(consume)(unsigned long id, NS(callback) cb, void *cb_data, int *cb_err);
+int NS(maxlen)(void);
 

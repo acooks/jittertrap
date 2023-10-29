@@ -24,7 +24,7 @@ static struct nl_cache *link_cache, *qdisc_cache;
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
-int netem_init()
+int netem_init(void)
 {
 	/* Allocate and initialize a new netlink handle */
 	if (!(sock = nl_socket_alloc())) {
@@ -76,7 +76,7 @@ int is_iface_allowed(const char *needle)
 	return 0;
 }
 
-char **netem_list_ifaces()
+char **netem_list_ifaces(void)
 {
 	struct rtnl_link *link;
 	char **ifaces;

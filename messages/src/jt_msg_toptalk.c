@@ -26,7 +26,7 @@ static const char *tt_test_msg =
     "{\"src\":\"192.168.0.1\", \"dst\": \"192.168.0.2\", \"sport\":32004, \"dport\":32004, \"proto\": \"udp\", \"bytes\":100, \"packets\":10, \"tclass\":\"AF41\"}"
     "]}}";
 
-const char* jt_toptalk_test_msg_get() { return tt_test_msg; }
+const char* jt_toptalk_test_msg_get(void) { return tt_test_msg; }
 
 int jt_toptalk_printer(void *data, char *out, int len)
 {

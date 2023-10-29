@@ -8,9 +8,9 @@ struct netem_params {
 	char iface[MAX_IFACE_LEN];
 };
 
-int netem_init();
+int netem_init(void);
 int is_iface_allowed(const char *needle);
-char **netem_list_ifaces();
+char **netem_list_ifaces(void);
 int netem_set_params(const char *iface, struct netem_params *params);
 int netem_get_params(char *iface, struct netem_params *params);
 

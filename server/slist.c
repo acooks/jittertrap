@@ -55,7 +55,7 @@ struct slist *slist_pop(struct slist *head)
 	return pop_node;
 }
 
-struct slist *slist_new()
+struct slist *slist_new(void)
 {
 	struct slist *head = malloc(sizeof(struct slist));
 	head->next = head;
