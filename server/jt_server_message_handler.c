@@ -151,7 +151,7 @@ int jt_srv_send(int msg_type, void *msg_data)
 	return err;
 }
 
-int jt_srv_send_netem_params()
+int jt_srv_send_netem_params(void)
 {
 	struct netem_params p;
 	struct jt_msg_netem_params *m =
@@ -177,7 +177,7 @@ int jt_srv_send_netem_params()
 	return err;
 }
 
-int jt_srv_send_select_iface()
+int jt_srv_send_select_iface(void)
 {
 	char iface[MAX_IFACE_LEN];
 	memcpy(&iface, g_selected_iface, MAX_IFACE_LEN);
@@ -185,7 +185,7 @@ int jt_srv_send_select_iface()
 	return jt_srv_send(JT_MSG_SELECT_IFACE_V1, &iface);
 }
 
-int jt_srv_send_iface_list()
+int jt_srv_send_iface_list(void)
 {
 	struct jt_iface_list *il;
 	char **iface;
@@ -237,7 +237,7 @@ int jt_srv_send_iface_list()
 	return err;
 }
 
-int jt_srv_send_sample_period()
+int jt_srv_send_sample_period(void)
 {
 	int sp;
 	sp = get_sample_period();
@@ -254,7 +254,7 @@ static int stats_consumer(struct mq_stats_msg *m, void *data)
 	return 1;
 }
 
-int jt_srv_send_stats()
+int jt_srv_send_stats(void)
 {
 	struct jt_msg_stats *msg_stats;
 	int err, cb_err;
@@ -284,7 +284,7 @@ static int tt_consumer(struct mq_tt_msg *m, void *data)
 	return 1;
 }
 
-int jt_srv_send_tt()
+int jt_srv_send_tt(void)
 {
 	int ret, cb_err;
 
@@ -295,7 +295,7 @@ int jt_srv_send_tt()
 	return 0;
 }
 
-static int jt_init()
+static int jt_init(void)
 {
 	int err;
 	char *iface;
@@ -306,7 +306,7 @@ static int jt_init()
 		return -1;
 	}
 
-	err = mq_ws_init();
+	err = mq_ws_init("ws");
 	if (err) {
 		return -1;
 	}
@@ -316,8 +316,8 @@ static int jt_init()
 	select_iface(iface);
 	free(iface);
 
-	mq_tt_init();
-	mq_stats_init();
+	mq_tt_init("tt");
+	mq_stats_init("stats");
 	compute_thread_init();
 	intervals_thread_init();
 
@@ -331,7 +331,7 @@ static int jt_init()
 	return 0;
 }
 
-int jt_srv_pause()
+int jt_srv_pause(void)
 {
 	int err;
 
@@ -347,7 +347,7 @@ int jt_srv_pause()
 	return 0;
 }
 
-int jt_srv_resume()
+int jt_srv_resume(void)
 {
 	int err;
 
@@ -364,7 +364,7 @@ int jt_srv_resume()
 	return 0;
 }
 
-int jt_server_tick()
+int jt_server_tick(void)
 {
 	switch (g_jt_state) {
 	case JT_STATE_STARTING:

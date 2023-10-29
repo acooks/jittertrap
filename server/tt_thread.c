@@ -171,7 +171,7 @@ static uint32_t calc_intervals(uint32_t intervals[INTERVAL_COUNT])
 	return 1E3 * tt_intervals[0].tv_usec + 1E9 * tt_intervals[0].tv_sec;
 }
 
-static void set_affinity()
+static void set_affinity(void)
 {
 	int s, j;
 	cpu_set_t cpuset;
@@ -255,7 +255,7 @@ static void *intervals_run(void *data)
 	return NULL;
 }
 
-int intervals_thread_init()
+int intervals_thread_init(void)
 {
 	int err;
 	void *res;

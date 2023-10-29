@@ -6,8 +6,6 @@
 
 #include "mq_msg_ws.h"
 
-#define MAX_Q_DEPTH 16
-
 int message_producer(struct mq_ws_msg *m, void *data)
 {
 	int *d = (int *)data;
@@ -86,7 +84,7 @@ int test_consume_from_empty()
 	unsigned long id;
 
 	printf("test for consume-from-empty case\n");
-	err = mq_ws_init();
+	err = mq_ws_init("consume from empty test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -112,13 +110,13 @@ int test_produce_overflow()
 
 	printf("test for produce overflow handling.\n");
 
-	err = mq_ws_init();
+	err = mq_ws_init("produce overflow test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
 	assert(!err);
 
-	for (i = 0; i < MAX_Q_DEPTH - 1; i++) {
+	for (i = 0; i < mq_ws_maxlen() - 1; i++) {
 		err = mq_ws_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}
@@ -144,7 +142,7 @@ int test_produce_consume()
 
 	printf("Testing produce-til-full, consume-til-empty case \n");
 
-	err = mq_ws_init();
+	err = mq_ws_init("pc test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -189,7 +187,7 @@ int test_ppcc()
 
 	printf("Testing PPCC case\n");
 
-	err = mq_ws_init();
+	err = mq_ws_init("ppcc test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -234,7 +232,7 @@ int test_pcpc()
 
 	printf("Testing PCPC case\n");
 
-	err = mq_ws_init();
+	err = mq_ws_init("pcpc test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -277,7 +275,7 @@ int test_pccpcc()
 
 	printf("Testing PCCP case\n");
 
-	err = mq_ws_init();
+	err = mq_ws_init("pccp test");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -328,7 +326,7 @@ int benchmark()
 
 	printf("Benchmarking... %d iterations \n", TEST_ITERATIONS);
 
-	err = mq_ws_init();
+	err = mq_ws_init("benchmark");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);

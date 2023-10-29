@@ -40,7 +40,7 @@ struct tt_thread_info {
 };
 
 void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t);
-int tt_get_flow_count();
+int tt_get_flow_count(void);
 void *tt_intervals_run(void *p);
 int tt_intervals_init(struct tt_thread_info *ti);
 int tt_intervals_free(struct tt_thread_info *ti);

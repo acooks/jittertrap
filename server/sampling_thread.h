@@ -6,6 +6,5 @@ void sample_iface(const char *_iface);
 
 /* microseconds */
 void set_sample_period(int sample_period_us);
-int get_sample_period();
-
+int get_sample_period(void);
 #endif

@@ -38,7 +38,7 @@ void slist_push(struct slist *head, struct slist *new_tail);
 int slist_size(struct slist *head);
 
 struct slist *slist_pop(struct slist *head);
-struct slist *slist_new();
+struct slist *slist_new(void);
 struct slist *slist_idx(struct slist *head, int idx);
 void slist_clear(struct slist *head);
 

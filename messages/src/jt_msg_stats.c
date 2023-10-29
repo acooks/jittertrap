@@ -23,7 +23,7 @@ static const char *jt_stats_test_msg =
     "\"whoosh_err_mean\": 42809, \"whoosh_err_max\": 54759, \"whoosh_err_sd\": "
     "43249}}";
 
-const char *jt_stats_test_msg_get() { return jt_stats_test_msg; }
+const char *jt_stats_test_msg_get(void) { return jt_stats_test_msg; }
 
 int jt_stats_free(void *data)
 {

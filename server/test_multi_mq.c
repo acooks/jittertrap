@@ -30,7 +30,7 @@ int test_mq_msg_ws(void)
 	unsigned long id;
 
 	printf("test for consume-from-empty case\n");
-	err = mq_ws_init();
+	err = mq_ws_init("ws q");
 	assert(!err);
 
 	err = mq_ws_consumer_subscribe(&id);
@@ -57,7 +57,7 @@ int test_mq_msg_stats(void)
 	unsigned long id;
 
 	printf("test for consume-from-empty case\n");
-	err = mq_stats_init();
+	err = mq_stats_init("stats q");
 	assert(!err);
 
 	err = mq_stats_consumer_subscribe(&id);

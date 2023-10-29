@@ -98,11 +98,11 @@ static int test_messages(const int *msg_type_arr)
 	return 0;
 }
 
-int test_c2s_messages() { return test_messages(&jt_msg_types_c2s[0]); }
+int test_c2s_messages(void) { return test_messages(&jt_msg_types_c2s[0]); }
 
-int test_s2c_messages() { return test_messages(&jt_msg_types_s2c[0]); }
+int test_s2c_messages(void) { return test_messages(&jt_msg_types_s2c[0]); }
 
-int main()
+int main(void)
 {
 	int err;
 

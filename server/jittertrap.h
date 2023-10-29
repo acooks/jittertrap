@@ -36,8 +36,8 @@ static_assert(
 extern pthread_mutex_t nl_sock_mutex;
 extern char g_selected_iface[MAX_IFACE_LEN];
 
-int jt_get_sample_period();
+int jt_get_sample_period(void);
 int jt_set_iface(const char *iface);
-char const *jt_get_iface();
+char const *jt_get_iface(void);
 
 #endif

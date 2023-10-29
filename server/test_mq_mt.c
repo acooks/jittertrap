@@ -191,7 +191,7 @@ int main()
 	pthread_t consumer_thread1;
 	pthread_t consumer_thread2;
 
-	err = mq_ws_init();
+	err = mq_ws_init("test");
 	assert(!err);
 
 	x = 1;

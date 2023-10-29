@@ -5,7 +5,7 @@ int jt_stats_packer(void *data, char **out);
 int jt_stats_unpacker(json_t *root, void **data);
 int jt_stats_printer(void *data, char *out, int len);
 int jt_stats_free(void *data);
-const char *jt_stats_test_msg_get();
+const char *jt_stats_test_msg_get(void);
 
 struct jt_msg_stats
 {

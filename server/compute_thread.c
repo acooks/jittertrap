@@ -253,7 +253,7 @@ inline static int message_producer(struct mq_stats_msg *m, void *data)
 	return stats_filter(sample_list, m, *decimation_factor);
 }
 
-void send_decimations()
+void send_decimations(void)
 {
 	int cb_err;
 
@@ -267,7 +267,7 @@ void send_decimations()
 	}
 }
 
-static int frames_to_sample_list()
+static int frames_to_sample_list(void)
 {
 	int new_samples = 0;
 
@@ -341,7 +341,7 @@ int compute_thread_init(void)
 		exit(EXIT_FAILURE);                                            \
 	} while (0)
 
-static void set_affinity()
+static void set_affinity(void)
 {
 	int s, j;
 	cpu_set_t cpuset;

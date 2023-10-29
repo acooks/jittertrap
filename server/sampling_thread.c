@@ -64,7 +64,7 @@ void (*stats_handler)(struct iface_stats *counts);
 /* local prototypes */
 static void *run(void *data);
 
-int get_sample_period()
+int get_sample_period(void)
 {
 	return sample_period_us;
 }
@@ -189,7 +189,7 @@ update_stats(struct sample *sample_c, char *iface, struct timespec deadline)
 		exit(EXIT_FAILURE);                                            \
 	} while (0)
 
-static void set_affinity()
+static void set_affinity(void)
 {
 	int s, j;
 	cpu_set_t cpuset;

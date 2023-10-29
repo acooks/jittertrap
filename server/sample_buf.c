@@ -20,7 +20,7 @@ static struct iface_stats *sample_buf;
 static struct iface_stats *produce_ptr;
 static struct iface_stats *consume_ptr;
 
-void raw_sample_buf_init()
+void raw_sample_buf_init(void)
 {
 	sample_buf = malloc(BUF_BYTE_LEN);
 	assert(sample_buf);
@@ -28,7 +28,7 @@ void raw_sample_buf_init()
 	consume_ptr = sample_buf;
 }
 
-struct iface_stats *raw_sample_buf_produce_next()
+struct iface_stats *raw_sample_buf_produce_next(void)
 {
 	pthread_mutex_lock(&pc_mutex);
 	produce_ptr++;
@@ -45,7 +45,7 @@ struct iface_stats *raw_sample_buf_produce_next()
 	return produce_ptr;
 }
 
-struct iface_stats *raw_sample_buf_consume_next()
+struct iface_stats *raw_sample_buf_consume_next(void)
 {
 	pthread_mutex_lock(&pc_mutex);
 	consume_ptr++;
