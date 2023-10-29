@@ -13,21 +13,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  ubuntu_1804:
-    name: deploy to ubuntu 18.04
-    runs-on: ubuntu-18.04
-  ubuntu_latest:
-    name: deploy to ubuntu-latest
-    runs-on: ubuntu-latest
-    
   build:
-    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:        
+        os: [ubuntu-latest, ubuntu-18.04]
+
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - name: Install Build Dependencies
-        run: |
+    - uses: actions/checkout@v4
+    - name: Check out repository code
+    
+        
+    - name: Install Build Dependencies
+      run: |
           sudo apt-get update
           sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf
-      - name: make
-        run: make
+          
+    - name: make
+      run: make
