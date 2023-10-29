@@ -13,21 +13,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  ubuntu_1804:
-    name: deploy to ubuntu 18.04
-    runs-on: ubuntu-18.04
-  ubuntu_latest:
-    name: deploy to ubuntu-latest
-    runs-on: ubuntu-latest
-    
-  build:
-    runs-on: ubuntu-latest
+  build_and_test:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:        
+        os: [ubuntu-latest, ubuntu-20.04]
+
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - name: Install Build Dependencies
-        run: |
+    - name: Check out repository code
+      uses: actions/checkout@v4    
+        
+    - name: Install Build Dependencies
+      run: |
           sudo apt-get update
-          sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf
-      - name: make
-        run: make
+          sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf lcov
+    - name: make
+      run: CFLAGS="-fprofile-arcs -ftest-coverage" make
+
+    - name: Run tests
+      run: sudo CFLAGS="-fprofile-arcs -ftest-coverage" make test
+    
+    - name: Upload coverage to Code Climate      
+      uses: paambaati/codeclimate-action@v5.0.0
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CODECLIMATE_REPORTER_ID }}
+      with:
+        coverageCommand: lcov -c -d server -d cli-client -d messages/ -o jittertrap.lcov
+        coverageLocations: ${{github.workspace}}/*.lcov:lcov
