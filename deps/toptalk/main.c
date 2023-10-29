@@ -156,9 +156,9 @@ void print_flow(int row, char *src, char *dst, struct flow_record *fte1,
 	         fte1->flow.dport);
 	mvprintw(TOP_N_LINE_OFFSET + row + 0, 47, "%s",
 	         protos[fte1->flow.proto]);
-	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%03s",
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 47, "%3s",
 	         dscpvalues[fte1->flow.tclass]);
-	mvprintw(TOP_N_LINE_OFFSET + row + 1, 55, "%10d  %10d",
+	mvprintw(TOP_N_LINE_OFFSET + row + 1, 55, "%10ld  %10ld",
 	         fte1->bytes / div, fte2->bytes / div);
 	mvprintw(TOP_N_LINE_OFFSET + row + 2, 0, "%80s", " ");
 }
@@ -175,9 +175,9 @@ void print_top_n(struct tt_top_flows *t5)
 
 	range(t5->total_bytes, &unit, &div);
 	byteunit = byteunits[unit];
-	mvprintw(0, 50, "%5d active flows", t5->flow_count);
-	mvprintw(1, 50, "%5d %s    ", t5->total_bytes / div, byteunit);
-	mvprintw(2, 50, "%5d Pkts/s", t5->total_packets);
+	mvprintw(0, 50, "%5ld active flows", t5->flow_count);
+	mvprintw(1, 50, "%5ld %s    ", t5->total_bytes / div, byteunit);
+	mvprintw(2, 50, "%5ld Pkts/s", t5->total_packets);
 
 	/* Clear the table */
 	for (int i = TOP_N_LINE_OFFSET + row;
