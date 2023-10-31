@@ -46,6 +46,11 @@ cppcheck:
 clang-analyze:
 	scan-build make messages server cli-client
 
+coverage:
+	CFLAGS="-fprofile-arcs -ftest-coverage" $(MAKE) clean test
+	lcov -c --no-external -d server -d cli-client -d messages -o jittertrap.lcov
+
+
 .PHONY: clean $(CLEANDIRS)
 clean: $(CLEANDIRS)
 $(CLEANDIRS):

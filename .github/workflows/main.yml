@@ -29,15 +29,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf lcov
     - name: make
-      run: CFLAGS="-fprofile-arcs -ftest-coverage" make
+      run: make
 
     - name: Run tests
-      run: sudo CFLAGS="-fprofile-arcs -ftest-coverage" make test
+      run: sudo make test
     
     - name: Upload coverage to Code Climate      
       uses: paambaati/codeclimate-action@v5.0.0
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CODECLIMATE_REPORTER_ID }}
       with:
-        coverageCommand: lcov -c -d server -d cli-client -d messages/ -o jittertrap.lcov
+        coverageCommand: make coverage
         coverageLocations: ${{github.workspace}}/*.lcov:lcov

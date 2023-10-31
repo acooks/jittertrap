@@ -80,3 +80,4 @@ test: test-packing
 .PHONY: clean
 clean:
 	rm $(LIB) *.o *.a test-packing || true
+	rm *.gcno *.gcov *.gcda || true
