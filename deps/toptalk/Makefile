@@ -79,3 +79,4 @@ clang-analyze: clean
 .PHONY: clean
 clean:
 	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
+	rm *.gcno *.gcov *.gcda || true
