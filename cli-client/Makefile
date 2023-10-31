@@ -49,6 +49,8 @@ indent:
 .PHONY: clean
 clean:
 	rm $(PROG) || true
+	rm *.gcno *.gcov *.gcda || true
+
 
 .PHONY: test
 test:

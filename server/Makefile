@@ -162,3 +162,4 @@ test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 clean:
 	rm $(PROG) *.o || true
 	rm test-mq test-mq-mt test-multi-mq || true
+	rm *.gcno *.gcov *.gcda || true
