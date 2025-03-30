@@ -646,6 +646,8 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	if (err)
 		goto cleanup;
 
+	totals.bytes = 0;
+	totals.packets = 0;
 	return 0;
 
 cleanup:
