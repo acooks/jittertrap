@@ -258,11 +258,8 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scaleLinear().range([0, width]);
-      //yScale = d3.scale.linear().range([height, 0]);
-      //yScale = d3.scale.log().clamp(true).range([height, 1]);
-      yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 1]);
 
+      xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
       if (chartData[0]) {
@@ -271,7 +268,14 @@ JT = (function (my) {
         }));
       }
 
-      yScale.domain([0, maxBytesSlice(chartData)]);
+      var yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
+
+      if (yPow == 1) {
+        yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 0]);
+      } else {
+        yScale = d3.scaleLinear().clamp(true).range([height, 0]);
+      }
+      yScale.domain([0, 1.2 * maxBytesSlice(chartData)]);
 
       xAxis.scale(xScale);
       yAxis.scale(yScale);
