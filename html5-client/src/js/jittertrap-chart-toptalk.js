@@ -69,6 +69,7 @@ JT = (function (my) {
     m.reset = function() {
 
       d3.select("#chartToptalk").selectAll("svg").remove();
+      my.charts.resizeChart("#chartToptalk", size)();
 
       svg = d3.select("#chartToptalk")
             .append("svg");
