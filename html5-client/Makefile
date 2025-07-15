@@ -34,7 +34,7 @@ copydeps: createdirs
 	cp deps/js/cbuffer.js ${OUT}/js/
 	cp deps/js/bootstrap.min.js ${OUT}/js/
 	cp deps/js/mustache.min.js ${OUT}/js/
-	cp deps/js/d3.min.js ${OUT}/js/
+	cp deps/js/d3.v7.min.js ${OUT}/js/
 	cp deps/css/bootstrap.min.css ${OUT}/css/
 	cp deps/css/bootstrap-theme.min.css ${OUT}/css/
 	cp deps/css/bootstrap.css.map ${OUT}/css/
