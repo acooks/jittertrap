@@ -276,7 +276,7 @@ JT = (function (my) {
       } else {
         yScale = d3.scaleLinear().clamp(true).range([height, 0]);
       }
-      yScale.domain([0, 1.2 * maxBytesSlice(chartData)]);
+      yScale.domain([0, maxBytesSlice(chartData)]);
 
       xAxis.scale(xScale);
       yAxis.scale(yScale);
