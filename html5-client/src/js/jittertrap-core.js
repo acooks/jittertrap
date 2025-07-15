@@ -458,6 +458,7 @@ JT = (function (my) {
     expireOldFlowsAndUpdateRank(interval);
     updateTopFlowChartData(interval);
 
+    return;
     switch (interval) {
       case 5000000:
       case 10000000:
