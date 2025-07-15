@@ -60,7 +60,7 @@ MAINTAINER_VERSION = $(shell cat ../VERSION)
 version:
 	cp src/js/jittertrap-version-template.js src/js/jittertrap-version.js
 	sed -i 's/##GIT-REPO##/${GIT_REPO}/g' src/js/jittertrap-version.js
-	sed -i 's/##GIT-BRANCH##/${GIT_BRANCH}/g' src/js/jittertrap-version.js
+	sed -i 's%##GIT-BRANCH##%${GIT_BRANCH}%g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-COMMIT##/${GIT_COMMIT}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-COMMIT-TS##/${GIT_COMMIT_TS}/g' src/js/jittertrap-version.js
 	sed -i 's/##GIT-CLEAN##/${GIT_ISCLEAN}/g' src/js/jittertrap-version.js
