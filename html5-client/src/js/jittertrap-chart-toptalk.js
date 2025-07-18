@@ -226,32 +226,40 @@ JT = (function (my) {
     /* Reformat chartData to work with the new d3 v4 API
      * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
     var formatData = function(chartData) {
-      var bins = [];
+      // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
+      var binsMap = new Map();
 
-      for (var key in chartData)
-      {
-	  	  var row = chartData[key];
-        for (var val in row.values)
-        {
-          var o = row.values[val];
+      for (var i = 0; i < chartData.length; i++) {
+        var row = chartData[i];
+        for (var j = 0; j < row.values.length; j++) {
+          var o = row.values[j];
+          var ts = o.ts;
+          var fkey = row.fkey;
+          var bytes = o.bytes;
 
-          var prevTsIndex = bins.map(function (d) { return d.ts }).indexOf(o.ts);
-          if (prevTsIndex === -1) // create new ts row
-          {
-            bins.push({
-              "ts": o.ts, 
-              [row.fkey]: o.bytes // use var as key
-            });
-          } else { // update current row with key
-            if (bins[prevTsIndex][row.fkey]) 
-              bins[prevTsIndex][row.fkey] += o.bytes;
-            else
-              bins[prevTsIndex][row.fkey] = o.bytes;
+          // Check if we have seen this timestamp before.
+          if (!binsMap.has(ts)) {
+            // If not, create a new entry for it in the map.
+            binsMap.set(ts, { "ts": ts });
           }
-	  	  }
+
+          // Get the bin for the current timestamp.
+          var bin = binsMap.get(ts);
+
+          // Add or update the byte count for the current flow.
+          // Using a direct property assignment is safe and fast here.
+          if (bin[fkey]) {
+            bin[fkey] += bytes;
+          } else {
+            bin[fkey] = bytes;
+          }
+        }
       }
-      return bins;
+
+      // Convert the map's values back into an array for d3.stack().
+      return Array.from(binsMap.values());
     }
+
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
@@ -259,11 +267,10 @@ JT = (function (my) {
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
 
-
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
-      if (chartData[0]) {
+      if (chartData && chartData[0]) {
         xScale.domain(d3.extent(chartData[0].values, function(d) {
           return d.ts;
         }));
