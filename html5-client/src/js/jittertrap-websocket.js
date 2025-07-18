@@ -19,10 +19,12 @@ JT = (function (my) {
 
   var handleMsgUpdateStats = function (params) {
     JT.core.processDataMsg(params.s, params.ival_ns);
+    JT.charts.setDirty();
   };
 
   var handleMsgToptalk = function (params) {
     JT.core.processTopTalkMsg(params);
+    JT.charts.setDirty();
   };
 
   var handleMsgDevSelect = function(params) {
@@ -54,7 +56,6 @@ JT = (function (my) {
     my.core.samplePeriod(period);
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
-    my.charts.setUpdatePeriod();
     JT.core.clearAllSeries();
     JT.charts.resetChart();
   };

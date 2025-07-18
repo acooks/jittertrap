@@ -17,6 +17,9 @@ $(document).ready(function() {
   var wsUri = "ws://" + document.domain + ":" + location.port;
   JT.ws.init(wsUri);
 
+  // Initialise charts and start render loop
+  JT.charts.init()
+
   // UI Event Handlers
   $("#chopts_series").bind('change', JT.charts.resetChart);
   $('#set_netem_button').bind('click', JT.ws.set_netem);
