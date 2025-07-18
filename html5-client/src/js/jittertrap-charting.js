@@ -12,7 +12,7 @@ JT = (function (my) {
   var params = {};
 
   /* time (milliseconds) represented by each point on the chart */
-  params.plotPeriod        = 1000;
+  params.plotPeriod        = 100;
   params.plotPeriodMin     = 1;
   params.plotPeriodMax     = 1000;
 
@@ -85,9 +85,6 @@ JT = (function (my) {
     }
 
     var avgRenderTime =  Math.floor(renderTime / renderCount);
-    //console.log("Rendering time: " + avgRenderTime
-    //            + " Processing time: " + procTime
-    //            + " Charting Period: " + chartingPeriod);
 
     params.redrawPeriod = params.plotPeriod / 2;
 
@@ -115,8 +112,6 @@ JT = (function (my) {
     renderTime += d2 - d1;
     tuneChartUpdatePeriod();
   };
-
-  var drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
 
   var setUpdatePeriod = function() {
     var updateRate = 1000.0 / params.redrawPeriod; /* Hz */
@@ -153,6 +148,14 @@ JT = (function (my) {
     JT.charts.resetChart();
 
     return {newPeriod: newPeriod, sampleCount: sampleCount};
+  };
+
+  var drawIntervalID;
+
+  /* Initialize all charts and start the render loop */
+  my.charts.init = function() {
+    resetChart();
+    drawIntervalID = setInterval(renderGraphs, params.redrawPeriod);
   };
 
   /* Export "public" functions */

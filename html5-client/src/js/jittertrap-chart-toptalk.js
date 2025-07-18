@@ -37,11 +37,6 @@ JT = (function (my) {
     var yGrid = d3.axisLeft();
     var area = d3.area();
 
-/*
-    // DEBUG line
-    var line = d3.svg.line();
-*/
-
     var stack = d3.stack()
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
@@ -64,15 +59,29 @@ JT = (function (my) {
     };
 
     var svg = {};
+    var context = {};
+    var canvas = {};
 
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
 
       d3.select("#chartToptalk").selectAll("svg").remove();
+      d3.select("#chartToptalk").selectAll("canvas").remove();
+
+
+      canvas = d3.select("#chartToptalk")
+            .append("canvas")
+            .style("position", "absolute");
+
       my.charts.resizeChart("#chartToptalk", size)();
+      context = canvas.node().getContext("2d");
 
       svg = d3.select("#chartToptalk")
-            .append("svg");
+            .append("svg")
+            .style("position", "relative");
+
+      area.context(context);
+
 
       var width = size.width - margin.left - margin.right;
       var height = size.height - margin.top - margin.bottom;
@@ -100,17 +109,12 @@ JT = (function (my) {
            .ticks(5)
            .tickFormat("");
 
-/*
-      // DEBUG line
-      line = d3.svg.line()
-             .x(function(d) { return xScale(d.ts); })
-             .y(function(d) { return yScale(d.bytes); })
-             .interpolate("monotone");
-             // Note: tput charts use "basis" interpolation
-*/
-
       svg.attr("width", width + margin.left + margin.right)
          .attr("height", height + margin.top + margin.bottom);
+
+      canvas.attr("width", width)
+         .attr("height", height)
+         .style("transform", "translate(" + margin.left + "px," + margin.top + "px)");
 
       var graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -154,22 +158,7 @@ JT = (function (my) {
         .attr("class", "yGrid")
         .call(yGrid);
 
-      graph.append("g")
-         .attr("id", "flows");
-
-/*
-      // DEBUG Black line.
-      graph.append("path")
-         .datum(chartData)
-         .attr("class", "blackline")
-         .attr(
-             {
-               "fill" : "none",
-               "stroke" : "black",
-               "opacity": 1,
-               "stroke-width" : "1px"
-             });
-*/
+      context.clearRect(0, 0, width, height);
 
       svg.append("g")
          .attr("class", "barsbox")
@@ -292,12 +281,9 @@ JT = (function (my) {
       yGrid.scale(yScale);
 
       svg = d3.select("#chartToptalk");
-/*
-      // DEBUG Line
-      svg.select(".blackline").attr("d", line(chartData[0].values));
-*/
-      svg.select(".x.axis").call(xAxis);
-      svg.select(".y.axis").call(yAxis);
+
+      svg.select(".x.axis").transition().duration(20).call(xAxis);
+      svg.select(".y.axis").transition().duration(20).call(yAxis);
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
@@ -312,18 +298,20 @@ JT = (function (my) {
 
       area = d3.area()
                .curve(d3.curveMonotoneX)
+               .context(context)
                .x(function (d) { return xScale(d.data.ts); })
-               .y0(function (d) { return yScale(d[0]); })
-               .y1(function (d) { return yScale(d[0] + d[1]); });
+               .y0(function (d) { return yScale(d[0] || 0); })
+               .y1(function (d) { return yScale(d[1] || 0); });
 
-      svg.select("#flows").selectAll(".layer").remove();
+      context.clearRect(0, 0, width, height);
 
-      svg.select("#flows").selectAll("path")
-         .data(stackedChartData)
-       .enter().append("path")
-         .attr("class", "layer")
-         .attr("d", area)
-         .style("fill", function(d, i) { return colorScale(d.key); });
+      stackedChartData.forEach(function(layer) {
+        context.beginPath();
+        area(layer);
+        context.fillStyle = colorScale(layer.key);
+        context.fill();
+      });
+
 
 
       // distribution bar
