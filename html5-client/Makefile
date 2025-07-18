@@ -73,6 +73,7 @@ coreconfig: version
 
 TPL = ${OUT}/index.html
 assemble-html: createdirs
+	cp src/html/favicon.svg ${OUT}
 	cp src/html/index.tpl.html ${TPL}
 	perl -pe 's|##MODAL-ERROR##|`cat src/html/modal-error.part.html`|ge' -i ${TPL}
 	perl -pe 's|##MODAL-ABOUT##|`cat src/html/modal-about.part.html`|ge' -i ${TPL}
@@ -93,6 +94,7 @@ install:
 	install -m 0644 ${OUT}/js/* ${DESTDIR}/var/lib/jittertrap/js/
 	install -m 0644 ${OUT}/templates/* ${DESTDIR}/var/lib/jittertrap/templates/
 	install -m 0644 ${OUT}/index.html ${DESTDIR}/var/lib/jittertrap/
+	install -m 0644 ${OUT}/favicon.svg ${DESTDIR}/var/lib/jittertrap/
 
 test:
 	true
