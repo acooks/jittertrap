@@ -20,24 +20,24 @@ JT = (function (my) {
   };
 
   my.charts.toptalk.toptalkChart = (function (m) {
-    var margin = {
+    const margin = {
       top: 20,
       right: 20,
       bottom: 440,
       left: 75
     };
 
-    var size = { width: 960, height: 700 };
-    var xScale = d3.scaleLinear();
-    var yScale = d3.scaleLinear();
-    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-    var xAxis = d3.axisBottom();
-    var yAxis = d3.axisLeft();
-    var xGrid = d3.axisBottom();
-    var yGrid = d3.axisLeft();
+    const size = { width: 960, height: 700 };
+    let xScale = d3.scaleLinear();
+    let yScale = d3.scaleLinear();
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    let xAxis = d3.axisBottom();
+    let yAxis = d3.axisLeft();
+    let xGrid = d3.axisBottom();
+    let yGrid = d3.axisLeft();
     var area = d3.area();
 
-    var stack = d3.stack()
+    const stack = d3.stack()
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
@@ -218,13 +218,13 @@ JT = (function (my) {
       // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
       var binsMap = new Map();
 
-      for (var i = 0; i < chartData.length; i++) {
-        var row = chartData[i];
-        for (var j = 0; j < row.values.length; j++) {
-          var o = row.values[j];
-          var ts = o.ts;
-          var fkey = row.fkey;
-          var bytes = o.bytes;
+      for (let i = 0; i < chartData.length; i++) {
+        const row = chartData[i];
+        for (let j = 0; j < row.values.length; j++) {
+          const o = row.values[j];
+          const ts = o.ts;
+          const fkey = row.fkey;
+          const bytes = o.bytes;
 
           // Check if we have seen this timestamp before.
           if (!binsMap.has(ts)) {
@@ -233,15 +233,8 @@ JT = (function (my) {
           }
 
           // Get the bin for the current timestamp.
-          var bin = binsMap.get(ts);
-
-          // Add or update the byte count for the current flow.
-          // Using a direct property assignment is safe and fast here.
-          if (bin[fkey]) {
-            bin[fkey] += bytes;
-          } else {
-            bin[fkey] = bytes;
-          }
+          const bin = binsMap.get(ts);
+          bin[fkey] = (bin[fkey] || 0) + bytes;
         }
       }
 

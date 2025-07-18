@@ -9,7 +9,7 @@ JT = (function (my) {
   my.charts = {};
 
   /* Add a container for charting parameters */
-  var params = {};
+  const params = {};
 
   /* Dirty flag signals when a redraw is needed. */
   var isDirty = true;
@@ -25,7 +25,7 @@ JT = (function (my) {
   params.redrawPeriodMax   = 100;
   params.redrawPeriodSaved = 0;
 
-  var clearChartData = function () {
+  const clearChartData = function () {
     my.charts.tput.getTputRef().length = 0;
     my.charts.pgaps.getMinMaxRef().length = 0;
     my.charts.pgaps.getMeanRef().length = 0;
@@ -50,8 +50,8 @@ JT = (function (my) {
 
   /* newSize is an OUT parameter */
   my.charts.resizeChart = function(containerId, newSize) {
-    return function() {
-      var container = d3.select(containerId);
+    return function () {
+      const container = d3.select(containerId);
       var new_width = container.node().getBoundingClientRect().width;
       var new_height = container.node().getBoundingClientRect().height;
       if (new_width === 0 ) {
@@ -67,8 +67,8 @@ JT = (function (my) {
     };
   };
 
-  var resetChart = function() {
-    var selectedSeriesOpt = $("#chopts_series option:selected").val();
+  const resetChart = function () {
+    const selectedSeriesOpt = $("#chopts_series option:selected").val();
     my.core.setSelectedSeriesName(selectedSeriesOpt);
     clearChartData();
     my.charts.tput.tputChart.reset(my.core.getSelectedSeries());
@@ -76,10 +76,10 @@ JT = (function (my) {
     my.charts.toptalk.toptalkChart.reset();
   };
 
-  var renderCount = 0;
-  var renderTime = 0;
+  let renderCount = 0;
+  let renderTime = 0;
 
-  var renderGraphs = function() {
+  const renderGraphs = function() {
     /* Only redraw if the data has changed */
     if (!isDirty) {
       return;
@@ -90,7 +90,7 @@ JT = (function (my) {
     my.charts.toptalk.toptalkChart.redraw();
 
     isDirty = false; // Clear the dirty flag after drawing
-    var tuneWindowSize = 5; // how often to adjust the updatePeriod.
+    const tuneWindowSize = 5; // how often to adjust the updatePeriod.
 
     params.redrawPeriod = params.plotPeriod / 2;
 
@@ -103,23 +103,23 @@ JT = (function (my) {
     renderTime = 0;
   };
 
-  var drawIntervalID;
+  let drawIntervalID;
 
-  var animationLoop = function() {
+  const animationLoop = function() {
     renderGraphs();
     drawIntervalID = requestAnimationFrame(animationLoop);
   }
 
-  my.charts.setDirty = function() {
+  my.charts.setDirty = function () {
     isDirty = true;
   };
 
-  var getChartPeriod = function () {
+  const getChartPeriod = function () {
     return params.plotPeriod;
   };
 
 
-  var toggleStopStartGraph = function() {
+  const toggleStopStartGraph = function() {
     if (drawIntervalID) {
       cancelAnimationFrame(drawIntervalID);
       drawIntervalID = 0;
@@ -128,7 +128,7 @@ JT = (function (my) {
     }
   };
 
-  var setChartPeriod = function (newPeriod) {
+  const setChartPeriod = function (newPeriod) {
     if (newPeriod < params.plotPeriodMin) {
        newPeriod = params.plotPeriodMin;
     } else if (newPeriod > params.plotPeriodMax) {
@@ -136,7 +136,7 @@ JT = (function (my) {
     }
 
     params.plotPeriod = newPeriod;
-    var sampleCount = JT.core.sampleCount(newPeriod);
+    const sampleCount = JT.core.sampleCount(newPeriod);
     JT.core.resizeDataBufs(sampleCount);
     JT.charts.resetChart();
 
@@ -144,7 +144,7 @@ JT = (function (my) {
   };
 
   /* Initialize all charts and start the render loop */
-  my.charts.init = function() {
+  my.charts.init = function () {
     resetChart();
     drawIntervalID = requestAnimationFrame(animationLoop);
   };
