@@ -199,7 +199,7 @@
    */
   const addTrapToUI = function(trap){
     const trapValue        = $('#trap_value').val(),
-          trapValueInt     = parseInt(trapValue),
+          trapValueInt     = parseInt(trapValue, 10),
           trapTypeSelected = $('#trap_names option:selected').data('trapType'),
           trapNameSelected = $('#trap_names option:selected').text(),
           trapTable        = $('#traps_table'),
@@ -249,7 +249,7 @@
                               .find('option:selected');
     const trapType            = $selectedTrapOption.data('trapType');
     const trapValue           = $('#trap_value').val();
-    const trapValueInt        = parseInt(trapValue);
+    const trapValueInt        = parseInt(trapValue, 10);
 
     if (trapValueInt > 0) {
       const map = mapTrapIdToSeriesAndTest[trapType];

@@ -74,10 +74,10 @@
       {'msg': 'set_netem',
        'p': {
          'dev': $("#dev_select").val(),
-         'delay': parseInt($("#delay").val()),
-         'jitter': parseInt($("#jitter").val()),
+         'delay': parseInt($("#delay").val(), 10),
+         'jitter': parseInt($("#jitter").val(), 10),
          /* convert the float to an integer representing 10ths of percent. */
-         'loss': parseInt(Math.round(10 * $("#loss").val()))
+         'loss': parseInt(Math.round(10 * $("#loss").val()), 10)
        }
       });
     sock.send(msg);
