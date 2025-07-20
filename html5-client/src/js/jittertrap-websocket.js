@@ -39,12 +39,10 @@
   const handleMsgIfaces = function(params) {
     const ifaces = params.ifaces;
     $('#dev_select').empty();
-    $.each(ifaces,
-      function (ix, val) {
-        const option = $('<option>').text(val).val(val);
-        $('#dev_select').append(option);
-      }
-    );
+    ifaces.forEach((val) => {
+      const option = $('<option>').text(val).val(val);
+      $('#dev_select').append(option);
+    });
   };
 
   const handleMsgNetemParams = function(params) {

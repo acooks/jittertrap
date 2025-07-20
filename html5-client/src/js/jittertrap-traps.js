@@ -155,10 +155,7 @@
       if (result.pass) {
         //console.log("trap triggered.");
         this.tripVal = result.val;
-        $.each(this.actionList, function(idx, action) {
-          //console.log("taking action: " + idx);
-          action.execute(result.val);
-        });
+        this.actionList.forEach(action => action.execute(result.val));
       }
     };
 
@@ -166,9 +163,7 @@
       this.tripVal = this.threshVal;
       this.state = trapStates.disarmed;
 
-      $.each(this.actionList, function(idx, action) {
-        action.reset();
-      });
+      this.actionList.forEach(action => action.reset());
     };
 
     console.log("new trap: " + trapsNextUID);
@@ -178,7 +173,7 @@
    *
    */
   my.trapModule.checkTriggers = function(seriesName, stats) {
-    $.each(trapsBin, function(idx, trap) {
+    Object.values(trapsBin).forEach(trap => {
       if (trap.seriesName == seriesName) {
         trap.testAndAct(stats);
       }
