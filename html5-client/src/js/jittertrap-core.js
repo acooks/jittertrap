@@ -9,7 +9,7 @@
   /* module namespace */
   my.core = {};
 
-  var samplePeriod = JT.coreconfig.samplePeriod;
+  let samplePeriod = JT.coreconfig.samplePeriod;
 
   /* data sample period; microseconds; fixed. */
   my.core.samplePeriod = function(sp) {
@@ -21,29 +21,29 @@
   };
 
   /* number of samples to keep for a complete chart series. */
-  var sampleWindowSize = 200;
+  const sampleWindowSize = 200;
   /* number of data samples. */
   /* FIXME: see about replacing sampleCount with sampleWindowSize */
-  var sampleCount = sampleWindowSize;
+  const sampleCount = sampleWindowSize;
 
   my.core.sampleCount = function () {
     return sampleCount;
   };
 
   /* count must be bytes, samplePeriod is microseconds */
-  var byteCountToKbpsRate = function(count) {
-    var rate = count / my.core.samplePeriod() * 8000.0 * (my.core.samplePeriod() / 1000);
+  const byteCountToKbpsRate = function(count) {
+    const rate = count / my.core.samplePeriod() * 8000.0 * (my.core.samplePeriod() / 1000);
     return rate;
   };
 
-  var packetDeltaToRate = function(count) {
+  const packetDeltaToRate = function(count) {
     return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
   };
 
-  var timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200, "500ms": 500, "1000ms": 1000};
+  const timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200, "500ms": 500, "1000ms": 1000};
 
   /* a prototype object to encapsulate timeseries data. */
-  var Series = function(name, title, ylabel, rateFormatter) {
+  const Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
     this.title = title;
     this.ylabel = ylabel;
@@ -52,13 +52,13 @@
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
     this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
     this.pgaps = {};
-    for (var ts in timeScaleTable) {
+    for (const ts in timeScaleTable) {
       this.pgaps[ts] = new CBuffer(sampleWindowSize);
     }
  };
 
 
-  var sBin = {};  // a container (Bin) for series.
+  const sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
                            "Ingress Bitrate in kbps",
                            "kbps, mean",
@@ -79,7 +79,7 @@
                                  "pkts per sec, mean",
                                  packetDeltaToRate);
 
-  var selectedSeriesName = "rxRate";
+  let selectedSeriesName = "rxRate";
 
   my.core.setSelectedSeriesName = function(sName) {
     selectedSeriesName = sName;
@@ -89,15 +89,15 @@
     return sBin[selectedSeriesName];
   };
 
-  var resizeCBuf = function(series, len) {
+  const resizeCBuf = function(series, len) {
 
     if (len === sampleCount) {
       return;
     }
 
-    for (var key in timeScaleTable) {
-      var b = new CBuffer(len);
-      var l = (len < series.samples[key].size) ? len : series.samples[key].size;
+    for (const key in timeScaleTable) {
+      const b = new CBuffer(len);
+      let l = (len < series.samples[key].size) ? len : series.samples[key].size;
       while (l--) {
         b.push(series.samples[key].shift());
       }
@@ -116,9 +116,9 @@
 
   };
 
-  var clearSeries = function (s) {
+  const clearSeries = function (s) {
 
-    for (var key in timeScaleTable) {
+    for (const key in timeScaleTable) {
       s.samples[key] = new CBuffer(sampleWindowSize);
       s.pgaps[key].empty();
     }
@@ -134,11 +134,11 @@
     clearFlows();
   };
 
-  var numSort = function(a,b) {
+  const numSort = function(a,b) {
     return (a - b)|0;
   };
 
-  var updateBasicStatsChartData = function (stats, chartSeries) {
+  const updateBasicStatsChartData = function (stats, chartSeries) {
     if (chartSeries[0]) {
       chartSeries[0].y = stats.min;
       chartSeries[1].y = stats.median;
@@ -152,67 +152,67 @@
     }
   };
 
-  var updatePacketGapChartData = function (data, mean, minMax) {
+  const updatePacketGapChartData = function (data, mean, minMax) {
 
-    var chartPeriod = my.charts.getChartPeriod();
-    var len = data.size;
+    const chartPeriod = my.charts.getChartPeriod();
+    const len = data.size;
 
     mean.length = 0;
     minMax.length = 0;
 
-    for (var i = 0; i < len; i++) {
-      var x = i * chartPeriod;
-      var pg = data.get(i);
+    for (let i = 0; i < len; i++) {
+      const x = i * chartPeriod;
+      const pg = data.get(i);
       mean.push({x: x, y: pg.mean});
       minMax.push({x: x, y: [pg.min, pg.max]});
       //console.log(x + " " + pg.min + " " + pg.max);
     }
   };
 
-  var updateStats = function (series, timeScale) {
-    var sortedData = series.samples[timeScale].slice(0);
+  const updateStats = function (series, timeScale) {
+    const sortedData = series.samples[timeScale].slice(0);
     series.stats.cur = sortedData[sortedData.length-1];
     sortedData.sort(numSort);
 
     series.stats.max = sortedData[sortedData.length-1];
     series.stats.min = sortedData[0];
     series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
-    var sum = 0;
-    var i = 0;
+    let sum = 0;
+    let i = 0;
 
     for (i = sortedData.length-1; i >=0; i--) {
       sum += sortedData[i];
     }
     series.stats.mean = sum / sortedData.length;
 
-    var pg = series.pgaps[timeScale].last();
+    const pg = series.pgaps[timeScale].last();
     series.stats.maxPG = 1.0 * pg.max;
     series.stats.meanPG = 1.0 * pg.mean;
 
   };
 
-  var updateMainChartData = function(samples, chartSeries) {
-    var chartPeriod = my.charts.getChartPeriod();
-    var len = samples.size;
+  const updateMainChartData = function(samples, chartSeries) {
+    const chartPeriod = my.charts.getChartPeriod();
+    const len = samples.size;
 
     chartSeries.length = 0;
 
-    for (var i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
       chartSeries.push({timestamp: i*chartPeriod, value: samples.get(i)});
     }
   };
 
-  var chartSamples = {};
+  const chartSamples = {};
 
-  var updateSampleCounts = function(interval) {
+  const updateSampleCounts = function(interval) {
       if (!chartSamples[interval]) chartSamples[interval] = 1;
       else if (chartSamples[interval] < sampleCount) chartSamples[interval]++;
   };
 
-  var updateTopFlowChartData = function(interval) {
-    var chartPeriod = my.charts.getChartPeriod();
-    var chartSeries = JT.charts.getTopFlowsRef();
-    var fcount = (flowRank[interval].length < 10) ?
+  const updateTopFlowChartData = function(interval) {
+    const chartPeriod = my.charts.getChartPeriod();
+    const chartSeries = JT.charts.getTopFlowsRef();
+    const fcount = (flowRank[interval].length < 10) ?
                  flowRank[interval].length : 10;
 
     updateSampleCounts(interval);
@@ -227,16 +227,16 @@
 
     chartSeries.length = 0;
 
-    var slices = flowsTS[interval].size;
+    const slices = flowsTS[interval].size;
 
     /* get the top 10 from the ranking... */
-    for (var j = 0; j < fcount; j++) {
-      var fkey = flowRank[interval][j];
-      var flow = {"fkey": fkey, "values": []};
-      for (var i = 0; i < slices; i++) {
-        var slice = flowsTS[interval].get(i);
+    for (let j = 0; j < fcount; j++) {
+      const fkey = flowRank[interval][j];
+      const flow = {"fkey": fkey, "values": []};
+      for (let i = 0; i < slices; i++) {
+        const slice = flowsTS[interval].get(i);
         /* the data point must exist to keep the series alignment intact */
-        var d = {"ts": slice.ts, "bytes":0, "packets":0};
+        const d = {"ts": slice.ts, "bytes":0, "packets":0};
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
@@ -252,7 +252,7 @@
 
   };
 
-  var updateSeries = function (series, yVal, selectedSeries, timeScale) {
+  const updateSeries = function (series, yVal, selectedSeries, timeScale) {
     series.samples[timeScale].push(series.rateFormatter(yVal / 1000.0));
 
     if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
@@ -272,7 +272,7 @@
     }
   };
 
-  var updateData = function (d, sSeries, timeScale) {
+  const updateData = function (d, sSeries, timeScale) {
     sBin.rxRate.pgaps[timeScale].push(
       {
         "min"  : d.min_rx_pgap,
@@ -312,7 +312,7 @@
   };
 
   my.core.processDataMsg = function (stats, interval) {
-    var selectedSeries = sBin[selectedSeriesName];
+    const selectedSeries = sBin[selectedSeriesName];
 
     switch (interval) {
       case 5000000:
@@ -346,28 +346,28 @@
 
   /***** Top Flows follows *****/
 
-  var flows = {};
-  var flowRank = {}; /* a sortable list of flow keys for each interval */
+  let flows = {};
+  let flowRank = {}; /* a sortable list of flow keys for each interval */
 
-  var flowsTS = {};
-  var flowsTotals = {};
+  let flowsTS = {};
+  let flowsTotals = {};
 
   /* discard all previous flow data, like when changing capture interface */
-  var clearFlows = function () {
+  const clearFlows = function () {
     flows = {};
     flowRank = {};
     flowsTS = {};
     flowsTotals = {};
   };
 
-  var getFlowKey = function (interval, flow) {
+  const getFlowKey = function (interval, flow) {
     return interval + '/' + flow.src + '/' + flow.sport + '/' + flow.dst +
            '/' + flow.dport + '/' + flow.proto + '/' + flow.tclass;
   };
 
-  var msgToFlows = function (msg, timestamp) {
-    var interval = msg.interval_ns;
-    var fcnt = msg.flows.length;
+  const msgToFlows = function (msg, timestamp) {
+    const interval = msg.interval_ns;
+    const fcnt = msg.flows.length;
 
     /* we haven't seen this interval before, initialise it. */
     if (!flowsTS[interval]) {
@@ -376,12 +376,12 @@
       flowRank[interval] = []; /* sortable! */
     }
 
-    var sample_slice = {};
+    const sample_slice = {};
     sample_slice.ts = timestamp;
     flowsTS[interval].push(sample_slice);
 
-    for (var i = 0; i < fcnt; i++) {
-      var fkey = getFlowKey(interval, msg.flows[i]);
+    for (let i = 0; i < fcnt; i++) {
+      const fkey = getFlowKey(interval, msg.flows[i]);
 
       /* create new flow entry if we haven't seen it before */
       if (!flowsTotals[interval][fkey]) {
@@ -424,9 +424,9 @@
 
   /* reduce the time-to-live for the flow and expire it when no samples are
    * within the visible chart window */
-  var expireOldFlowsAndUpdateRank = function (interval) {
-    var fkey;
-    var ft = flowsTotals[interval];
+  const expireOldFlowsAndUpdateRank = function (interval) {
+    let fkey;
+    let ft = flowsTotals[interval];
     for (fkey in ft) {
       if (ft.hasOwnProperty(fkey)) {
         ft[fkey].ttl -= 1;
@@ -449,8 +449,8 @@
   };
 
   my.core.processTopTalkMsg = function (msg) {
-    var interval = msg.interval_ns;
-    var tstamp = msg.timestamp.tv_sec + msg.timestamp.tv_nsec / 1E9;
+    let interval = msg.interval_ns;
+    let tstamp = msg.timestamp.tv_sec + msg.timestamp.tv_nsec / 1E9;
 
     console.assert(!(Number.isNaN(tstamp)));
 

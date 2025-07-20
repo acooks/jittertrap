@@ -12,7 +12,7 @@
   const params = {};
 
   /* Dirty flag signals when a redraw is needed. */
-  var isDirty = true;
+  let isDirty = true;
 
   /* time (milliseconds) represented by each point on the chart */
   params.plotPeriod        = 100;
@@ -52,8 +52,8 @@
   my.charts.resizeChart = function(containerId, newSize) {
     return function () {
       const container = d3.select(containerId);
-      var new_width = container.node().getBoundingClientRect().width;
-      var new_height = container.node().getBoundingClientRect().height;
+      const new_width = container.node().getBoundingClientRect().width;
+      const new_height = container.node().getBoundingClientRect().height;
       if (new_width === 0 ) {
         return;
       }

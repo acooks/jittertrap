@@ -5,14 +5,14 @@
 ((my) => {
   'use strict';
   my.measurementsModule = {};
-  var measurements = {};
+  const measurements = {};
 
   measurements.rxRate = {};
   measurements.txRate = {};
   measurements.rxPacketRate = {};
   measurements.txPacketRate = {};
 
-  var updateTputDOM = function () {
+  const updateTputDOM = function () {
     $("#jt-measure-tput-min-rx").html(measurements.rxRate.min);
     $("#jt-measure-tput-max-rx").html(measurements.rxRate.max);
     $("#jt-measure-tput-mean-rx").html(measurements.rxRate.mean);
@@ -22,7 +22,7 @@
     $("#jt-measure-tput-mean-tx").html(measurements.txRate.mean);
   };
 
-  var updateRateDOM = function () {
+  const updateRateDOM = function () {
     $("#jt-measure-pktRate-min-rx").html(measurements.rxPacketRate.min);
     $("#jt-measure-pktRate-max-rx").html(measurements.rxPacketRate.max);
     $("#jt-measure-pktRate-mean-rx").html(measurements.rxPacketRate.mean);
@@ -32,7 +32,7 @@
     $("#jt-measure-pktRate-mean-tx").html(measurements.txPacketRate.mean);
   };
 
-  var updateZRunDOM = function () {
+  const updateZRunDOM = function () {
     $("#jt-measure-zRun-max-rx").html(measurements.rxRate.maxZ);
     $("#jt-measure-zRun-mean-rx").html(measurements.rxRate.meanZ);
 
@@ -40,7 +40,7 @@
     $("#jt-measure-zRun-mean-tx").html(measurements.txRate.meanZ);
   };
 
-  var updateDOM = function () {
+  const updateDOM = function () {
     updateTputDOM();
     updateRateDOM();
     updateZRunDOM();
@@ -48,7 +48,7 @@
 
   };
 
-  var drawIntervalID = setInterval(updateDOM, 100);
+  const drawIntervalID = setInterval(updateDOM, 100);
 
   my.measurementsModule.updateSeries = function (series, stats) {
 

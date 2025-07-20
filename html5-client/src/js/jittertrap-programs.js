@@ -8,11 +8,11 @@
 
   my.programsModule = {};
 
-  var programs = {};
-  var nextPID = 123;
-  var runningProgram = null;
+  const programs = {};
+  let nextPID = 123;
+  let runningProgram = null;
 
-  var Program = function (json) {
+  const Program = function (json) {
     this.id = "program_" + nextPID++;
     this.name = json.name;
     this.timeoutHandles = {};
@@ -35,7 +35,7 @@
       $("#clear_netem_button").prop('disabled', true);
       $("#netem_status").html("Program Running");
 
-      for (var i in this.impairments) {
+      for (let i in this.impairments) {
         if (json.impairments[i].stop) {
           console.log("stop at " + i);
           this.timeoutHandles[i] = setTimeout(function() {
@@ -70,7 +70,7 @@
       if (this != runningProgram) {
         return runningProgram.stop();
       }
-      for (var th in this.timeoutHandles) {
+      for (let th in this.timeoutHandles) {
         clearTimeout(this.timeoutHandles[th]);
       }
       JT.ws.clear_netem();
@@ -102,20 +102,20 @@
   );
 
   my.programsModule.addProgramHandler = function(event) {
-    var pgm_txt = $("#new_program").val();
+    const pgm_txt = $("#new_program").val();
     console.log("new program:" + pgm_txt);
 
-    var pgm = new Program(JSON.parse(pgm_txt));
+    const pgm = new Program(JSON.parse(pgm_txt));
     updateUI(pgm);
   };
 
-  var updateUI = function(pgm) {
-    var programTable = $('#programs_table');
+  const updateUI = function(pgm) {
+    const programTable = $('#programs_table');
 
     $.get('/templates/program.html', function(template) {
-      var template_data = { programName: pgm.name,
-                            programUID:  pgm.id,
-                          },
+      const template_data = { programName: pgm.name,
+                              programUID:  pgm.id,
+                            },
           rendered      = Mustache.render(template, template_data);
 
       programTable.find('tbody').append(rendered);
@@ -141,7 +141,7 @@
         delete programs[pgm.id];
 
         // Remove from UI
-        var tr = $(event.target).parents('tr');
+        const tr = $(event.target).parents('tr');
         tr.remove();
       });
 

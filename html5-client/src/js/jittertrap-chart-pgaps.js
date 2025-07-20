@@ -8,7 +8,7 @@
 
   my.charts.pgaps = {};
 
-  var chartData = { packetGapMean: [], packetGapMinMax: [] };
+  const chartData = { packetGapMean: [], packetGapMinMax: [] };
 
   my.charts.pgaps.getMeanRef = function () {
     return chartData.packetGapMean;
@@ -19,24 +19,24 @@
   };
 
   my.charts.pgaps.packetGapChart = (function (m) {
-    var margin = {
+    const margin = {
       top: 20,
       right: 20,
       bottom: 40,
       left: 75
     };
 
-    var size = { width: 960, height: 300 };
-    var xScale = d3.scaleLinear().range([0, size.width]);
-    var yScale = d3.scaleLinear().range([size.height, 0]);
-    var xAxis = d3.axisBottom();
-    var yAxis = d3.axisLeft();
-    var xGrid = d3.axisBottom();
-    var yGrid = d3.axisLeft();
-    var line = d3.line();
-    var minMaxArea = d3.area();
+    const size = { width: 960, height: 300 };
+    let xScale = d3.scaleLinear().range([0, size.width]);
+    let yScale = d3.scaleLinear().range([size.height, 0]);
+    let xAxis = d3.axisBottom();
+    let yAxis = d3.axisLeft();
+    let xGrid = d3.axisBottom();
+    let yGrid = d3.axisLeft();
+    let line = d3.line();
+    let minMaxArea = d3.area();
 
-    var svg = {};
+    let svg = {};
 
     m.reset = function() {
 
@@ -45,8 +45,8 @@
       svg = d3.select("#packetGapContainer")
             .append("svg");
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);
@@ -86,7 +86,7 @@
       svg.attr("width", width + margin.left + margin.right)
          .attr("height", height + margin.top + margin.bottom);
 
-      var graph = svg.append("g")
+      const graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
@@ -147,8 +147,8 @@
 
     m.redraw = function() {
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);

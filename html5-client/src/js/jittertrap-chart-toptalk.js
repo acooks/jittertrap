@@ -8,9 +8,9 @@
 
   my.charts.toptalk = {};
 
-  var chartData = [];
+  const chartData = [];
 
-  var clearChartData = function () {
+  const clearChartData = function () {
     chartData.length = 0;
   };
 
@@ -35,15 +35,15 @@
     let yAxis = d3.axisLeft();
     let xGrid = d3.axisBottom();
     let yGrid = d3.axisLeft();
-    var area = d3.area();
+    let area = d3.area();
 
     const stack = d3.stack()
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
-    var svg = {};
-    var context = {};
-    var canvas = {};
+    let svg = {};
+    let context = {};
+    let canvas = {};
 
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
@@ -66,8 +66,8 @@
       area.context(context);
 
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);
@@ -98,8 +98,7 @@
       canvas.attr("width", width)
          .attr("height", height)
          .style("transform", "translate(" + margin.left + "px," + margin.top + "px)");
-
-      var graph = svg.append("g")
+      const graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
@@ -177,20 +176,19 @@
     };
 
     /* To find the range of the y-axis, find max of the stacked x values */
-    var maxBytesSlice = function(chartData) {
-      var i, j;
-      var flowCount, sampleCount, maxSlice = 0;
+    const maxBytesSlice = function(chartData) {
+      let maxSlice = 0;
 
-      flowCount = chartData.length;
+      const flowCount = chartData.length;
       if (!flowCount) {
         return 0;
       }
 
-      sampleCount = chartData[0].values.length;
+      const sampleCount = chartData[0].values.length;
 
-      for (i = 0; i < sampleCount; i++) {
-        var thisSliceBytes = 0;
-        for (j = 0; j < flowCount; j++) {
+      for (let i = 0; i < sampleCount; i++) {
+        let thisSliceBytes = 0;
+        for (let j = 0; j < flowCount; j++) {
           thisSliceBytes += chartData[j].values[i].bytes;
         }
         if (thisSliceBytes > maxSlice) {
@@ -202,9 +200,9 @@
 
     /* Reformat chartData to work with the new d3 v4 API
      * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
-    var formatData = function(chartData) {
+    const formatData = function(chartData) {
       // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
-      var binsMap = new Map();
+      const binsMap = new Map();
 
       for (let i = 0; i < chartData.length; i++) {
         const row = chartData[i];
@@ -234,8 +232,8 @@
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
@@ -246,7 +244,7 @@
         }));
       }
 
-      var yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
+      const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
       if (yPow == 1) {
         yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 0]);
@@ -268,13 +266,13 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      var fkeys = chartData.map(function(f) { return f.fkey; });
+      const fkeys = chartData.map(function(f) { return f.fkey; });
       colorScale.domain(fkeys);
 
       stack.keys(fkeys);
 
       // Format the data, so they're flat arrays
-      var stackedChartData = stack(
+      const stackedChartData = stack(
         formatData(chartData));
 
       area = d3.area()
@@ -296,15 +294,15 @@
 
 
       // distribution bar
-      var contribs = chartData.map(function(f) {
+      const contribs = chartData.map(function(f) {
         return { k: f.fkey, b: f.tbytes, p :f.tpackets };
       });
 
-      var tbytes = contribs.reduce(function(a,b) { return a + b.b }, 0 );
+      const tbytes = contribs.reduce(function(a,b) { return a + b.b }, 0 );
 
-      var rangeStop = 0;
-      var barData = contribs.map(function(d) {
-        var new_d = {
+      let rangeStop = 0;
+      const barData = contribs.map(function(d) {
+        const new_d = {
           k: d.k,
           x0: rangeStop,
           x1: (rangeStop + d.b)
@@ -313,17 +311,17 @@
         return new_d;
       });
 
-      var x = d3.scaleLinear()
+      const x = d3.scaleLinear()
                       .rangeRound([0, width])
                       .domain([0,tbytes]);
 
-      var y = d3.scaleBand()
+      const y = d3.scaleBand()
                       .range([0, 10])
                       .round(.3);
 
-      var barsbox = svg.select("#barsbox");
+      const barsbox = svg.select("#barsbox");
       barsbox.selectAll(".subbar").remove();
-      var bars = barsbox.selectAll("rect")
+      const bars = barsbox.selectAll("rect")
                     .data(barData)
                     .enter().append("g").attr("class", "subbar");
 
@@ -340,10 +338,10 @@
 
 
       // legend box handling
-      var legend_tabs = colorScale.domain();
-      var legendbox = svg.select("#ttlegendbox");
+      const legend_tabs = colorScale.domain();
+      const legendbox = svg.select("#ttlegendbox");
       legendbox.selectAll(".legend").remove();
-      var legend = legendbox.selectAll(".legend")
+      const legend = legendbox.selectAll(".legend")
                    .data(fkeys.slice()).enter()
                    .append("g")
                    .attr("class", "legend")

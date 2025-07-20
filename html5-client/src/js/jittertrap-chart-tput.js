@@ -8,7 +8,7 @@
 
   my.charts.tput = {};
 
-  var chartData = [];
+  const chartData = [];
 
   /* must return a reference to an array of {x:x, y:y} */
   my.charts.tput.getTputRef = function () {
@@ -16,28 +16,28 @@
   };
 
   my.charts.tput.tputChart = (function (m) {
-    var margin = {
+    const margin = {
       top: 20,
       right: 20,
       bottom: 40,
       left: 75
     };
 
-    var size = { width: 960, height: 300 };
-    var xScale = d3.scaleLinear().range([0, size.width]);
-    var yScale = d3.scaleLinear().range([size.height, 0]);
+    const size = { width: 960, height: 300 };
+    let xScale = d3.scaleLinear().range([0, size.width]);
+    let yScale = d3.scaleLinear().range([size.height, 0]);
 
-    var xAxis = d3.axisBottom();
-    var yAxis = d3.axisLeft();
-    var xGrid = d3.axisBottom();
-    var yGrid = d3.axisLeft();
-    
-    var line = d3.line()
+    let xAxis = d3.axisBottom();
+    let yAxis = d3.axisLeft();
+    let xGrid = d3.axisBottom();
+    let yGrid = d3.axisLeft();
+
+    let line = d3.line()
           .x(function(d) { return xScale(d.timestamp); })
           .y(function(d) { return yScale(d.value); })
           .curve(d3.curveBasis);
 
-    var svg = {};
+    let svg = {};
 
     m.reset = function(selectedSeries) {
 
@@ -46,8 +46,8 @@
       svg = d3.select("#chartThroughput")
             .append("svg");
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);
@@ -81,7 +81,7 @@
          .attr("height", height + margin.top + margin.bottom);
 
 
-      var graph = svg.append("g")
+      const graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
@@ -133,8 +133,8 @@
 
     m.redraw = function() {
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);

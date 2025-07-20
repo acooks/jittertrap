@@ -14,7 +14,7 @@ $(document).ready(function() {
   $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
 
   // Initialize WebSockets
-  var wsUri = "ws://" + document.domain + ":" + location.port;
+  const wsUri = "ws://" + document.domain + ":" + location.port;
   JT.ws.init(wsUri);
 
   // Initialise charts and start render loop
@@ -28,8 +28,8 @@ $(document).ready(function() {
   $('#chopts_stop_start').bind('click', JT.charts.toggleStopStartGraph);
 
   $("#chopts_chartPeriod").bind('change', function() {
-    var plotPeriod = $("#chopts_chartPeriod").val();
-    var result = JT.charts.setChartPeriod(plotPeriod);
+    const plotPeriod = $("#chopts_chartPeriod").val();
+    const result = JT.charts.setChartPeriod(plotPeriod);
     $("#chopts_chartPeriod").val(result.newPeriod);
     $("#jt-measure-datalength").html(result.sampleCount);
   });
@@ -63,4 +63,3 @@ $(document).ready(function() {
   $("#new_program").val(JT.programsModule.templateProgram);
   $('#add_program_modal button').last().click(JT.programsModule.addProgramHandler);
 });
-

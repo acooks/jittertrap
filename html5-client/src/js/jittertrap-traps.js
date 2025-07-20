@@ -7,13 +7,13 @@
   'use strict';
   my.trapModule = {};
 
-  var trapsNextUID = 123123;
+  let trapsNextUID = 123123;
 
-  var trapsBin = {}; // a container for Traps
+  const trapsBin = {}; // a container for Traps
 
-  var trapStates = { disarmed: 0, armed: 1, triggered: 2 };
+  const trapStates = { disarmed: 0, armed: 1, triggered: 2 };
 
-  var testTypes = {
+  const testTypes = {
     curLessThan: function (threshold, tripped, stats) {
       return { pass: (stats.cur < threshold),
                val:  (stats.cur < tripped) ? stats.cur : tripped };
@@ -48,7 +48,7 @@
     }
   };
 
-  var mapTrapIdToSeriesAndTest = {
+  const mapTrapIdToSeriesAndTest = {
     cur_rx_bitrate_lt : { series: "rxRate", test: testTypes.curLessThan },
     cur_rx_bitrate_mt : { series: "rxRate", test: testTypes.curMoreThan },
     mean_rx_bitrate: { series: "rxRate", test: testTypes.meanMoreThan },
@@ -61,7 +61,7 @@
     tx_pkt_gap     : { series: "txRate", test: testTypes.maxPGapMoreThan }
   };
 
-  var actionTypes = {};
+  let actionTypes = {};
 
   actionTypes = (function (my) {
     my.logAction = {};
@@ -81,17 +81,17 @@
   actionTypes = (function (my) {
     my.blinkAction = {};
     my.blinkTimeoutHandles = {};
-    var handles = actionTypes.blinkTimeoutHandles;
+    const handles = actionTypes.blinkTimeoutHandles;
 
-    var ledOff = function (ledId) {
-      var led = $("#"+ledId);
+    const ledOff = function (ledId) {
+      const led = $("#"+ledId);
       led.css("color", "#FF9900");
       my.blinkTimeoutHandles.ledId = 0;
     };
 
-    var ledOn = function (trap, val) {
-      var ledId = trap.trapUID + "_led";
-      var led = $("#"+ledId);
+    const ledOn = function (trap, val) {
+      const ledId = trap.trapUID + "_led";
+      const led = $("#"+ledId);
       led.css("color", "red");
       led.html("&nbsp;"+val.toFixed(2));
       if (my.blinkTimeoutHandles[ledId]) {
@@ -107,9 +107,9 @@
     };
 
     my.blinkAction.reset = function (trap) {
-      var ledId = trap.trapUID + "_led";
+      const ledId = trap.trapUID + "_led";
       ledOff(ledId);
-      var led = $("#"+ledId);
+      const led = $("#"+ledId);
       led.css("color", "black");
       led.html("&nbsp;");
     };
@@ -120,7 +120,7 @@
   /**
    *
    */
-  var TrapAction = function (trap, actionType) {
+  const TrapAction = function (trap, actionType) {
     this.trap = trap;
 
     this.execute = function (triggeredVal) {
@@ -135,7 +135,7 @@
   /**
    *
    */
-  var Trap = function (trapType, seriesName, triggerTester, threshVal) {
+  const Trap = function (trapType, seriesName, triggerTester, threshVal) {
     this.trapType = trapType;
     this.trapUID = trapType + "_" + trapsNextUID++;
     this.seriesName = seriesName;
@@ -146,12 +146,12 @@
     this.actionList = []; // a list of TrapAction
 
     this.addAction = function (actionType) {
-      var ta = new TrapAction(this, actionType);
+      const ta = new TrapAction(this, actionType);
       this.actionList.push(ta);
     };
 
     this.testAndAct = function (stats) {
-      var result = this.triggerTester(this.threshVal, this.tripVal, stats);
+      const result = this.triggerTester(this.threshVal, this.tripVal, stats);
       if (result.pass) {
         //console.log("trap triggered.");
         this.tripVal = result.val;
@@ -190,9 +190,9 @@
    * Just needs to ensure the trap measurement units are displayed
    */
   my.trapModule.trapSelectionHandler = function(event){
-    var $input_group_addon = $(event.target).parent()
+    const $input_group_addon = $(event.target).parent()
                              .find('.input-group-addon');
-    var units = $(event.target).find('option:selected')
+    const units = $(event.target).find('option:selected')
                 .data('trapUnits');
 
     // Update input-group-addon with correct units for type of trap selected
@@ -202,19 +202,19 @@
   /**
    *
    */
-  var addTrapToUI = function(trap){
-    var trapValue        = $('#trap_value').val(),
-        trapValueInt     = parseInt(trapValue),
-        trapTypeSelected = $('#trap_names option:selected').data('trapType'),
-        trapNameSelected = $('#trap_names option:selected').text(),
-        trapTable        = $('#traps_table'),
+  const addTrapToUI = function(trap){
+    const trapValue        = $('#trap_value').val(),
+          trapValueInt     = parseInt(trapValue),
+          trapTypeSelected = $('#trap_names option:selected').data('trapType'),
+          trapNameSelected = $('#trap_names option:selected').text(),
+          trapTable        = $('#traps_table'),
         trapUnits        = $('#trap_names option:selected').data('trapUnits');
 
     // Validity/Verification checks first
     if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
       // Add the trap to the traps table
       $.get('/templates/trap.html', function(template) {
-        var template_data = { trapType: trapTypeSelected,
+        const template_data = { trapType: trapTypeSelected,
                               trapUID:  trap.trapUID,
                               trapName: trapNameSelected,
                               trapValue: trapValueInt,
@@ -230,7 +230,7 @@
           delete trapsBin[trap.trapUID];
 
           // Removal from the UI
-          var trapTr = $(event.target).parents('tr');
+          const trapTr = $(event.target).parents('tr');
           trapTr.remove();
         });
 
@@ -250,15 +250,15 @@
    *
    */
   my.trapModule.addTrapHandler = function(event) {
-    var $selectedTrapOption = $(event.target).parents('.modal')
+    const $selectedTrapOption = $(event.target).parents('.modal')
                               .find('option:selected');
-    var trapType            = $selectedTrapOption.data('trapType');
-    var trapValue           = $('#trap_value').val();
-    var trapValueInt        = parseInt(trapValue);
+    const trapType            = $selectedTrapOption.data('trapType');
+    const trapValue           = $('#trap_value').val();
+    const trapValueInt        = parseInt(trapValue);
 
     if (trapValueInt > 0) {
-      var map = mapTrapIdToSeriesAndTest[trapType];
-      var t = new Trap(trapType, map.series, map.test, trapValue);
+      const map = mapTrapIdToSeriesAndTest[trapType];
+      const t = new Trap(trapType, map.series, map.test, trapValue);
       //t.addAction(actionTypes.logAction);
       t.addAction(actionTypes.blinkAction);
       trapsBin[t.trapUID] = t;

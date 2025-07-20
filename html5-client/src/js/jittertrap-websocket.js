@@ -7,28 +7,28 @@
 
   my.ws = {};
 
-  var selectedIface = {}; // set on dev_select message
+  let selectedIface = {}; // set on dev_select message
 
   /* the websocket object, see my.ws.init() */
-  var sock = {};
+  let sock = {};
 
   /**
    * Websocket Callback Functions
    * i.e. Referred to in websocket.onmessage
    */
 
-  var handleMsgUpdateStats = function (params) {
+  const handleMsgUpdateStats = function (params) {
     JT.core.processDataMsg(params.s, params.ival_ns);
     JT.charts.setDirty();
   };
 
-  var handleMsgToptalk = function (params) {
+  const handleMsgToptalk = function (params) {
     JT.core.processTopTalkMsg(params);
     JT.charts.setDirty();
   };
 
-  var handleMsgDevSelect = function(params) {
-    var iface = params.iface;
+  const handleMsgDevSelect = function(params) {
+    const iface = params.iface;
     console.log("iface: " + iface);
     $('#dev_select').val(iface);
     selectedIface = $('#dev_select').val();
@@ -36,23 +36,23 @@
     JT.charts.resetChart();
   };
 
-  var handleMsgIfaces = function(params) {
-    var ifaces = params.ifaces;
+  const handleMsgIfaces = function(params) {
+    const ifaces = params.ifaces;
     $('#dev_select').empty();
     $.each(ifaces,
       function (ix, val) {
-        var option = $('<option>').text(val).val(val);
+        const option = $('<option>').text(val).val(val);
         $('#dev_select').append(option);
       }
     );
   };
 
-  var handleMsgNetemParams = function(params) {
+  const handleMsgNetemParams = function(params) {
     JT.programsModule.processNetemMsg(params);
   };
 
-  var handleMsgSamplePeriod = function(params) {
-    var period = params.period;
+  const handleMsgSamplePeriod = function(params) {
+    const period = params.period;
     my.core.samplePeriod(period);
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
@@ -65,14 +65,14 @@
    * Websocket Sending Functions
    */
 
-  var dev_select = function() {
-    var msg = JSON.stringify({'msg':'dev_select',
+  const dev_select = function() {
+    const msg = JSON.stringify({'msg':'dev_select',
                               'p': { 'iface': $("#dev_select").val()}});
     sock.send(msg);
   };
 
-  var set_netem = function() {
-    var msg = JSON.stringify(
+  const set_netem = function() {
+    const msg = JSON.stringify(
       {'msg': 'set_netem',
        'p': {
          'dev': $("#dev_select").val(),
@@ -86,7 +86,7 @@
     return false;
   };
 
-  var clear_netem = function() {
+  const clear_netem = function() {
     $("#delay").val(0);
     $("#jitter").val(0);
     $("#loss").val(0);
@@ -99,7 +99,7 @@
     sock = new WebSocket(uri, "jittertrap");
 
     sock.onopen = function(evt) {
-      var msg = JSON.stringify({'msg': 'hello'});
+      const msg = JSON.stringify({'msg': 'hello'});
       sock.send(msg);
     };
 
@@ -121,7 +121,7 @@
     };
 
     sock.onmessage = function(evt) {
-      var msg;
+      let msg;
       try {
         msg = JSON.parse(evt.data);
       }
@@ -133,7 +133,7 @@
         console.log("unrecognised message: " + evt.data);
         return;
       }
-      var msgType = msg.msg;
+      const msgType = msg.msg;
 
       if ((msgType === "stats") && msg.p.iface === selectedIface) {
         handleMsgUpdateStats(msg.p);
