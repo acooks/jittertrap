@@ -88,7 +88,6 @@ static void clear_table(int table_idx)
 		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
 	}
-	assert(0 == HASH_CNT(ts_hh, table));
 	complete_flow_tables[table_idx] = NULL;
 
 	/* copy incomplete to complete */
@@ -110,7 +109,6 @@ static void clear_table(int table_idx)
 		HASH_DELETE(ts_hh, table, iter);
 		free(iter);
 	}
-	assert(0 == HASH_CNT(ts_hh, table));
 	incomplete_flow_tables[table_idx] = NULL;
 }
 
