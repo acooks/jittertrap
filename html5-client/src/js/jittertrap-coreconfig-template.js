@@ -3,12 +3,11 @@
 /* global JT: true */
 JT = {};
 
-JT = (function (my) {
+((my) => {
   'use strict';
   my.coreconfig = {};
   my.coreconfig.samplePeriod = ##CORECONFIG-SAMPLEPERIOD##;
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-coreconfig-template.js */
 

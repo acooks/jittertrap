@@ -3,7 +3,7 @@
 /* global CBuffer */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   /* module namespace */
@@ -482,6 +482,5 @@ JT = (function (my) {
     }
   };
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-core.js */

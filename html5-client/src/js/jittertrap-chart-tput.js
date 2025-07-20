@@ -3,7 +3,7 @@
 /* global d3 */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.charts.tput = {};
@@ -182,6 +182,5 @@ JT = (function (my) {
 
   }({}));
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-chart-tput.js */

@@ -2,7 +2,7 @@
 
 /* global JT: true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
   my.measurementsModule = {};
   var measurements = {};
@@ -62,6 +62,5 @@ JT = (function (my) {
     measurements[series].meanZ = stats.meanPG.toFixed(2);
   };
 
-  return my;
-}(JT));
+})(JT);
 /* end of jittertrap-measure.js */

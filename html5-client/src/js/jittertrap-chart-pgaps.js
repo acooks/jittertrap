@@ -3,7 +3,7 @@
 /* global d3 */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.charts.pgaps = {};
@@ -197,6 +197,5 @@ JT = (function (my) {
 
   }({}));
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-chart-pgaps.js */

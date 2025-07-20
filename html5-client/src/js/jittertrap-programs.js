@@ -3,7 +3,7 @@
 /* global Mustache */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.programsModule = {};
@@ -171,5 +171,4 @@ JT = (function (my) {
     }
   };
 
-  return my;
-}(JT));
+})(JT);

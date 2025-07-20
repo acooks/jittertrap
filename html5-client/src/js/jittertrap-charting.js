@@ -3,7 +3,7 @@
 /* global d3 */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.charts = {};
@@ -155,6 +155,5 @@ JT = (function (my) {
   my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-charting.js */

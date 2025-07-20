@@ -2,7 +2,7 @@
 
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.ws = {};
@@ -160,6 +160,5 @@ JT = (function (my) {
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-websocket.js */
