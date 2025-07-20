@@ -41,23 +41,6 @@ JT = (function (my) {
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
-    /* Make a displayable title from the flow key */
-    var key2legend = function (fkey) {
-      var a = fkey.split('/');
-      var padsource = " ".repeat(15 - a[1].length);
-      var padsport = " ".repeat(6 - a[2].length);
-      var paddest = " ".repeat(15 - a[3].length);
-      var paddport = " ".repeat(9 - a[4].length);
-      var padproto = " ".repeat(8 - a[5].length);
-      var padtclass = " ".repeat(13 - a[6].length);
-      return a[1] + padsource + " : "
-             + a[2] + padsport
-             + "   ->   "
-             + a[3] + paddest + " : "
-             + a[4] + paddport + " │ " + padproto + a[5] + " │ "
-             + padtclass + a[6];
-    };
-
     var svg = {};
     var context = {};
     var canvas = {};
@@ -169,20 +152,25 @@ JT = (function (my) {
       svg.append("g")
          .attr("class", "legendbox")
          .attr("id", "ttlegendbox")
+         .attr("transform", "translate(" + margin.left + ", 400)")
          .append("text")
-	   .attr("x", 22)
-	   .attr("y", 9)
-	   .attr("dy", ".35em")
-	   .style("text-anchor", "begin")
-	   .style("font-family" ,"monospace")
-	   .style("white-space", "pre")
-	   .text("Source          : Src Port ->   Destination     : Dst Port  │ Protocol │ Traffic Class")
-             .attr("class", "legendheading")
-             .attr("transform",
-                    function(d, i) {
-                       return "translate(" + margin.left + "," + 400 + ")";
-                    }
-              );
+           .attr("class", "legendheading");
+
+      const legendHeader = svg.select(".legendheading");
+      legendHeader.append("tspan")
+        .attr("x", 190)
+        .attr("text-anchor", "end")
+        .text("Source IP");
+      legendHeader.append("tspan").attr("x", 195).text(":Port");
+      legendHeader.append("tspan").attr("x", 265).text("->");
+      legendHeader.append("tspan")
+        .attr("x", 295)
+        .text("Destination IP");
+      legendHeader.append("tspan").attr("x", 485).text(":Port");
+      legendHeader.append("tspan").attr("x", 550).text("| Protocol");
+      legendHeader.append("tspan")
+        .attr("x", 650)
+        .text("| T/Class");
 
 
       my.charts.resizeChart("#chartToptalk", size)();
@@ -361,8 +349,7 @@ JT = (function (my) {
                    .attr("class", "legend")
                    .attr("transform",
                          function(d, i) {
-                           return "translate(" + margin.left + ","
-                                             + (400 + ((i+1) * 25)) + ")";
+                           return "translate(0, " + ((i + 1) * 25) + ")";
                          }
                    );
 
@@ -372,14 +359,32 @@ JT = (function (my) {
 	      .attr("height", 18)
 	      .style("fill", colorScale);
 
-      legend.append("text")
-	      .attr("x", 22)
-	      .attr("y", 9)
-	      .attr("dy", ".35em")
-	      .style("text-anchor", "begin")
-	      .style("font-family" ,"monospace")
-	      .style("white-space", "pre")
-	      .text(function(d) { return key2legend(d); });
+      const legendText = legend.append("text")
+        .attr("y", 9)
+        .attr("dy", ".35em");
+
+      legendText.each(function(d) {
+        const parts = d.split('/');
+        let sourceIP = parts[1];
+        const sourcePort = parts[2];
+        let destIP = parts[3];
+        const destPort = parts[4];
+        const proto = parts[5];
+        const tclass = parts[6];
+
+        if (sourceIP.length > 25) sourceIP = sourceIP.substring(0, 22) + "...";
+        if (destIP.length > 25) destIP = destIP.substring(0, 22) + "...";
+
+        const textNode = d3.select(this);
+        textNode.append("tspan")
+          .attr("x", 190).attr("text-anchor", "end").text(sourceIP);
+        textNode.append("tspan").attr("x", 195).text(":" + sourcePort.padEnd(6));
+        textNode.append("tspan").attr("x", 265).text("->");
+        textNode.append("tspan").attr("x", 295).text(destIP);
+        textNode.append("tspan").attr("x", 485).text(":" + destPort);
+        textNode.append("tspan").attr("x", 550).text("| " + proto);
+        textNode.append("tspan").attr("x", 650).text("| " + tclass);
+      });
 
     };
 

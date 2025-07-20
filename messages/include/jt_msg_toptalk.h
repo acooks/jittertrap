@@ -8,7 +8,7 @@ int jt_toptalk_free(void *data);
 const char *jt_toptalk_test_msg_get(void);
 
 #define MAX_FLOWS 20
-#define ADDR_LEN 40
+#define ADDR_LEN 50
 #define PROTO_LEN 5
 #define TCLASS_LEN 5
 

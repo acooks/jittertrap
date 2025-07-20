@@ -48,7 +48,8 @@ struct hdr_ipv4 {
 } __attribute__((__packed__));
 #define IP_HL(ip) (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip) (((ip)->ip_vhl) >> 4)
-int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
+int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
+               struct flow_pkt *pkt, char *errstr);
 
 struct hdr_ipv6 {
 	uint32_t vcf;
@@ -59,7 +60,8 @@ struct hdr_ipv6 {
 	struct in6_addr ip6_dst;
 } __attribute__((__packed__));
 
-int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr);
+int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
+               struct flow_pkt *pkt, char *errstr);
 
 struct hdr_tcp {
 	uint16_t sport; /* source port */
@@ -115,8 +117,8 @@ int decode_icmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
                 char *errstr);
 
-int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
-                 char *errstr);
+int decode_icmp6(const struct hdr_icmp *packet, const uint8_t *end_of_packet,
+                 struct flow_pkt *pkt, char *errstr);
 
 int decode_esp(const struct hdr_esp *packet, struct flow_pkt *pkt,
                char *errstr);

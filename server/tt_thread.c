@@ -35,12 +35,12 @@ struct {
 	.thread_prio = 2
 };
 
-static char const *const protos[IPPROTO_MAX] = {[IPPROTO_TCP] = "TCP",
-                                                [IPPROTO_UDP] = "UDP",
-                                                [IPPROTO_ICMP] = "ICMP",
-                                                [IPPROTO_ICMPV6] = "ICMP6",
-                                                [IPPROTO_IP] = "IP",
-                                                [IPPROTO_IGMP] = "IGMP" };
+static char const *const protos[IPPROTO_MAX] = {
+	[IPPROTO_TCP] = "TCP",   [IPPROTO_UDP] = "UDP",
+	[IPPROTO_ICMP] = "ICMP", [IPPROTO_ICMPV6] = "ICMP6",
+	[IPPROTO_IP] = "IP",     [IPPROTO_IGMP] = "IGMP",
+	[IPPROTO_ESP] = "ESP"
+};
 
 static char const * const dscpvalues[] = {
         [IPTOS_DSCP_AF11] = "AF11",
@@ -66,7 +66,54 @@ static char const * const dscpvalues[] = {
         [IPTOS_CLASS_CS7] = "CS7"
 };
 
-int tt_thread_restart(char * iface)
+int is_valid_dscp(int potential_dscp)
+{
+
+	switch (potential_dscp) {
+	case IPTOS_DSCP_AF11:
+	case IPTOS_DSCP_AF12:
+	case IPTOS_DSCP_AF13:
+	case IPTOS_DSCP_AF21:
+	case IPTOS_DSCP_AF22:
+	case IPTOS_DSCP_AF23:
+	case IPTOS_DSCP_AF31:
+	case IPTOS_DSCP_AF32:
+	case IPTOS_DSCP_AF33:
+	case IPTOS_DSCP_AF41:
+	case IPTOS_DSCP_AF42:
+	case IPTOS_DSCP_AF43:
+	case IPTOS_DSCP_EF:
+	case IPTOS_CLASS_CS0:
+	case IPTOS_CLASS_CS1:
+	case IPTOS_CLASS_CS2:
+	case IPTOS_CLASS_CS3:
+	case IPTOS_CLASS_CS4:
+	case IPTOS_CLASS_CS5:
+	case IPTOS_CLASS_CS6:
+	case IPTOS_CLASS_CS7:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+int is_valid_proto(int potential_proto)
+{
+	switch (potential_proto) {
+	case IPPROTO_TCP:
+	case IPPROTO_UDP:
+	case IPPROTO_ICMP:
+	case IPPROTO_ICMPV6:
+	case IPPROTO_IP:
+	case IPPROTO_IGMP:
+	case IPPROTO_ESP:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+int tt_thread_restart(char *iface)
 {
 	int err;
 	void *res;
@@ -97,35 +144,68 @@ int tt_thread_restart(char * iface)
 	return 0;
 }
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 /* Convert from a struct tt_top_flows to a struct mq_tt_msg */
-static int
-m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
+static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 {
 	struct jt_msg_toptalk *m = &msg->m;
+	char s_addr_str[INET6_ADDRSTRLEN] = { 0 };
+	char d_addr_str[INET6_ADDRSTRLEN] = { 0 };
+	int flow_count;
 
 	m->timestamp.tv_sec = ttf->timestamp.tv_sec;
 	m->timestamp.tv_nsec = ttf->timestamp.tv_usec * 1000;
 
-	m->interval_ns = tt_intervals[interval].tv_sec * 1E9
-		+ tt_intervals[interval].tv_usec * 1E3;
+	m->interval_ns = tt_intervals[interval].tv_sec * 1E9 +
+	                 tt_intervals[interval].tv_usec * 1E3;
 
-	m->tflows = ttf->flow_count;
+	flow_count = MIN(ttf->flow_count, MAX_FLOWS);
+	m->tflows = flow_count;
 	m->tbytes = ttf->total_bytes;
 	m->tpackets = ttf->total_packets;
 
-	for (int f = 0; f < MAX_FLOWS; f++) {
+	for (int f = 0; f < flow_count; f++) {
 		m->flows[f].bytes = ttf->flow[f][interval].bytes;
 		m->flows[f].packets = ttf->flow[f][interval].packets;
 		m->flows[f].sport = ttf->flow[f][interval].flow.sport;
 		m->flows[f].dport = ttf->flow[f][interval].flow.dport;
-		snprintf(m->flows[f].proto, PROTO_LEN, "%s",
-				protos[ttf->flow[f][interval].flow.proto]);
-		snprintf(m->flows[f].src, ADDR_LEN, "%s",
-				inet_ntoa(ttf->flow[f][interval].flow.src_ip));
-		snprintf(m->flows[f].dst, ADDR_LEN, "%s",
-				inet_ntoa(ttf->flow[f][interval].flow.dst_ip));
-		snprintf(m->flows[f].tclass, TCLASS_LEN, "%s",
-		         dscpvalues[ttf->flow[f][interval].flow.tclass]);
+		if (is_valid_proto(ttf->flow[f][interval].flow.proto)) {
+			snprintf(m->flows[f].proto, PROTO_LEN, "%s",
+			         protos[ttf->flow[f][interval].flow.proto]);
+		} else {
+			snprintf(m->flows[f].proto, PROTO_LEN, "%s", "__");
+		}
+		if (ttf->flow[f][interval].flow.ethertype == ETHERTYPE_IP) {
+			inet_ntop(AF_INET,
+			          &(ttf->flow[f][interval].flow.src_ip),
+			          s_addr_str, INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET,
+			          &(ttf->flow[f][interval].flow.dst_ip),
+			          d_addr_str, INET6_ADDRSTRLEN);
+		} else if (ttf->flow[f][interval].flow.ethertype ==
+		           ETHERTYPE_IPV6) {
+			inet_ntop(AF_INET6,
+			          &(ttf->flow[f][interval].flow.src_ip6),
+			          s_addr_str, INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET6,
+			          &(ttf->flow[f][interval].flow.dst_ip6),
+			          d_addr_str, INET6_ADDRSTRLEN);
+		} else {
+			snprintf(s_addr_str, INET6_ADDRSTRLEN,
+				 "Ethertype 0x%x\n",
+				 ttf->flow[f][interval].flow.ethertype);
+		}
+		snprintf(m->flows[f].src, ADDR_LEN, "%s", s_addr_str);
+		snprintf(m->flows[f].dst, ADDR_LEN, "%s", d_addr_str);
+
+		if (is_valid_dscp(ttf->flow[f][interval].flow.tclass)) {
+			snprintf(
+			    m->flows[f].tclass, TCLASS_LEN, "%s",
+			    dscpvalues[ttf->flow[f][interval].flow.tclass]);
+		} else {
+			snprintf(m->flows[f].tclass, TCLASS_LEN, "%s", "__");
+		}
 	}
 	return 0;
 }
