@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/icmp6.h>
 #include <pcap/sll.h>
 
 #include "flow.h"
@@ -14,6 +15,7 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
                     struct flow_pkt *pkt, char *errstr)
 {
 	const struct hdr_ethernet *ethernet;
+	const uint8_t *end_of_packet = wirebits + h->caplen;
 	int ret;
 
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
@@ -25,14 +27,16 @@ int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 
 	switch (ntohs(ethernet->type)) {
 	case ETHERTYPE_IP:
-		ret = decode_ip4(wirebits + HDR_LEN_ETHER, pkt, errstr);
+		ret = decode_ip4(wirebits + HDR_LEN_ETHER, end_of_packet, pkt,
+		                 errstr);
 		break;
 	case ETHERTYPE_VLAN:
 		ret = decode_ethernet(h, wirebits + HDR_LEN_ETHER_VLAN, pkt,
 		                      errstr);
 		break;
 	case ETHERTYPE_IPV6:
-		ret = decode_ip6(wirebits + HDR_LEN_ETHER, pkt, errstr);
+		ret = decode_ip6(wirebits + HDR_LEN_ETHER, end_of_packet, pkt,
+		                 errstr);
 		break;
 	case ETHERTYPE_ARP:
 		snprintf(errstr, DECODE_ERRBUF_SIZE, "%s", "ARP ignored");
@@ -56,6 +60,7 @@ int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
                      struct flow_pkt *pkt, char *errstr)
 {
 	const struct sll_header *sll;
+	const uint8_t *end_of_packet = wirebits + h->caplen;
 	int ret;
 
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
@@ -66,26 +71,31 @@ int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 	sll = (struct sll_header *)wirebits;
 	switch (ntohs(sll->sll_protocol)) {
 	case ETHERTYPE_IP:
-		ret = decode_ip4(wirebits + SLL_HDR_LEN, pkt, errstr);
+		ret = decode_ip4(wirebits + SLL_HDR_LEN, end_of_packet, pkt,
+		                 errstr);
 		break;
 	case ETHERTYPE_IPV6:
-		ret = decode_ip6(wirebits + SLL_HDR_LEN, pkt, errstr);
+		ret = decode_ip6(wirebits + SLL_HDR_LEN, end_of_packet, pkt,
+		                 errstr);
 		break;
 	default:
 		snprintf(errstr, DECODE_ERRBUF_SIZE,
-		         "sll proto: %x. Linux 'cooked' decoding is TODO (in progress).",
+		         "sll proto: %x. Linux 'cooked' decoding is TODO",
 		         ntohs(sll->sll_protocol));
 		ret = -1;
 	}
 	return ret;
 }
 
-int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
+int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
+               struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
 	const struct hdr_ipv6 *ip6_packet = (const struct hdr_ipv6 *)packet;
 	uint8_t next_hdr, hdr_len;
+	size_t total_ext_len;
+	int is_ext_header = 1;
 
 	pkt->flow_rec.flow.ethertype = ETHERTYPE_IPV6;
 	pkt->flow_rec.flow.src_ip6 = (ip6_packet->ip6_src);
@@ -93,14 +103,38 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	pkt->flow_rec.flow.tclass = (htonl(ip6_packet->vcf) & 0x0fc00000) >> 20;
 
 	next_hdr = ip6_packet->next_hdr;
+	while (is_ext_header) {
 
-	/* Optional headers */
-	switch (next_hdr) {
-	case IPPROTO_DSTOPTS: /* IPv6 Destination Options */
-		hdr_len = *((uint8_t*)next + 1);
-		next = (uint8_t*)next + hdr_len;
-		next_hdr = *((uint8_t*)next);
-		break;
+		/* Optional headers */
+		switch (next_hdr) {
+		case IPPROTO_HOPOPTS:
+		case IPPROTO_ROUTING:
+		case IPPROTO_FRAGMENT:
+		case IPPROTO_DSTOPTS: /* IPv6 Destination Options */
+			hdr_len = *((uint8_t *)next + 1);
+			total_ext_len = (hdr_len + 1) * 8;
+
+			if ((const uint8_t *)next + total_ext_len >
+			    end_of_packet) {
+				snprintf(
+				    errstr, DECODE_ERRBUF_SIZE,
+				    "*** Invalid IPv6 extension header length");
+				return -1; // Packet is malformed
+			}
+			next = (uint8_t *)next + total_ext_len;
+			next_hdr = *((uint8_t *)next);
+			break;
+		default:
+			is_ext_header = 0;
+			break;
+		}
+	}
+
+	if ((const uint8_t *)next + 8 >
+	    end_of_packet) { // 8 is the size of the smallest L4 header (UDP)
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "*** Truncated IPv6 packet");
+		return -1;
 	}
 
 	/* Transport proto TCP/UDP/ICMP */
@@ -118,7 +152,7 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 		ret = decode_igmp(next, pkt, errstr);
 		break;
 	case IPPROTO_ICMPV6:
-		ret = decode_icmp6(next, pkt, errstr);
+		ret = decode_icmp6(next, end_of_packet, pkt, errstr);
 		break;
 	case IPPROTO_ESP:
 		ret = decode_esp(next, pkt, errstr);
@@ -132,7 +166,8 @@ int decode_ip6(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
 	return ret;
 }
 
-int decode_ip4(const uint8_t *packet, struct flow_pkt *pkt, char *errstr)
+int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
+               struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next;
@@ -234,14 +269,31 @@ int decode_igmp(const struct hdr_icmp *packet, struct flow_pkt *pkt,
 	return 0;
 }
 
-int decode_icmp6(const struct hdr_icmp *packet, struct flow_pkt *pkt,
-                 char *errstr)
+int decode_icmp6(const struct hdr_icmp *packet, const uint8_t *end_of_packet,
+                 struct flow_pkt *pkt, char *errstr)
 {
+	(void)end_of_packet;
 	(void)errstr;
-	(void)packet;
+
 	pkt->flow_rec.flow.proto = IPPROTO_ICMPV6;
-	pkt->flow_rec.flow.sport = 0;
-	pkt->flow_rec.flow.dport = 0;
+
+	/* Create unique flows for Echo Request (128) and Echo Reply (129) */
+	if (packet->type == ICMP6_ECHO_REQUEST) {
+		/* Use the ICMP identifier to create a unique flow "port" */
+		pkt->flow_rec.flow.dport =
+		    (ICMP6_ECHO_REQUEST << 8) | packet->code;
+		pkt->flow_rec.flow.sport =
+		    ntohs(*(const uint16_t *)&(packet->hdr_data));
+	} else if (packet->type == ICMP6_ECHO_REPLY) {
+		pkt->flow_rec.flow.sport =
+		    (ICMP6_ECHO_REPLY << 8) | packet->code;
+		pkt->flow_rec.flow.dport =
+		    ntohs(*(const uint16_t *)&(packet->hdr_data));
+	} else {
+		/* Aggregate all other ICMPv6 types */
+		pkt->flow_rec.flow.sport = packet->type;
+		pkt->flow_rec.flow.dport = 0;
+	}
 	return 0;
 }
 
