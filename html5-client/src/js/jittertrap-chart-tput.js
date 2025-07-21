@@ -133,42 +133,27 @@
 
     m.redraw = function() {
 
+      // No data, no draw.
+      if (chartData.length === 0) {
+        return;
+      }
+
       const width = size.width - margin.left - margin.right;
       const height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scaleLinear().range([0, width]);
-      yScale = d3.scaleLinear().range([height, 0]);
-
-      xAxis = d3.axisBottom()
-              .scale(xScale)
-              .ticks(10);
-
-      yAxis = d3.axisLeft()
-              .scale(yScale)
-              .ticks(5);
+      // Update scale ranges and domains.
+      xScale.range([0, width]);
+      yScale.range([height, 0]);
 
       /* Scale the range of the data again */
-      xScale.domain(d3.extent(chartData, function(d) {
-        return d.timestamp;
-      }));
+      xScale.domain(d3.extent(chartData, d => d.timestamp));
+      yScale.domain([0, d3.max(chartData, d => d.value)]);
 
-      yScale.domain([0, d3.max(chartData, function(d) {
-        return d.value;
-      })]);
+      // Update grids
+      xGrid.tickSize(-height);
+      yGrid.tickSize(-width);
 
-      xGrid = d3.axisBottom()
-          .scale(xScale)
-           .tickSize(-height)
-           .ticks(10)
-           .tickFormat("");
-
-      yGrid = d3.axisLeft()
-          .scale(yScale)
-           .tickSize(-width)
-           .ticks(5)
-           .tickFormat("");
-
-      svg = d3.select("#chartThroughput");
+      // Redraw the line and axes.
       svg.select(".line").attr("d", line(chartData));
       svg.select(".x.axis").call(xAxis);
       svg.select(".y.axis").call(yAxis);
