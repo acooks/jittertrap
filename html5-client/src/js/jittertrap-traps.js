@@ -14,38 +14,30 @@
   const trapStates = { disarmed: 0, armed: 1, triggered: 2 };
 
   const testTypes = {
-    curLessThan: function (threshold, tripped, stats) {
-      return { pass: (stats.cur < threshold),
-               val:  (stats.cur < tripped) ? stats.cur : tripped };
-    },
-    curMoreThan: function (threshold, tripped, stats) {
-      return { pass: (stats.cur > threshold),
-               val:  (stats.cur > tripped) ? stats.cur : tripped };
-    },
-    minLessThan: function (threshold, tripped, stats) {
-      return { pass: (stats.min < threshold),
-               val:  (stats.min < tripped) ? stats.min : tripped };
-    },
-    maxMoreThan: function (threshold, tripped, stats) {
-      return { pass: (stats.max > threshold),
-               val:  (stats.max > tripped) ? stats.max : tripped };
-    },
-    meanMoreThan: function (threshold, tripped, stats) {
-      return { pass: (stats.mean > threshold),
-               val:  (stats.mean > tripped) ? stats.mean : tripped };
-    },
-    meanLessThan: function (threshold, tripped, stats) {
-      return { pass: (stats.mean < threshold),
-               val:  (stats.mean < tripped) ? stats.mean : tripped };
-    },
-    meanPGapMoreThan: function (threshold, tripped, stats) {
-      return { pass: (stats.meanPG > threshold),
-               val:  (stats.meanPG > tripped) ? stats.meanPG : tripped };
-    },
-    maxPGapMoreThan: function (threshold, tripped, stats) {
-      return { pass:(stats.maxPG > threshold),
-               val: (stats.maxPG > tripped) ? stats.maxPG : tripped };
-    }
+    curLessThan: (threshold, tripped, stats) => ({
+      pass: (stats.cur < threshold),
+      val:  (stats.cur < tripped) ? stats.cur : tripped }),
+    curMoreThan: (threshold, tripped, stats) => ({
+      pass: (stats.cur > threshold),
+      val:  (stats.cur > tripped) ? stats.cur : tripped }),
+    minLessThan: (threshold, tripped, stats) => ({
+      pass: (stats.min < threshold),
+      val:  (stats.min < tripped) ? stats.min : tripped }),
+    maxMoreThan: (threshold, tripped, stats) => ({
+      pass: (stats.max > threshold),
+      val:  (stats.max > tripped) ? stats.max : tripped }),
+    meanMoreThan: (threshold, tripped, stats) => ({
+      pass: (stats.mean > threshold),
+      val:  (stats.mean > tripped) ? stats.mean : tripped }),
+    meanLessThan: (threshold, tripped, stats) => ({
+      pass: (stats.mean < threshold),
+      val:  (stats.mean < tripped) ? stats.mean : tripped }),
+    meanPGapMoreThan: (threshold, tripped, stats) => ({
+      pass: (stats.meanPG > threshold),
+      val:  (stats.meanPG > tripped) ? stats.meanPG : tripped }),
+    maxPGapMoreThan: (threshold, tripped, stats) => ({
+      pass:(stats.maxPG > threshold),
+      val: (stats.maxPG > tripped) ? stats.maxPG : tripped })
   };
 
   const mapTrapIdToSeriesAndTest = {
@@ -65,14 +57,14 @@
 
   actionTypes = (function (my) {
     my.logAction = {};
-    my.logAction.act = function (trap, val) {
+    my.logAction.act = (trap, val) => {
       console.log("log action. Trap: " + trap.trapType
                 + " series: " + trap.seriesName
                 + " threshold Val: " + trap.threshVal
                 + " triggered Val: " + val);
     };
 
-    my.logAction.reset = function (trap) {};
+    my.logAction.reset = () => {};
 
     return my;
   }(actionTypes));
@@ -98,15 +90,13 @@
         clearTimeout(my.blinkTimeoutHandles[ledId]);
       }
       my.blinkTimeoutHandles[ledId] =
-        setTimeout(function() { ledOff(ledId); },
+        setTimeout(() => ledOff(ledId),
                    JT.charts.getChartPeriod() + 10);
     };
 
-    my.blinkAction.act = function (trap, val) {
-      ledOn(trap, val);
-    };
+    my.blinkAction.act = (trap, val) => ledOn(trap, val);
 
-    my.blinkAction.reset = function (trap) {
+    my.blinkAction.reset = (trap) => {
       const ledId = trap.trapUID + "_led";
       ledOff(ledId);
       const led = $("#"+ledId);
@@ -208,7 +198,7 @@
     // Validity/Verification checks first
     if ((! isNaN(trapValueInt)) && (trapValueInt > 0)) {
       // Add the trap to the traps table
-      $.get('/templates/trap.html', function(template) {
+      $.get('/templates/trap.html', (template) => {
         const template_data = { trapType: trapTypeSelected,
                               trapUID:  trap.trapUID,
                               trapName: trapNameSelected,
@@ -220,7 +210,7 @@
         trapTable.find('tbody').append(rendered);
 
         // Remove trap button
-        $("#"+trap.trapUID+"_delete").on('click', function(event) {
+        $("#"+trap.trapUID+"_delete").on('click', (event) => {
           // Remove from JS
           delete trapsBin[trap.trapUID];
 
@@ -230,7 +220,7 @@
         });
 
         // Reset trap button
-        $("#"+trap.trapUID+"_reset").on('click', function(event) {
+        $(`#${trap.trapUID}_reset`).on('click', () => {
           trap.reset();
         });
 

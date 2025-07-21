@@ -38,7 +38,7 @@
       for (let i in this.impairments) {
         if (json.impairments[i].stop) {
           console.log("stop at " + i);
-          this.timeoutHandles[i] = setTimeout(function() {
+          this.timeoutHandles[i] = setTimeout(() => {
               $("#delay").val(0);
               $("#jitter").val(0);
               $("#loss").val(0);
@@ -48,7 +48,7 @@
             i * 1000
           );
         } else {
-          this.timeoutHandles[i] = setTimeout(function(t, d, j, l) {
+          this.timeoutHandles[i] = setTimeout((t, d, j, l) => {
               console.log(Date.now() + " t = " + t + ", d: " + d + ", j: " + j + ", l:" + l);
               $("#delay").val(d);
               $("#jitter").val(j);
@@ -112,7 +112,7 @@
   const updateUI = function(pgm) {
     const programTable = $('#programs_table');
 
-    $.get('/templates/program.html', function(template) {
+    $.get('/templates/program.html', (template) => {
       const template_data = { programName: pgm.name,
                               programUID:  pgm.id,
                             },
@@ -121,22 +121,22 @@
       programTable.find('tbody').append(rendered);
 
       // Play button
-      $("#"+pgm.id+"_play").on('click', function(event) {
+      $("#"+pgm.id+"_play").on('click', () => {
         pgm.play();
       });
 
       // Stop button
-      $("#"+pgm.id+"_stop").on('click', function(event) {
+      $("#"+pgm.id+"_stop").on('click', () => {
         pgm.stop();
       });
 
       // Edit button
-      $("#"+pgm.id+"_edit").on('click', function(event) {
+      $("#"+pgm.id+"_edit").on('click', () => {
         $("#new_program").val(JSON.stringify(pgm, null, '\t'));
       });
 
       // Remove button
-      $("#"+pgm.id+"_delete").on('click', function(event) {
+      $("#"+pgm.id+"_delete").on('click', (event) => {
         // Remove from JS
         delete programs[pgm.id];
 
