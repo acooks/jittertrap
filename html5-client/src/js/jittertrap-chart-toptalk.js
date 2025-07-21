@@ -175,34 +175,12 @@
       my.charts.resizeChart("#chartToptalk", size)();
     };
 
-    /* To find the range of the y-axis, find max of the stacked x values */
-    const maxBytesSlice = function(chartData) {
-      let maxSlice = 0;
-
-      const flowCount = chartData.length;
-      if (!flowCount) {
-        return 0;
-      }
-
-      const sampleCount = chartData[0].values.length;
-
-      for (let i = 0; i < sampleCount; i++) {
-        let thisSliceBytes = 0;
-        for (let j = 0; j < flowCount; j++) {
-          thisSliceBytes += chartData[j].values[i].bytes;
-        }
-        if (thisSliceBytes > maxSlice) {
-          maxSlice = thisSliceBytes;
-        }
-      }
-      return maxSlice;
-    };
-
     /* Reformat chartData to work with the new d3 v4 API
      * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
-    const formatData = function(chartData) {
+    const formatDataAndGetMaxSlice = function(chartData) {
       // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
       const binsMap = new Map();
+      let maxSlice = 0;
 
       for (let i = 0; i < chartData.length; i++) {
         const row = chartData[i];
@@ -224,8 +202,23 @@
         }
       }
 
+      const formattedData = Array.from(binsMap.values());
+
+      // Calculate the sum of each time slice to find the maximum for the Y-axis domain.
+      formattedData.forEach(slice => {
+        let currentSliceSum = 0;
+        for (const key in slice) {
+          if (key !== 'ts') {
+            currentSliceSum += slice[key];
+          }
+        }
+        if (currentSliceSum > maxSlice) {
+          maxSlice = currentSliceSum;
+        }
+      });
+
       // Convert the map's values back into an array for d3.stack().
-      return Array.from(binsMap.values());
+      return { formattedData, maxSlice };
     }
 
 
@@ -244,6 +237,8 @@
         }));
       }
 
+      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(chartData);
+
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
       if (yPow == 1) {
@@ -251,7 +246,7 @@
       } else {
         yScale = d3.scaleLinear().clamp(true).range([height, 0]);
       }
-      yScale.domain([0, maxBytesSlice(chartData)]);
+      yScale.domain([0, maxSlice]);
 
       xAxis.scale(xScale);
       yAxis.scale(yScale);
@@ -272,8 +267,7 @@
       stack.keys(fkeys);
 
       // Format the data, so they're flat arrays
-      const stackedChartData = stack(
-        formatData(chartData));
+      const stackedChartData = stack(formattedData);
 
       area = d3.area()
                .curve(d3.curveMonotoneX)
