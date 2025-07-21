@@ -321,48 +321,54 @@
                    "translate(" + margin.left + "," + 350 + ")");
 
       // legend box handling
-      const legend_tabs = colorScale.domain();
       const legendbox = svg.select("#ttlegendbox");
-      legendbox.selectAll(".legend").remove();
+
+      // General Update Pattern for the legend
       const legend = legendbox.selectAll(".legend")
-                   .data(fkeys.slice()).enter()
-                   .append("g")
-                   .attr("class", "legend")
-                   .attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
+        .data(fkeys, d => d); // Use a key function for object constancy
 
-      legend.append("rect")
-	      .attr("x", 0)
-	      .attr("width", 18)
-	      .attr("height", 18)
-	      .style("fill", colorScale);
+      // EXIT - remove old legend items that are no longer in fkeys
+      legend.exit().remove();
 
-      const legendText = legend.append("text")
+      // ENTER - create new <g> elements for new flows
+      const legendEnter = legend.enter()
+        .append("g")
+        .attr("class", "legend");
+
+      // Append rect and text elements only to the new <g> elements
+      legendEnter.append("rect")
+        .attr("x", 0)
+        .attr("width", 18)
+        .attr("height", 18);
+
+      const legendTextEnter = legendEnter.append("text")
         .attr("y", 9)
         .attr("dy", ".35em");
 
-      legendText.each(function(d) {
+      // Add the complex <tspan> structure only ONCE when elements are created
+      legendTextEnter.each(function(d) {
         const parts = d.split('/');
-        let sourceIP = parts[1];
+        const sourceIP = parts[1];
         const sourcePort = parts[2];
-        let destIP = parts[3];
+        const destIP = parts[3];
         const destPort = parts[4];
         const proto = parts[5];
         const tclass = parts[6];
 
-        if (sourceIP.length > 25) sourceIP = sourceIP.substring(0, 22) + "...";
-        if (destIP.length > 25) destIP = destIP.substring(0, 22) + "...";
-
         const textNode = d3.select(this);
-        textNode.append("tspan")
-          .attr("x", 190).attr("text-anchor", "end").text(sourceIP);
+        textNode.append("tspan").attr("x", 190).attr("text-anchor", "end").text(sourceIP.substring(0, 22) + (sourceIP.length > 22 ? "..." : ""));
         textNode.append("tspan").attr("x", 195).text(":" + sourcePort.padEnd(6));
         textNode.append("tspan").attr("x", 265).text("->");
-        textNode.append("tspan").attr("x", 295).text(destIP);
+        textNode.append("tspan").attr("x", 295).text(destIP.substring(0, 22) + (destIP.length > 22 ? "..." : ""));
         textNode.append("tspan").attr("x", 485).text(":" + destPort);
         textNode.append("tspan").attr("x", 550).text("| " + proto);
         textNode.append("tspan").attr("x", 650).text("| " + tclass);
       });
 
+      // UPDATE + ENTER - update positions and colors for all visible items
+      const legendUpdate = legend.merge(legendEnter);
+      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
+      legendUpdate.select("rect").style("fill", colorScale);
     };
 
 
