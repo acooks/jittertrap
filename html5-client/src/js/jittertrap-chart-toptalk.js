@@ -283,20 +283,14 @@
       });
 
       // distribution bar
-      const contribs = chartData.map(f => ({
-        k: f.fkey,
-        b: f.tbytes,
-        p: f.tpackets
-      }));
-
-      const tbytes = contribs.reduce((a,b) => a + b.b, 0 );
+      const tbytes = chartData.reduce((sum, f) => sum + f.tbytes, 0);
 
       let rangeStop = 0;
-      const barData = contribs.map(d => {
+      const barData = chartData.map(f => {
         const new_d = {
-          k: d.k,
+          k: f.fkey,
           x0: rangeStop,
-          x1: (rangeStop + d.b)
+          x1: (rangeStop + f.tbytes)
         };
         rangeStop = new_d.x1;
         return new_d;
