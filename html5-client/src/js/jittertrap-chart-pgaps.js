@@ -72,15 +72,15 @@
               .tickFormat("");
 
       line = d3.line()
-        .x(function(d) { return xScale(d.x); })
-        .y(function(d) { return yScale(d.y); })
+        .x(d => xScale(d.x))
+        .y(d => yScale(d.y))
         .curve(d3.curveBasis);
 
 
       minMaxArea = d3.area()
-        .x (function (d) { return xScale(d.x) || 1; })
-        .y0(function (d) { return yScale(d.y[0]) || 0; })
-        .y1(function (d) { return yScale(d.y[1]) || 0; })
+        .x(d => xScale(d.x) || 1)
+        .y0(d => yScale(d.y[0]) || 0)
+        .y1(d => yScale(d.y[1]) || 0)
         .curve(d3.curveBasis);
 
       svg.attr("width", width + margin.left + margin.right)

@@ -414,10 +414,8 @@
       );
 
       /* update flow ranks table, descending order */
-      flowRank[interval].sort(function (a, b) {
-        return flowsTotals[interval][b].tbytes -
-               flowsTotals[interval][a].tbytes;
-      });
+      flowRank[interval].sort((a, b) =>
+        flowsTotals[interval][b].tbytes - flowsTotals[interval][a].tbytes);
     }
   };
 
@@ -433,9 +431,7 @@
 
         if (ft[fkey].ttl <= 0) {
           delete ft[fkey];
-          flowRank[interval] = flowRank[interval].filter(function (o) {
-             return (o !== fkey);
-          });
+          flowRank[interval] = flowRank[interval].filter(o => o !== fkey);
         }
       }
     }

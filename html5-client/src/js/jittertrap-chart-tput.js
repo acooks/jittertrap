@@ -33,8 +33,8 @@
     let yGrid = d3.axisLeft();
 
     let line = d3.line()
-          .x(function(d) { return xScale(d.timestamp); })
-          .y(function(d) { return yScale(d.value); })
+          .x(d => xScale(d.timestamp))
+          .y(d => yScale(d.value))
           .curve(d3.curveBasis);
 
     let svg = {};
@@ -73,8 +73,8 @@
               .tickFormat("");
 
       line = d3.line()
-          .x(function(d) { return xScale(d.timestamp); })
-          .y(function(d) { return yScale(d.value); })
+          .x(d => xScale(d.timestamp))
+          .y(d => yScale(d.value))
           .curve(d3.curveBasis);
 
       svg.attr("width", width + margin.left + margin.right)

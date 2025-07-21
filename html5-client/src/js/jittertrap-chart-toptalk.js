@@ -231,11 +231,8 @@
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
-      if (chartData && chartData[0]) {
-        xScale.domain(d3.extent(chartData[0].values, function(d) {
-          return d.ts;
-        }));
-      }
+      if (chartData && chartData[0])
+        xScale.domain(d3.extent(chartData[0].values, d => d.ts));
 
       const { formattedData, maxSlice } = formatDataAndGetMaxSlice(chartData);
 
@@ -261,7 +258,7 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      const fkeys = chartData.map(function(f) { return f.fkey; });
+      const fkeys = chartData.map(f => f.fkey);
       colorScale.domain(fkeys);
 
       stack.keys(fkeys);
@@ -272,30 +269,30 @@
       area = d3.area()
                .curve(d3.curveMonotoneX)
                .context(context)
-               .x(function (d) { return xScale(d.data.ts); })
-               .y0(function (d) { return yScale(d[0] || 0); })
-               .y1(function (d) { return yScale(d[1] || 0); });
+               .x(d => xScale(d.data.ts))
+               .y0(d => yScale(d[0] || 0))
+               .y1(d => yScale(d[1] || 0));
 
       context.clearRect(0, 0, width, height);
 
-      stackedChartData.forEach(function(layer) {
+      stackedChartData.forEach(layer => {
         context.beginPath();
         area(layer);
         context.fillStyle = colorScale(layer.key);
         context.fill();
       });
 
-
-
       // distribution bar
-      const contribs = chartData.map(function(f) {
-        return { k: f.fkey, b: f.tbytes, p :f.tpackets };
-      });
+      const contribs = chartData.map(f => ({
+        k: f.fkey,
+        b: f.tbytes,
+        p: f.tpackets
+      }));
 
-      const tbytes = contribs.reduce(function(a,b) { return a + b.b }, 0 );
+      const tbytes = contribs.reduce((a,b) => a + b.b, 0 );
 
       let rangeStop = 0;
-      const barData = contribs.map(function(d) {
+      const barData = contribs.map(d => {
         const new_d = {
           k: d.k,
           x0: rangeStop,
@@ -322,14 +319,12 @@
       bars.append("rect")
           .attr("height", 23)
           .attr("y", 9)
-          .attr("x", function(d) { return x(d.x0); })
-          .attr("width", function(d) { return x(d.x1) - x(d.x0); })
-          .style("fill", function(d) { return colorScale(d.k); });
+          .attr("x", d => x(d.x0))
+          .attr("width", d => x(d.x1) - x(d.x0))
+          .style("fill", d => colorScale(d.k));
 
-      barsbox.attr("transform", function(d) {
-        return "translate(" + margin.left + "," + 350 + ")";
-      });
-
+      barsbox.attr("transform",
+                   "translate(" + margin.left + "," + 350 + ")");
 
       // legend box handling
       const legend_tabs = colorScale.domain();
@@ -339,11 +334,7 @@
                    .data(fkeys.slice()).enter()
                    .append("g")
                    .attr("class", "legend")
-                   .attr("transform",
-                         function(d, i) {
-                           return "translate(0, " + ((i + 1) * 25) + ")";
-                         }
-                   );
+                   .attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
 
       legend.append("rect")
 	      .attr("x", 0)
