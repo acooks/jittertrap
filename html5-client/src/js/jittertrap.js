@@ -58,8 +58,8 @@ $(document).ready(function() {
   // Changing traps from the list of traps in the trap modal
   $('#trap_names').bind('change', JT.trapModule.trapSelectionHandler);
   // Add a trap
-  $('#add_trap_modal button').last().click(JT.trapModule.addTrapHandler);
+  $('#add_trap_button').click(JT.trapModule.addTrapHandler);
 
   $("#new_program").val(JT.programsModule.templateProgram);
-  $('#add_program_modal button').last().click(JT.programsModule.addProgramHandler);
+  $('#add_program_button').click(JT.programsModule.addProgramHandler);
 });

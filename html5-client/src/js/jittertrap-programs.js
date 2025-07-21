@@ -141,14 +141,14 @@
         delete programs[pgm.id];
 
         // Remove from UI
-        const tr = $(event.target).parents('tr');
+        const tr = $(event.target).closest('tr');
         tr.remove();
       });
 
     });
 
     // Close the modal dialog
-    $('#add_program_modal button').get(1).click();
+    $('#add_program_modal').modal('hide');
   };
 
   my.programsModule.processNetemMsg = function (params) {

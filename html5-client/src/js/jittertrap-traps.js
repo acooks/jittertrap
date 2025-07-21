@@ -175,8 +175,7 @@
    * Just needs to ensure the trap measurement units are displayed
    */
   my.trapModule.trapSelectionHandler = function(event){
-    const $input_group_addon = $(event.target).parent()
-                             .find('.input-group-addon');
+    const $input_group_addon = $(event.target).siblings('.input-group').find('.input-group-addon');
     const units = $(event.target).find('option:selected')
                 .data('trapUnits');
 
@@ -215,7 +214,7 @@
           delete trapsBin[trap.trapUID];
 
           // Removal from the UI
-          const trapTr = $(event.target).parents('tr');
+          const trapTr = $(event.target).closest('tr');
           trapTr.remove();
         });
 
@@ -227,7 +226,7 @@
       });
 
       $('#add_trap_modal input').val("");
-      $('#add_trap_modal button').get(1).click();
+      $('#add_trap_modal').modal('hide');
     }
   };
 
@@ -235,15 +234,14 @@
    *
    */
   my.trapModule.addTrapHandler = function(event) {
-    const $selectedTrapOption = $(event.target).parents('.modal')
-                              .find('option:selected');
+    const $selectedTrapOption = $(event.target).closest('.modal').find('option:selected');
     const trapType            = $selectedTrapOption.data('trapType');
     const trapValue           = $('#trap_value').val();
     const trapValueInt        = parseInt(trapValue, 10);
 
     if (trapValueInt > 0) {
       const map = mapTrapIdToSeriesAndTest[trapType];
-      const t = new Trap(trapType, map.series, map.test, trapValue);
+      const t = new Trap(trapType, map.series, map.test, trapValueInt);
       //t.addAction(actionTypes.logAction);
       t.addAction(actionTypes.blinkAction);
       trapsBin[t.trapUID] = t;
