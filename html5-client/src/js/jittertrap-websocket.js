@@ -92,6 +92,17 @@
     return false;
   };
 
+  const messageHandlers = {
+    stats: (params) => {
+      if (params.iface === selectedIface) handleMsgUpdateStats(params);
+    },
+    toptalk: handleMsgToptalk,
+    dev_select: handleMsgDevSelect,
+    iface_list: handleMsgIfaces,
+    netem_params: handleMsgNetemParams,
+    sample_period: handleMsgSamplePeriod,
+  };
+
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri, "jittertrap");
@@ -125,26 +136,17 @@
       }
       catch (err) {
         console.log("Error: " + err.message);
+        return;
       }
 
       if (!msg || !msg.msg) {
         console.log("unrecognised message: " + evt.data);
         return;
       }
-      const msgType = msg.msg;
 
-      if ((msgType === "stats") && msg.p.iface === selectedIface) {
-        handleMsgUpdateStats(msg.p);
-      } else if (msgType === "toptalk") {
-        handleMsgToptalk(msg.p);
-      } else if (msgType === "dev_select") {
-        handleMsgDevSelect(msg.p);
-      } else if (msgType === "iface_list") {
-        handleMsgIfaces(msg.p);
-      } else if (msgType === "netem_params") {
-        handleMsgNetemParams(msg.p);
-      } else if (msgType === "sample_period") {
-        handleMsgSamplePeriod(msg.p);
+      const handler = messageHandlers[msg.msg];
+      if (handler) {
+        handler(msg.p);
       } else {
         console.log("unhandled message: " + evt.data);
       }
