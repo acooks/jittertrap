@@ -61,22 +61,22 @@
   const sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
                            "Ingress Bitrate in kbps",
-                           "kbps, mean",
+                           "Bitrate (kbps)",
                            byteCountToKbpsRate);
 
   sBin.txRate = new Series("txRate",
                            "Egress Bitrate in kbps",
-                           "kbps, mean",
+                           "Bitrate (kbps)",
                            byteCountToKbpsRate);
 
   sBin.txPacketRate = new Series("txPacketRate",
                                  "Egress packet rate",
-                                 "pkts per sec, mean",
+                                 "Packet Rate (pps)",
                                  packetDeltaToRate);
 
   sBin.rxPacketRate = new Series("rxPacketRate",
                                  "Ingress packet rate",
-                                 "pkts per sec, mean",
+                                 "Packet Rate (pps)",
                                  packetDeltaToRate);
 
   let selectedSeriesName = "rxRate";

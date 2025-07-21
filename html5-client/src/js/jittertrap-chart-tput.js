@@ -88,7 +88,8 @@
          .attr("class", "title")
          .attr("text-anchor", "middle")
          .attr("x", width/2)
-         .attr("y", -margin.top/2)
+         .attr("y", 0)
+         .attr("dy", "-0.6em")
          .text(selectedSeries.title);
 
       graph.append("g")
@@ -97,21 +98,23 @@
          .call(xAxis);
 
       graph.append("text")
-           .attr("class", "x label")
+           .attr("class", "x-axis-label")
            .attr("text-anchor", "middle")
            .attr("x", width/2)
-           .attr("y", height + 15 + 0.5 * margin.bottom)
+           .attr("y", height + margin.bottom - 10)
            .text(selectedSeries.xlabel);
 
       graph.append("g")
          .attr("class", "y axis")
-         .call(yAxis)
-         .append("text")
-         .attr("x", -margin.left)
+         .call(yAxis);
+
+      graph.append("text")
+         .attr("class", "y-axis-label")
          .attr("transform", "rotate(-90)")
-         .attr("y", -margin.left)
-         .attr("dy", ".71em")
-         .style("text-anchor", "end")
+         .attr("y", 0 - margin.left)
+         .attr("x", 0 - (height / 2))
+         .attr("dy", "1em")
+         .style("text-anchor", "middle")
          .text(selectedSeries.ylabel);
 
       graph.append("g")
