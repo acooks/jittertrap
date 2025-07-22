@@ -78,7 +78,7 @@
     const ledOff = function (ledId) {
       const led = $("#"+ledId);
       led.css("color", "#FF9900");
-      my.blinkTimeoutHandles.ledId = 0;
+      my.blinkTimeoutHandles[ledId] = 0;
     };
 
     const ledOn = function (trap, val) {
