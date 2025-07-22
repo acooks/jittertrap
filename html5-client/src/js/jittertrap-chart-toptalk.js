@@ -3,14 +3,14 @@
 /* global d3 */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.charts.toptalk = {};
 
-  var chartData = [];
+  const chartData = [];
 
-  var clearChartData = function () {
+  const clearChartData = function () {
     chartData.length = 0;
   };
 
@@ -35,15 +35,15 @@ JT = (function (my) {
     let yAxis = d3.axisLeft();
     let xGrid = d3.axisBottom();
     let yGrid = d3.axisLeft();
-    var area = d3.area();
+    let area = d3.area();
 
     const stack = d3.stack()
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
-    var svg = {};
-    var context = {};
-    var canvas = {};
+    let svg = {};
+    let context = {};
+    let canvas = {};
 
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
@@ -66,8 +66,8 @@ JT = (function (my) {
       area.context(context);
 
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);
@@ -98,15 +98,15 @@ JT = (function (my) {
       canvas.attr("width", width)
          .attr("height", height)
          .style("transform", "translate(" + margin.left + "px," + margin.top + "px)");
-
-      var graph = svg.append("g")
+      const graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       graph.append("text")
          .attr("class", "title")
          .attr("text-anchor", "middle")
          .attr("x", width/2)
-         .attr("y", -margin.top/2)
+         .attr("y", 0)
+         .attr("dy", "-0.6em")
          .text("Top flows");
 
       graph.append("g")
@@ -115,7 +115,7 @@ JT = (function (my) {
          .call(xAxis);
 
       graph.append("text")
-           .attr("class", "x label")
+           .attr("class", "x-axis-label")
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + 35)
@@ -123,13 +123,15 @@ JT = (function (my) {
 
       graph.append("g")
          .attr("class", "y axis")
-         .call(yAxis)
-         .append("text")
-         .attr("x", -margin.left)
+         .call(yAxis);
+
+      graph.append("text")
+         .attr("class", "y-axis-label")
          .attr("transform", "rotate(-90)")
-         .attr("y", -margin.left)
-         .attr("dy", ".71em")
-         .style("text-anchor", "end")
+         .attr("y", 0 - margin.left)
+         .attr("x", 0 - (height / 2))
+         .attr("dy", "1em")
+         .style("text-anchor", "middle")
          .text("Bytes");
 
       graph.append("g")
@@ -176,35 +178,12 @@ JT = (function (my) {
       my.charts.resizeChart("#chartToptalk", size)();
     };
 
-    /* To find the range of the y-axis, find max of the stacked x values */
-    var maxBytesSlice = function(chartData) {
-      var i, j;
-      var flowCount, sampleCount, maxSlice = 0;
-
-      flowCount = chartData.length;
-      if (!flowCount) {
-        return 0;
-      }
-
-      sampleCount = chartData[0].values.length;
-
-      for (i = 0; i < sampleCount; i++) {
-        var thisSliceBytes = 0;
-        for (j = 0; j < flowCount; j++) {
-          thisSliceBytes += chartData[j].values[i].bytes;
-        }
-        if (thisSliceBytes > maxSlice) {
-          maxSlice = thisSliceBytes;
-        }
-      }
-      return maxSlice;
-    };
-
     /* Reformat chartData to work with the new d3 v4 API
      * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
-    var formatData = function(chartData) {
+    const formatDataAndGetMaxSlice = function(chartData) {
       // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
-      var binsMap = new Map();
+      const binsMap = new Map();
+      let maxSlice = 0;
 
       for (let i = 0; i < chartData.length; i++) {
         const row = chartData[i];
@@ -226,34 +205,48 @@ JT = (function (my) {
         }
       }
 
+      const formattedData = Array.from(binsMap.values());
+
+      // Calculate the sum of each time slice to find the maximum for the Y-axis domain.
+      formattedData.forEach(slice => {
+        let currentSliceSum = 0;
+        for (const key in slice) {
+          if (key !== 'ts') {
+            currentSliceSum += slice[key];
+          }
+        }
+        if (currentSliceSum > maxSlice) {
+          maxSlice = currentSliceSum;
+        }
+      });
+
       // Convert the map's values back into an array for d3.stack().
-      return Array.from(binsMap.values());
+      return { formattedData, maxSlice };
     }
 
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
 
-      var width = size.width - margin.left - margin.right;
-      var height = size.height - margin.top - margin.bottom;
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
-      if (chartData && chartData[0]) {
-        xScale.domain(d3.extent(chartData[0].values, function(d) {
-          return d.ts;
-        }));
-      }
+      if (chartData && chartData[0])
+        xScale.domain(d3.extent(chartData[0].values, d => d.ts));
 
-      var yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
+      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(chartData);
+
+      const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
       if (yPow == 1) {
         yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 0]);
       } else {
         yScale = d3.scaleLinear().clamp(true).range([height, 0]);
       }
-      yScale.domain([0, maxBytesSlice(chartData)]);
+      yScale.domain([0, maxSlice]);
 
       xAxis.scale(xScale);
       yAxis.scale(yScale);
@@ -268,124 +261,117 @@ JT = (function (my) {
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      var fkeys = chartData.map(function(f) { return f.fkey; });
+      const fkeys = chartData.map(f => f.fkey);
       colorScale.domain(fkeys);
 
       stack.keys(fkeys);
 
       // Format the data, so they're flat arrays
-      var stackedChartData = stack(
-        formatData(chartData));
+      const stackedChartData = stack(formattedData);
 
       area = d3.area()
                .curve(d3.curveMonotoneX)
                .context(context)
-               .x(function (d) { return xScale(d.data.ts); })
-               .y0(function (d) { return yScale(d[0] || 0); })
-               .y1(function (d) { return yScale(d[1] || 0); });
+               .x(d => xScale(d.data.ts))
+               .y0(d => yScale(d[0] || 0))
+               .y1(d => yScale(d[1] || 0));
 
       context.clearRect(0, 0, width, height);
 
-      stackedChartData.forEach(function(layer) {
+      stackedChartData.forEach(layer => {
         context.beginPath();
         area(layer);
         context.fillStyle = colorScale(layer.key);
         context.fill();
       });
 
-
-
       // distribution bar
-      var contribs = chartData.map(function(f) {
-        return { k: f.fkey, b: f.tbytes, p :f.tpackets };
-      });
+      const tbytes = chartData.reduce((sum, f) => sum + f.tbytes, 0);
 
-      var tbytes = contribs.reduce(function(a,b) { return a + b.b }, 0 );
-
-      var rangeStop = 0;
-      var barData = contribs.map(function(d) {
-        var new_d = {
-          k: d.k,
+      let rangeStop = 0;
+      const barData = chartData.map(f => {
+        const new_d = {
+          k: f.fkey,
           x0: rangeStop,
-          x1: (rangeStop + d.b)
+          x1: (rangeStop + f.tbytes)
         };
         rangeStop = new_d.x1;
         return new_d;
       });
 
-      var x = d3.scaleLinear()
+      const x = d3.scaleLinear()
                       .rangeRound([0, width])
                       .domain([0,tbytes]);
 
-      var y = d3.scaleBand()
+      const y = d3.scaleBand()
                       .range([0, 10])
                       .round(.3);
 
-      var barsbox = svg.select("#barsbox");
+      const barsbox = svg.select("#barsbox");
       barsbox.selectAll(".subbar").remove();
-      var bars = barsbox.selectAll("rect")
+      const bars = barsbox.selectAll("rect")
                     .data(barData)
                     .enter().append("g").attr("class", "subbar");
 
       bars.append("rect")
           .attr("height", 23)
           .attr("y", 9)
-          .attr("x", function(d) { return x(d.x0); })
-          .attr("width", function(d) { return x(d.x1) - x(d.x0); })
-          .style("fill", function(d) { return colorScale(d.k); });
+          .attr("x", d => x(d.x0))
+          .attr("width", d => x(d.x1) - x(d.x0))
+          .style("fill", d => colorScale(d.k));
 
-      barsbox.attr("transform", function(d) {
-        return "translate(" + margin.left + "," + 350 + ")";
-      });
-
+      barsbox.attr("transform",
+                   "translate(" + margin.left + "," + 350 + ")");
 
       // legend box handling
-      var legend_tabs = colorScale.domain();
-      var legendbox = svg.select("#ttlegendbox");
-      legendbox.selectAll(".legend").remove();
-      var legend = legendbox.selectAll(".legend")
-                   .data(fkeys.slice()).enter()
-                   .append("g")
-                   .attr("class", "legend")
-                   .attr("transform",
-                         function(d, i) {
-                           return "translate(0, " + ((i + 1) * 25) + ")";
-                         }
-                   );
+      const legendbox = svg.select("#ttlegendbox");
 
-      legend.append("rect")
-	      .attr("x", 0)
-	      .attr("width", 18)
-	      .attr("height", 18)
-	      .style("fill", colorScale);
+      // General Update Pattern for the legend
+      const legend = legendbox.selectAll(".legend")
+        .data(fkeys, d => d); // Use a key function for object constancy
 
-      const legendText = legend.append("text")
+      // EXIT - remove old legend items that are no longer in fkeys
+      legend.exit().remove();
+
+      // ENTER - create new <g> elements for new flows
+      const legendEnter = legend.enter()
+        .append("g")
+        .attr("class", "legend");
+
+      // Append rect and text elements only to the new <g> elements
+      legendEnter.append("rect")
+        .attr("x", 0)
+        .attr("width", 18)
+        .attr("height", 18);
+
+      const legendTextEnter = legendEnter.append("text")
         .attr("y", 9)
         .attr("dy", ".35em");
 
-      legendText.each(function(d) {
+      // Add the complex <tspan> structure only ONCE when elements are created
+      legendTextEnter.each(function(d) {
         const parts = d.split('/');
-        let sourceIP = parts[1];
+        const sourceIP = parts[1];
         const sourcePort = parts[2];
-        let destIP = parts[3];
+        const destIP = parts[3];
         const destPort = parts[4];
         const proto = parts[5];
         const tclass = parts[6];
 
-        if (sourceIP.length > 25) sourceIP = sourceIP.substring(0, 22) + "...";
-        if (destIP.length > 25) destIP = destIP.substring(0, 22) + "...";
-
         const textNode = d3.select(this);
-        textNode.append("tspan")
-          .attr("x", 190).attr("text-anchor", "end").text(sourceIP);
+        textNode.append("tspan").attr("x", 190).attr("text-anchor", "end").text(sourceIP.substring(0, 22) + (sourceIP.length > 22 ? "..." : ""));
         textNode.append("tspan").attr("x", 195).text(":" + sourcePort.padEnd(6));
         textNode.append("tspan").attr("x", 265).text("->");
-        textNode.append("tspan").attr("x", 295).text(destIP);
+        textNode.append("tspan").attr("x", 295).text(destIP.substring(0, 22) + (destIP.length > 22 ? "..." : ""));
         textNode.append("tspan").attr("x", 485).text(":" + destPort);
         textNode.append("tspan").attr("x", 550).text("| " + proto);
         textNode.append("tspan").attr("x", 650).text("| " + tclass);
       });
 
+      // UPDATE + ENTER - update positions and colors for all visible items
+      const legendUpdate = legend.merge(legendEnter);
+      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
+      legendUpdate.select("rect").style("fill", colorScale);
     };
 
 
@@ -397,6 +383,5 @@ JT = (function (my) {
 
   }({}));
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-chart-toptalk.js */

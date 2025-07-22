@@ -3,16 +3,16 @@
 /* global Mustache */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.programsModule = {};
 
-  var programs = {};
-  var nextPID = 123;
-  var runningProgram = null;
+  const programs = {};
+  let nextPID = 123;
+  let runningProgram = null;
 
-  var Program = function (json) {
+  const Program = function (json) {
     this.id = "program_" + nextPID++;
     this.name = json.name;
     this.timeoutHandles = {};
@@ -35,10 +35,10 @@ JT = (function (my) {
       $("#clear_netem_button").prop('disabled', true);
       $("#netem_status").html("Program Running");
 
-      for (var i in this.impairments) {
+      for (let i in this.impairments) {
         if (json.impairments[i].stop) {
           console.log("stop at " + i);
-          this.timeoutHandles[i] = setTimeout(function() {
+          this.timeoutHandles[i] = setTimeout(() => {
               $("#delay").val(0);
               $("#jitter").val(0);
               $("#loss").val(0);
@@ -48,7 +48,7 @@ JT = (function (my) {
             i * 1000
           );
         } else {
-          this.timeoutHandles[i] = setTimeout(function(t, d, j, l) {
+          this.timeoutHandles[i] = setTimeout((t, d, j, l) => {
               console.log(Date.now() + " t = " + t + ", d: " + d + ", j: " + j + ", l:" + l);
               $("#delay").val(d);
               $("#jitter").val(j);
@@ -70,7 +70,7 @@ JT = (function (my) {
       if (this != runningProgram) {
         return runningProgram.stop();
       }
-      for (var th in this.timeoutHandles) {
+      for (let th in this.timeoutHandles) {
         clearTimeout(this.timeoutHandles[th]);
       }
       JT.ws.clear_netem();
@@ -102,53 +102,53 @@ JT = (function (my) {
   );
 
   my.programsModule.addProgramHandler = function(event) {
-    var pgm_txt = $("#new_program").val();
+    const pgm_txt = $("#new_program").val();
     console.log("new program:" + pgm_txt);
 
-    var pgm = new Program(JSON.parse(pgm_txt));
+    const pgm = new Program(JSON.parse(pgm_txt));
     updateUI(pgm);
   };
 
-  var updateUI = function(pgm) {
-    var programTable = $('#programs_table');
+  const updateUI = function(pgm) {
+    const programTable = $('#programs_table');
 
-    $.get('/templates/program.html', function(template) {
-      var template_data = { programName: pgm.name,
-                            programUID:  pgm.id,
-                          },
+    $.get('/templates/program.html', (template) => {
+      const template_data = { programName: pgm.name,
+                              programUID:  pgm.id,
+                            },
           rendered      = Mustache.render(template, template_data);
 
       programTable.find('tbody').append(rendered);
 
       // Play button
-      $("#"+pgm.id+"_play").on('click', function(event) {
+      $("#"+pgm.id+"_play").on('click', () => {
         pgm.play();
       });
 
       // Stop button
-      $("#"+pgm.id+"_stop").on('click', function(event) {
+      $("#"+pgm.id+"_stop").on('click', () => {
         pgm.stop();
       });
 
       // Edit button
-      $("#"+pgm.id+"_edit").on('click', function(event) {
+      $("#"+pgm.id+"_edit").on('click', () => {
         $("#new_program").val(JSON.stringify(pgm, null, '\t'));
       });
 
       // Remove button
-      $("#"+pgm.id+"_delete").on('click', function(event) {
+      $("#"+pgm.id+"_delete").on('click', (event) => {
         // Remove from JS
         delete programs[pgm.id];
 
         // Remove from UI
-        var tr = $(event.target).parents('tr');
+        const tr = $(event.target).closest('tr');
         tr.remove();
       });
 
     });
 
     // Close the modal dialog
-    $('#add_program_modal button').get(1).click();
+    $('#add_program_modal').modal('hide');
   };
 
   my.programsModule.processNetemMsg = function (params) {
@@ -171,5 +171,4 @@ JT = (function (my) {
     }
   };
 
-  return my;
-}(JT));
+})(JT);

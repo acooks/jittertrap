@@ -2,7 +2,7 @@
 
 /* global JT: true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
   my.version = {};
   my.version.maintainerVersion = '##MAINTAINER-VERSION##';
@@ -12,7 +12,6 @@ JT = (function (my) {
   my.version.commitTime = '##GIT-COMMIT-TS##';
   my.version.isClean = '##GIT-CLEAN##';
 
- return my;
-}(JT));
+})(JT);
 /* End of jittertrap-version-template.js */
 

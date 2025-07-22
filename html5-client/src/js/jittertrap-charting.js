@@ -3,7 +3,7 @@
 /* global d3 */
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.charts = {};
@@ -12,7 +12,7 @@ JT = (function (my) {
   const params = {};
 
   /* Dirty flag signals when a redraw is needed. */
-  var isDirty = true;
+  let isDirty = true;
 
   /* time (milliseconds) represented by each point on the chart */
   params.plotPeriod        = 100;
@@ -52,8 +52,8 @@ JT = (function (my) {
   my.charts.resizeChart = function(containerId, newSize) {
     return function () {
       const container = d3.select(containerId);
-      var new_width = container.node().getBoundingClientRect().width;
-      var new_height = container.node().getBoundingClientRect().height;
+      const new_width = container.node().getBoundingClientRect().width;
+      const new_height = container.node().getBoundingClientRect().height;
       if (new_width === 0 ) {
         return;
       }
@@ -155,6 +155,5 @@ JT = (function (my) {
   my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-charting.js */

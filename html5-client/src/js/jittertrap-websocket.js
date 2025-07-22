@@ -2,33 +2,33 @@
 
 /* global JT:true */
 
-JT = (function (my) {
+((my) => {
   'use strict';
 
   my.ws = {};
 
-  var selectedIface = {}; // set on dev_select message
+  let selectedIface = {}; // set on dev_select message
 
   /* the websocket object, see my.ws.init() */
-  var sock = {};
+  let sock = {};
 
   /**
    * Websocket Callback Functions
    * i.e. Referred to in websocket.onmessage
    */
 
-  var handleMsgUpdateStats = function (params) {
+  const handleMsgUpdateStats = function (params) {
     JT.core.processDataMsg(params.s, params.ival_ns);
     JT.charts.setDirty();
   };
 
-  var handleMsgToptalk = function (params) {
+  const handleMsgToptalk = function (params) {
     JT.core.processTopTalkMsg(params);
     JT.charts.setDirty();
   };
 
-  var handleMsgDevSelect = function(params) {
-    var iface = params.iface;
+  const handleMsgDevSelect = function(params) {
+    const iface = params.iface;
     console.log("iface: " + iface);
     $('#dev_select').val(iface);
     selectedIface = $('#dev_select').val();
@@ -36,23 +36,21 @@ JT = (function (my) {
     JT.charts.resetChart();
   };
 
-  var handleMsgIfaces = function(params) {
-    var ifaces = params.ifaces;
+  const handleMsgIfaces = function(params) {
+    const ifaces = params.ifaces;
     $('#dev_select').empty();
-    $.each(ifaces,
-      function (ix, val) {
-        var option = $('<option>').text(val).val(val);
-        $('#dev_select').append(option);
-      }
-    );
+    ifaces.forEach((val) => {
+      const option = $('<option>').text(val).val(val);
+      $('#dev_select').append(option);
+    });
   };
 
-  var handleMsgNetemParams = function(params) {
+  const handleMsgNetemParams = function(params) {
     JT.programsModule.processNetemMsg(params);
   };
 
-  var handleMsgSamplePeriod = function(params) {
-    var period = params.period;
+  const handleMsgSamplePeriod = function(params) {
+    const period = params.period;
     my.core.samplePeriod(period);
     $("#jt-measure-sample-period").html(period / 1000.0 + "ms");
     console.log("sample period: " + period);
@@ -65,28 +63,28 @@ JT = (function (my) {
    * Websocket Sending Functions
    */
 
-  var dev_select = function() {
-    var msg = JSON.stringify({'msg':'dev_select',
+  const dev_select = function() {
+    const msg = JSON.stringify({'msg':'dev_select',
                               'p': { 'iface': $("#dev_select").val()}});
     sock.send(msg);
   };
 
-  var set_netem = function() {
-    var msg = JSON.stringify(
+  const set_netem = function() {
+    const msg = JSON.stringify(
       {'msg': 'set_netem',
        'p': {
          'dev': $("#dev_select").val(),
-         'delay': parseInt($("#delay").val()),
-         'jitter': parseInt($("#jitter").val()),
+         'delay': parseInt($("#delay").val(), 10),
+         'jitter': parseInt($("#jitter").val(), 10),
          /* convert the float to an integer representing 10ths of percent. */
-         'loss': parseInt(Math.round(10 * $("#loss").val()))
+         'loss': parseInt(Math.round(10 * $("#loss").val()), 10)
        }
       });
     sock.send(msg);
     return false;
   };
 
-  var clear_netem = function() {
+  const clear_netem = function() {
     $("#delay").val(0);
     $("#jitter").val(0);
     $("#loss").val(0);
@@ -94,12 +92,23 @@ JT = (function (my) {
     return false;
   };
 
+  const messageHandlers = {
+    stats: (params) => {
+      if (params.iface === selectedIface) handleMsgUpdateStats(params);
+    },
+    toptalk: handleMsgToptalk,
+    dev_select: handleMsgDevSelect,
+    iface_list: handleMsgIfaces,
+    netem_params: handleMsgNetemParams,
+    sample_period: handleMsgSamplePeriod,
+  };
+
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri, "jittertrap");
 
     sock.onopen = function(evt) {
-      var msg = JSON.stringify({'msg': 'hello'});
+      const msg = JSON.stringify({'msg': 'hello'});
       sock.send(msg);
     };
 
@@ -121,32 +130,23 @@ JT = (function (my) {
     };
 
     sock.onmessage = function(evt) {
-      var msg;
+      let msg;
       try {
         msg = JSON.parse(evt.data);
       }
       catch (err) {
         console.log("Error: " + err.message);
+        return;
       }
 
       if (!msg || !msg.msg) {
         console.log("unrecognised message: " + evt.data);
         return;
       }
-      var msgType = msg.msg;
 
-      if ((msgType === "stats") && msg.p.iface === selectedIface) {
-        handleMsgUpdateStats(msg.p);
-      } else if (msgType === "toptalk") {
-        handleMsgToptalk(msg.p);
-      } else if (msgType === "dev_select") {
-        handleMsgDevSelect(msg.p);
-      } else if (msgType === "iface_list") {
-        handleMsgIfaces(msg.p);
-      } else if (msgType === "netem_params") {
-        handleMsgNetemParams(msg.p);
-      } else if (msgType === "sample_period") {
-        handleMsgSamplePeriod(msg.p);
+      const handler = messageHandlers[msg.msg];
+      if (handler) {
+        handler(msg.p);
       } else {
         console.log("unhandled message: " + evt.data);
       }
@@ -160,6 +160,5 @@ JT = (function (my) {
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
 
-  return my;
-}(JT));
+})(JT);
 /* End of jittertrap-websocket.js */
