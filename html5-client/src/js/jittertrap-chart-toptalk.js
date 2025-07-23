@@ -115,7 +115,7 @@
          .call(xAxis);
 
       graph.append("text")
-           .attr("class", "x-axis-label")
+           .attr("class", "axis-label")
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + 35)
@@ -126,7 +126,7 @@
          .call(yAxis);
 
       graph.append("text")
-         .attr("class", "y-axis-label")
+         .attr("class", "axis-label")
          .attr("transform", "rotate(-90)")
          .attr("y", 0 - margin.left)
          .attr("x", 0 - (height / 2))

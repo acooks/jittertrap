@@ -1,7 +1,19 @@
+/* Chart Text Styling */
+.title {
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.axis-label {
+  font-size: .9em;
+}
+
+.axis .tick {
+  font-size: .8em;
+}
 
 .legendheading {
   font-weight: bold;
-  font-size: .8em;
 }
 
 .axis path,
