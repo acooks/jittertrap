@@ -88,8 +88,8 @@
          .attr("class", "title")
          .attr("text-anchor", "middle")
          .attr("x", width/2)
-         .attr("y", 0)
-         .attr("dy", "-0.6em")
+         .attr("y", 0 - margin.top / 2)
+         .attr("dominant-baseline", "middle")
          .text(selectedSeries.title);
 
       graph.append("g")
