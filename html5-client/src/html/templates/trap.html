@@ -1,20 +1,22 @@
 <tr data-trap-id="{{trapUID}}">
-  <td class="col-xs-4">{{trapName}}</td>
-  <td class="col-xs-2">
+  <td>{{trapName}}</td>
+  <td>
     <div class="input-group">
-      <span class="form-control">{{trapValue}}</span>
-      <span class="input-group-addon">{{trapUnits}}</span>
+      <div class="form-control">{{trapValue}}</div>
+      <div class="input-group-append">
+        <span class="input-group-text">{{trapUnits}}</span>
+      </div>
     </div>
   </td>
-  <td class="col-xs-2">
-    <button type="button" class="btn btn-default" id="{{trapUID}}_delete">
+  <td>
+    <button type="button" class="btn btn-secondary" id="{{trapUID}}_delete">
       <span class="fas fa-minus" aria-hidden="true"></span>
     </button>
-    <button type="button" class="btn btn-default" id="{{trapUID}}_reset">
-      <span class="fas fa-refresh" aria-hidden="true"></span>
+    <button type="button" class="btn btn-secondary" id="{{trapUID}}_reset">
+      <span class="fas fa-sync-alt" aria-hidden="true"></span>
     </button>
   </td>
-  <td class="col-xs-2">
+  <td>
     <div>
       <span class="fas fa-exclamation-triangle" id="{{trapUID}}_led"></span>
     </div>

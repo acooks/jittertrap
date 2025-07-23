@@ -1,22 +1,30 @@
-      <div id="about" class="modal fade" role="dialog">
-        <div class="modal-dialog">
+      <div id="about" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
           <div id="version" class="modal-content">
             <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal">&times;</button>
-              <h4 class="modal-title">Version info:</h4>
+              <h5 class="modal-title" id="aboutModalLabel">Version info:</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
             <div class="modal-body">
               <div>
                 <p>
                   Version: <span id="jt-version-maintainer"></span>
-                </p><p>
+                </p>
+                <p>
                   Repository: <span id="jt-version-repo"></span>
-                </p><p>
+                </p>
+                <p>
                   Branch: <span id="jt-version-branch"></span> <span id="jt-version-clean"></span>
-                </p><p>
+                </p>
+                <p>
                   Last commit: <span id="jt-version-commit"></span>, <span id="jt-version-commit-time"></span>
                 </p>
               </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
           </div>
         </div>

@@ -1,153 +1,144 @@
-        <!-- Traps -->
-        <div id="trapsPanel" class="tab-pane fade">
-          <div class="panel panel-default">
-            <div class="panel-body">
-              <button id="trap_add" class="btn btn-default" data-toggle="modal" data-target="#add_trap_modal" type="button">
-                <i class="fas fa-plus" aria-hidden="true"></i>
-                Add Trap
-              </button>
+<!-- Traps -->
+<div id="trapsPanel" class="tab-pane fade">
+  <div class="card">
+    <div class="card-body">
+      <button id="trap_add" class="btn btn-secondary" data-toggle="modal" data-target="#add_trap_modal" type="button">
+        <i class="fas fa-plus" aria-hidden="true"></i>
+        Add Trap
+      </button>
 
-              <!-- Trap Dialog viewed by clicking the Add Trap button -->
-              <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
-                <div class="modal-dialog">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                      <h4 class="modal-title">Add a Trap</h4>
-                    </div>
-                    <div class="modal-body">
-                      <form>
-                        <!-- Traps and their measurement units -->
-                        <select id="trap_names">
-                          <option data-trap-type="cur_rx_bitrate_mt" data-trap-units="Kbps">Rx Bitrate Exceeds</option>
-                          <option data-trap-type="cur_rx_bitrate_lt" data-trap-units="Kbps">Rx Bitrate Less Than</option>
-                          <option data-trap-type="mean_rx_bitrate" data-trap-units="Kbps">Mean Rx Bitrate Exceeds </option>
-                          <option data-trap-type="mean_tx_bitrate" data-trap-units="Kbps">Mean Tx Bitrate Exceeds </option>
-                          <option data-trap-type="max_rx_bitrate" data-trap-units="Kbps">Max Rx Bitrate Exceeds </option>
-                          <option data-trap-type="max_tx_bitrate" data-trap-units="Kbps">Max Tx Bitrate Exceeds </option>
-                          <option data-trap-type="min_rx_bitrate" data-trap-units="Kbps">Min Rx Bitrate Below </option>
-                          <option data-trap-type="min_tx_bitrate" data-trap-units="Kbps">Min Tx Bitrate Below </option>
-                          <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Rx Packet Spacing Exceeds</option>
-                          <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Tx Packet Spacing Exceeds</option>
-                        </select>
-                        <!-- Trap value and measurement units for that value -->
-                        <div class="input-group">
-                          <input id="trap_value" class="form-control" type="text" />
-                          <span class="input-group-addon">Kbps</span>
-                        </div>
-                      </form>
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                      <button type="button" class="btn btn-primary" id="add_trap_button">Add</button>
+      <!-- Trap Dialog viewed by clicking the Add Trap button -->
+      <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Add a Trap</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form>
+                <div class="form-group">
+                  <label for="trap_names">Trap Type</label>
+                  <select id="trap_names" class="form-control">
+                    <option data-trap-type="cur_rx_bitrate_mt" data-trap-units="Kbps">Rx Bitrate Exceeds</option>
+                    <option data-trap-type="cur_rx_bitrate_lt" data-trap-units="Kbps">Rx Bitrate Less Than</option>
+                    <option data-trap-type="mean_rx_bitrate" data-trap-units="Kbps">Mean Rx Bitrate Exceeds </option>
+                    <option data-trap-type="mean_tx_bitrate" data-trap-units="Kbps">Mean Tx Bitrate Exceeds </option>
+                    <option data-trap-type="max_rx_bitrate" data-trap-units="Kbps">Max Rx Bitrate Exceeds </option>
+                    <option data-trap-type="max_tx_bitrate" data-trap-units="Kbps">Max Tx Bitrate Exceeds </option>
+                    <option data-trap-type="min_rx_bitrate" data-trap-units="Kbps">Min Rx Bitrate Below </option>
+                    <option data-trap-type="min_tx_bitrate" data-trap-units="Kbps">Min Tx Bitrate Below </option>
+                    <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Rx Packet Spacing Exceeds</option>
+                    <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Tx Packet Spacing Exceeds</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="trap_value">Value</label>
+                  <div class="input-group">
+                    <input id="trap_value" class="form-control" type="text" />
+                    <div class="input-group-append">
+                      <span class="input-group-text">Kbps</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" id="add_trap_button">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <table id="traps_table" class="table">
-                <thead>
-                  <tr>
-                    <th>Trap</th>
-                    <th>Value</th>
-                    <th>Options</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Example Trap after being added through the UI
-                  <tr data-trap-id="max_rx_bitrate" data-trap-value="123">
-                    <td>Exceeds RX Bitrate</td>
-                    <td>
-                      <div class="input-group">
-                        <span class="form-control">123</span>
-                        <span class="input-group-addon">kbps</span>
-                      </div>
-                    </td>
-                    <td>
-                      <button type="button" class="btn btn-default">
-                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
-                      </button>
-                    </td>
-                  </tr>
-                  -->
-                </tbody>
-              </table>
+      <table id="traps_table" class="table mt-4">
+        <thead>
+          <tr>
+            <th>Trap</th>
+            <th>Value</th>
+            <th>Options</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Example Trap after being added through the UI -->
+        </tbody>
+      </table>
 
-              <div>&nbsp;</div>
+      <table class="table table-sm measurements mt-4">
+        <thead>
+          <tr>
+            <th>Measurements</th>
+            <th></th>
+            <th>Rx</th>
+            <th>Tx</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <th>Throughput (kbps)</th>
+          <th>Min</th>
+          <td><span id="jt-measure-tput-min-rx"></span></td>
+          <td><span id="jt-measure-tput-min-tx"></span></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Max</th>
+          <td><span id="jt-measure-tput-max-rx"></span></td>
+          <td><span id="jt-measure-tput-max-tx"></span></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Mean</th>
+          <td><span id="jt-measure-tput-mean-rx"></span></td>
+          <td><span id="jt-measure-tput-mean-tx"></span></td>
+        </tr>
+        <tr class="border-0"><td colspan="4"></td></tr>
+        <tr>
+          <th>Packet Rate (pps)</th>
+          <th>Min</th>
+          <td><span id="jt-measure-pktRate-min-rx"></span></td>
+          <td><span id="jt-measure-pktRate-min-tx"></span></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Max</th>
+          <td><span id="jt-measure-pktRate-max-rx"></span></td>
+          <td><span id="jt-measure-pktRate-max-tx"></span></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Mean</th>
+          <td><span id="jt-measure-pktRate-mean-rx"></span></td>
+          <td><span id="jt-measure-pktRate-mean-tx"></span></td>
+        </tr>
+        <tr class="border-0"><td colspan="4"></td></tr>
+        <tr>
+          <th>Inter-packet Space (ms)</th>
+          <th>Max</th>
+          <td><span id="jt-measure-zRun-max-rx"></span></td>
+          <td><span id="jt-measure-zRun-max-tx"></span></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Mean</th>
+          <td><span id="jt-measure-zRun-mean-rx"></span></td>
+          <td><span id="jt-measure-zRun-mean-tx"></span></td>
+        </tr>
+        <tr class="border-0"><td colspan="4"></td></tr>
+        <tr>
+          <th>Sample Period</th>
+          <td colspan=3><span id="jt-measure-sample-period"></span></td>
+        </tr><tr>
+          <th>Data Samples</th>
+          <td colspan=3><span id="jt-measure-datalength"></span></td>
+        </tr>
+        </tbody>
+      </table>
 
-              <table class="table table-condensed measurements">
-                <thead>
-                  <tr>
-                    <th>Measurements</th>
-                    <th></th>
-                    <th>Rx</th>
-                    <th>Tx</th>
-                  </tr>
-                </thead>
-                <tbody>
-                <tr>
-                  <th>Throughput (kbps)</th>
-                  <th>Min</th>
-                  <td><span id="jt-measure-tput-min-rx"></span></td>
-                  <td><span id="jt-measure-tput-min-tx"></span></td>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th>Max</th>
-                  <td><span id="jt-measure-tput-max-rx"></span></td>
-                  <td><span id="jt-measure-tput-max-tx"></span></td>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th>Mean</th>
-                  <td><span id="jt-measure-tput-mean-rx"></span></td>
-                  <td><span id="jt-measure-tput-mean-tx"></span></td>
-                </tr>
-                <tr><td colspan=4>&nbsp;</td></tr>
-                <tr>
-                  <th>Packet Rate (pps)</th>
-                  <th>Min</th>
-                  <td><span id="jt-measure-pktRate-min-rx"></span></td>
-                  <td><span id="jt-measure-pktRate-min-tx"></span></td>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th>Max</th>
-                  <td><span id="jt-measure-pktRate-max-rx"></span></td>
-                  <td><span id="jt-measure-pktRate-max-tx"></span></td>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th>Mean</th>
-                  <td><span id="jt-measure-pktRate-mean-rx"></span></td>
-                  <td><span id="jt-measure-pktRate-mean-tx"></span></td>
-                </tr>
-                <tr><td colspan=4>&nbsp;</td></tr>
-                <tr>
-                  <th>Inter-packet Space (ms)</th>
-                  <th>Max</th>
-                  <td><span id="jt-measure-zRun-max-rx"></span></td>
-                  <td><span id="jt-measure-zRun-max-tx"></span></td>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th>Mean</th>
-                  <td><span id="jt-measure-zRun-mean-rx"></span></td>
-                  <td><span id="jt-measure-zRun-mean-tx"></span></td>
-                </tr>
-                <tr><td colspan=4>&nbsp;</td></tr>
-                <tr>
-                  <th>Sample Period</th>
-                  <td colspan=3><span id="jt-measure-sample-period"></span></td>
-                </tr><tr>
-                  <th>Data Samples</th>
-                  <td colspan=3><span id="jt-measure-datalength"></span></td>
-                </tr>
-                </tbody>
-              </table>
-
-            </div> <!-- end panel body -->
-          </div> <!-- end panel -->
-        </div> <!-- end tab pane -->
-        <!-- End of Traps -->
+    </div> <!-- end card body -->
+  </div> <!-- end card -->
+</div> <!-- end tab pane -->
+<!-- End of Traps -->

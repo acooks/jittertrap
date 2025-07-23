@@ -49,12 +49,6 @@
 .form-inline .input-group input[type="number"] {
   width:5em;
 }
-
-.page-header {
-  margin: 0;
-  border: 0;
-}
-
 .measurements td {
   width: 9em;
   text-align: right;
@@ -63,4 +57,10 @@
 .measurements th {
   width: 9em;
   text-align: right;
+}
+
+/* Style for the running program's play button */
+.program-play-btn.program-running {
+  color: #28a745; /* Bootstrap's success green */
+  box-shadow: 0 0 0 .2rem rgba(40, 167, 69, .5);
 }

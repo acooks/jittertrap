@@ -1,20 +1,20 @@
 <tr data-program-id="{{programUID}}">
-  <td class="col-xs-4">{{programName}}</td>
-  <td class="col-xs-2">
-    <button type="button" class="btn btn-default" id="{{programUID}}_play">
+  <td>{{programName}}</td>
+  <td>
+    <button type="button" class="btn btn-secondary program-play-btn" id="{{programUID}}_play">
       <span class="fas fa-play" aria-hidden="true"></span>
     </button>
-    <button type="button" class="btn btn-default" id="{{programUID}}_stop">
+    <button type="button" class="btn btn-secondary" id="{{programUID}}_stop">
       <span class="fas fa-stop" aria-hidden="true"></span>
     </button>
-    <button type="button" class="btn btn-default" id="{{programUID}}_edit" data-toggle="modal" data-target="#add_program_modal">
+    <button type="button" class="btn btn-secondary" id="{{programUID}}_edit" data-toggle="modal" data-target="#add_program_modal">
       <span class="fas fa-pencil-alt" aria-hidden="true"></span>
     </button>
-    <button type="button" class="btn btn-default" id="{{programUID}}_delete">
+    <button type="button" class="btn btn-secondary" id="{{programUID}}_delete">
       <span class="fas fa-minus" aria-hidden="true"></span>
     </button>
   </td>
-  <td class="col-xs-2">
+  <td>
     <div>
       <span class="fas" id="{{programUID}}_status"></span>
     </div>

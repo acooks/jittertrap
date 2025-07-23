@@ -175,12 +175,12 @@
    * Just needs to ensure the trap measurement units are displayed
    */
   my.trapModule.trapSelectionHandler = function(event){
-    const $input_group_addon = $(event.target).siblings('.input-group').find('.input-group-addon');
+    const $input_group_text = $('#add_trap_modal .input-group-text');
     const units = $(event.target).find('option:selected')
                 .data('trapUnits');
 
     // Update input-group-addon with correct units for type of trap selected
-    $input_group_addon.text(units);
+    $input_group_text.text(units);
   };
 
   /**

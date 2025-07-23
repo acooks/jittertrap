@@ -4,61 +4,59 @@
     <meta charset="UTF-8">
     <title>##PRODUCT-BRANDING##</title>
 
-    <!-- Bootstrap 3.2.2 -->
+    <!-- Bootstrap 4.6.2 -->
     <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/bootstrap-theme.min.css">
     <link rel="stylesheet" href="css/fontawesome.css">
     <link rel="stylesheet" href="css/jittertrap.css">
 
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
-    <script type="text/javascript" src="js/jquery-2.2.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="js/mustache.min.js"></script>
     <script type="text/javascript" src="js/cbuffer.js"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="js/d3.v7.min.js"></script>
     <script type="text/javascript" src="js/jittertrap-concat.js"></script>
 
   </head>
   <body>
-    <div class="page-header"></div>
-    <div class="container">
-      <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="container pt-3">
+      <div class="card">
+        <div class="card-body">
         <div class="row">
-          <div class="col-xs-5">
+          <div class="col-5">
             <div class="dropdown">
-              <button class="btn btn-default dropdown-toggle brand-name" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                ##PRODUCT-BRANDING## <span class="caret"></span>
+              <button class="btn btn-secondary dropdown-toggle brand-name" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                ##PRODUCT-BRANDING##
               </button>
-              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                <li><a href="#" data-toggle="modal" data-target="#about">About</a></li>
-                <li><a href="#" data-toggle="modal" data-target="#help">Help!</a></li>
-              </ul>
+              <div class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#about">About</a>
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#help">Help!</a>
+              </div>
             </div>
           </div>
-          <div class="col-xs-5">
+          <div class="col-5">
             <form id="devSelectForm" class="form-inline">
               <div class="form-group">
-                <label for="dev_select">Interface</label>
+                <label for="dev_select" class="mr-2">Interface</label>
                 <select id="dev_select" class="form-control"></select>
               </div>
             </form>
           </div>
         </div> <!-- row -->
-        </div> <!-- panel-body -->
+        </div> <!-- card-body -->
       </div>
 
 
-      <ul class="nav nav-tabs nav-justified">
-        <li class="active"><a data-toggle="tab" href="#chartsPanel"><i class="fas fa-chart-bar" aria-hidden="true"></i>&nbsp;Charts</a></li>
-        <li><a data-toggle="tab" href="#impairmentsPanel"><i class="fas fa-hourglass-half" aria-hidden="true"></i>&nbsp;Impairments</a></li>
-        <li><a data-toggle="tab" href="#trapsPanel"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i>&nbsp;Traps & Measurements</a></li>
+      <ul class="nav nav-tabs nav-fill">
+        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#chartsPanel"><i class="fas fa-chart-bar" aria-hidden="true"></i>&nbsp;Charts</a></li>
+        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#impairmentsPanel"><i class="fas fa-hourglass-half" aria-hidden="true"></i>&nbsp;Impairments</a></li>
+        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#trapsPanel"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i>&nbsp;Traps & Measurements</a></li>
       </ul>
 
       <div class="tab-content">
-##PANEL-IMPAIRMENTS##
 ##PANEL-CHARTPARAMS##
+##PANEL-IMPAIRMENTS##
 ##PANEL-TRAPS##
       </div> <!-- end tab-content -->
 
