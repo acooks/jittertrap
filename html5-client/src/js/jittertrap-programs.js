@@ -22,12 +22,12 @@
 
     this.play = function() {
       console.log("playing program: " + this.id);
-      if (runningProgram && runningProgram.stop) {
+      if (runningProgram && runningProgram.id !== this.id && runningProgram.stop) {
         runningProgram.stop();
       }
-      JT.ws.clear_netem();
+      $('.program-play-btn').removeClass('program-running');
       runningProgram = this;
-      $("#"+this.id+"_play").css('color','green');
+      $("#"+this.id+"_play").addClass('program-running');
       $("#delay").prop('readonly', true);
       $("#jitter").prop('readonly', true);
       $("#loss").prop('readonly', true);
@@ -74,14 +74,14 @@
         clearTimeout(this.timeoutHandles[th]);
       }
       JT.ws.clear_netem();
-      runningProgram = null;
-      $("#"+this.id+"_play").css('color','#333');
+      $("#"+this.id+"_play").removeClass('program-running');
       $("#delay").prop('readonly', false);
       $("#jitter").prop('readonly', false);
       $("#loss").prop('readonly', false);
       $("#set_netem_button").prop('disabled', false);
       $("#clear_netem_button").prop('disabled', false);
       $("#netem_status").html("Ready");
+      runningProgram = null;
     };
   };
 
@@ -114,7 +114,7 @@
 
     $.get('/templates/program.html', (template) => {
       const template_data = { programName: pgm.name,
-                              programUID:  pgm.id,
+                              programUID: pgm.id,
                             },
           rendered      = Mustache.render(template, template_data);
 

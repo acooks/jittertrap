@@ -93,8 +93,8 @@
          .attr("class", "title")
          .attr("text-anchor", "middle")
          .attr("x", width/2)
-         .attr("y", 0)
-         .attr("dy", "-0.6em")
+         .attr("y", 0 - margin.top / 2)
+         .attr("dominant-baseline", "middle")
          .text("Inter Packet Gap");
 
       graph.append("g")
@@ -103,7 +103,7 @@
          .call(xAxis);
 
       graph.append("text")
-           .attr("class", "x-axis-label")
+           .attr("class", "axis-label")
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + margin.bottom - 10)
@@ -114,7 +114,7 @@
          .call(yAxis);
 
       graph.append("text")
-         .attr("class", "y-axis-label")
+         .attr("class", "axis-label")
          .attr("transform", "rotate(-90)")
          .attr("y", 0 - margin.left)
          .attr("x", 0 - (height / 2))

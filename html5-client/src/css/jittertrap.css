@@ -1,3 +1,16 @@
+/* Chart Text Styling */
+.title {
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.axis-label {
+  font-size: .9em;
+}
+
+.axis .tick {
+  font-size: .8em;
+}
 
 .legendheading {
   font-weight: bold;
@@ -49,12 +62,6 @@
 .form-inline .input-group input[type="number"] {
   width:5em;
 }
-
-.page-header {
-  margin: 0;
-  border: 0;
-}
-
 .measurements td {
   width: 9em;
   text-align: right;
@@ -63,4 +70,15 @@
 .measurements th {
   width: 9em;
   text-align: right;
+}
+
+/* Style for the running program's play button */
+.program-play-btn.program-running {
+  color: #28a745; /* Bootstrap's success green */
+  box-shadow: 0 0 0 .2rem rgba(40, 167, 69, .5);
+}
+
+.legend-text {
+  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size: .8em;
 }

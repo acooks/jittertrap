@@ -11,7 +11,7 @@ createdirs: clean
 	mkdir ${OUT}
 	mkdir ${OUT}/js
 	mkdir ${OUT}/css
-	mkdir ${OUT}/fonts
+	mkdir ${OUT}/webfonts
 
 CONCAT = ${OUT}/js/jittertrap-concat.js
 concat: createdirs
@@ -30,16 +30,14 @@ concat: createdirs
 	cat src/js/jittertrap.js                           >> ${CONCAT}
 
 copydeps: createdirs
-	cp deps/js/jquery-2.2.1.min.js ${OUT}/js/
+	cp deps/js/jquery-3.7.1.min.js ${OUT}/js/
 	cp deps/js/cbuffer.js ${OUT}/js/
-	cp deps/js/bootstrap.min.js ${OUT}/js/
+	cp deps/js/bootstrap.bundle.min.js ${OUT}/js/
 	cp deps/js/mustache.min.js ${OUT}/js/
 	cp deps/js/d3.v7.min.js ${OUT}/js/
 	cp deps/css/bootstrap.min.css ${OUT}/css/
-	cp deps/css/bootstrap-theme.min.css ${OUT}/css/
-	cp deps/css/bootstrap.css.map ${OUT}/css/
-	cp deps/css/bootstrap-theme.css.map ${OUT}/css/
-	cp deps/fonts/glyphicons-halflings-regular.* ${OUT}/fonts/
+	cp deps/css/fontawesome.css ${OUT}/css/
+	cp deps/fonts/fa* ${OUT}/webfonts/
 
 copyhtml: createdirs assemble-html
 	cp -r src/html/templates ${OUT}/
