@@ -64,3 +64,8 @@
   color: #28a745; /* Bootstrap's success green */
   box-shadow: 0 0 0 .2rem rgba(40, 167, 69, .5);
 }
+
+.legend-text {
+  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size: .875em;
+}
