@@ -160,15 +160,15 @@
 
       const legendHeader = svg.select(".legendheading");
       legendHeader.append("tspan")
-        .attr("x", "18em")
+        .attr("x", "25em")
         .attr("text-anchor", "end")
         .text("Source IP");
-      legendHeader.append("tspan").attr("x", "18.5em").text(":Port");
-      legendHeader.append("tspan").attr("x", "23.5em").text("->");
-      legendHeader.append("tspan").attr("x", "25.5em").text("Destination IP");
-      legendHeader.append("tspan").attr("x", "40.5em").text(":Port");
-      legendHeader.append("tspan").attr("x", "45.5em").text("| Protocol");
-      legendHeader.append("tspan").attr("x", "52.5em").text("| T/Class");
+      legendHeader.append("tspan").attr("x", "25.5em").text(":Port");
+      legendHeader.append("tspan").attr("x", "30.5em").text("->");
+      legendHeader.append("tspan").attr("x", "32.5em").text("Destination IP");
+      legendHeader.append("tspan").attr("x", "58em").text(":Port");
+      legendHeader.append("tspan").attr("x", "63.5em").text("| Protocol");
+      legendHeader.append("tspan").attr("x", "70em").text("| T/Class");
 
 
       my.charts.resizeChart("#chartToptalk", size)();
@@ -356,13 +356,13 @@
         const tclass = parts[6];
 
         const textNode = d3.select(this);
-        textNode.append("tspan").attr("x", "18em").attr("text-anchor", "end").text(sourceIP.substring(0, 22) + (sourceIP.length > 22 ? "..." : ""));
-        textNode.append("tspan").attr("x", "18.5em").text(":" + sourcePort.padEnd(6));
-        textNode.append("tspan").attr("x", "23.5em").text("->");
-        textNode.append("tspan").attr("x", "25.5em").text(destIP.substring(0, 22) + (destIP.length > 22 ? "..." : ""));
-        textNode.append("tspan").attr("x", "40.5em").text(":" + destPort);
-        textNode.append("tspan").attr("x", "45.5em").text("| " + proto);
-        textNode.append("tspan").attr("x", "52.5em").text("| " + tclass);
+        textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
+        textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
+        textNode.append("tspan").attr("x", "30.5em").text("->");
+        textNode.append("tspan").attr("x", "32.5em").text(destIP);
+        textNode.append("tspan").attr("x", "58em").text(":" + destPort);
+        textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
+        textNode.append("tspan").attr("x", "70em").text("| " + tclass);
       });
 
       // UPDATE + ENTER - update positions and colors for all visible items

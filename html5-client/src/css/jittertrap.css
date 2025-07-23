@@ -1,6 +1,7 @@
 
 .legendheading {
   font-weight: bold;
+  font-size: .8em;
 }
 
 .axis path,
@@ -67,5 +68,5 @@
 
 .legend-text {
   font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-  font-size: .875em;
+  font-size: .8em;
 }
