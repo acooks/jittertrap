@@ -220,6 +220,13 @@
       return { formattedData, maxSlice };
     }
 
+    const getFlowColor = (key) => {
+      if (key === 'other') {
+        return '#cccccc'; // a neutral grey
+      }
+      return colorScale(key);
+    };
+
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
@@ -277,7 +284,7 @@
       stackedChartData.forEach(layer => {
         context.beginPath();
         area(layer);
-        context.fillStyle = colorScale(layer.key);
+        context.fillStyle = getFlowColor(layer.key);
         context.fill();
       });
 
@@ -314,7 +321,7 @@
           .attr("y", 9)
           .attr("x", d => x(d.x0))
           .attr("width", d => x(d.x1) - x(d.x0))
-          .style("fill", d => colorScale(d.k));
+          .style("fill", d => getFlowColor(d.k));
 
       barsbox.attr("transform",
                    "translate(" + margin.left + "," + 350 + ")");
@@ -347,28 +354,32 @@
 
       // Add the complex <tspan> structure only ONCE when elements are created
       legendTextEnter.each(function(d) {
-        const parts = d.split('/');
-        const sourceIP = parts[1];
-        const sourcePort = parts[2];
-        const destIP = parts[3];
-        const destPort = parts[4];
-        const proto = parts[5];
-        const tclass = parts[6];
-
         const textNode = d3.select(this);
-        textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
-        textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
-        textNode.append("tspan").attr("x", "30.5em").text("->");
-        textNode.append("tspan").attr("x", "32.5em").text(destIP);
-        textNode.append("tspan").attr("x", "58em").text(":" + destPort);
-        textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
-        textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+        if (d === 'other') {
+          textNode.append("tspan").attr("x", 25).text("Other Flows");
+        } else {
+          const parts = d.split('/');
+          const sourceIP = parts[1];
+          const sourcePort = parts[2];
+          const destIP = parts[3];
+          const destPort = parts[4];
+          const proto = parts[5];
+          const tclass = parts[6];
+
+          textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
+          textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
+          textNode.append("tspan").attr("x", "30.5em").text("->");
+          textNode.append("tspan").attr("x", "32.5em").text(destIP);
+          textNode.append("tspan").attr("x", "58em").text(":" + destPort);
+          textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
+          textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+        }
       });
 
       // UPDATE + ENTER - update positions and colors for all visible items
       const legendUpdate = legend.merge(legendEnter);
       legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
-      legendUpdate.select("rect").style("fill", colorScale);
+      legendUpdate.select("rect").style("fill", getFlowColor);
     };
 
 
