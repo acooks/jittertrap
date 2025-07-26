@@ -103,6 +103,8 @@
     sample_period: handleMsgSamplePeriod,
   };
 
+  Object.freeze(messageHandlers); // Prevent modification of messageHandlers
+
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri, "jittertrap");
@@ -144,16 +146,28 @@
         return;
       }
 
-      const handler = messageHandlers[msg.msg];
-      if (Object.prototype.hasOwnProperty.call(messageHandlers, msg.msg) && typeof handler === 'function') {
-        handler(msg.p);
+      // Validate message type to prevent potential DoS and prototype pollution
+      const isValidMessageType = (Object.keys(messageHandlers).includes(msg.msg)  &&
+          Object.prototype.hasOwnProperty.call(messageHandlers, msg.msg) &&
+          typeof messageHandlers[msg.msg] === 'function');
+
+      if (isValidMessageType) {
+        const handler = messageHandlers[msg.msg];
+        try {
+          handler(msg.p);
+        } catch (e) {
+          console.error("Error in message handler for", msg.msg, ":", e);
+        }
       } else {
-        console.log("unhandled message: " + evt.data);
+        //It is possible that the message type is not implemented.
+        //It is also possible that Object.freeze failed.
+        console.log("unhandled message type: " + msg.msg);
       }
     };
   };
 
   /**
+
    * Websocket Sending Functions
    */
   my.ws.dev_select = dev_select;
