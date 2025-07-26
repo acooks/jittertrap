@@ -145,7 +145,7 @@
       }
 
       const handler = messageHandlers[msg.msg];
-      if (handler) {
+      if (Object.prototype.hasOwnProperty.call(messageHandlers, msg.msg) && typeof handler === 'function') {
         handler(msg.p);
       } else {
         console.log("unhandled message: " + evt.data);
