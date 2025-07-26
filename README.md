@@ -3,9 +3,11 @@
 [![Coverity Status](https://scan.coverity.com/projects/4088/badge.svg)](https://scan.coverity.com/projects/4088)
 [![Build Status](https://github.com/acooks/jittertrap/actions/workflows/main.yml/badge.svg)](https://github.com/acooks/jittertrap/actions/workflows/main.yml)
 
-JitterTrap is a network measurement and impairment tool for developers of real-time applications and devices.
 
-It has two broad areas of use:
+JitterTrap is a performance analysis tool for engineers working in the field of delay-sensitive networked applications and devices. It provides real-time measurements and network impairment emulation to facilitate development, integration and troubleshooting.
+
+It has three broad areas of use:
+* real-time analysis of network congestion.
 * detection and measurement of unexpected delays, introduced by the device or application under test. That is, **characterising the source behaviour** with respect to throughput, packet rates, jitter.
 * introducing and controling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, **characterising the behaviour of the destination**, with respect to delay, jitter and loss.
 
@@ -15,7 +17,7 @@ Or try this old demo video:
 [![Demo Video](https://img.youtube.com/vi/7u6xBxz6bFY/0.jpg)](https://youtu.be/7u6xBxz6bFY "Demo video")
 
 
-Help is available from help@jittertrap.net, or create a github issue.
+Please use GitHub Discussions for questions and suggestions.
 
 
 ## Installing JitterTrap
