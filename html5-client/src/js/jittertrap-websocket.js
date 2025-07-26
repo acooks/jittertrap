@@ -116,19 +116,20 @@
 
     sock.onclose = function(evt) {
       console.log("unhandled websocket onclose event: " + evt);
-      $("#error-msg").html($("#error-msg").html()
+      const errorMsgElement = $("#error-msg");
+      const errorModalElement = $("#error-modal");
+      errorMsgElement.html($("#error-msg").html()
                            + "<p>Websocket closed.</p>");
       $("#error-modal").modal('show');
     };
 
     sock.onerror = function(evt) {
       console.log("unhandled websocket onerror event: " + evt);
-      $("#error-msg").html("<p>"
-                           + "Websocket error."
-                           + " (Sorry, that's all we know, but the javascript console might contain useful debug information.)"
-                           + "</p>"
-                           + "<p>Are you connecting through a proxy?</p>");
-      $("#error-modal").modal('show');
+      const errorMsgElement = $("#error-msg");
+      const errorModalElement = $("#error-modal");
+      const escapedErrorMessage = "Websocket error. (Sorry, that's all we know, but the javascript console might contain useful debug information.) Are you connecting through a proxy?";
+      errorMsgElement.html("<p>" + escapedErrorMessage + "</p>");
+      errorModalElement.modal('show');
     };
 
     sock.onmessage = function(evt) {
@@ -173,6 +174,7 @@
   my.ws.dev_select = dev_select;
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
+
 
 })(JT);
 /* End of jittertrap-websocket.js */
