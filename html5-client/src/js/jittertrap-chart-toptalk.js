@@ -19,6 +19,42 @@
     return chartData;
   };
 
+  const processAndAggregateChartData = function(incomingData) {
+    const LEGEND_DISPLAY_LIMIT = 10;
+
+    if (incomingData.length <= LEGEND_DISPLAY_LIMIT) {
+      return incomingData;
+    }
+
+    const topNFlows = incomingData.slice(0, LEGEND_DISPLAY_LIMIT);
+    const remainingFlows = incomingData.slice(LEGEND_DISPLAY_LIMIT);
+
+    const otherFlow = {
+      fkey: 'other',
+      tbytes: 0,
+      values: []
+    };
+
+    const otherValuesMap = new Map();
+
+    remainingFlows.forEach(flow => {
+      otherFlow.tbytes += flow.tbytes;
+      flow.values.forEach(dataPoint => {
+        const currentBytes = otherValuesMap.get(dataPoint.ts) || 0;
+        otherValuesMap.set(dataPoint.ts, currentBytes + dataPoint.bytes);
+      });
+    });
+
+    otherValuesMap.forEach((bytes, ts) => {
+      otherFlow.values.push({ ts: ts, bytes: bytes });
+    });
+
+    // Ensure the values are sorted by timestamp, as d3 expects
+    otherFlow.values.sort((a, b) => a.ts - b.ts);
+
+    return topNFlows.concat(otherFlow);
+  };
+
   my.charts.toptalk.toptalkChart = (function (m) {
     const margin = {
       top: 20,
@@ -231,16 +267,19 @@
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
 
+      // Process the raw chartData to aggregate "other" flows before drawing
+      const processedChartData = processAndAggregateChartData(chartData);
+
       const width = size.width - margin.left - margin.right;
       const height = size.height - margin.top - margin.bottom;
 
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
-      if (chartData && chartData[0])
-        xScale.domain(d3.extent(chartData[0].values, d => d.ts));
+      if (processedChartData && processedChartData[0])
+        xScale.domain(d3.extent(processedChartData[0].values, d => d.ts));
 
-      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(chartData);
+      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(processedChartData);
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
@@ -264,7 +303,7 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      const fkeys = chartData.map(f => f.fkey);
+      const fkeys = processedChartData.map(f => f.fkey);
       colorScale.domain(fkeys);
 
       stack.keys(fkeys);
@@ -289,10 +328,10 @@
       });
 
       // distribution bar
-      const tbytes = chartData.reduce((sum, f) => sum + f.tbytes, 0);
+      const tbytes = processedChartData.reduce((sum, f) => sum + f.tbytes, 0);
 
       let rangeStop = 0;
-      const barData = chartData.map(f => {
+      const barData = processedChartData.map(f => {
         const new_d = {
           k: f.fkey,
           x0: rangeStop,

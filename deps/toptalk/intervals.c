@@ -368,28 +368,27 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 {
 	struct flow_hash *rfti; /* reference flow table iter */
 
-	/* sort the flow reference table */
+	/* sort the flow reference table by byte count */
 	HASH_SRT(r_hh, flow_ref_table, bytes_cmp);
 
 	/*
-	 * expire old packets in the output path
+	 * Expire old packets in the output path.
 	 * NB: must be called in packet receive path as well.
 	 */
 	expire_old_packets(deadline);
 
-	/* check if the interval is complete and then rotate tables */
+	/* Check if the interval is complete and then rotate tables */
 	expire_old_interval_tables(deadline);
 
-	/* for each of the top 5 flow in the reference table,
-	 * fill the counts from the short-interval flow tables */
+	/* For each of the top N flows in the reference table,
+	 * fill the counts from the short-interval flow tables. */
 	rfti = flow_ref_table;
-
 	for (int i = 0; i < MAX_FLOW_COUNT && rfti; i++) {
 		fill_short_int_flows(t5->flow[i], rfti);
 		rfti = rfti->r_hh.next;
 	}
-	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 
+	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);
 	t5->total_bytes = rate_calc(ref_window_size, totals.bytes);
 	t5->total_packets = rate_calc(ref_window_size, totals.packets);
 	t5->timestamp = deadline;

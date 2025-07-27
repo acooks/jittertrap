@@ -212,8 +212,7 @@
   const updateTopFlowChartData = function(interval) {
     const chartPeriod = my.charts.getChartPeriod();
     const chartSeries = JT.charts.getTopFlowsRef();
-    const fcount = (flowRank[interval].length < 10) ?
-                 flowRank[interval].length : 10;
+    const fcount = flowRank[interval].length;
 
     updateSampleCounts(interval);
 

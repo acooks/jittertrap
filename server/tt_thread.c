@@ -152,7 +152,10 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 	struct jt_msg_toptalk *m = &msg->m;
 	char s_addr_str[INET6_ADDRSTRLEN] = { 0 };
 	char d_addr_str[INET6_ADDRSTRLEN] = { 0 };
-	int flow_count;
+
+	// Determine the number of flows to send, capped by the message capacity.
+	// This relies on the compile-time MAX_FLOW_COUNT being >= MAX_FLOWS.
+	int flow_count = MIN(ttf->flow_count, MAX_FLOWS);
 
 	m->timestamp.tv_sec = ttf->timestamp.tv_sec;
 	m->timestamp.tv_nsec = ttf->timestamp.tv_usec * 1000;
@@ -160,7 +163,6 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 	m->interval_ns = tt_intervals[interval].tv_sec * 1E9 +
 	                 tt_intervals[interval].tv_usec * 1E3;
 
-	flow_count = MIN(ttf->flow_count, MAX_FLOWS);
 	m->tflows = flow_count;
 	m->tbytes = ttf->total_bytes;
 	m->tpackets = ttf->total_packets;
@@ -355,4 +357,3 @@ int intervals_thread_init(void)
 
 	return 0;
 }
-
