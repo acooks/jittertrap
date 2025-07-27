@@ -19,6 +19,42 @@
     return chartData;
   };
 
+  const processAndAggregateChartData = function(incomingData) {
+    const LEGEND_DISPLAY_LIMIT = 10;
+
+    if (incomingData.length <= LEGEND_DISPLAY_LIMIT) {
+      return incomingData;
+    }
+
+    const topNFlows = incomingData.slice(0, LEGEND_DISPLAY_LIMIT);
+    const remainingFlows = incomingData.slice(LEGEND_DISPLAY_LIMIT);
+
+    const otherFlow = {
+      fkey: 'other',
+      tbytes: 0,
+      values: []
+    };
+
+    const otherValuesMap = new Map();
+
+    remainingFlows.forEach(flow => {
+      otherFlow.tbytes += flow.tbytes;
+      flow.values.forEach(dataPoint => {
+        const currentBytes = otherValuesMap.get(dataPoint.ts) || 0;
+        otherValuesMap.set(dataPoint.ts, currentBytes + dataPoint.bytes);
+      });
+    });
+
+    otherValuesMap.forEach((bytes, ts) => {
+      otherFlow.values.push({ ts: ts, bytes: bytes });
+    });
+
+    // Ensure the values are sorted by timestamp, as d3 expects
+    otherFlow.values.sort((a, b) => a.ts - b.ts);
+
+    return topNFlows.concat(otherFlow);
+  };
+
   my.charts.toptalk.toptalkChart = (function (m) {
     const margin = {
       top: 20,
@@ -220,9 +256,19 @@
       return { formattedData, maxSlice };
     }
 
+    const getFlowColor = (key) => {
+      if (key === 'other') {
+        return '#cccccc'; // a neutral grey
+      }
+      return colorScale(key);
+    };
+
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
+
+      // Process the raw chartData to aggregate "other" flows before drawing
+      const processedChartData = processAndAggregateChartData(chartData);
 
       const width = size.width - margin.left - margin.right;
       const height = size.height - margin.top - margin.bottom;
@@ -230,10 +276,10 @@
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
-      if (chartData && chartData[0])
-        xScale.domain(d3.extent(chartData[0].values, d => d.ts));
+      if (processedChartData && processedChartData[0])
+        xScale.domain(d3.extent(processedChartData[0].values, d => d.ts));
 
-      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(chartData);
+      const { formattedData, maxSlice } = formatDataAndGetMaxSlice(processedChartData);
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
@@ -257,7 +303,7 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      const fkeys = chartData.map(f => f.fkey);
+      const fkeys = processedChartData.map(f => f.fkey);
       colorScale.domain(fkeys);
 
       stack.keys(fkeys);
@@ -277,15 +323,15 @@
       stackedChartData.forEach(layer => {
         context.beginPath();
         area(layer);
-        context.fillStyle = colorScale(layer.key);
+        context.fillStyle = getFlowColor(layer.key);
         context.fill();
       });
 
       // distribution bar
-      const tbytes = chartData.reduce((sum, f) => sum + f.tbytes, 0);
+      const tbytes = processedChartData.reduce((sum, f) => sum + f.tbytes, 0);
 
       let rangeStop = 0;
-      const barData = chartData.map(f => {
+      const barData = processedChartData.map(f => {
         const new_d = {
           k: f.fkey,
           x0: rangeStop,
@@ -314,7 +360,7 @@
           .attr("y", 9)
           .attr("x", d => x(d.x0))
           .attr("width", d => x(d.x1) - x(d.x0))
-          .style("fill", d => colorScale(d.k));
+          .style("fill", d => getFlowColor(d.k));
 
       barsbox.attr("transform",
                    "translate(" + margin.left + "," + 350 + ")");
@@ -347,28 +393,32 @@
 
       // Add the complex <tspan> structure only ONCE when elements are created
       legendTextEnter.each(function(d) {
-        const parts = d.split('/');
-        const sourceIP = parts[1];
-        const sourcePort = parts[2];
-        const destIP = parts[3];
-        const destPort = parts[4];
-        const proto = parts[5];
-        const tclass = parts[6];
-
         const textNode = d3.select(this);
-        textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
-        textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
-        textNode.append("tspan").attr("x", "30.5em").text("->");
-        textNode.append("tspan").attr("x", "32.5em").text(destIP);
-        textNode.append("tspan").attr("x", "58em").text(":" + destPort);
-        textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
-        textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+        if (d === 'other') {
+          textNode.append("tspan").attr("x", 25).text("Other Flows");
+        } else {
+          const parts = d.split('/');
+          const sourceIP = parts[1];
+          const sourcePort = parts[2];
+          const destIP = parts[3];
+          const destPort = parts[4];
+          const proto = parts[5];
+          const tclass = parts[6];
+
+          textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
+          textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
+          textNode.append("tspan").attr("x", "30.5em").text("->");
+          textNode.append("tspan").attr("x", "32.5em").text(destIP);
+          textNode.append("tspan").attr("x", "58em").text(":" + destPort);
+          textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
+          textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+        }
       });
 
       // UPDATE + ENTER - update positions and colors for all visible items
       const legendUpdate = legend.merge(legendEnter);
       legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
-      legendUpdate.select("rect").style("fill", colorScale);
+      legendUpdate.select("rect").style("fill", getFlowColor);
     };
 
 
