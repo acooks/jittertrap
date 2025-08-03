@@ -79,8 +79,11 @@
 }
 
 .legend-text {
-  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
   font-size: .8em;
+}
+
+#toptalkLegend {
+  padding-left: 75px; /* Align with chart */
 }
 
 @media (max-width: 768px) {
