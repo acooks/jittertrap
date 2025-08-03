@@ -294,6 +294,11 @@
       const width = size.width - margin.left - margin.right;
       const height = 300; // Use a fixed height for the chart drawing area
 
+      // Update canvas and SVG dimensions
+      canvas.attr("width", width)
+            .attr("height", height);
+      svg.attr("width", width + margin.left + margin.right);
+
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
@@ -314,8 +319,8 @@
       xAxis.scale(xScale);
       yAxis.scale(yScale);
 
-      xGrid.scale(xScale);
-      yGrid.scale(yScale);
+      xGrid.scale(xScale).tickSize(-height);
+      yGrid.scale(yScale).tickSize(-width);
 
       svg = d3.select("#chartToptalk");
 
