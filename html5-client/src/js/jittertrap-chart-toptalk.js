@@ -92,7 +92,6 @@
             .append("canvas")
             .style("position", "absolute");
 
-      my.charts.resizeChart("#chartToptalk", size)();
       context = canvas.node().getContext("2d");
 
       svg = d3.select("#chartToptalk")
@@ -196,15 +195,19 @@
 
       const legendHeader = svg.select(".legendheading");
       legendHeader.append("tspan")
-        .attr("x", "25em")
+        .attr("x", "45em")
         .attr("text-anchor", "end")
         .text("Source IP");
-      legendHeader.append("tspan").attr("x", "25.5em").text(":Port");
-      legendHeader.append("tspan").attr("x", "30.5em").text("->");
-      legendHeader.append("tspan").attr("x", "32.5em").text("Destination IP");
-      legendHeader.append("tspan").attr("x", "58em").text(":Port");
-      legendHeader.append("tspan").attr("x", "63.5em").text("| Protocol");
-      legendHeader.append("tspan").attr("x", "70em").text("| T/Class");
+      legendHeader.append("tspan").attr("x", "45.5em").text(":Port");
+      // New line for destination
+      legendHeader.append("tspan")
+        .attr("x", "45em")
+        .attr("text-anchor", "end")
+        .attr("dy", "1.2em") // dy for new line
+        .text("Destination IP");
+      legendHeader.append("tspan").attr("x", "45.5em").text(":Port");
+      legendHeader.append("tspan").attr("x", "51.5em").text("| Protocol");
+      legendHeader.append("tspan").attr("x", "58em").text("| T/Class");
 
 
       my.charts.resizeChart("#chartToptalk", size)();
@@ -384,11 +387,11 @@
       legendEnter.append("rect")
         .attr("x", 0)
         .attr("width", 18)
-        .attr("height", 18);
+        .attr("height", 36);
 
       const legendTextEnter = legendEnter.append("text")
         .attr("class", "legend-text")
-        .attr("y", 9)
+        .attr("y", 18)
         .attr("dy", ".35em");
 
       // Add the complex <tspan> structure only ONCE when elements are created
@@ -405,19 +408,21 @@
           const proto = parts[5];
           const tclass = parts[6];
 
-          textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
-          textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
-          textNode.append("tspan").attr("x", "30.5em").text("->");
-          textNode.append("tspan").attr("x", "32.5em").text(destIP);
-          textNode.append("tspan").attr("x", "58em").text(":" + destPort);
-          textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
-          textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+          // First line
+          textNode.append("tspan").attr("x", "45em").attr("text-anchor", "end").text(sourceIP);
+          textNode.append("tspan").attr("x", "45.5em").text(":" + sourcePort.padEnd(6));
+
+          // Second line
+          textNode.append("tspan").attr("x", "45em").attr("text-anchor", "end").attr("dy", "1.2em").text(destIP);
+          textNode.append("tspan").attr("x", "45.5em").text(":" + destPort.padEnd(6));
+          textNode.append("tspan").attr("x", "51.5em").text("| " + proto);
+          textNode.append("tspan").attr("x", "58em").text("| " + tclass);
         }
       });
 
       // UPDATE + ENTER - update positions and colors for all visible items
       const legendUpdate = legend.merge(legendEnter);
-      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
+      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 40) + ")");
       legendUpdate.select("rect").style("fill", getFlowColor);
     };
 
