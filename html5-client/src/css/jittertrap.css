@@ -49,18 +49,9 @@
   stroke-width: 1.5px;
 }
 
-.trapContainer {
-  border: none;
-  display: block;
-}
-
 /* Trap */
 #traps_table tbody td {
   vertical-align: middle;
-}
-
-.form-inline .input-group input[type="number"] {
-  width:5em;
 }
 .measurements td {
   width: 9em;
@@ -79,6 +70,53 @@
 }
 
 .legend-text {
-  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
   font-size: .8em;
+}
+
+#toptalkLegend {
+  padding-left: 75px; /* Align with chart */
+}
+
+@media (max-width: 768px) {
+  .measurements td,
+  .measurements th {
+    font-size: .8rem;
+  }
+}
+
+.btn-primary {
+  background-color: #4682B4;
+  border-color: #4682B4;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.open > .dropdown-toggle.btn-primary {
+  background-color: #3a6d9a;
+  border-color: #3a6d9a;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active,
+.open > .dropdown-toggle.btn-secondary {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #4682B4 !important;
+}
+
+.nav-pills .nav-link,
+footer a {
+  color: #4682B4;
 }
