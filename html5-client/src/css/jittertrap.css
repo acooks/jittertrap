@@ -49,18 +49,9 @@
   stroke-width: 1.5px;
 }
 
-.trapContainer {
-  border: none;
-  display: block;
-}
-
 /* Trap */
 #traps_table tbody td {
   vertical-align: middle;
-}
-
-.form-inline .input-group input[type="number"] {
-  width:5em;
 }
 .measurements td {
   width: 9em;
