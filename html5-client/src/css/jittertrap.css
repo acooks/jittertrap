@@ -120,3 +120,21 @@
 footer a {
   color: #4682B4;
 }
+
+@media (min-width: 1920px) {
+  #chartsPanel .tab-content {
+    display: flex;
+    flex-direction: row;
+  }
+
+  #tputPanel, #toptalkPanel {
+    display: block !important;
+    opacity: 1 !important;
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  #showTputPanel, #showTopTalkPanel {
+    display: none;
+  }
+}
