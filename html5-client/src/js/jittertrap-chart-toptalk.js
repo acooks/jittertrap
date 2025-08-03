@@ -59,11 +59,11 @@
     const margin = {
       top: 20,
       right: 20,
-      bottom: 440,
+      bottom: 600, // Increased to provide ample space for the legend
       left: 75
     };
 
-    const size = { width: 960, height: 700 };
+    const size = { width: 960, height: 920 }; // Increased total height
     let xScale = d3.scaleLinear();
     let yScale = d3.scaleLinear();
     const colorScale = d3.scaleOrdinal(["#4682B4", ...d3.schemeCategory10.slice(1)]);
@@ -92,6 +92,7 @@
             .append("canvas")
             .style("position", "absolute");
 
+      my.charts.resizeChart("#chartToptalk", size)();
       context = canvas.node().getContext("2d");
 
       svg = d3.select("#chartToptalk")
@@ -102,7 +103,7 @@
 
 
       const width = size.width - margin.left - margin.right;
-      const height = size.height - margin.top - margin.bottom;
+      const height = 300; // Fixed chart height
 
       xScale = d3.scaleLinear().range([0, width]);
       yScale = d3.scaleLinear().range([height, 0]);
@@ -128,7 +129,7 @@
            .tickFormat("");
 
       svg.attr("width", width + margin.left + margin.right)
-         .attr("height", height + margin.top + margin.bottom);
+         .attr("height", size.height);
 
       canvas.attr("width", width)
          .attr("height", height)
@@ -189,25 +190,42 @@
       svg.append("g")
          .attr("class", "legendbox")
          .attr("id", "ttlegendbox")
-         .attr("transform", "translate(" + margin.left + ", 400)")
+         .attr("transform", "translate(" + margin.left + ", " + (height + 170) + ")")
          .append("text")
            .attr("class", "legendheading legend-text");
 
       const legendHeader = svg.select(".legendheading");
+      const headerXPositions = {
+        ip: "25em",
+        port: "26em",
+        proto: "32em",
+        tclass: "40em"
+      };
+
+      // First line of header
       legendHeader.append("tspan")
-        .attr("x", "45em")
+        .attr("x", headerXPositions.ip)
         .attr("text-anchor", "end")
         .text("Source IP");
-      legendHeader.append("tspan").attr("x", "45.5em").text(":Port");
-      // New line for destination
       legendHeader.append("tspan")
-        .attr("x", "45em")
+        .attr("x", headerXPositions.port)
+        .text("| Src Port");
+
+      // Second line of header
+      legendHeader.append("tspan")
+        .attr("x", headerXPositions.ip)
         .attr("text-anchor", "end")
-        .attr("dy", "1.2em") // dy for new line
+        .attr("dy", "1.2em")
         .text("Destination IP");
-      legendHeader.append("tspan").attr("x", "45.5em").text(":Port");
-      legendHeader.append("tspan").attr("x", "51.5em").text("| Protocol");
-      legendHeader.append("tspan").attr("x", "58em").text("| T/Class");
+      legendHeader.append("tspan")
+        .attr("x", headerXPositions.port)
+        .text("| Dst Port");
+      legendHeader.append("tspan")
+        .attr("x", headerXPositions.proto)
+        .text("| Protocol");
+      legendHeader.append("tspan")
+        .attr("x", headerXPositions.tclass)
+        .text("| T/Class");
 
 
       my.charts.resizeChart("#chartToptalk", size)();
@@ -274,7 +292,7 @@
       const processedChartData = processAndAggregateChartData(chartData);
 
       const width = size.width - margin.left - margin.right;
-      const height = size.height - margin.top - margin.bottom;
+      const height = 300; // Use a fixed height for the chart drawing area
 
       xScale = d3.scaleLinear().range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
@@ -366,10 +384,16 @@
           .style("fill", d => getFlowColor(d.k));
 
       barsbox.attr("transform",
-                   "translate(" + margin.left + "," + 350 + ")");
+                   "translate(" + margin.left + ", " + (height + 60) + ")");
 
       // legend box handling
       const legendbox = svg.select("#ttlegendbox");
+      const containerWidth = d3.select("#chartToptalk").node().getBoundingClientRect().width;
+      const isNarrow = containerWidth < 768; // Breakpoint for mobile
+
+      // Adjust legend header for narrow screens
+      const legendHeader = svg.select(".legendheading");
+      legendHeader.style("display", isNarrow ? "none" : "block"); // Hide header on narrow screens
 
       // General Update Pattern for the legend
       const legend = legendbox.selectAll(".legend")
@@ -383,47 +407,101 @@
         .append("g")
         .attr("class", "legend");
 
+      // Determine item height based on screen width
+      const wideItemHeight = 40;
+      const narrowItemHeight = 70; // Accommodate 3 lines of text
+      const itemHeight = isNarrow ? narrowItemHeight : wideItemHeight;
+      const rectHeight = isNarrow ? 65 : 36;
+
       // Append rect and text elements only to the new <g> elements
       legendEnter.append("rect")
         .attr("x", 0)
-        .attr("width", 18)
-        .attr("height", 36);
+        .attr("width", 18);
 
-      const legendTextEnter = legendEnter.append("text")
-        .attr("class", "legend-text")
-        .attr("y", 18)
-        .attr("dy", ".35em");
-
-      // Add the complex <tspan> structure only ONCE when elements are created
-      legendTextEnter.each(function(d) {
-        const textNode = d3.select(this);
-        if (d === 'other') {
-          textNode.append("tspan").attr("x", 25).text("Other Flows");
-        } else {
-          const parts = d.split('/');
-          const sourceIP = parts[1];
-          const sourcePort = parts[2];
-          const destIP = parts[3];
-          const destPort = parts[4];
-          const proto = parts[5];
-          const tclass = parts[6];
-
-          // First line
-          textNode.append("tspan").attr("x", "45em").attr("text-anchor", "end").text(sourceIP);
-          textNode.append("tspan").attr("x", "45.5em").text(":" + sourcePort.padEnd(6));
-
-          // Second line
-          textNode.append("tspan").attr("x", "45em").attr("text-anchor", "end").attr("dy", "1.2em").text(destIP);
-          textNode.append("tspan").attr("x", "45.5em").text(":" + destPort.padEnd(6));
-          textNode.append("tspan").attr("x", "51.5em").text("| " + proto);
-          textNode.append("tspan").attr("x", "58em").text("| " + tclass);
-        }
-      });
+      legendEnter.append("text")
+        .attr("class", "legend-text");
 
       // UPDATE + ENTER - update positions and colors for all visible items
       const legendUpdate = legend.merge(legendEnter);
-      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 40) + ")");
-      legendUpdate.select("rect").style("fill", getFlowColor);
+
+      legendUpdate.select("rect")
+        .attr("height", rectHeight)
+        .style("fill", getFlowColor);
+
+      legendUpdate.attr("transform", (d, i) => {
+        const yPos = isNarrow ? (i * itemHeight) : (i * itemHeight) + 40;
+        return "translate(0, " + yPos + ")";
+      });
+
+      legendUpdate.select("text")
+        .attr("y", rectHeight / 2) // Center text vertically in the rect
+        .attr("dy", ".35em")
+        .each(function(d) {
+          const textNode = d3.select(this);
+          textNode.text(null); // Clear existing content
+
+          if (d === 'other') {
+            textNode.append("tspan").attr("x", 25).text("Other Flows");
+          } else {
+            const parts = d.split('/');
+            const sourceIP = parts[1];
+            const sourcePort = parts[2];
+            const destIP = parts[3];
+            const destPort = parts[4];
+            const proto = parts[5];
+            const tclass = parts[6];
+
+            if (isNarrow) {
+              // Narrow screen layout: stacked vertically
+              textNode.append("tspan").attr("x", 25).attr("dy", "-0.6em").text(`Src: ${sourceIP}:${sourcePort}`);
+              textNode.append("tspan").attr("x", 25).attr("dy", "1.2em").text(`Dst: ${destIP}:${destPort}`);
+              textNode.append("tspan").attr("x", 25).attr("dy", "1.2em").text(`Proto: ${proto} | T/Class: ${tclass}`);
+            } else {
+              // Wide screen layout: horizontal
+              const xPositions = {
+                ip: "25em",
+                port: "26em",
+                proto: "32em",
+                tclass: "40em"
+              };
+
+              // First line
+              textNode.append("tspan")
+                .attr("x", xPositions.ip)
+                .attr("text-anchor", "end")
+                .text(sourceIP);
+              textNode.append("tspan")
+                .attr("x", xPositions.port)
+                .text(`| ${sourcePort}`);
+
+              // Second line
+              textNode.append("tspan")
+                .attr("x", xPositions.ip)
+                .attr("text-anchor", "end")
+                .attr("dy", "1.2em")
+                .text(destIP);
+              textNode.append("tspan")
+                .attr("x", xPositions.port)
+                .text(`| ${destPort}`);
+              textNode.append("tspan")
+                .attr("x", xPositions.proto)
+                .text(`| ${proto}`);
+              textNode.append("tspan")
+                .attr("x", xPositions.tclass)
+                .text(`| ${tclass}`);
+            }
+          }
+        });
+
+      // Resize the SVG and its container to fit all the legend items.
+      const legendHeaderHeight = isNarrow ? 0 : 40; // Account for hidden header
+      const legendStartY = height + 170; // Y position where the legend box starts
+      const legendItemsHeight = (fkeys.length * itemHeight) + legendHeaderHeight;
+      const bottomPadding = 40; // Extra space at the bottom
+      const newHeight = legendStartY + legendItemsHeight + bottomPadding;
+
+      svg.attr("height", newHeight);
+      d3.select("#chartToptalk").style("height", newHeight + "px");
     };
 
 
