@@ -66,7 +66,7 @@
     const size = { width: 960, height: 700 };
     let xScale = d3.scaleLinear();
     let yScale = d3.scaleLinear();
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    const colorScale = d3.scaleOrdinal(["#4682B4", ...d3.schemeCategory10.slice(1)]);
     let xAxis = d3.axisBottom();
     let yAxis = d3.axisLeft();
     let xGrid = d3.axisBottom();

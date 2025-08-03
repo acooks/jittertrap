@@ -3,30 +3,35 @@
   <div class="card">
     <div class="card-body">
       <form id="chartsForm">
-        <div class="form-inline mb-3">
-          <div class="form-group mr-3">
-            <label for="chopts_chartPeriod" class="mr-2">Interval</label>
-            <div class="input-group">
-              <select id="chopts_chartPeriod" class="form-control">
-                <option value=5>5</option>
-                <option value=10>10</option>
-                <option value=20>20</option>
-                <option value=50>50</option>
-                <option value=100 selected>100</option>
-                <option value=200>200</option>
-                <option value=500>500</option>
-                <option value=1000>1000</option>
-              </select>
-              <div class="input-group-append">
-                <span class="input-group-text">ms</span>
+        <div class="row align-items-center mb-3">
+          <div class="col-md-auto mb-2 mb-md-0">
+            <div class="form-group mb-0">
+              <label for="chopts_chartPeriod" class="mr-2">Interval</label>
+              <div class="input-group">
+                <select id="chopts_chartPeriod" class="form-control">
+                  <option value=5>5</option>
+                  <option value=10>10</option>
+                  <option value=20>20</option>
+                  <option value=50>50</option>
+                  <option value=100 selected>100</option>
+                  <option value=200>200</option>
+                  <option value=500>500</option>
+                  <option value=1000>1000</option>
+                </select>
+                <div class="input-group-append">
+                  <span class="input-group-text">ms</span>
+                </div>
               </div>
             </div>
           </div>
-          <button id="chopts_stop_start" class="btn btn-secondary mr-3"> Pause/Run</button>
-
-          <div class="btn-group nav" role="tablist">
-            <a class="btn btn-secondary nav-link active" id="showTputPanel" data-toggle="tab" href="#tputPanel" role="tab">Throughput</a>
-            <a class="btn btn-secondary nav-link" id="showTopTalkPanel" data-toggle="tab" href="#toptalkPanel" role="tab">Top Talkers</a>
+          <div class="col-md-auto mb-2 mb-md-0">
+            <div class="btn-group nav" role="tablist">
+              <a class="btn btn-secondary nav-link active" id="showTputPanel" data-toggle="tab" href="#tputPanel" role="tab">Throughput</a>
+              <a class="btn btn-secondary nav-link" id="showTopTalkPanel" data-toggle="tab" href="#toptalkPanel" role="tab">Top Talkers</a>
+            </div>
+          </div>
+          <div class="col-md-auto">
+            <button id="chopts_stop_start" class="btn btn-secondary"> Pause/Run</button>
           </div>
         </div>
 
