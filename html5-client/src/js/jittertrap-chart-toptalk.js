@@ -68,8 +68,14 @@
     let yScale = d3.scaleLinear();
     // Use Spectral interpolator for better distinctness with 20+ flows
     const colorScale = d3.scaleOrdinal(d3.quantize(d3.interpolateSpectral, 21).reverse());
+
+    const formatBitrate = function(d) {
+        // d is in bps. d3.format('.2s') auto-scales and adds SI prefix.
+        return d3.format(".2s")(d) + "bps";
+    };
+    
     let xAxis = d3.axisBottom();
-    let yAxis = d3.axisLeft();
+    let yAxis = d3.axisLeft().tickFormat(formatBitrate);
     let xGrid = d3.axisBottom();
     let yGrid = d3.axisLeft();
     let area = d3.area();
@@ -79,7 +85,7 @@
                 .offset(d3.stackOffsetNone);
 
     // Bisector to find the closest timestamp index
-    const bisectDate = d3.bisector(d => d.ts).left;
+    const bisectDate = d3.bisector(d => d.data.ts).left;
 
     let svg = {};
     let context = {};
@@ -117,16 +123,31 @@
         
         // Find index in the first layer's data
         const layerData = currentStackedData[0]; 
-        if (!layerData) return;
+        if (!layerData || layerData.length === 0) return; // No data at all
 
+        // Find closest data point index. `i` is the insertion point.
         const i = bisectDate(layerData, x0, 1);
-        const d0 = layerData[i - 1];
-        const d1 = layerData[i];
         
-        if (!d0 || !d1) return;
-
-        // Find closest data point index
-        const index = x0 - d0.data.ts > d1.data.ts - x0 ? i : i - 1;
+        let index = -1; // Default to not found
+        
+        if (i === 0) {
+            // Mouse is before the first data point or at it, consider the first if data exists
+            if (layerData.length > 0) index = 0;
+        } else if (i === layerData.length) {
+            // Mouse is after the last data point, consider the last if data exists
+            if (layerData.length > 0) index = layerData.length - 1;
+        } else {
+            // Mouse is between two points, find the closest
+            const d0 = layerData[i - 1];
+            const d1 = layerData[i];
+            index = x0 - d0.data.ts > d1.data.ts - x0 ? i : i - 1;
+        }
+        
+        // If no valid index found after all checks, hide tooltip.
+        if (index === -1) {
+            tooltip.style("opacity", 0);
+            return;
+        }
 
         // Check Y coordinate against stack layers
         let found = false;
@@ -149,11 +170,8 @@
                          `${parts[5]} | ${parts[6]}`;
              }
              
-             const bytes = dp.data[fkey];
-             // Calculate bitrate: bytes * 8 / (period_ms / 1000)
-             const periodMs = JT.charts.getChartPeriod();
-             const bitrate = (bytes * 8) / (periodMs / 1000);
-             content += `<br/>${d3.format(".3s")(bitrate)}bps`;
+             const bitrate = dp.data[fkey];
+             content += `<br/>${formatBitrate(bitrate)}`;
 
              tooltip.html(content)
                     .style("left", (px + 10) + "px")
@@ -205,18 +223,15 @@
             rel: d3.pointer(event, this),
             page: [event.pageX, event.pageY]
         };
-        // Pass simplified struct to update function? 
-        // Or just use lastMousePosition in updateTooltip?
-        // Let's use lastMousePosition globally.
+
+        if (!currentStackedData || currentStackedData.length === 0) return;
+        
+        updateTooltip(lastMousePosition);
       })
       .on("mouseout", function() {
         lastMousePosition = null;
         tooltip.style("opacity", 0);
       });
-
-      area.context(context);
-
-      area.context(context);
 
 
       const width = size.width - margin.left - margin.right;
@@ -231,7 +246,8 @@
 
       yAxis = d3.axisLeft()
               .scale(yScale)
-              .ticks(5);
+              .ticks(5)
+              .tickFormat(formatBitrate);
 
       xGrid = d3.axisBottom()
           .scale(xScale)
@@ -285,7 +301,7 @@
          .attr("x", 0 - (height / 2))
          .attr("dy", "1em")
          .style("text-anchor", "middle")
-         .text("Bytes");
+         .text("Bitrate");
 
       graph.append("g")
         .attr("class", "xGrid")
@@ -322,20 +338,23 @@
       my.charts.resizeChart("#chartToptalk", size)();
     };
 
-    /* Reformat chartData to work with the new d3 v4 API
+    /* Reformat chartData to work with the new d3 v7 API
      * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
     const formatDataAndGetMaxSlice = function(chartData) {
       // Use a Map for O(1) indexed lookups, which is much faster than map().indexOf().
       const binsMap = new Map();
       let maxSlice = 0;
+      const periodSec = JT.charts.getChartPeriod() / 1000.0;
 
       for (let i = 0; i < chartData.length; i++) {
         const row = chartData[i];
         for (let j = 0; j < row.values.length; j++) {
           const o = row.values[j];
-          const ts = o.ts;
+          const ts = o.data ? o.data.ts : o.ts; // Handle potential pre-wrapped data
           const fkey = row.fkey;
-          const bytes = o.bytes;
+          const bytes = o.bytes; // bytes is Bytes/sec (rate) from the server
+          // Calculate bps: bytes * 8 bits/byte
+          const bps = bytes * 8;
 
           // Check if we have seen this timestamp before.
           if (!binsMap.has(ts)) {
@@ -345,11 +364,14 @@
 
           // Get the bin for the current timestamp.
           const bin = binsMap.get(ts);
-          bin[fkey] = (bin[fkey] || 0) + bytes;
+          bin[fkey] = (bin[fkey] || 0) + bps;
         }
       }
 
       const formattedData = Array.from(binsMap.values());
+
+      // Ensure data is sorted by timestamp for d3.stack and bisect to work correctly
+      formattedData.sort((a, b) => a.ts - b.ts);
 
       // Calculate the sum of each time slice to find the maximum for the Y-axis domain.
       formattedData.forEach(slice => {
