@@ -69,6 +69,13 @@ coreconfig: version
 	sed -i 's/##CORECONFIG-SAMPLEPERIOD##/${SAMPLE_PERIOD_US}/g' src/js/jittertrap-coreconfig.js
 
 
+IMPAIRMENTS_PART = src/html/panel-impairments.part.html
+ifdef DISABLE_IMPAIRMENTS
+ifeq ($(DISABLE_IMPAIRMENTS), 1)
+IMPAIRMENTS_PART = src/html/panel-impairments-disabled.part.html
+endif
+endif
+
 TPL = ${OUT}/index.html
 assemble-html: createdirs
 	cp src/html/favicon.svg ${OUT}
@@ -77,7 +84,7 @@ assemble-html: createdirs
 	perl -pe 's|##MODAL-ABOUT##|`cat src/html/modal-about.part.html`|ge' -i ${TPL}
 	perl -pe 's|##MODAL-HELP##|`cat src/html/modal-help.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
-	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat src/html/panel-impairments.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat $(IMPAIRMENTS_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
 
