@@ -78,12 +78,109 @@
                 .order(d3.stackOrderReverse)
                 .offset(d3.stackOffsetNone);
 
+    // Bisector to find the closest timestamp index
+    const bisectDate = d3.bisector(d => d.ts).left;
+
     let svg = {};
     let context = {};
     let canvas = {};
+    let currentStackedData = []; // Store for hit-testing
+    let lastMousePosition = null; // Store mouse position for live tooltip updates
+
+    const updateTooltip = function(mousePos) {
+        const tooltip = d3.select("#toptalk-tooltip");
+        
+        if (!currentStackedData || currentStackedData.length === 0 || !mousePos) {
+             tooltip.style("opacity", 0);
+             return;
+        }
+
+        // mousePos is { rel: [rx, ry], page: [px, py] }
+        // Use relative coords for chart hit testing
+        const [mx, my] = mousePos.rel;
+        // Use page coords for tooltip positioning
+        const [px, py] = mousePos.page;
+        
+        // Adjust for margins to get chart area coordinates
+        const chartX = mx - margin.left;
+        const chartY = my - margin.top;
+
+        // If outside chart area, hide tooltip
+        if (chartX < 0 || chartX > (size.width - margin.left - margin.right) ||
+            chartY < 0 || chartY > (size.height - margin.top - margin.bottom)) {
+          tooltip.style("opacity", 0);
+          return;
+        }
+
+        // Invert X to get timestamp
+        const x0 = xScale.invert(chartX);
+        
+        // Find index in the first layer's data
+        const layerData = currentStackedData[0]; 
+        if (!layerData) return;
+
+        const i = bisectDate(layerData, x0, 1);
+        const d0 = layerData[i - 1];
+        const d1 = layerData[i];
+        
+        if (!d0 || !d1) return;
+
+        // Find closest data point index
+        const index = x0 - d0.data.ts > d1.data.ts - x0 ? i : i - 1;
+
+        // Check Y coordinate against stack layers
+        let found = false;
+        for (const layer of currentStackedData) {
+          const dp = layer[index];
+          if (!dp) continue;
+          
+          const yLower = yScale(dp[0]);
+          const yUpper = yScale(dp[1]);
+          
+          if (chartY >= yUpper && chartY <= yLower) {
+             const fkey = layer.key;
+             let content = "";
+             
+             if (fkey === 'other') {
+               content = "<strong>Other Flows</strong><br/>";
+             } else {
+               const parts = fkey.split('/');
+               content = `<strong>${parts[1]}:${parts[2]} &rarr; ${parts[3]}:${parts[4]}</strong><br/>` +
+                         `${parts[5]} | ${parts[6]}`;
+             }
+             
+             const bytes = dp.data[fkey];
+             // Calculate bitrate: bytes * 8 / (period_ms / 1000)
+             const periodMs = JT.charts.getChartPeriod();
+             const bitrate = (bytes * 8) / (periodMs / 1000);
+             content += `<br/>${d3.format(".3s")(bitrate)}bps`;
+
+             tooltip.html(content)
+                    .style("left", (px + 10) + "px")
+                    .style("top", (py - 28) + "px")
+                    .style("opacity", 1)
+                    .style("background", getFlowColor(fkey))
+                    .style("border", "1px solid #fff");
+                    
+             found = true;
+             break;
+          }
+        }
+        
+        if (!found) {
+          tooltip.style("opacity", 0);
+        }
+    };
     
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
+
+      let tooltip = d3.select("body").select("#toptalk-tooltip");
+      if (tooltip.empty()) {
+        tooltip = d3.select("body").append("div")
+          .attr("id", "toptalk-tooltip")
+          .attr("class", "jt-tooltip");
+      }
 
       d3.select("#chartToptalk").selectAll("svg").remove();
       d3.select("#chartToptalk").selectAll("canvas").remove();
@@ -99,6 +196,25 @@
       svg = d3.select("#chartToptalk")
             .append("svg")
             .style("position", "relative");
+
+      // Tooltip interaction
+      
+      svg.on("mousemove", function(event) {
+        // Store both relative (for hit test) and page (for display) coords
+        lastMousePosition = {
+            rel: d3.pointer(event, this),
+            page: [event.pageX, event.pageY]
+        };
+        // Pass simplified struct to update function? 
+        // Or just use lastMousePosition in updateTooltip?
+        // Let's use lastMousePosition globally.
+      })
+      .on("mouseout", function() {
+        lastMousePosition = null;
+        tooltip.style("opacity", 0);
+      });
+
+      area.context(context);
 
       area.context(context);
 
@@ -306,6 +422,7 @@
 
       // Format the data, so they're flat arrays
       const stackedChartData = stack(formattedData);
+      currentStackedData = stackedChartData; // Expose for hit-testing
 
       area = d3.area()
                .curve(d3.curveMonotoneX)
@@ -403,6 +520,11 @@
           row.append("div").style("width", "10%").text("| " + tclass);
         }
       });
+
+      // Update tooltip if active
+      if (lastMousePosition) {
+          updateTooltip(lastMousePosition);
+      }
     };
 
 
