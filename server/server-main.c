@@ -40,9 +40,8 @@ static struct lws_protocols protocols[] = {
 	            .callback = callback_jittertrap,
 	            .per_session_data_size =
 	                sizeof(struct per_session_data__jittertrap),
-	            .rx_buffer_size = 0,
-	            .tx_packet_size = 4000,
-	        },
+	                        .rx_buffer_size = 0,
+	                        .tx_packet_size = 16384,	        },
 
 	    /* terminator */
 	    [PROTOCOL_TERMINATOR] = {.name = NULL,

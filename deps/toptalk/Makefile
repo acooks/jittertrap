@@ -18,7 +18,7 @@ INTERVAL_COUNT = 8
 endif
 
 ifndef MAX_FLOW_COUNT
-MAX_FLOW_COUNT = 10
+MAX_FLOW_COUNT = 100
 endif
 
 ifndef DEFINES

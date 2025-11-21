@@ -8,7 +8,7 @@ int jt_toptalk_free(void *data);
 const char *jt_toptalk_test_msg_get(void);
 
 /* MAX_FLOWS should be 2x the number of displayed top N flows. */
-#define MAX_FLOWS 20
+#define MAX_FLOWS 40
 #define ADDR_LEN 50
 #define PROTO_LEN 6
 #define TCLASS_LEN 5
