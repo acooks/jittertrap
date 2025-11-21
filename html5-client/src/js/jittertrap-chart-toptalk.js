@@ -20,7 +20,7 @@
   };
 
   const processAndAggregateChartData = function(incomingData) {
-    const LEGEND_DISPLAY_LIMIT = 10;
+    const LEGEND_DISPLAY_LIMIT = 20;
 
     if (incomingData.length <= LEGEND_DISPLAY_LIMIT) {
       return incomingData;
@@ -59,14 +59,15 @@
     const margin = {
       top: 20,
       right: 20,
-      bottom: 440,
+      bottom: 100,
       left: 75
     };
 
-    const size = { width: 960, height: 700 };
+    const size = { width: 960, height: 500 };
     let xScale = d3.scaleLinear();
     let yScale = d3.scaleLinear();
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    // Use Spectral interpolator for better distinctness with 20+ flows
+    const colorScale = d3.scaleOrdinal(d3.quantize(d3.interpolateSpectral, 21).reverse());
     let xAxis = d3.axisBottom();
     let yAxis = d3.axisLeft();
     let xGrid = d3.axisBottom();
@@ -80,7 +81,7 @@
     let svg = {};
     let context = {};
     let canvas = {};
-
+    
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
 
@@ -187,25 +188,20 @@
          .append("text")
            .text("Byte Distribution")
 
-      svg.append("g")
-         .attr("class", "legendbox")
-         .attr("id", "ttlegendbox")
-         .attr("transform", "translate(" + margin.left + ", 400)")
-         .append("text")
-           .attr("class", "legendheading legend-text");
-
-      const legendHeader = svg.select(".legendheading");
-      legendHeader.append("tspan")
-        .attr("x", "25em")
-        .attr("text-anchor", "end")
-        .text("Source IP");
-      legendHeader.append("tspan").attr("x", "25.5em").text(":Port");
-      legendHeader.append("tspan").attr("x", "30.5em").text("->");
-      legendHeader.append("tspan").attr("x", "32.5em").text("Destination IP");
-      legendHeader.append("tspan").attr("x", "58em").text(":Port");
-      legendHeader.append("tspan").attr("x", "63.5em").text("| Protocol");
-      legendHeader.append("tspan").attr("x", "70em").text("| T/Class");
-
+      // Initialize the HTML legend header
+      const legendContainer = d3.select("#toptalkLegendContainer");
+      legendContainer.selectAll("*").remove(); // Clear any existing content
+      
+      // Create a table-like structure for the legend
+      const header = legendContainer.append("div")
+        .attr("class", "legend-header d-flex font-weight-bold border-bottom mb-1 pb-1 legend-text");
+        
+      header.append("div").style("width", "20px").html("&nbsp;"); // Color box placeholder
+      header.append("div").style("width", "35%").classed("text-right pr-2", true).text("Source IP:Port");
+      header.append("div").style("width", "5%").classed("text-center", true).text("->");
+      header.append("div").style("width", "35%").classed("text-left pl-2", true).text("Destination IP:Port");
+      header.append("div").style("width", "10%").text("Proto");
+      header.append("div").style("width", "10%").text("T/Class");
 
       my.charts.resizeChart("#chartToptalk", size)();
     };
@@ -304,8 +300,8 @@
       svg.select(".yGrid").call(yGrid);
 
       const fkeys = processedChartData.map(f => f.fkey);
-      colorScale.domain(fkeys);
-
+      colorScale.domain(fkeys); // Set the domain for the ordinal scale
+      
       stack.keys(fkeys);
 
       // Format the data, so they're flat arrays
@@ -363,39 +359,34 @@
           .style("fill", d => getFlowColor(d.k));
 
       barsbox.attr("transform",
-                   "translate(" + margin.left + "," + 350 + ")");
+                   "translate(" + margin.left + "," + (height + 50) + ")");
 
       // legend box handling
-      const legendbox = svg.select("#ttlegendbox");
+      const legendContainer = d3.select("#toptalkLegendContainer");
+      
+      // Remove old rows (except the header, which is the first child)
+      legendContainer.selectAll(".legend-row").remove();
 
-      // General Update Pattern for the legend
-      const legend = legendbox.selectAll(".legend")
-        .data(fkeys, d => d); // Use a key function for object constancy
+      // Data join for new rows
+      const rows = legendContainer.selectAll(".legend-row")
+        .data(fkeys, d => d);
 
-      // EXIT - remove old legend items that are no longer in fkeys
-      legend.exit().remove();
+      const rowsEnter = rows.enter()
+        .append("div")
+        .attr("class", "legend-row d-flex align-items-center mb-1 legend-text");
 
-      // ENTER - create new <g> elements for new flows
-      const legendEnter = legend.enter()
-        .append("g")
-        .attr("class", "legend");
+      // Color box
+      rowsEnter.append("div")
+        .style("width", "18px")
+        .style("height", "18px")
+        .style("background-color", d => getFlowColor(d))
+        .style("margin-right", "2px");
 
-      // Append rect and text elements only to the new <g> elements
-      legendEnter.append("rect")
-        .attr("x", 0)
-        .attr("width", 18)
-        .attr("height", 18);
-
-      const legendTextEnter = legendEnter.append("text")
-        .attr("class", "legend-text")
-        .attr("y", 9)
-        .attr("dy", ".35em");
-
-      // Add the complex <tspan> structure only ONCE when elements are created
-      legendTextEnter.each(function(d) {
-        const textNode = d3.select(this);
+      // Content
+      rowsEnter.each(function(d) {
+        const row = d3.select(this);
         if (d === 'other') {
-          textNode.append("tspan").attr("x", 25).text("Other Flows");
+          row.append("div").style("padding-left", "10px").text("Other Flows");
         } else {
           const parts = d.split('/');
           const sourceIP = parts[1];
@@ -405,20 +396,13 @@
           const proto = parts[5];
           const tclass = parts[6];
 
-          textNode.append("tspan").attr("x", "25em").attr("text-anchor", "end").text(sourceIP);
-          textNode.append("tspan").attr("x", "25.5em").text(":" + sourcePort.padEnd(6));
-          textNode.append("tspan").attr("x", "30.5em").text("->");
-          textNode.append("tspan").attr("x", "32.5em").text(destIP);
-          textNode.append("tspan").attr("x", "58em").text(":" + destPort);
-          textNode.append("tspan").attr("x", "63.5em").text("| " + proto);
-          textNode.append("tspan").attr("x", "70em").text("| " + tclass);
+          row.append("div").style("width", "35%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
+          row.append("div").style("width", "5%").classed("text-center", true).text("->");
+          row.append("div").style("width", "35%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
+          row.append("div").style("width", "10%").text("| " + proto);
+          row.append("div").style("width", "10%").text("| " + tclass);
         }
       });
-
-      // UPDATE + ENTER - update positions and colors for all visible items
-      const legendUpdate = legend.merge(legendEnter);
-      legendUpdate.attr("transform", (d, i) => "translate(0, " + ((i + 1) * 25) + ")");
-      legendUpdate.select("rect").style("fill", getFlowColor);
     };
 
 
