@@ -92,6 +92,7 @@
     let canvas = {};
     let currentStackedData = []; // Store for hit-testing
     let lastMousePosition = null; // Store mouse position for live tooltip updates
+    let resizeTimer; // Timer for debounced resize handling
 
     const updateTooltip = function(mousePos) {
         const tooltip = d3.select("#toptalk-tooltip");
@@ -314,6 +315,14 @@
 
       context.clearRect(0, 0, width, height);
 
+      // Initialize area generator (reused across redraws)
+      area = d3.area()
+               .curve(d3.curveMonotoneX)
+               .context(context)
+               .x(d => xScale(d.data.ts))
+               .y0(d => yScale(d[0] || 0))
+               .y1(d => yScale(d[1] || 0));
+
       svg.append("g")
          .attr("class", "barsbox")
          .attr("id", "barsbox")
@@ -326,11 +335,9 @@
       // Initialize the HTML legend header
       const legendContainer = d3.select("#toptalkLegendContainer");
       legendContainer.selectAll("*").remove(); // Clear any existing content
-      
+
       // Create a table-like structure for the legend
       // (Header is now static in HTML)
-
-      my.charts.resizeChart("#chartToptalk", size)();
     };
 
     /* Reformat chartData to work with the new d3 v7 API
@@ -402,7 +409,8 @@
       const width = size.width - margin.left - margin.right;
       const height = size.height - margin.top - margin.bottom;
 
-      xScale = d3.scaleLinear().range([0, width]);
+      // Update xScale range instead of recreating
+      xScale.range([0, width]);
       /* compute the domain of x as the [min,max] extent of timestamps
        * of the first (largest) flow */
       if (processedChartData && processedChartData[0])
@@ -412,12 +420,21 @@
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
-      if (yPow == 1) {
-        yScale = d3.scalePow().exponent(0.5).clamp(true).range([height, 0]);
-      } else {
-        yScale = d3.scaleLinear().clamp(true).range([height, 0]);
+      // Check if we need to switch scale types
+      const needsPowerScale = (yPow == 1);
+      const isPowerScale = yScale.exponent !== undefined;
+
+      if (needsPowerScale !== isPowerScale) {
+        // Only recreate if switching between linear and power
+        if (needsPowerScale) {
+          yScale = d3.scalePow().exponent(0.5).clamp(true);
+        } else {
+          yScale = d3.scaleLinear().clamp(true);
+        }
       }
-      yScale.domain([0, maxSlice]);
+
+      // Update range and domain
+      yScale.range([height, 0]).domain([0, maxSlice]);
 
       xAxis.scale(xScale);
       yAxis.scale(yScale);
@@ -441,13 +458,7 @@
       const stackedChartData = stack(formattedData);
       currentStackedData = stackedChartData; // Expose for hit-testing
 
-      area = d3.area()
-               .curve(d3.curveMonotoneX)
-               .context(context)
-               .x(d => xScale(d.data.ts))
-               .y0(d => yScale(d[0] || 0))
-               .y1(d => yScale(d[1] || 0));
-
+      // Area generator is initialized in reset(), just clear and draw
       context.clearRect(0, 0, width, height);
 
       stackedChartData.forEach(layer => {
@@ -544,8 +555,13 @@
 
 
     /* Set the callback for resizing the chart */
-    d3.select(window).on('resize.chartToptalk',
-                         my.charts.resizeChart("#chartToptalk", size));
+    d3.select(window).on('resize.chartToptalk', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        m.reset();
+        my.charts.setDirty();
+      }, 100);
+    });
 
     return m;
 
