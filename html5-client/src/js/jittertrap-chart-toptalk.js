@@ -167,9 +167,9 @@
              if (fkey === 'other') {
                content = "<strong>Other Flows</strong><br/>";
              } else {
-               const parts = fkey.split('/');
-               content = `<strong>${parts[1]}:${parts[2]} &rarr; ${parts[3]}:${parts[4]}</strong><br/>` +
-                         `${parts[5]} | ${parts[6]}`;
+               const flow = parseFlowKey(fkey);
+               content = `<strong>${flow.sourceIP}:${flow.sourcePort} &rarr; ${flow.destIP}:${flow.destPort}</strong><br/>` +
+                         `${flow.proto} | ${flow.tclass}`;
              }
              
              const bitrate = dp.data[fkey];
@@ -428,6 +428,19 @@
       return colorScale(key);
     };
 
+    /* Parse flow key into component parts */
+    const parseFlowKey = (fkey) => {
+      const parts = fkey.split('/');
+      return {
+        sourceIP: parts[1],
+        sourcePort: parts[2],
+        destIP: parts[3],
+        destPort: parts[4],
+        proto: parts[5],
+        tclass: parts[6]
+      };
+    };
+
     /* Check if two arrays are equal */
     const arraysEqual = (a, b) => {
       if (a.length !== b.length) return false;
@@ -463,19 +476,13 @@
         if (d === 'other') {
           row.append("div").classed("col", true).style("padding-left", "10px").text("Other Flows");
         } else {
-          const parts = d.split('/');
-          const sourceIP = parts[1];
-          const sourcePort = parts[2];
-          const destIP = parts[3];
-          const destPort = parts[4];
-          const proto = parts[5];
-          const tclass = parts[6];
+          const flow = parseFlowKey(d);
 
-          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
+          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(flow.sourceIP + ":" + flow.sourcePort);
           row.append("div").style("width", "5%").classed("text-center flex-shrink-0", true).text("->");
-          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
-          row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(proto);
-          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(tclass);
+          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(flow.destIP + ":" + flow.destPort);
+          row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(flow.proto);
+          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(flow.tclass);
         }
       });
     };
