@@ -49,6 +49,12 @@ unsigned long tt_consumer_id;
 
 static int set_netem(void *data)
 {
+#ifdef DISABLE_IMPAIRMENTS
+	(void)data;
+	syslog(LOG_WARNING,
+	       "ignoring set_netem request: impairments disabled at compile time\n");
+	return 0;
+#else
 	struct jt_msg_netem_params *p1 = data;
 	struct netem_params p2 = {
 		.delay = p1->delay, .jitter = p1->jitter, .loss = p1->loss,
@@ -57,6 +63,7 @@ static int set_netem(void *data)
 	netem_set_params(p1->iface, &p2);
 	jt_srv_send_netem_params();
 	return 0;
+#endif
 }
 
 static int select_iface(void *data)

@@ -35,9 +35,9 @@ $(document).ready(function() {
   });
 
   $("#showTputPanel")
-    .on('shown.bs.tab', JT.charts.resetChart);
+    .on('shown.bs.tab', function() { setTimeout(JT.charts.resetChart, 200); });
   $("#showTopTalkPanel")
-    .on('shown.bs.tab', JT.charts.resetChart);
+    .on('shown.bs.tab', function() { setTimeout(JT.charts.resetChart, 200); });
 
   $('#more_chopts_toggle').click(function() {
     $('#more_chopts').toggle("fast");

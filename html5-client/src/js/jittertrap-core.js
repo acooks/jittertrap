@@ -11,7 +11,7 @@
 
   let samplePeriod = JT.coreconfig.samplePeriod;
 
-  /* data sample period; microseconds; fixed. */
+  /* data sample period; microseconds; fixed (backend sampling rate). */
   my.core.samplePeriod = function(sp) {
     if (sp) {
       console.log("sample period set to " + sp + " microseconds");
@@ -30,14 +30,18 @@
     return sampleCount;
   };
 
-  /* count must be bytes, samplePeriod is microseconds */
-  const byteCountToKbpsRate = function(count) {
-    const rate = count / my.core.samplePeriod() * 8000.0 * (my.core.samplePeriod() / 1000);
+  /* count is bytes/sec (from server) */
+  const byteCountToBpsRate = function(count) {
+    // count is Bps. Multiply by 8 to get bps.
+    const rate = count * 8.0;
     return rate;
   };
 
-  const packetDeltaToRate = function(count) {
-    return count * (1000000.0 / my.core.samplePeriod()) * (my.core.samplePeriod() / 1000);
+  /* count is packets/sec (from server) */
+  const packetDeltaToPpsRate = function(count) {
+    // count is Pps. No conversion needed.
+    const rate = count;
+    return rate;
   };
 
   const timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200, "500ms": 500, "1000ms": 1000};
@@ -60,24 +64,24 @@
 
   const sBin = {};  // a container (Bin) for series.
   sBin.rxRate = new Series("rxRate",
-                           "Ingress Bitrate in kbps",
-                           "Bitrate (kbps)",
-                           byteCountToKbpsRate);
+                           "Ingress Bitrate (bps)",
+                           "Bitrate",
+                           byteCountToBpsRate);
 
   sBin.txRate = new Series("txRate",
-                           "Egress Bitrate in kbps",
-                           "Bitrate (kbps)",
-                           byteCountToKbpsRate);
+                           "Egress Bitrate (bps)",
+                           "Bitrate",
+                           byteCountToBpsRate);
 
   sBin.txPacketRate = new Series("txPacketRate",
-                                 "Egress packet rate",
-                                 "Packet Rate (pps)",
-                                 packetDeltaToRate);
+                                 "Egress Packet Rate",
+                                 "Packet Rate",
+                                 packetDeltaToPpsRate);
 
   sBin.rxPacketRate = new Series("rxPacketRate",
-                                 "Ingress packet rate",
-                                 "Packet Rate (pps)",
-                                 packetDeltaToRate);
+                                 "Ingress Packet Rate",
+                                 "Packet Rate",
+                                 packetDeltaToPpsRate);
 
   let selectedSeriesName = "rxRate";
 
@@ -252,7 +256,8 @@
   };
 
   const updateSeries = function (series, yVal, selectedSeries, timeScale) {
-    series.samples[timeScale].push(series.rateFormatter(yVal / 1000.0));
+    const periodMs = timeScaleTable[timeScale];
+    series.samples[timeScale].push(series.rateFormatter(yVal));
 
     if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
       updateStats(series, timeScale);

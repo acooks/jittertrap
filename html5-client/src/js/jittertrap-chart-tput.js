@@ -23,12 +23,17 @@
       left: 75
     };
 
-    const size = { width: 960, height: 300 };
+    const size = { width: 960, height: 400 };
     let xScale = d3.scaleLinear().range([0, size.width]);
     let yScale = d3.scaleLinear().range([size.height, 0]);
 
+    const formatBitrate = function(d) {
+        // d is in bps. d3.format('.2s') auto-scales and adds SI prefix.
+        return d3.format(".2s")(d) + "bps";
+    };
+
     let xAxis = d3.axisBottom();
-    let yAxis = d3.axisLeft();
+    let yAxis = d3.axisLeft().tickFormat(formatBitrate);
     let xGrid = d3.axisBottom();
     let yGrid = d3.axisLeft();
 
@@ -58,7 +63,8 @@
 
       yAxis = d3.axisLeft()
               .scale(yScale)
-              .ticks(5);
+              .ticks(5)
+              .tickFormat(formatBitrate);
 
       xGrid = d3.axisBottom()
               .scale(xScale)

@@ -3,68 +3,115 @@
   <div class="card">
     <div class="card-body">
       <form id="chartsForm">
-        <div class="row align-items-center mb-3">
-          <div class="col-md-auto mb-2 mb-md-0">
-            <div class="form-group mb-0">
-              <label for="chopts_chartPeriod" class="mr-2">Interval</label>
-              <div class="input-group">
-                <select id="chopts_chartPeriod" class="form-control">
-                  <option value=5>5</option>
-                  <option value=10>10</option>
-                  <option value=20>20</option>
-                  <option value=50>50</option>
-                  <option value=100 selected>100</option>
-                  <option value=200>200</option>
-                  <option value=500>500</option>
-                  <option value=1000>1000</option>
-                </select>
-                <div class="input-group-append">
-                  <span class="input-group-text">ms</span>
-                </div>
+        <!-- Global Controls -->
+        <div class="d-flex align-items-center mb-3 flex-wrap">
+          <div class="form-group d-flex align-items-center mr-4 mb-0">
+            <label for="chopts_chartPeriod" class="mr-2 mb-0">Interval</label>
+            <div class="input-group">
+              <select id="chopts_chartPeriod" class="form-control">
+                <option value=5>5</option>
+                <option value=10>10</option>
+                <option value=20>20</option>
+                <option value=50>50</option>
+                <option value=100 selected>100</option>
+                <option value=200>200</option>
+                <option value=500>500</option>
+                <option value=1000>1000</option>
+              </select>
+              <div class="input-group-append">
+                <span class="input-group-text">ms</span>
               </div>
             </div>
           </div>
-          <div class="col-md-auto mb-2 mb-md-0">
-            <div class="btn-group nav" role="tablist">
-              <a class="btn btn-secondary nav-link active" id="showTputPanel" data-toggle="tab" href="#tputPanel" role="tab">Throughput</a>
-              <a class="btn btn-secondary nav-link" id="showTopTalkPanel" data-toggle="tab" href="#toptalkPanel" role="tab">Top Talkers</a>
-            </div>
-          </div>
-          <div class="col-md-auto">
-            <button id="chopts_stop_start" class="btn btn-secondary"> Pause/Run</button>
+          
+          <button id="chopts_stop_start" class="btn btn-secondary mr-4">Pause/Run</button>
+
+          <!-- Mobile Tab Buttons -->
+          <div class="btn-group nav d-lg-none" role="tablist">
+            <a class="btn btn-secondary nav-link active" id="showTputPanel" data-toggle="tab" href="#tputPanel" role="tab">Throughput</a>
+            <a class="btn btn-secondary nav-link" id="showTopTalkPanel" data-toggle="tab" href="#toptalkPanel" role="tab">Top Talkers</a>
           </div>
         </div>
 
-        <div class="tab-content">
+        <div class="tab-content" id="chartsGrid">
+          <!-- Throughput Panel -->
           <div id="tputPanel" class="tab-pane fade show active" role="tabpanel">
-            <div class="form-group">
-              <label for="chopts_series" class="mr-2">Series</label>
-              <select id="chopts_series" class="form-control">
-                <option value="rxRate" selected="selected">Rx Bitrate</option>
-                <option value="txRate">Tx Bitrate</option>
-                <option value="rxPacketRate">Rx Packet Rate</option>
-                <option value="txPacketRate">Tx Packet Rate</option>
-              </select>
-            </div>
-            <div id="chartThroughput" style="height: 300px; width:100%;" class="my-3"></div>
-            <div id="packetGapContainer" style="height: 300px; width: 100%;" class="my-3"></div>
+             <!-- Header for Throughput -->
+             <div class="d-flex align-items-center mb-2" style="height: 38px;">
+               <div class="form-group d-flex align-items-center mb-0">
+                 <label for="chopts_series" class="mr-2 mb-0">Series</label>
+                 <select id="chopts_series" class="form-control w-auto">
+                   <option value="rxRate" selected="selected">Rx Bitrate</option>
+                   <option value="txRate">Tx Bitrate</option>
+                   <option value="rxPacketRate">Rx Packet Rate</option>
+                   <option value="txPacketRate">Tx Packet Rate</option>
+                 </select>
+               </div>
+             </div>
+           
+             <!-- Content -->
+             <div id="chartThroughput" style="height: 400px; width:100%;" class="my-3"></div>
+             <div id="packetGapContainer" style="height: 300px; width: 100%;" class="my-3"></div>
           </div>
 
+          <!-- Top Talkers Panel -->
           <div id="toptalkPanel" class="tab-pane fade" role="tabpanel">
-            <div class="btn-group btn-group-toggle" data-toggle="buttons" id="y-axis-is-logarithmic">
-              <label class="btn btn-secondary btn-sm active">
-                <input name="y-axis-is-log" type="radio" value="1" checked>Logarithmic
-              </label>
-              <label class="btn btn-secondary btn-sm">
-                <input name="y-axis-is-log" type="radio" value="0">Linear
-              </label>
-            </div>
-            <div id="chartToptalkWrapper" style="position: relative;">
-              <div id="chartToptalk" style="width:100%;" class="my-3"></div>
-            </div>
-            <div id="toptalkLegend"></div>
-          </div>
-        </div>
+             <!-- Header for Top Talkers -->
+             <div class="d-flex align-items-center justify-content-end mb-2" style="height: 38px;">
+               <div class="form-group d-flex align-items-center mb-0">
+                 <label class="mr-2 mb-0">Y-Axis Scale</label>
+                 <div class="btn-group btn-group-toggle" data-toggle="buttons" id="y-axis-is-logarithmic">
+                   <label class="btn btn-secondary active">
+                     <input name="y-axis-is-log" type="radio" value="1" checked>Logarithmic
+                   </label>
+                   <label class="btn btn-secondary">
+                     <input name="y-axis-is-log" type="radio" value="0">Linear
+                   </label>
+                 </div>
+               </div>
+             </div>
+
+                                                                                                                      <!-- Content -->
+
+                                                                                                                      <div id="chartToptalk" style="height: 400px; width:100%;" class="my-3"></div>
+
+                                                                                                                      
+
+                                                                                                                      <!-- Legend Wrapper for alignment -->
+
+                                                                                                                      <div class="legend-wrapper mt-3" style="margin-left: 75px;">
+
+                                                                                                                        <!-- Legend Header -->
+
+                                                                                                                        <div class="d-flex font-weight-bold border-bottom pb-1 legend-text">
+
+                                                                                                                          <div class="legend-color-box-header flex-shrink-0">&nbsp;</div>
+
+                                                                                                                          <div style="width: 38%" class="text-right pr-2">Source IP:Port</div>
+
+                                                                                                                          <div style="width: 5%" class="text-center flex-shrink-0">-></div>
+
+                                                                                                                          <div style="width: 38%" class="text-left pl-2">Destination IP:Port</div>
+
+                                                                                                                          <div style="width: 9%" class="flex-shrink-0">Proto</div>
+
+                                                                                                                          <div style="width: 10%" class="flex-shrink-0">T/Class</div>
+
+                                                                                                                        </div>
+
+                                                                                                                        <!-- Scrollable Legend Body -->
+
+                                                                                                                        <div id="toptalkLegendContainer" style="height: 255px; overflow-y: scroll; border: 1px solid #ccc;"></div>
+
+                                                                                                                      </div>
+
+                                                                                        
+
+                                                                                                                    </div>
+
+                                                                                        
+
+                                                                                                                 </div>      </form>
       </form>
     </div>
   </div> <!-- card -->

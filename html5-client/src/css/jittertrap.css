@@ -70,7 +70,20 @@
 }
 
 .legend-text {
-  font-size: .8em;
+  font-size: 12px;
+}
+
+.legend-row:hover {
+  background-color: #f0f0f0;
+  cursor: default;
+}
+
+.legend-color-box-header,
+.legend-color-box {
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+  flex-shrink: 0;
 }
 
 #toptalkLegend {
@@ -121,20 +134,41 @@ footer a {
   color: #4682B4;
 }
 
-@media (min-width: 1920px) {
-  #chartsPanel .tab-content {
+@media (min-width: 992px) {
+  /* On desktop (lg and up), override the tab behavior to show both panels side-by-side */
+  #chartsGrid {
     display: flex;
-    flex-direction: row;
+    width: 100%;
   }
 
   #tputPanel, #toptalkPanel {
     display: block !important;
     opacity: 1 !important;
-    flex: 0 0 50%;
-    max-width: 50%;
+    width: 50%;
+    padding: 0 15px; /* Simulate grid gutters */
   }
 
+  /* Hide the tab toggles on desktop since both are visible */
   #showTputPanel, #showTopTalkPanel {
     display: none;
   }
+}
+
+#chartToptalk {
+  /* min-height removed to allow 300px sizing via HTML style attribute */
+}
+
+.jt-tooltip {
+  position: absolute;
+  text-align: left;
+  padding: 8px;
+  font: 12px sans-serif;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1000;
+  box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
+  transition: opacity 0.1s ease;
 }

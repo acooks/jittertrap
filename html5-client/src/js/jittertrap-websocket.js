@@ -18,11 +18,14 @@
    */
 
   const handleMsgUpdateStats = function (params) {
+    // params.s contains network statistics as rates per second (e.g., bytes/sec, packets/sec)
     JT.core.processDataMsg(params.s, params.ival_ns);
     JT.charts.setDirty();
   };
 
   const handleMsgToptalk = function (params) {
+    // params contains top talker data as rates (Bytes/sec),
+    // calculated over the interval.
     JT.core.processTopTalkMsg(params);
     JT.charts.setDirty();
   };
