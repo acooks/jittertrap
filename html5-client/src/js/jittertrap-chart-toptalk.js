@@ -93,6 +93,7 @@
     let currentStackedData = []; // Store for hit-testing
     let lastMousePosition = null; // Store mouse position for live tooltip updates
     let resizeTimer; // Timer for debounced resize handling
+    let cachedFkeys = []; // Cache for legend optimization
 
     const updateTooltip = function(mousePos) {
         const tooltip = d3.select("#toptalk-tooltip");
@@ -399,6 +400,58 @@
       return colorScale(key);
     };
 
+    /* Check if two arrays are equal */
+    const arraysEqual = (a, b) => {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
+    };
+
+    /* Update the legend DOM - only called when flows change */
+    const updateLegend = (fkeys) => {
+      const legendContainer = d3.select("#toptalkLegendContainer");
+
+      // Remove old rows
+      legendContainer.selectAll(".legend-row").remove();
+
+      // Data join for new rows
+      const rows = legendContainer.selectAll(".legend-row")
+        .data(fkeys, d => d);
+
+      const rowsEnter = rows.enter()
+        .append("div")
+        .attr("class", "legend-row d-flex align-items-center mb-1 legend-text");
+
+      // Color box
+      rowsEnter.append("div")
+        .classed("legend-color-box flex-shrink-0", true)
+        .style("background-color", d => getFlowColor(d));
+
+      // Content
+      rowsEnter.each(function(d) {
+        const row = d3.select(this);
+        if (d === 'other') {
+          row.append("div").classed("col", true).style("padding-left", "10px").text("Other Flows");
+        } else {
+          const parts = d.split('/');
+          const sourceIP = parts[1];
+          const sourcePort = parts[2];
+          const destIP = parts[3];
+          const destPort = parts[4];
+          const proto = parts[5];
+          const tclass = parts[6];
+
+          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
+          row.append("div").style("width", "5%").classed("text-center flex-shrink-0", true).text("->");
+          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
+          row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(proto);
+          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(tclass);
+        }
+      });
+    };
+
 
     /* Update the chart (try to avoid memory allocations here!) */
     m.redraw = function() {
@@ -506,46 +559,11 @@
       barsbox.attr("transform",
                    "translate(" + margin.left + "," + (height + 55) + ")");
 
-      // legend box handling
-      const legendContainer = d3.select("#toptalkLegendContainer");
-      
-      // Remove old rows (except the header, which is the first child)
-      legendContainer.selectAll(".legend-row").remove();
-
-      // Data join for new rows
-      const rows = legendContainer.selectAll(".legend-row")
-        .data(fkeys, d => d);
-
-      const rowsEnter = rows.enter()
-        .append("div")
-        .attr("class", "legend-row d-flex align-items-center mb-1 legend-text");
-
-      // Color box
-      rowsEnter.append("div")
-        .classed("legend-color-box flex-shrink-0", true)
-        .style("background-color", d => getFlowColor(d));
-
-      // Content
-      rowsEnter.each(function(d) {
-        const row = d3.select(this);
-        if (d === 'other') {
-          row.append("div").classed("col", true).style("padding-left", "10px").text("Other Flows");
-        } else {
-          const parts = d.split('/');
-          const sourceIP = parts[1];
-          const sourcePort = parts[2];
-          const destIP = parts[3];
-          const destPort = parts[4];
-          const proto = parts[5];
-          const tclass = parts[6];
-
-          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
-          row.append("div").style("width", "5%").classed("text-center flex-shrink-0", true).text("->");
-          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
-          row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(proto);
-          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(tclass);
-        }
-      });
+      // Only update legend when flow list changes
+      if (!arraysEqual(fkeys, cachedFkeys)) {
+        updateLegend(fkeys);
+        cachedFkeys = fkeys.slice(); // Cache a copy
+      }
 
       // Update tooltip if active
       if (lastMousePosition) {
