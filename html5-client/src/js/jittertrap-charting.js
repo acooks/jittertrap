@@ -64,6 +64,8 @@
       container.select("svg")
                .attr("width", new_width)
                .attr("height", new_height);
+      
+      my.charts.setDirty();
     };
   };
 

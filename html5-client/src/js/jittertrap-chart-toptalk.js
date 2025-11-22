@@ -63,7 +63,7 @@
       left: 75
     };
 
-    const size = { width: 960, height: 500 };
+    const size = { width: 960, height: 400 };
     let xScale = d3.scaleLinear();
     let yScale = d3.scaleLinear();
     // Use Spectral interpolator for better distinctness with 20+ flows
@@ -318,6 +318,9 @@
          .attr("class", "barsbox")
          .attr("id", "barsbox")
          .append("text")
+           .attr("x", 0)
+           .attr("y", 35)
+           .style("font-size", "12px")
            .text("Byte Distribution")
 
       // Initialize the HTML legend header
@@ -325,15 +328,7 @@
       legendContainer.selectAll("*").remove(); // Clear any existing content
       
       // Create a table-like structure for the legend
-      const header = legendContainer.append("div")
-        .attr("class", "legend-header d-flex font-weight-bold border-bottom mb-1 pb-1 legend-text");
-        
-      header.append("div").style("width", "20px").html("&nbsp;"); // Color box placeholder
-      header.append("div").style("width", "35%").classed("text-right pr-2", true).text("Source IP:Port");
-      header.append("div").style("width", "5%").classed("text-center", true).text("->");
-      header.append("div").style("width", "35%").classed("text-left pl-2", true).text("Destination IP:Port");
-      header.append("div").style("width", "10%").text("Proto");
-      header.append("div").style("width", "10%").text("T/Class");
+      // (Header is now static in HTML)
 
       my.charts.resizeChart("#chartToptalk", size)();
     };
@@ -491,14 +486,14 @@
                     .enter().append("g").attr("class", "subbar");
 
       bars.append("rect")
-          .attr("height", 23)
+          .attr("height", 12)
           .attr("y", 9)
           .attr("x", d => x(d.x0))
           .attr("width", d => x(d.x1) - x(d.x0))
           .style("fill", d => getFlowColor(d.k));
 
       barsbox.attr("transform",
-                   "translate(" + margin.left + "," + (height + 50) + ")");
+                   "translate(" + margin.left + "," + (height + 55) + ")");
 
       // legend box handling
       const legendContainer = d3.select("#toptalkLegendContainer");
@@ -516,16 +511,14 @@
 
       // Color box
       rowsEnter.append("div")
-        .style("width", "18px")
-        .style("height", "18px")
-        .style("background-color", d => getFlowColor(d))
-        .style("margin-right", "2px");
+        .classed("legend-color-box flex-shrink-0", true)
+        .style("background-color", d => getFlowColor(d));
 
       // Content
       rowsEnter.each(function(d) {
         const row = d3.select(this);
         if (d === 'other') {
-          row.append("div").style("padding-left", "10px").text("Other Flows");
+          row.append("div").classed("col", true).style("padding-left", "10px").text("Other Flows");
         } else {
           const parts = d.split('/');
           const sourceIP = parts[1];
@@ -535,11 +528,11 @@
           const proto = parts[5];
           const tclass = parts[6];
 
-          row.append("div").style("width", "35%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
-          row.append("div").style("width", "5%").classed("text-center", true).text("->");
-          row.append("div").style("width", "35%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
-          row.append("div").style("width", "10%").text("| " + proto);
-          row.append("div").style("width", "10%").text("| " + tclass);
+          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(sourceIP + ":" + sourcePort);
+          row.append("div").style("width", "5%").classed("text-center flex-shrink-0", true).text("->");
+          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(destIP + ":" + destPort);
+          row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(proto);
+          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(tclass);
         }
       });
 
