@@ -175,12 +175,40 @@
              const bitrate = dp.data[fkey];
              content += `<br/>${formatBitrate(bitrate)}`;
 
+             // Set content and styling first
              tooltip.html(content)
-                    .style("left", (px + 10) + "px")
-                    .style("top", (py - 28) + "px")
                     .style("opacity", 1)
                     .style("background", getFlowColor(fkey))
                     .style("border", "1px solid #fff");
+
+             // Get tooltip dimensions for boundary detection
+             const tooltipNode = tooltip.node();
+             const tooltipWidth = tooltipNode.offsetWidth;
+             const tooltipHeight = tooltipNode.offsetHeight;
+             const viewportWidth = window.innerWidth;
+             const viewportHeight = window.innerHeight;
+
+             // Default offsets
+             let left = px + 10;
+             let top = py - 28;
+
+             // Check right boundary - flip to left if would go off-screen
+             if (left + tooltipWidth > viewportWidth) {
+               left = px - tooltipWidth - 10;
+             }
+
+             // Check top boundary - flip below cursor if would go off-screen
+             if (top < 0) {
+               top = py + 10;
+             }
+
+             // Check bottom boundary
+             if (top + tooltipHeight > viewportHeight) {
+               top = viewportHeight - tooltipHeight - 10;
+             }
+
+             tooltip.style("left", left + "px")
+                    .style("top", top + "px");
                     
              found = true;
              break;
