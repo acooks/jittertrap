@@ -367,6 +367,9 @@
 
       // Create a table-like structure for the legend
       // (Header is now static in HTML)
+
+      // Invalidate cached fkeys to force legend rebuild on next redraw
+      cachedFkeys = [];
     };
 
     /* Reformat chartData to work with the new d3 v7 API
