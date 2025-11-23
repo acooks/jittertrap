@@ -320,7 +320,7 @@
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + 35)
-           .text("Time");
+           .text("Time (s)");
 
       graph.append("g")
          .attr("class", "y axis")
@@ -504,12 +504,42 @@
 
       // Update xScale range instead of recreating
       xScale.range([0, width]);
-      /* compute the domain of x as the [min,max] extent of timestamps
-       * of the first (largest) flow */
-      if (processedChartData && processedChartData[0])
-        xScale.domain(d3.extent(processedChartData[0].values, d => d.ts));
 
       const { formattedData, maxSlice } = formatDataAndGetMaxSlice(processedChartData);
+
+      /* compute the domain of x as the [min,max] extent of timestamps
+       * of the first (largest) flow */
+      if (processedChartData && processedChartData[0]) {
+        xScale.domain(d3.extent(processedChartData[0].values, d => d.ts));
+      }
+
+      // Update time formatter: 0 = now (max), negative = past (oscilloscope style)
+      // Note: Top talkers timestamps are in seconds, not milliseconds
+      const currentDomain = xScale.domain();
+      if (currentDomain && currentDomain[1] !== undefined && !isNaN(currentDomain[1])) {
+        const maxTimestamp = currentDomain[1];
+        const minTimestamp = currentDomain[0];
+        const domainSpan = maxTimestamp - minTimestamp;
+
+        // Generate fixed tick positions in relative time (e.g., -20, -15, -10, -5, 0)
+        const tickInterval = Math.max(1, Math.ceil(domainSpan / 10)); // ~10 ticks, minimum 1 second
+        const tickValues = [];
+        let iterations = 0;
+        for (let relativeTime = 0; relativeTime >= -domainSpan && iterations < 100; relativeTime -= tickInterval) {
+          tickValues.unshift(maxTimestamp + relativeTime);
+          iterations++;
+        }
+
+        // Set explicit tick values to prevent scrolling
+        xAxis.tickValues(tickValues);
+        xGrid.tickValues(tickValues);
+
+        // Create custom formatter for seconds-based timestamps
+        xAxis.tickFormat(function(seconds) {
+          const relativeSeconds = seconds - maxTimestamp;
+          return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
+        });
+      }
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
 
