@@ -86,14 +86,148 @@
   flex-shrink: 0;
 }
 
-#toptalkLegend {
-  padding-left: 75px; /* Align with chart */
-}
-
 @media (max-width: 768px) {
+  /* Reduce chart text sizes on mobile to save space */
+  .title {
+    font-size: 0.9em;
+    font-weight: 500;
+  }
+
+  .axis-label {
+    font-size: 0.75em;
+  }
+
+  .axis .tick {
+    font-size: 0.7em;
+  }
+
+  /* Compact legend text */
+  .legend-text {
+    font-size: 10px;
+  }
+
+  /* Make charts taller on mobile to compensate for narrow width */
+  #chartThroughput {
+    height: 450px !important;
+  }
+
+  #packetGapContainer {
+    height: 350px !important;
+  }
+
+  #chartToptalk {
+    height: 450px !important;
+  }
+
+  #toptalkLegendContainer {
+    height: 200px !important;
+  }
+
+  /* Tighter spacing between charts on mobile */
+  .my-2 {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Compact controls on mobile */
+  .form-group {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Reduce measurements table font size */
   .measurements td,
   .measurements th {
-    font-size: .8rem;
+    font-size: 0.8rem;
+  }
+
+  /* Make tab toggle buttons more compact */
+  #chartTabToggles .btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  /* Reduce legend margins on mobile */
+  .legend-wrapper {
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+  }
+
+  /* Redesign legend for mobile - stack vertically instead of columns */
+  .legend-wrapper .d-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Hide column headers on mobile */
+  .legend-wrapper .border-bottom {
+    display: none !important;
+  }
+
+  /* Each legend row becomes a vertical card */
+  .legend-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 8px !important;
+    margin-bottom: 8px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+  }
+
+  /* Color box on mobile */
+  .legend-color-box {
+    width: 24px !important;
+    height: 24px !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Legend text elements stack vertically */
+  .legend-row > div {
+    width: 100% !important;
+    text-align: left !important;
+    padding: 2px 0 !important;
+    font-size: 11px !important;
+  }
+
+  /* Source and destination formatting */
+  .legend-row > div:nth-child(2)::before {
+    content: "From: ";
+    font-weight: bold;
+    color: #666;
+  }
+
+  .legend-row > div:nth-child(4)::before {
+    content: "To: ";
+    font-weight: bold;
+    color: #666;
+  }
+
+  /* Hide the arrow on mobile */
+  .legend-row > div:nth-child(3) {
+    display: none !important;
+  }
+
+  /* Protocol and class on same line */
+  .legend-row > div:nth-child(5) {
+    display: inline-block !important;
+    width: auto !important;
+    margin-right: 8px !important;
+  }
+
+  .legend-row > div:nth-child(5)::before {
+    content: "Proto: ";
+    font-weight: bold;
+    color: #666;
+  }
+
+  .legend-row > div:nth-child(6) {
+    display: inline-block !important;
+    width: auto !important;
+  }
+
+  .legend-row > div:nth-child(6)::before {
+    content: "Class: ";
+    font-weight: bold;
+    color: #666;
   }
 }
 
@@ -134,8 +268,75 @@ footer a {
   color: #4682B4;
 }
 
-@media (min-width: 992px) {
-  /* On desktop (lg and up), override the tab behavior to show both panels side-by-side */
+/* Responsive chart heights based on viewport height */
+/* Ensures app fits in 1080p and scales up for larger displays */
+
+@media (min-height: 700px) and (max-height: 899px) {
+  /* Common laptop displays (1366x768, 1440x900) - balanced for side-by-side view */
+  #chartThroughput {
+    height: 35vh !important;
+  }
+  #packetGapContainer {
+    height: 28vh !important;
+  }
+  #chartToptalk {
+    height: 42vh !important;
+  }
+  #toptalkLegendContainer {
+    height: 21vh !important;
+  }
+}
+
+@media (min-height: 900px) and (max-height: 1080px) {
+  /* 1080p displays - balanced panels for side-by-side view */
+  #chartThroughput {
+    height: 37vh !important;
+  }
+  #packetGapContainer {
+    height: 27vh !important;
+  }
+  #chartToptalk {
+    height: 36vh !important;
+  }
+  #toptalkLegendContainer {
+    height: 22vh !important;
+  }
+}
+
+@media (min-height: 1081px) and (max-height: 1440px) {
+  /* 1440p displays - moderate sizing */
+  #chartThroughput {
+    height: 35vh !important;
+  }
+  #packetGapContainer {
+    height: 25vh !important;
+  }
+  #chartToptalk {
+    height: 45vh !important;
+  }
+  #toptalkLegendContainer {
+    height: 22vh !important;
+  }
+}
+
+@media (min-height: 1441px) {
+  /* 4K and larger - expand to fill available space */
+  #chartThroughput {
+    height: 38vh !important;
+  }
+  #packetGapContainer {
+    height: 28vh !important;
+  }
+  #chartToptalk {
+    height: 50vh !important;
+  }
+  #toptalkLegendContainer {
+    height: 25vh !important;
+  }
+}
+
+@media (min-width: 1900px) {
+  /* On wide screens, show both panels side-by-side */
   #chartsGrid {
     display: flex;
     width: 100%;
@@ -148,9 +349,9 @@ footer a {
     padding: 0 15px; /* Simulate grid gutters */
   }
 
-  /* Hide the tab toggles on desktop since both are visible */
-  #showTputPanel, #showTopTalkPanel {
-    display: none;
+  /* Hide the tab toggles when both panels are visible side-by-side */
+  #chartTabToggles {
+    display: none !important;
   }
 }
 

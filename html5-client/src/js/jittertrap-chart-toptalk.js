@@ -56,11 +56,13 @@
   };
 
   my.charts.toptalk.toptalkChart = (function (m) {
+    // Use smaller margins on mobile devices
+    const isMobile = window.innerWidth <= 768;
     const margin = {
-      top: 20,
-      right: 20,
-      bottom: 100,
-      left: 75
+      top: isMobile ? 15 : 20,
+      right: isMobile ? 10 : 20,
+      bottom: isMobile ? 80 : 100,
+      left: isMobile ? 50 : 75
     };
 
     const size = { width: 960, height: 400 };
