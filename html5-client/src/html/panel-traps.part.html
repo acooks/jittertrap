@@ -22,14 +22,14 @@
                 <div class="form-group">
                   <label for="trap_names">Trap Type</label>
                   <select id="trap_names" class="form-control">
-                    <option data-trap-type="cur_rx_bitrate_mt" data-trap-units="Kbps">Rx Bitrate Exceeds</option>
-                    <option data-trap-type="cur_rx_bitrate_lt" data-trap-units="Kbps">Rx Bitrate Less Than</option>
-                    <option data-trap-type="mean_rx_bitrate" data-trap-units="Kbps">Mean Rx Bitrate Exceeds </option>
-                    <option data-trap-type="mean_tx_bitrate" data-trap-units="Kbps">Mean Tx Bitrate Exceeds </option>
-                    <option data-trap-type="max_rx_bitrate" data-trap-units="Kbps">Max Rx Bitrate Exceeds </option>
-                    <option data-trap-type="max_tx_bitrate" data-trap-units="Kbps">Max Tx Bitrate Exceeds </option>
-                    <option data-trap-type="min_rx_bitrate" data-trap-units="Kbps">Min Rx Bitrate Below </option>
-                    <option data-trap-type="min_tx_bitrate" data-trap-units="Kbps">Min Tx Bitrate Below </option>
+                    <option data-trap-type="cur_rx_bitrate_mt" data-trap-units="bps">Rx Bitrate Exceeds</option>
+                    <option data-trap-type="cur_rx_bitrate_lt" data-trap-units="bps">Rx Bitrate Less Than</option>
+                    <option data-trap-type="mean_rx_bitrate" data-trap-units="bps">Mean Rx Bitrate Exceeds </option>
+                    <option data-trap-type="mean_tx_bitrate" data-trap-units="bps">Mean Tx Bitrate Exceeds </option>
+                    <option data-trap-type="max_rx_bitrate" data-trap-units="bps">Max Rx Bitrate Exceeds </option>
+                    <option data-trap-type="max_tx_bitrate" data-trap-units="bps">Max Tx Bitrate Exceeds </option>
+                    <option data-trap-type="min_rx_bitrate" data-trap-units="bps">Min Rx Bitrate Below </option>
+                    <option data-trap-type="min_tx_bitrate" data-trap-units="bps">Min Tx Bitrate Below </option>
                     <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Rx Packet Spacing Exceeds</option>
                     <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Tx Packet Spacing Exceeds</option>
                   </select>
@@ -39,7 +39,7 @@
                   <div class="input-group">
                     <input id="trap_value" class="form-control" type="text" />
                     <div class="input-group-append">
-                      <span class="input-group-text">Kbps</span>
+                      <span class="input-group-text">bps</span>
                     </div>
                   </div>
                 </div>
@@ -54,7 +54,8 @@
       </div>
 
       <div class="table-responsive">
-        <table id="traps_table" class="table mt-4">
+        <h5 class="mt-4">Active Traps</h5>
+        <table id="traps_table" class="table mt-2">
           <thead>
             <tr>
               <th>Trap</th>
@@ -70,10 +71,11 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm measurements mt-4">
+        <h5 class="mt-4">Measurements</h5>
+        <table class="table table-sm measurements mt-2">
           <thead>
             <tr>
-              <th>Measurements</th>
+              <th>Metric</th>
               <th></th>
               <th>Rx</th>
               <th>Tx</th>
@@ -81,7 +83,7 @@
           </thead>
           <tbody>
           <tr>
-            <th>Throughput (kbps)</th>
+            <th>Throughput</th>
             <th>Min</th>
             <td><span id="jt-measure-tput-min-rx"></span></td>
             <td><span id="jt-measure-tput-min-tx"></span></td>
@@ -100,7 +102,7 @@
           </tr>
           <tr class="border-0"><td colspan="4"></td></tr>
           <tr>
-            <th>Packet Rate (pps)</th>
+            <th>Packet Rate</th>
             <th>Min</th>
             <td><span id="jt-measure-pktRate-min-rx"></span></td>
             <td><span id="jt-measure-pktRate-min-tx"></span></td>
@@ -119,7 +121,7 @@
           </tr>
           <tr class="border-0"><td colspan="4"></td></tr>
           <tr>
-            <th>Inter-packet Space (ms)</th>
+            <th>Inter-packet Space</th>
             <th>Max</th>
             <td><span id="jt-measure-zRun-max-rx"></span></td>
             <td><span id="jt-measure-zRun-max-tx"></span></td>
