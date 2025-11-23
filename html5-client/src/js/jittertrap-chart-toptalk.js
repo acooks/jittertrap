@@ -537,8 +537,8 @@
 
       svg = d3.select("#chartToptalk");
 
-      svg.select(".x.axis").transition().duration(20).call(xAxis);
-      svg.select(".y.axis").transition().duration(20).call(yAxis);
+      svg.select(".x.axis").call(xAxis);
+      svg.select(".y.axis").call(yAxis);
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
