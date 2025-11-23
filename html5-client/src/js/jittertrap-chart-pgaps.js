@@ -109,7 +109,7 @@
            .attr("text-anchor", "middle")
            .attr("x", width/2)
            .attr("y", height + margin.bottom - 10)
-           .text("Time (ms)");
+           .text("Time (s)");
 
       graph.append("g")
          .attr("class", "y axis")
@@ -166,6 +166,25 @@
       /* Scale the range of the data again */
       xScale.domain(d3.extent(chartData.packetGapMean, d => d.x));
       yScale.domain([0, d3.max(chartData.packetGapMinMax, d => d.y[1])]);
+
+      // Update time formatter: 0 = now (max), negative = past (oscilloscope style)
+      const domainExtent = xScale.domain();
+      const maxTimestamp = domainExtent[1];
+      const minTimestamp = domainExtent[0];
+      const domainSpanMs = maxTimestamp - minTimestamp;
+
+      // Generate fixed tick positions in relative time to prevent scrolling
+      const tickIntervalMs = Math.max(1000, Math.ceil(domainSpanMs / 10 / 1000) * 1000); // Round to whole seconds, minimum 1s
+      const tickValues = [];
+      let iterations = 0;
+      for (let relativeTime = 0; relativeTime >= -domainSpanMs && iterations < 100; relativeTime -= tickIntervalMs) {
+        tickValues.unshift(maxTimestamp + relativeTime);
+        iterations++;
+      }
+
+      xAxis.tickValues(tickValues);
+      xAxis.tickFormat(JT.charts.createTimeFormatter(maxTimestamp));
+      xGrid.tickValues(tickValues);
 
       // Update grids
       xGrid.tickSize(-height);

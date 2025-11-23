@@ -14,6 +14,7 @@
   /* Dirty flag signals when a redraw is needed. */
   let isDirty = true;
 
+
   /* time (milliseconds) represented by each point on the chart */
   params.plotPeriod        = 100;
   params.plotPeriodMin     = 1;
@@ -120,6 +121,23 @@
     return params.plotPeriod;
   };
 
+  /* Create a time formatter that shows time relative to now (max timestamp)
+   * This creates oscilloscope-style display where 0 = "now" and negative values = "past"
+   * e.g., -20s to 0s where 0 is the most recent data */
+  const createTimeFormatter = function (maxTimeMs) {
+    return function (milliseconds) {
+      // Handle undefined or invalid values
+      if (typeof milliseconds !== 'number' || typeof maxTimeMs !== 'number' ||
+          isNaN(milliseconds) || isNaN(maxTimeMs)) {
+        return '0';
+      }
+      const relativeMs = milliseconds - maxTimeMs;
+      const seconds = relativeMs / 1000;
+      // Remove unnecessary decimals for whole numbers
+      return seconds % 1 === 0 ? seconds.toString() : seconds.toFixed(1);
+    };
+  };
+
 
   const toggleStopStartGraph = function() {
     if (drawIntervalID) {
@@ -156,6 +174,7 @@
   my.charts.getChartPeriod = getChartPeriod;
   my.charts.setChartPeriod = setChartPeriod;
   my.charts.resetChart = resetChart;
+  my.charts.createTimeFormatter = createTimeFormatter;
 
 })(JT);
 /* End of jittertrap-charting.js */
