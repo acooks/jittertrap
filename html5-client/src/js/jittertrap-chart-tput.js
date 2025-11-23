@@ -16,11 +16,13 @@
   };
 
   my.charts.tput.tputChart = (function (m) {
+    // Use smaller margins on mobile devices
+    const isMobile = window.innerWidth <= 768;
     const margin = {
-      top: 20,
-      right: 20,
-      bottom: 40,
-      left: 75
+      top: isMobile ? 15 : 20,
+      right: isMobile ? 10 : 20,
+      bottom: isMobile ? 35 : 40,
+      left: isMobile ? 50 : 75
     };
 
     const size = { width: 960, height: 400 };
@@ -170,8 +172,15 @@
       svg.select(".yGrid").call(yGrid);
     };
 
-    d3.select(window).on('resize.chartThroughput',
-                         my.charts.resizeChart("#chartThroughput", size));
+    let resizeTimer;
+    d3.select(window).on('resize.chartThroughput', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        my.charts.resizeChart("#chartThroughput", size)();
+        m.reset(my.core.getSelectedSeries());
+        my.charts.setDirty();
+      }, 100);
+    });
     return m;
 
   }({}));

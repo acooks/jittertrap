@@ -26,8 +26,8 @@
           
           <button id="chopts_stop_start" class="btn btn-secondary mr-4">Pause/Run</button>
 
-          <!-- Mobile Tab Buttons -->
-          <div class="btn-group nav d-lg-none" role="tablist">
+          <!-- Tab Toggle Buttons (visible below 1900px) -->
+          <div class="btn-group nav" id="chartTabToggles" role="tablist">
             <a class="btn btn-secondary nav-link active" id="showTputPanel" data-toggle="tab" href="#tputPanel" role="tab">Throughput</a>
             <a class="btn btn-secondary nav-link" id="showTopTalkPanel" data-toggle="tab" href="#toptalkPanel" role="tab">Top Talkers</a>
           </div>
@@ -50,8 +50,8 @@
              </div>
            
              <!-- Content -->
-             <div id="chartThroughput" style="height: 400px; width:100%;" class="my-3"></div>
-             <div id="packetGapContainer" style="height: 300px; width: 100%;" class="my-3"></div>
+             <div id="chartThroughput" style="height: 400px; width:100%;" class="my-2"></div>
+             <div id="packetGapContainer" style="height: 300px; width: 100%;" class="my-2"></div>
           </div>
 
           <!-- Top Talkers Panel -->
@@ -73,13 +73,13 @@
 
                                                                                                                       <!-- Content -->
 
-                                                                                                                      <div id="chartToptalk" style="height: 400px; width:100%;" class="my-3"></div>
+                                                                                                                      <div id="chartToptalk" style="height: 400px; width:100%;" class="my-2"></div>
 
                                                                                                                       
 
                                                                                                                       <!-- Legend Wrapper for alignment -->
 
-                                                                                                                      <div class="legend-wrapper mt-3" style="margin-left: 75px;">
+                                                                                                                      <div class="legend-wrapper mt-3" style="margin-left: 75px; margin-right: 20px;">
 
                                                                                                                         <!-- Legend Header -->
 
