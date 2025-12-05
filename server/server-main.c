@@ -15,6 +15,7 @@
 
 #include "proto.h"
 #include "proto-jittertrap.h"
+#include "pcap_buffer.h"
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -69,8 +70,37 @@ static struct option options[] = {
 };
 
 
+/* MIME type for pcap files */
+static const struct lws_protocol_vhost_options pcap_mimetype = {
+        NULL,                           /* next */
+        NULL,                           /* options */
+        ".pcap",                        /* extension */
+        "application/vnd.tcpdump.pcap"  /* MIME type */
+};
+
+/* Mount for pcap file downloads - must be first in chain */
+static struct lws_http_mount pcap_mount = {
+        .mount_next             = NULL,             /* will be set to &mount */
+        .mountpoint             = "/pcap",          /* mountpoint URL */
+        .origin                 = PCAP_BUF_PCAP_DIR, /* serve from pcap dir */
+        .def                    = NULL,             /* no default filename */
+        .protocol               = NULL,
+        .cgienv                 = NULL,
+        .extra_mimetypes        = &pcap_mimetype,
+        .interpret              = NULL,
+        .cgi_timeout            = 0,
+        .cache_max_age          = 0,
+        .auth_mask              = 0,
+        .cache_reusable         = 0,
+        .cache_revalidate       = 0,
+        .cache_intermediaries   = 0,
+        .origin_protocol        = LWSMPRO_FILE,     /* files in a dir */
+        .mountpoint_len         = 5,                /* strlen("/pcap") */
+        .basic_auth_login_file  = NULL
+};
+
 static struct lws_http_mount mount = {
-        .mount_next             = NULL,             /* linked-list "next" */
+        .mount_next             = &pcap_mount,      /* chain to pcap mount */
         .mountpoint             = "/",              /* mountpoint URL */
         .origin                 = "./mount-origin", /* serve from dir */
         .def                    = "index.html",     /* default filename */
@@ -172,6 +202,14 @@ int main(int argc, char **argv)
 
 	syslog(LOG_NOTICE, "jittertrap server\n");
 	syslog(LOG_INFO, "Using resource path \"%s\"\n", resource_path);
+
+	/* Initialize pcap buffer with default config */
+	if (pcap_buf_ensure_directory() != 0) {
+		syslog(LOG_WARNING, "Could not create pcap directory\n");
+	}
+	if (pcap_buf_init(NULL) != 0) {
+		syslog(LOG_WARNING, "Could not initialize pcap buffer\n");
+	}
 
 	info.iface = iface;
 	info.protocols = protocols;

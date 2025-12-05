@@ -45,6 +45,10 @@ void *tt_intervals_run(void *p);
 int tt_intervals_init(struct tt_thread_info *ti);
 int tt_intervals_free(struct tt_thread_info *ti);
 
+/* Optional callbacks for packet capture integration */
+void tt_set_pcap_callback(void (*store_cb)(const struct pcap_pkthdr *, const uint8_t *),
+                          void (*iface_cb)(int dlt));
+
 #define handle_error_en(en, msg) \
         do {                                                                   \
                 errno = en;                                                    \

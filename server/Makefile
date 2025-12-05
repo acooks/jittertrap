@@ -38,6 +38,7 @@ SOURCES = \
  netem.c \
  slist.c \
  intervals_user.c \
+ pcap_buffer.c \
 
 
 HEADERS = \
@@ -56,6 +57,7 @@ HEADERS = \
  tt_thread.h \
  sample_buf.h \
  slist.h \
+ pcap_buffer.h \
 
 OBJECTS += compute_thread.o
 OBJECTS += server-main.o
@@ -72,6 +74,7 @@ OBJECTS += sample_buf.o
 OBJECTS += netem.o
 OBJECTS += slist.o
 OBJECTS += intervals_user.o
+OBJECTS += pcap_buffer.o
 
 
 MESSAGEHEADERS = \
@@ -83,6 +86,7 @@ MESSAGEHEADERS = \
  ../messages/include/jt_msg_netem_params.h \
  ../messages/include/jt_msg_sample_period.h \
  ../messages/include/jt_msg_set_netem.h \
+ ../messages/include/jt_msg_pcap.h \
 
 MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
 
@@ -148,12 +152,16 @@ test-multi-mq: $(MQ_MULTI_TEST_SOURCES) $(Q_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEP
 test-slist: test_slist.c slist.o
 	$(CC) -o test-slist test_slist.c slist.o $(CFLAGS) -O0 $(DEFINES)
 
+test-pcap: test_pcap_buffer.c pcap_buffer.o
+	$(CC) -o test-pcap test_pcap_buffer.c pcap_buffer.o $(CFLAGS) -O0 $(DEFINES) -lpcap -lpthread
+
 .PHONY: test
-test: test-mq test-mq-mt test-multi-mq test-slist
+test: test-mq test-mq-mt test-multi-mq test-slist test-pcap
 	./test-mq >/dev/null
 	./test-mq-mt >/dev/null
 	./test-multi-mq >/dev/null
 	./test-slist
+	./test-pcap
 	@echo -e "Test OK\n"
 
 TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
@@ -164,5 +172,5 @@ test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 .PHONY: clean
 clean:
 	rm $(PROG) *.o || true
-	rm test-mq test-mq-mt test-multi-mq || true
+	rm test-mq test-mq-mt test-multi-mq test-pcap || true
 	rm *.gcno *.gcov *.gcda || true

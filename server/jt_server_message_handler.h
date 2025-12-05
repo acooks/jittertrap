@@ -8,6 +8,8 @@ int jt_srv_send_iface_list(void);
 int jt_srv_send_select_iface(void);
 int jt_srv_send_netem_params(void);
 int jt_srv_send_sample_period(void);
+int jt_srv_send_pcap_config(void);
+int jt_srv_send_pcap_status(void);
 int jt_srv_resume(void);
 int jt_srv_pause(void);
 #endif

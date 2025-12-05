@@ -71,6 +71,23 @@
 
 
   actionTypes = (function (my) {
+    /* PCAP Trigger Action - triggers packet capture on threshold */
+    my.pcapTriggerAction = {};
+
+    my.pcapTriggerAction.act = (trap, val) => {
+      if (JT.pcapModule && JT.pcapModule.isRecording()) {
+        const reason = 'Trap ' + trap.trapType + ' triggered at ' + val.toFixed(2);
+        JT.pcapModule.trigger(reason);
+        console.log('[PCAP] Trap trigger: ' + reason);
+      }
+    };
+
+    my.pcapTriggerAction.reset = () => {};
+
+    return my;
+  }(actionTypes));
+
+  actionTypes = (function (my) {
     my.blinkAction = {};
     my.blinkTimeoutHandles = {};
     const handles = actionTypes.blinkTimeoutHandles;
@@ -244,6 +261,7 @@
       const t = new Trap(trapType, map.series, map.test, trapValueInt);
       //t.addAction(actionTypes.logAction);
       t.addAction(actionTypes.blinkAction);
+      t.addAction(actionTypes.pcapTriggerAction);
       trapsBin[t.trapUID] = t;
       addTrapToUI(t);
     }

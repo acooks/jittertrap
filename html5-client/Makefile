@@ -25,6 +25,7 @@ concat: createdirs
 	cat src/js/jittertrap-chart-pgaps.js               >> ${CONCAT}
 	cat src/js/jittertrap-chart-toptalk.js             >> ${CONCAT}
 	cat src/js/jittertrap-traps.js                     >> ${CONCAT}
+	cat src/js/jittertrap-pcap.js                      >> ${CONCAT}
 	cat src/js/jittertrap-programs.js                  >> ${CONCAT}
 	cat src/js/jittertrap-version.js                   >> ${CONCAT}
 	cat src/js/jittertrap.js                           >> ${CONCAT}
@@ -86,6 +87,7 @@ assemble-html: createdirs
 	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat $(IMPAIRMENTS_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PCAP-SIDEBAR##|`cat src/html/pcap-sidebar.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
 
 install:

@@ -20,6 +20,9 @@ $(document).ready(function() {
   // Initialise charts and start render loop
   JT.charts.init()
 
+  // Initialize PCAP module
+  JT.pcapModule.initUI();
+
   // UI Event Handlers
   $("#chopts_series").bind('change', JT.charts.resetChart);
   $('#set_netem_button').bind('click', JT.ws.set_netem);

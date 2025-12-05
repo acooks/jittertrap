@@ -1,0 +1,93 @@
+<!-- PCAP Buffer Sidebar -->
+<div id="pcap-sidebar" class="card bg-light" style="position: fixed; right: 10px; top: 70px; width: 280px; z-index: 1000;">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span>
+      <i class="fas fa-download"></i>
+      <strong>PCAP Buffer</strong>
+    </span>
+    <span id="pcap-status-badge" class="badge badge-secondary">
+      <span id="pcap-status">Disabled</span>
+    </span>
+  </div>
+  <div class="card-body py-2">
+    <!-- Enable/Disable Toggle -->
+    <div class="custom-control custom-switch mb-2">
+      <input type="checkbox" class="custom-control-input" id="pcap_enabled">
+      <label class="custom-control-label" for="pcap_enabled">Enable Recording</label>
+    </div>
+
+    <!-- Buffer Progress -->
+    <div class="mb-2">
+      <small class="text-muted">Buffer Fullness</small>
+      <div class="progress" style="height: 20px;">
+        <div class="progress-bar bg-info" id="pcap-buffer-progress"
+             role="progressbar" style="width: 0%"
+             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          0s
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <table class="table table-sm table-borderless mb-2" style="font-size: 0.85em;">
+      <tr>
+        <td class="text-muted py-0">Packets:</td>
+        <td class="py-0 text-right"><span id="pcap-packets">0</span></td>
+      </tr>
+      <tr>
+        <td class="text-muted py-0">Data:</td>
+        <td class="py-0 text-right"><span id="pcap-bytes">0 B</span></td>
+      </tr>
+      <tr>
+        <td class="text-muted py-0">Memory:</td>
+        <td class="py-0 text-right"><span id="pcap-memory">0 MB</span></td>
+      </tr>
+      <tr>
+        <td class="text-muted py-0">Dropped:</td>
+        <td class="py-0 text-right"><span id="pcap-dropped">0</span></td>
+      </tr>
+    </table>
+
+    <!-- Trigger Button -->
+    <button class="btn btn-primary btn-sm btn-block mb-2" id="pcap-trigger-btn" disabled>
+      <i class="fas fa-camera"></i> Capture Now
+    </button>
+
+    <!-- Settings Toggle -->
+    <button class="btn btn-outline-secondary btn-sm btn-block" id="pcap-settings-toggle"
+            data-toggle="collapse" data-target="#pcap-settings-panel">
+      <i class="fas fa-cog"></i> Settings
+    </button>
+
+    <!-- Collapsible Settings Panel -->
+    <div class="collapse mt-2" id="pcap-settings-panel">
+      <div class="form-group mb-2">
+        <label for="pcap_duration" class="small mb-0">Buffer Duration (sec)</label>
+        <input type="number" class="form-control form-control-sm" id="pcap_duration"
+               value="30" min="5" max="300">
+      </div>
+      <div class="form-group mb-2">
+        <label for="pcap_max_memory" class="small mb-0">Max Memory (MB)</label>
+        <input type="number" class="form-control form-control-sm" id="pcap_max_memory"
+               value="256" min="16" max="2048">
+      </div>
+      <div class="form-group mb-2">
+        <label for="pcap_pre_trigger" class="small mb-0">Pre-trigger (sec)</label>
+        <input type="number" class="form-control form-control-sm" id="pcap_pre_trigger"
+               value="25" min="0" max="300">
+      </div>
+      <div class="form-group mb-2">
+        <label for="pcap_post_trigger" class="small mb-0">Post-trigger (sec)</label>
+        <input type="number" class="form-control form-control-sm" id="pcap_post_trigger"
+               value="5" min="0" max="60">
+      </div>
+      <button class="btn btn-sm btn-success btn-block" id="pcap-apply-config">
+        Apply Settings
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container for notifications -->
+<div id="pcap-toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050;">
+</div>
