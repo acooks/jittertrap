@@ -57,6 +57,22 @@ $(document).ready(function() {
   $('#devSelectForm').submit(function(e){ e.preventDefault(); });
   $('#impairmentsForm').submit(false);
 
+  // Context-sensitive help: expand relevant section based on active tab
+  $('#help').on('show.bs.modal', function() {
+    const activeTab = $('.nav-link.active').attr('href');
+    let targetSection = '#helpCharts';  // default
+    if (activeTab === '#impairmentsPanel') {
+      targetSection = '#helpImpairments';
+    } else if (activeTab === '#trapsPanel') {
+      targetSection = '#helpTraps';
+    }
+    // Collapse all, then show target
+    $('#helpAccordion .collapse').removeClass('show');
+    $('#helpAccordion .btn-link').addClass('collapsed');
+    $(targetSection).addClass('show');
+    $(targetSection).prev().find('.btn-link').removeClass('collapsed');
+  });
+
 
   // Changing traps from the list of traps in the trap modal
   $('#trap_names').bind('change', JT.trapModule.trapSelectionHandler);
