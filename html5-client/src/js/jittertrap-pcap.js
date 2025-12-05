@@ -205,8 +205,8 @@
       enabled: 1,
       max_memory_mb: 256,
       duration_sec: 30,
-      pre_trigger_sec: 27,
-      post_trigger_sec: 3
+      pre_trigger_sec: 30,
+      post_trigger_sec: 0
     };
     JT.ws.pcap_config(config);
   };
@@ -233,8 +233,8 @@
       enabled: 1,
       max_memory_mb: 256,
       duration_sec: 30,
-      pre_trigger_sec: parseInt($('#pcap_pre_trigger').val()) || 27,
-      post_trigger_sec: parseInt($('#pcap_post_trigger').val()) || 3
+      pre_trigger_sec: parseInt($('#pcap_pre_trigger').val()) || 30,
+      post_trigger_sec: parseInt($('#pcap_post_trigger').val()) || 0
     };
 
     /* Validate */
