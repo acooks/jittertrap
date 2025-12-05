@@ -22,6 +22,10 @@ ifeq ($(DISABLE_IMPAIRMENTS), 1)
 DEFINES += -DDISABLE_IMPAIRMENTS
 endif
 
+ifeq ($(DISABLE_PCAP), 1)
+DEFINES += -DDISABLE_PCAP
+endif
+
 SOURCES = \
  server-main.c \
  proto.c \

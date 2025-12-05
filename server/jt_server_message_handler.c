@@ -333,6 +333,12 @@ int jt_srv_send_pcap_ready(struct pcap_buf_trigger_result *result)
 
 static int set_pcap_config(void *data)
 {
+#ifdef DISABLE_PCAP
+	(void)data;
+	syslog(LOG_WARNING,
+	       "ignoring set_pcap_config request: pcap disabled at compile time\n");
+	return 0;
+#else
 	struct jt_msg_pcap_config *cfg = data;
 	struct pcap_buf_config buf_cfg;
 
@@ -375,10 +381,17 @@ static int set_pcap_config(void *data)
 	jt_srv_send_pcap_status();
 
 	return 0;
+#endif
 }
 
 static int trigger_pcap(void *data)
 {
+#ifdef DISABLE_PCAP
+	(void)data;
+	syslog(LOG_WARNING,
+	       "ignoring pcap trigger request: pcap disabled at compile time\n");
+	return 0;
+#else
 	struct jt_msg_pcap_trigger *trigger = data;
 	struct pcap_buf_trigger_result result;
 	int err;
@@ -409,6 +422,7 @@ static int trigger_pcap(void *data)
 	jt_srv_send_pcap_status();
 
 	return 0;
+#endif
 }
 
 static int stats_consumer(struct mq_stats_msg *m, void *data)
