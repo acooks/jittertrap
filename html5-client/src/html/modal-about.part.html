@@ -2,29 +2,34 @@
         <div class="modal-dialog" role="document">
           <div id="version" class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="aboutModalLabel">Version info:</h5>
+              <h5 class="modal-title" id="aboutModalLabel">About JitterTrap</h5>
               <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
             <div class="modal-body">
-              <div>
-                <p>
-                  Version: <span id="jt-version-maintainer"></span>
-                </p>
-                <p>
-                  Repository: <span id="jt-version-repo"></span>
-                </p>
-                <p>
-                  Branch: <span id="jt-version-branch"></span> <span id="jt-version-clean"></span>
-                </p>
-                <p>
-                  Last commit: <span id="jt-version-commit"></span>, <span id="jt-version-commit-time"></span>
-                </p>
-              </div>
+              <p>JitterTrap is a network measurement and impairment tool for analyzing traffic patterns and simulating adverse network conditions.</p>
+
+              <table class="table table-sm table-borderless mb-3">
+                <tr>
+                  <td style="width: 70px;">Version</td>
+                  <td><span id="jt-version-maintainer"></span> (<span id="jt-version-branch"></span> <span id="jt-version-clean"></span>)</td>
+                </tr>
+                <tr>
+                  <td>Commit</td>
+                  <td><span id="jt-version-commit"></span>, <span id="jt-version-commit-time"></span></td>
+                </tr>
+              </table>
+
+              <p><a href="https://github.com/acooks/jittertrap" target="_blank"><i class="fab fa-github"></i> GitHub</a> &mdash; source code, issues, releases</p>
+
+              <p class="small text-muted mb-0">
+                Copyright &copy; 2014&ndash;2025 Andrew Cooks and contributors.<br>
+                Licensed under the GNU GPLv2.
+              </p>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
             </div>
           </div>
         </div>
