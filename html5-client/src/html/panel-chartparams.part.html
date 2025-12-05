@@ -24,10 +24,12 @@
             </div>
           </div>
           
-          <button id="chopts_stop_start" class="btn btn-secondary">Pause/Run</button>
-          <button id="pcap-trigger-btn" class="btn btn-secondary ml-2 mr-4" title="Capture packets to pcap file">
-            <i class="fas fa-camera"></i> Capture
-          </button>
+          <div class="d-flex" id="actionButtons">
+            <button id="chopts_stop_start" class="btn btn-secondary"><i class="fas fa-pause"></i> Pause</button>
+            <button id="pcap-trigger-btn" class="btn btn-secondary ml-2" title="Capture packets to pcap file">
+              <i class="fas fa-camera"></i> Capture
+            </button>
+          </div>
 
           <!-- Tab Toggle Buttons (visible below 1900px) -->
           <div class="btn-group nav" id="chartTabToggles" role="tablist">

@@ -140,11 +140,14 @@
 
 
   const toggleStopStartGraph = function() {
+    const btn = $('#chopts_stop_start');
     if (drawIntervalID) {
       cancelAnimationFrame(drawIntervalID);
       drawIntervalID = 0;
+      btn.html('<i class="fas fa-play"></i> Run');
     } else {
       drawIntervalID = requestAnimationFrame(animationLoop);
+      btn.html('<i class="fas fa-pause"></i> Pause');
     }
   };
 
