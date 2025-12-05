@@ -268,6 +268,30 @@ footer a {
   color: #4682B4;
 }
 
+/* Main tab styling - match Throughput/Top Talkers toggle */
+.nav-tabs {
+  border-bottom: none;
+}
+
+.nav-tabs .nav-link {
+  background-color: transparent;
+  border: 1px solid #6c757d;
+  color: #6c757d;
+  margin-right: 2px;
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+  border-color: #6c757d;
+  color: #5a6268;
+}
+
+.nav-tabs .nav-link.active {
+  background-color: #4682B4;
+  border-color: #4682B4;
+  color: #fff;
+}
+
 /* Responsive chart heights based on viewport height */
 /* Ensures app fits in 1080p and scales up for larger displays */
 
@@ -372,4 +396,50 @@ footer a {
   z-index: 1000;
   box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
   transition: opacity 0.1s ease;
+}
+
+/* Normalize button sizes in chart controls */
+#chartTabToggles.btn-group .btn.nav-link {
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  background-color: transparent;
+  border: 1px solid #6c757d;
+  color: #6c757d;
+}
+
+#chartTabToggles.btn-group .btn.nav-link:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #5a6268;
+}
+
+#chartTabToggles.btn-group .btn.nav-link.active {
+  background-color: #4682B4;
+  border-color: #4682B4;
+  color: #fff;
+}
+
+/* Match interval selector height to buttons */
+#chartsForm .input-group {
+  height: 38px;
+}
+
+#chartsForm .input-group .form-control,
+#chartsForm .input-group .input-group-text {
+  height: 100%;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+/* Fixed width for Pause/Run button to prevent size changes */
+#chopts_stop_start {
+  width: 5.5rem;
+}
+
+/* Visual separators between control groups */
+#chartsForm > .d-flex > .form-group:first-child,
+#actionButtons {
+  padding-right: 1rem;
+  border-right: 1px solid #dee2e6;
+  margin-right: 1rem !important;
 }

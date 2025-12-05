@@ -19,6 +19,21 @@
 
 #include "intervals.h"
 
+/* Optional packet capture callback - set by server if needed */
+static void (*pcap_store_callback)(const struct pcap_pkthdr *, const uint8_t *) = NULL;
+static void (*pcap_iface_callback)(int dlt) = NULL;
+
+void tt_set_pcap_callback(void (*store_cb)(const struct pcap_pkthdr *, const uint8_t *),
+                          void (*iface_cb)(int dlt))
+{
+	pcap_store_callback = store_cb;
+	pcap_iface_callback = iface_cb;
+}
+
+#define PCAP_BUF_STORE(hdr, data) do { \
+	if (pcap_store_callback) pcap_store_callback(hdr, data); \
+} while(0)
+
 struct flow_hash {
 	struct flow_record f;
 	union {
@@ -430,6 +445,9 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 	char errstr[DECODE_ERRBUF_SIZE];
 	struct flow_pkt pkt = { 0 };
 
+	/* Store raw packet in rolling buffer for pcap capture */
+	PCAP_BUF_STORE(pcap_hdr, wirebits);
+
 	if (0 == cbdata->decoder(pcap_hdr, wirebits, &pkt, errstr)) {
 		update_stats_tables(&pkt);
 		cbdata->result.err = 0;
@@ -486,6 +504,11 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 		                "not supported\n",
 		        *dev);
 		return 1;
+	}
+
+	/* Notify server of interface/datalink change if callback registered */
+	if (pcap_iface_callback) {
+		pcap_iface_callback(dlt);
 	}
 
 	if (pcap_setnonblock(pi->handle, 1, errbuf) != 0) {

@@ -1,18 +1,159 @@
-<!-- Traps -->
+<!-- Traps & Measurements -->
 <div id="trapsPanel" class="tab-pane fade">
   <div class="card">
     <div class="card-body">
-      <button id="trap_add" class="btn btn-secondary" data-toggle="modal" data-target="#add_trap_modal" type="button">
-        <i class="fas fa-plus" aria-hidden="true"></i>
-        Add Trap
-      </button>
 
-      <!-- Trap Dialog viewed by clicking the Add Trap button -->
+      <!-- Two-column layout on larger screens -->
+      <div class="row">
+
+        <!-- Left Column: Packet Capture and Traps -->
+        <div class="col-lg-6">
+
+          <!-- Packet Capture Section -->
+          <h5 class="mb-3">Packet Capture</h5>
+          <table class="table table-sm">
+            <tbody>
+              <tr>
+                <td style="width: 120px;">Status</td>
+                <td>
+                  <span id="pcap-status-badge" class="badge badge-secondary"><span id="pcap-status">Disabled</span></span>
+                </td>
+              </tr>
+              <tr>
+                <td>Buffer</td>
+                <td>
+                  <span id="pcap-buffer-time">0</span>s
+                  &mdash;
+                  <span id="pcap-packets">0</span> packets,
+                  <span id="pcap-bytes">0 B</span>
+                </td>
+              </tr>
+              <tr>
+                <td>Trigger Window</td>
+                <td>
+                  <div class="form-inline">
+                    <input type="number" class="form-control form-control-sm" id="pcap_pre_trigger"
+                           value="30" min="0" max="30" style="width: 60px;">
+                    <span class="mx-1">+</span>
+                    <input type="number" class="form-control form-control-sm" id="pcap_post_trigger"
+                           value="0" min="0" max="30" style="width: 60px;">
+                    <span class="ml-1 mr-2">sec</span>
+                    <button type="button" class="btn btn-secondary btn-sm" id="pcap-apply-config">Apply</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Traps Section -->
+          <div class="d-flex align-items-center mt-4 mb-3">
+            <h5 class="mb-0 mr-3">Traps</h5>
+            <button id="trap_add" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#add_trap_modal" type="button">
+              <i class="fas fa-plus" aria-hidden="true"></i> Add
+            </button>
+          </div>
+
+          <table id="traps_table" class="table table-sm">
+            <thead>
+              <tr>
+                <th>Condition</th>
+                <th>Threshold</th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Traps added dynamically -->
+            </tbody>
+          </table>
+
+        </div>
+
+        <!-- Right Column: Measurements -->
+        <div class="col-lg-6">
+          <h5 class="mb-3">Measurements</h5>
+          <table class="table table-sm measurements">
+            <thead>
+              <tr>
+                <th></th>
+                <th></th>
+                <th class="text-right">Rx</th>
+                <th class="text-right">Tx</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="3"><strong>Throughput</strong></td>
+                <td>Min</td>
+                <td><span id="jt-measure-tput-min-rx"></span></td>
+                <td><span id="jt-measure-tput-min-tx"></span></td>
+              </tr>
+              <tr>
+                <td>Max</td>
+                <td><span id="jt-measure-tput-max-rx"></span></td>
+                <td><span id="jt-measure-tput-max-tx"></span></td>
+              </tr>
+              <tr>
+                <td>Mean</td>
+                <td><span id="jt-measure-tput-mean-rx"></span></td>
+                <td><span id="jt-measure-tput-mean-tx"></span></td>
+              </tr>
+
+              <tr><td colspan="4" class="border-0 py-1"></td></tr>
+
+              <tr>
+                <td rowspan="3"><strong>Packet Rate</strong></td>
+                <td>Min</td>
+                <td><span id="jt-measure-pktRate-min-rx"></span></td>
+                <td><span id="jt-measure-pktRate-min-tx"></span></td>
+              </tr>
+              <tr>
+                <td>Max</td>
+                <td><span id="jt-measure-pktRate-max-rx"></span></td>
+                <td><span id="jt-measure-pktRate-max-tx"></span></td>
+              </tr>
+              <tr>
+                <td>Mean</td>
+                <td><span id="jt-measure-pktRate-mean-rx"></span></td>
+                <td><span id="jt-measure-pktRate-mean-tx"></span></td>
+              </tr>
+
+              <tr><td colspan="4" class="border-0 py-1"></td></tr>
+
+              <tr>
+                <td rowspan="2"><strong>Packet Gap</strong></td>
+                <td>Max</td>
+                <td><span id="jt-measure-zRun-max-rx"></span></td>
+                <td><span id="jt-measure-zRun-max-tx"></span></td>
+              </tr>
+              <tr>
+                <td>Mean</td>
+                <td><span id="jt-measure-zRun-mean-rx"></span></td>
+                <td><span id="jt-measure-zRun-mean-tx"></span></td>
+              </tr>
+
+              <tr><td colspan="4" class="border-0 py-1"></td></tr>
+
+              <tr>
+                <td><strong>Sample Period</strong></td>
+                <td colspan="3"><span id="jt-measure-sample-period"></span></td>
+              </tr>
+              <tr>
+                <td><strong>Data Samples</strong></td>
+                <td colspan="3"><span id="jt-measure-datalength"></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div> <!-- end row -->
+
+      <!-- Add Trap Modal -->
       <div class="modal fade" id="add_trap_modal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Add a Trap</h5>
+              <h5 class="modal-title">Add Trap</h5>
               <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
               </button>
@@ -20,22 +161,22 @@
             <div class="modal-body">
               <form>
                 <div class="form-group">
-                  <label for="trap_names">Trap Type</label>
+                  <label for="trap_names">Condition</label>
                   <select id="trap_names" class="form-control">
                     <option data-trap-type="cur_rx_bitrate_mt" data-trap-units="bps">Rx Bitrate Exceeds</option>
                     <option data-trap-type="cur_rx_bitrate_lt" data-trap-units="bps">Rx Bitrate Less Than</option>
-                    <option data-trap-type="mean_rx_bitrate" data-trap-units="bps">Mean Rx Bitrate Exceeds </option>
-                    <option data-trap-type="mean_tx_bitrate" data-trap-units="bps">Mean Tx Bitrate Exceeds </option>
-                    <option data-trap-type="max_rx_bitrate" data-trap-units="bps">Max Rx Bitrate Exceeds </option>
-                    <option data-trap-type="max_tx_bitrate" data-trap-units="bps">Max Tx Bitrate Exceeds </option>
-                    <option data-trap-type="min_rx_bitrate" data-trap-units="bps">Min Rx Bitrate Below </option>
-                    <option data-trap-type="min_tx_bitrate" data-trap-units="bps">Min Tx Bitrate Below </option>
-                    <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Rx Packet Spacing Exceeds</option>
-                    <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Tx Packet Spacing Exceeds</option>
+                    <option data-trap-type="mean_rx_bitrate" data-trap-units="bps">Mean Rx Bitrate Exceeds</option>
+                    <option data-trap-type="mean_tx_bitrate" data-trap-units="bps">Mean Tx Bitrate Exceeds</option>
+                    <option data-trap-type="max_rx_bitrate" data-trap-units="bps">Max Rx Bitrate Exceeds</option>
+                    <option data-trap-type="max_tx_bitrate" data-trap-units="bps">Max Tx Bitrate Exceeds</option>
+                    <option data-trap-type="min_rx_bitrate" data-trap-units="bps">Min Rx Bitrate Below</option>
+                    <option data-trap-type="min_tx_bitrate" data-trap-units="bps">Min Tx Bitrate Below</option>
+                    <option data-trap-type="rx_pkt_gap" data-trap-units="ms">Max Rx Packet Gap Exceeds</option>
+                    <option data-trap-type="tx_pkt_gap" data-trap-units="ms">Max Tx Packet Gap Exceeds</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="trap_value">Value</label>
+                  <label for="trap_value">Threshold</label>
                   <div class="input-group">
                     <input id="trap_value" class="form-control" type="text" />
                     <div class="input-group-append">
@@ -43,108 +184,22 @@
                     </div>
                   </div>
                 </div>
+                <div class="form-group">
+                  <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="trap_pcap_trigger" checked>
+                    <label class="custom-control-label" for="trap_pcap_trigger">Trigger packet capture</label>
+                  </div>
+                </div>
               </form>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-              <button type="button" class="btn btn-primary" id="add_trap_button">Add</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" id="add_trap_button">Add Trap</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="table-responsive">
-        <h5 class="mt-4">Active Traps</h5>
-        <table id="traps_table" class="table mt-2">
-          <thead>
-            <tr>
-              <th>Trap</th>
-              <th>Value</th>
-              <th>Options</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Example Trap after being added through the UI -->
-          </tbody>
-        </table>
-      </div>
-
-      <div class="table-responsive">
-        <h5 class="mt-4">Measurements</h5>
-        <table class="table table-sm measurements mt-2">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th></th>
-              <th>Rx</th>
-              <th>Tx</th>
-            </tr>
-          </thead>
-          <tbody>
-          <tr>
-            <th>Throughput</th>
-            <th>Min</th>
-            <td><span id="jt-measure-tput-min-rx"></span></td>
-            <td><span id="jt-measure-tput-min-tx"></span></td>
-          </tr>
-          <tr>
-            <th></th>
-            <th>Max</th>
-            <td><span id="jt-measure-tput-max-rx"></span></td>
-            <td><span id="jt-measure-tput-max-tx"></span></td>
-          </tr>
-          <tr>
-            <th></th>
-            <th>Mean</th>
-            <td><span id="jt-measure-tput-mean-rx"></span></td>
-            <td><span id="jt-measure-tput-mean-tx"></span></td>
-          </tr>
-          <tr class="border-0"><td colspan="4"></td></tr>
-          <tr>
-            <th>Packet Rate</th>
-            <th>Min</th>
-            <td><span id="jt-measure-pktRate-min-rx"></span></td>
-            <td><span id="jt-measure-pktRate-min-tx"></span></td>
-          </tr>
-          <tr>
-            <th></th>
-            <th>Max</th>
-            <td><span id="jt-measure-pktRate-max-rx"></span></td>
-            <td><span id="jt-measure-pktRate-max-tx"></span></td>
-          </tr>
-          <tr>
-            <th></th>
-            <th>Mean</th>
-            <td><span id="jt-measure-pktRate-mean-rx"></span></td>
-            <td><span id="jt-measure-pktRate-mean-tx"></span></td>
-          </tr>
-          <tr class="border-0"><td colspan="4"></td></tr>
-          <tr>
-            <th>Inter-packet Space</th>
-            <th>Max</th>
-            <td><span id="jt-measure-zRun-max-rx"></span></td>
-            <td><span id="jt-measure-zRun-max-tx"></span></td>
-          </tr>
-          <tr>
-            <th></th>
-            <th>Mean</th>
-            <td><span id="jt-measure-zRun-mean-rx"></span></td>
-            <td><span id="jt-measure-zRun-mean-tx"></span></td>
-          </tr>
-          <tr class="border-0"><td colspan="4"></td></tr>
-          <tr>
-            <th>Sample Period</th>
-            <td colspan=3><span id="jt-measure-sample-period"></span></td>
-          </tr><tr>
-            <th>Data Samples</th>
-            <td colspan=3><span id="jt-measure-datalength"></span></td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-
     </div> <!-- end card body -->
   </div> <!-- end card -->
 </div> <!-- end tab pane -->
-<!-- End of Traps -->

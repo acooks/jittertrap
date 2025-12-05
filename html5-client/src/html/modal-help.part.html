@@ -1,5 +1,5 @@
       <div id="help" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="helpModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg" role="document">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="helpModalLabel">Help</h5>
@@ -7,29 +7,231 @@
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
-            <div class="modal-body">
-              <h3>Impairment Help</h3>
-              <p>Delay, Delay Variation (Jitter) and Loss are applied to all packets <em>transmitted</em> by the selected interface.</p>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+              <div class="accordion" id="helpAccordion">
 
-              <h4>Delay:</h4>
-              <p>A basic time delay, specified in milliseconds.</p>
-              <h5>Example:</h5>
-              <p>42</p>
+                <!-- Charts -->
+                <div class="card">
+                  <div class="card-header py-2 px-3" id="helpChartsHead">
+                    <button class="btn btn-link p-0" type="button" data-toggle="collapse" data-target="#helpCharts">
+                      <i class="fas fa-chart-bar mr-2"></i>Charts
+                    </button>
+                  </div>
+                  <div id="helpCharts" class="collapse show" data-parent="#helpAccordion">
+                    <div class="card-body">
+                      <p>The Charts tab displays real-time network traffic on the selected interface.</p>
 
-              <h4>Delay Variation (Jitter):</h4>
-              <p> a modifier applied to the basic delay. Each packet is delayed by an additional random length of time in the range: plus-minus Delay Variation.</p>
-              <p>Note 1: The actual delay for a packet is calculated as the sum of Delay and the random Delay Variation value and can not be negative, so negative values are clamped at zero.</p>
-              <p>Note 2: If Delay Variation is non-zero, the Delay parameter has to be non-zero as well.</p>
-              <h5>Example:</h5>
-              <p>22</p>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;" class="align-top"><strong>Throughput</strong></td>
+                          <td>
+                            Shows bitrate or packet rate over time. Use the <strong>Series</strong> dropdown to switch between:
+                            <ul class="mb-0 mt-1">
+                              <li>Rx Bitrate &mdash; incoming bits per second</li>
+                              <li>Tx Bitrate &mdash; outgoing bits per second</li>
+                              <li>Rx Packet Rate &mdash; incoming packets per second</li>
+                              <li>Tx Packet Rate &mdash; outgoing packets per second</li>
+                            </ul>
+                            The Y-axis auto-scales to fit the data.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Packet Gap</strong></td>
+                          <td>
+                            Shows the time between consecutive packets (inter-packet gap). Useful for detecting:
+                            <ul class="mb-0 mt-1">
+                              <li>Gaps in traffic from buffering or scheduling issues</li>
+                              <li>Periodic pauses that might indicate application behavior</li>
+                              <li>Network problems causing packet bunching or delays</li>
+                            </ul>
+                            Spikes indicate periods with no packets. The blue line shows the mean packet gap, while the red/pink shading shows the min/max range observed during each sampling interval.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Top Talkers</strong></td>
+                          <td>
+                            Shows bandwidth usage broken down by flow (source/destination IP address and port). Each flow gets a unique color. Hover over the legend to see flow details.
+                            <br><br>
+                            Use the <strong>Y-Axis Scale</strong> toggle to switch between:
+                            <ul class="mb-0 mt-1">
+                              <li>Logarithmic &mdash; better for mixed traffic with high and low bandwidth flows</li>
+                              <li>Linear &mdash; better for comparing flows of similar magnitude</li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
 
-              <h4>Loss:</h4>
-              <p>A percentage of random packet loss. Each packet has X percent chance of being dropped.</p>
-              <h5>Example:</h5>
-              <p>7</p>
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Controls</h6>
+                      <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                          <td style="width: 140px;"><strong>Interface</strong></td>
+                          <td>Select which network interface to monitor. All charts and measurements apply to this interface.</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Interval</strong></td>
+                          <td>Chart time resolution in milliseconds. This controls how data is aggregated for display, not the underlying sampling rate. Lower values show more detail (zoom in), higher values show longer time spans (zoom out). Common values: 100ms for general use, 10-20ms for detailed analysis, 500-1000ms for long-term trends.</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Pause/Run</strong></td>
+                          <td>Freeze the charts to examine data, or resume live updates. While paused, data continues to be collected but not displayed.</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Capture</strong></td>
+                          <td>Trigger a packet capture. Downloads the buffered packets as a pcap file. See Packet Capture section for details.</td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Impairments -->
+                <div class="card">
+                  <div class="card-header py-2 px-3" id="helpImpairmentsHead">
+                    <button class="btn btn-link collapsed p-0" type="button" data-toggle="collapse" data-target="#helpImpairments">
+                      <i class="fas fa-hourglass-half mr-2"></i>Impairments
+                    </button>
+                  </div>
+                  <div id="helpImpairments" class="collapse" data-parent="#helpAccordion">
+                    <div class="card-body">
+                      <p>Impairments simulate adverse network conditions by applying delay, jitter, and packet loss to traffic <em>transmitted</em> by the selected interface. This is useful for testing how applications behave under poor network conditions.</p>
+
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;" class="align-top"><strong>Delay</strong></td>
+                          <td>
+                            Adds a fixed latency to every outgoing packet, specified in milliseconds.
+                            <br><br>
+                            Example: Setting delay to 50ms simulates a network path with 50ms one-way latency (100ms round-trip if applied on both ends).
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Jitter</strong></td>
+                          <td>
+                            Adds random variation to the delay. Each packet gets the base delay plus or minus a random value up to this amount. The total delay cannot go negative (clamped to zero).
+                            <br><br>
+                            Example: Delay 50ms + Jitter 10ms means each packet is delayed between 40-60ms.
+                            <br><br>
+                            <em>Note: Jitter requires a non-zero Delay value to be set.</em>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Loss</strong></td>
+                          <td>
+                            Randomly drops a percentage of outgoing packets. Each packet has an independent chance of being dropped.
+                            <br><br>
+                            Example: 5% loss means each packet has a 5% chance of being dropped, regardless of other packets.
+                          </td>
+                        </tr>
+                      </table>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Programs</h6>
+                      <p class="mb-0">Programs let you script sequences of impairment changes over time. This is useful for simulating varying network conditions during a test, such as gradually degrading quality or periodic disruptions. Click <strong>Add Program</strong> to create a new program with the template syntax.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Traps & Measurements -->
+                <div class="card">
+                  <div class="card-header py-2 px-3" id="helpTrapsHead">
+                    <button class="btn btn-link collapsed p-0" type="button" data-toggle="collapse" data-target="#helpTraps">
+                      <i class="fas fa-exclamation-triangle mr-2"></i>Traps &amp; Measurements
+                    </button>
+                  </div>
+                  <div id="helpTraps" class="collapse" data-parent="#helpAccordion">
+                    <div class="card-body">
+                      <h6 class="font-weight-bold">Traps</h6>
+                      <p>Traps monitor traffic and trigger actions when thresholds are crossed. Use them to detect anomalies like throughput drops, traffic spikes, or excessive packet gaps.</p>
+
+                      <p><strong>Creating a trap:</strong></p>
+                      <ol>
+                        <li>Click <strong>Add</strong> to open the trap dialog</li>
+                        <li>Select a condition (e.g., "Rx Bitrate Exceeds", "Max Rx Packet Gap Exceeds")</li>
+                        <li>Enter a threshold value in the appropriate units (bps or ms)</li>
+                        <li>Optionally check "Trigger packet capture" to automatically capture packets when the trap fires</li>
+                        <li>Click <strong>Add Trap</strong></li>
+                      </ol>
+
+                      <p><strong>Trap indicators:</strong></p>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 180px;"><i class="fas fa-circle text-muted"></i> Grey circle</td>
+                          <td>Trap has not been triggered</td>
+                        </tr>
+                        <tr>
+                          <td><i class="fas fa-circle text-danger"></i> Red circle</td>
+                          <td>Trap has been triggered &mdash; the threshold was crossed</td>
+                        </tr>
+                        <tr>
+                          <td><i class="fas fa-camera text-muted"></i> Grey camera</td>
+                          <td>Packet capture enabled, not yet triggered</td>
+                        </tr>
+                        <tr>
+                          <td><i class="fas fa-camera text-success"></i> Green camera</td>
+                          <td>Packet capture was triggered (one-shot &mdash; will not trigger again until reset)</td>
+                        </tr>
+                      </table>
+
+                      <p>Click the <i class="fas fa-undo"></i> reset button to clear the triggered state and re-arm the trap. Click <i class="fas fa-times"></i> to delete a trap.</p>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Measurements</h6>
+                      <p>Shows min/max/mean statistics for the data currently displayed in the charts:</p>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;"><strong>Throughput</strong></td>
+                          <td>Bits per second (bps, kbps, Mbps, Gbps)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Packet Rate</strong></td>
+                          <td>Packets per second (pps)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Packet Gap</strong></td>
+                          <td>Time between consecutive packets in milliseconds</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Sample Period</strong></td>
+                          <td>Current sampling interval</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Data Samples</strong></td>
+                          <td>Number of samples in the current chart window</td>
+                        </tr>
+                      </table>
+                      <p>Statistics are calculated over the visible chart data and reset when you change interfaces or the sample period.</p>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Packet Capture</h6>
+                      <p>JitterTrap maintains a rolling buffer of recent packets (up to 30 seconds). When you click <strong>Capture</strong> or a trap triggers, the buffered packets are saved to a pcap file and downloaded automatically.</p>
+
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;"><strong>Status</strong></td>
+                          <td>Shows whether packet recording is active (Recording) or not (Disabled). Recording starts automatically when you select an interface.</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Buffer</strong></td>
+                          <td>Current buffer depth in seconds, number of packets stored, and total data size.</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Pre + Post</strong></td>
+                          <td>
+                            Configure how much data to capture around the trigger event:
+                            <ul class="mb-0 mt-1">
+                              <li><strong>Pre</strong> &mdash; seconds of data before the trigger (from the buffer)</li>
+                              <li><strong>Post</strong> &mdash; seconds of data after the trigger (continues recording)</li>
+                            </ul>
+                            Default is 27 + 3 = 30 seconds total. Click <strong>Apply</strong> to change.
+                          </td>
+                        </tr>
+                      </table>
+                      <p class="mb-0">The downloaded pcap file can be opened in Wireshark or similar tools for detailed packet-level analysis.</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- end accordion -->
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
             </div>
           </div>
         </div>

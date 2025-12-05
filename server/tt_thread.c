@@ -17,6 +17,7 @@
 #include "intervals.h"
 
 #include "tt_thread.h"
+#include "pcap_buffer.h"
 
 struct tt_thread_info ti = {
 	0,
@@ -113,10 +114,30 @@ int is_valid_proto(int potential_proto)
 	}
 }
 
+/* Callback wrapper for pcap buffer packet storage */
+static void pcap_store_cb(const struct pcap_pkthdr *hdr, const uint8_t *data)
+{
+	pcap_buf_store_packet(hdr, data);
+}
+
+/* Callback for interface/datalink changes */
+static void pcap_iface_cb(int dlt)
+{
+	pcap_buf_set_datalink(dlt);
+	pcap_buf_clear();
+}
+
 int tt_thread_restart(char *iface)
 {
 	int err;
 	void *res;
+	static int callbacks_registered = 0;
+
+	/* Register pcap buffer callbacks once */
+	if (!callbacks_registered) {
+		tt_set_pcap_callback(pcap_store_cb, pcap_iface_cb);
+		callbacks_registered = 1;
+	}
 
 	if (ti.thread_id) {
 		pthread_cancel(ti.thread_id);

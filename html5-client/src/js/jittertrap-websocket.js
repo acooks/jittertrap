@@ -37,6 +37,11 @@
     selectedIface = $('#dev_select').val();
     JT.core.clearAllSeries();
     JT.charts.resetChart();
+
+    /* Auto-enable PCAP recording when interface is selected */
+    if (JT.pcapModule) {
+      JT.pcapModule.enable();
+    }
   };
 
   const handleMsgIfaces = function(params) {
@@ -59,6 +64,24 @@
     console.log("sample period: " + period);
     JT.core.clearAllSeries();
     JT.charts.resetChart();
+  };
+
+  const handleMsgPcapConfig = function(params) {
+    if (JT.pcapModule) {
+      JT.pcapModule.updateConfig(params);
+    }
+  };
+
+  const handleMsgPcapStatus = function(params) {
+    if (JT.pcapModule) {
+      JT.pcapModule.updateStatus(params);
+    }
+  };
+
+  const handleMsgPcapReady = function(params) {
+    if (JT.pcapModule) {
+      JT.pcapModule.handleFileReady(params);
+    }
   };
 
 
@@ -95,6 +118,22 @@
     return false;
   };
 
+  const pcap_config = function(config) {
+    const msg = JSON.stringify({
+      'msg': 'pcap_config',
+      'p': config
+    });
+    sock.send(msg);
+  };
+
+  const pcap_trigger = function(reason) {
+    const msg = JSON.stringify({
+      'msg': 'pcap_trigger',
+      'p': { 'reason': reason || 'Manual trigger' }
+    });
+    sock.send(msg);
+  };
+
   const messageHandlers = {
     stats: (params) => {
       if (params.iface === selectedIface) handleMsgUpdateStats(params);
@@ -104,6 +143,9 @@
     iface_list: handleMsgIfaces,
     netem_params: handleMsgNetemParams,
     sample_period: handleMsgSamplePeriod,
+    pcap_config: handleMsgPcapConfig,
+    pcap_status: handleMsgPcapStatus,
+    pcap_ready: handleMsgPcapReady,
   };
 
   Object.freeze(messageHandlers); // Prevent modification of messageHandlers
@@ -177,6 +219,8 @@
   my.ws.dev_select = dev_select;
   my.ws.set_netem = set_netem;
   my.ws.clear_netem = clear_netem;
+  my.ws.pcap_config = pcap_config;
+  my.ws.pcap_trigger = pcap_trigger;
 
 
 })(JT);

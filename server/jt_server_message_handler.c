@@ -12,6 +12,7 @@
 #include <math.h>
 #include <assert.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include <jansson.h>
 #include "jittertrap.h"
@@ -29,6 +30,8 @@
 
 #include "jt_message_types.h"
 #include "jt_messages.h"
+
+#include "pcap_buffer.h"
 
 
 #define QUOTE(str) #str
@@ -251,6 +254,177 @@ int jt_srv_send_sample_period(void)
 	return jt_srv_send(JT_MSG_SAMPLE_PERIOD_V1, &sp);
 }
 
+int jt_srv_send_pcap_config(void)
+{
+	struct pcap_buf_config buf_cfg;
+	struct jt_msg_pcap_config msg;
+
+	if (pcap_buf_get_config(&buf_cfg) != 0) {
+		/* Buffer not initialized */
+		msg.enabled = 0;
+		msg.max_memory_mb = PCAP_BUF_DEFAULT_MAX_MEM_MB;
+		msg.duration_sec = PCAP_BUF_DEFAULT_DURATION_SEC;
+		msg.pre_trigger_sec = PCAP_BUF_DEFAULT_PRE_TRIGGER;
+		msg.post_trigger_sec = PCAP_BUF_DEFAULT_POST_TRIGGER;
+	} else {
+		pcap_buf_state_t state = pcap_buf_get_state();
+		msg.enabled = (state != PCAP_BUF_STATE_DISABLED) ? 1 : 0;
+		msg.max_memory_mb = buf_cfg.max_memory_bytes / (1024 * 1024);
+		msg.duration_sec = buf_cfg.duration_sec;
+		msg.pre_trigger_sec = buf_cfg.pre_trigger_sec;
+		msg.post_trigger_sec = buf_cfg.post_trigger_sec;
+	}
+
+	return jt_srv_send(JT_MSG_PCAP_CONFIG_V1, &msg);
+}
+
+int jt_srv_send_pcap_status(void)
+{
+	struct pcap_buf_stats buf_stats;
+	struct jt_msg_pcap_status msg;
+	struct timeval now;
+
+	if (pcap_buf_get_stats(&buf_stats) != 0) {
+		/* Buffer not initialized */
+		memset(&msg, 0, sizeof(msg));
+		msg.state = PCAP_BUF_STATE_DISABLED;
+	} else {
+		msg.state = buf_stats.state;
+		msg.total_packets = buf_stats.total_packets;
+		msg.total_bytes = buf_stats.total_bytes;
+		msg.dropped_packets = buf_stats.dropped_packets;
+		msg.current_memory_bytes = buf_stats.current_memory;
+		msg.buffer_percent = buf_stats.buffer_percent;
+
+		/* Calculate oldest packet age */
+		gettimeofday(&now, NULL);
+		if (buf_stats.oldest_ts_sec > 0 && now.tv_sec >= (time_t)buf_stats.oldest_ts_sec) {
+			msg.oldest_age_sec = now.tv_sec - buf_stats.oldest_ts_sec;
+		} else {
+			msg.oldest_age_sec = 0;
+		}
+	}
+
+	return jt_srv_send(JT_MSG_PCAP_STATUS_V1, &msg);
+}
+
+int jt_srv_send_pcap_ready(struct pcap_buf_trigger_result *result)
+{
+	struct jt_msg_pcap_ready msg;
+	char *basename_ptr;
+
+	/* Extract just the filename for the URL path */
+	basename_ptr = strrchr(result->filepath, '/');
+	if (basename_ptr) {
+		snprintf(msg.filename, sizeof(msg.filename),
+		         "/pcap%s", basename_ptr);
+	} else {
+		/* No slash in path - use filename directly, truncate if needed */
+		snprintf(msg.filename, sizeof(msg.filename),
+		         "/pcap/%.240s", result->filepath);
+	}
+
+	msg.file_size = result->file_size;
+	msg.packet_count = result->packet_count;
+	msg.duration_sec = result->duration_sec;
+
+	return jt_srv_send(JT_MSG_PCAP_READY_V1, &msg);
+}
+
+static int set_pcap_config(void *data)
+{
+#ifdef DISABLE_PCAP
+	(void)data;
+	syslog(LOG_WARNING,
+	       "ignoring set_pcap_config request: pcap disabled at compile time\n");
+	return 0;
+#else
+	struct jt_msg_pcap_config *cfg = data;
+	struct pcap_buf_config buf_cfg;
+
+	/* Get current config as base */
+	if (pcap_buf_get_config(&buf_cfg) != 0) {
+		/* Initialize with defaults if not yet initialized */
+		buf_cfg.max_memory_bytes = cfg->max_memory_mb * 1024 * 1024;
+		buf_cfg.duration_sec = cfg->duration_sec;
+		buf_cfg.pre_trigger_sec = cfg->pre_trigger_sec;
+		buf_cfg.post_trigger_sec = cfg->post_trigger_sec;
+		buf_cfg.datalink_type = DLT_EN10MB;
+		buf_cfg.snaplen = BUFSIZ;
+
+		if (pcap_buf_init(&buf_cfg) != 0) {
+			syslog(LOG_ERR, "Failed to initialize pcap buffer\n");
+			return -1;
+		}
+	} else {
+		/* Update existing config */
+		buf_cfg.duration_sec = cfg->duration_sec;
+		buf_cfg.pre_trigger_sec = cfg->pre_trigger_sec;
+		buf_cfg.post_trigger_sec = cfg->post_trigger_sec;
+
+		if (cfg->max_memory_mb > 0) {
+			buf_cfg.max_memory_bytes = cfg->max_memory_mb * 1024 * 1024;
+		}
+
+		pcap_buf_set_config(&buf_cfg);
+	}
+
+	/* Enable or disable based on config */
+	if (cfg->enabled) {
+		pcap_buf_enable();
+	} else {
+		pcap_buf_disable();
+	}
+
+	/* Send updated config and status back to client */
+	jt_srv_send_pcap_config();
+	jt_srv_send_pcap_status();
+
+	return 0;
+#endif
+}
+
+static int trigger_pcap(void *data)
+{
+#ifdef DISABLE_PCAP
+	(void)data;
+	syslog(LOG_WARNING,
+	       "ignoring pcap trigger request: pcap disabled at compile time\n");
+	return 0;
+#else
+	struct jt_msg_pcap_trigger *trigger = data;
+	struct pcap_buf_trigger_result result;
+	int err;
+
+	syslog(LOG_INFO, "PCAP trigger requested: %s\n", trigger->reason);
+
+	/* Trigger the capture */
+	err = pcap_buf_trigger(trigger->reason);
+	if (err) {
+		syslog(LOG_ERR, "PCAP trigger failed\n");
+		return -1;
+	}
+
+	/* Wait for post-trigger period if configured */
+	while (!pcap_buf_post_trigger_complete()) {
+		usleep(100000); /* 100ms */
+	}
+
+	/* Write the pcap file */
+	err = pcap_buf_write_file(&result);
+	if (err) {
+		syslog(LOG_ERR, "PCAP file write failed\n");
+		return -1;
+	}
+
+	/* Send ready notification to client */
+	jt_srv_send_pcap_ready(&result);
+	jt_srv_send_pcap_status();
+
+	return 0;
+#endif
+}
+
 static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
 	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
@@ -371,6 +545,10 @@ int jt_srv_resume(void)
 	return 0;
 }
 
+/* Counter for periodic pcap status updates */
+static int pcap_status_tick = 0;
+#define PCAP_STATUS_INTERVAL 100  /* Send pcap status every 100 ticks (~1s) */
+
 int jt_server_tick(void)
 {
 	switch (g_jt_state) {
@@ -380,11 +558,20 @@ int jt_server_tick(void)
 		jt_srv_send_select_iface();
 		jt_srv_send_netem_params();
 		jt_srv_send_sample_period();
+		jt_srv_send_pcap_config();
+		jt_srv_send_pcap_status();
 		break;
 	case JT_STATE_RUNNING:
 		/* queue a stats msg (if there is one) */
 		jt_srv_send_stats();
 		jt_srv_send_tt();
+
+		/* Periodically send pcap status */
+		pcap_status_tick++;
+		if (pcap_status_tick >= PCAP_STATUS_INTERVAL) {
+			jt_srv_send_pcap_status();
+			pcap_status_tick = 0;
+		}
 		break;
 	case JT_STATE_PAUSED:
 		break;
@@ -457,6 +644,12 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 			break;
 		case JT_MSG_HELLO_V1:
 			syslog(LOG_INFO, "new session");
+			break;
+		case JT_MSG_PCAP_CONFIG_V1:
+			err = set_pcap_config(data);
+			break;
+		case JT_MSG_PCAP_TRIGGER_V1:
+			err = trigger_pcap(data);
 			break;
 		default:
 			/* no way to get here, right? */

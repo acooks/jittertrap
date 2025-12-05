@@ -6,7 +6,7 @@ $(document).ready(function() {
   $("#jt-version-repo").html(JT.version.repo);
   $("#jt-version-branch").html(JT.version.branch);
   $("#jt-version-commit").html(JT.version.commit);
-  $("#jt-version-commit-time").html(new Date(JT.version.commitTime * 1000));
+  $("#jt-version-commit-time").html(new Date(JT.version.commitTime * 1000).toLocaleDateString());
   $("#jt-version-clean").html(JT.version.isClean);
 
   // Initialize Chart Options
@@ -19,6 +19,9 @@ $(document).ready(function() {
 
   // Initialise charts and start render loop
   JT.charts.init()
+
+  // Initialize PCAP module
+  JT.pcapModule.initUI();
 
   // UI Event Handlers
   $("#chopts_series").bind('change', JT.charts.resetChart);
@@ -53,6 +56,22 @@ $(document).ready(function() {
   $('#chartsForm').submit(function(e){ e.preventDefault(); });
   $('#devSelectForm').submit(function(e){ e.preventDefault(); });
   $('#impairmentsForm').submit(false);
+
+  // Context-sensitive help: expand relevant section based on active tab
+  $('#help').on('show.bs.modal', function() {
+    const activeTab = $('.nav-link.active').attr('href');
+    let targetSection = '#helpCharts';  // default
+    if (activeTab === '#impairmentsPanel') {
+      targetSection = '#helpImpairments';
+    } else if (activeTab === '#trapsPanel') {
+      targetSection = '#helpTraps';
+    }
+    // Collapse all, then show target
+    $('#helpAccordion .collapse').removeClass('show');
+    $('#helpAccordion .btn-link').addClass('collapsed');
+    $(targetSection).addClass('show');
+    $(targetSection).prev().find('.btn-link').removeClass('collapsed');
+  });
 
 
   // Changing traps from the list of traps in the trap modal

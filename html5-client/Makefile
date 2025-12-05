@@ -25,6 +25,7 @@ concat: createdirs
 	cat src/js/jittertrap-chart-pgaps.js               >> ${CONCAT}
 	cat src/js/jittertrap-chart-toptalk.js             >> ${CONCAT}
 	cat src/js/jittertrap-traps.js                     >> ${CONCAT}
+	cat src/js/jittertrap-pcap.js                      >> ${CONCAT}
 	cat src/js/jittertrap-programs.js                  >> ${CONCAT}
 	cat src/js/jittertrap-version.js                   >> ${CONCAT}
 	cat src/js/jittertrap.js                           >> ${CONCAT}
@@ -76,6 +77,15 @@ IMPAIRMENTS_PART = src/html/panel-impairments-disabled.part.html
 endif
 endif
 
+PCAP_BUTTON_PART = src/html/pcap-button.part.html
+PCAP_DISABLED_MODAL_PART = src/html/empty.part.html
+ifdef DISABLE_PCAP
+ifeq ($(DISABLE_PCAP), 1)
+PCAP_BUTTON_PART = src/html/pcap-button-disabled.part.html
+PCAP_DISABLED_MODAL_PART = src/html/pcap-disabled-modal.part.html
+endif
+endif
+
 TPL = ${OUT}/index.html
 assemble-html: createdirs
 	cp src/html/favicon.svg ${OUT}
@@ -86,6 +96,8 @@ assemble-html: createdirs
 	perl -pe 's|##PANEL-CHARTPARAMS##|`cat src/html/panel-chartparams.part.html`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-IMPAIRMENTS##|`cat $(IMPAIRMENTS_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PANEL-TRAPS##|`cat src/html/panel-traps.part.html`|ge' -i ${TPL}
+	perl -pe 's|##PCAP-BUTTON##|`cat $(PCAP_BUTTON_PART)`|ge' -i ${TPL}
+	perl -pe 's|##PCAP-DISABLED-MODAL##|`cat $(PCAP_DISABLED_MODAL_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
 
 install:

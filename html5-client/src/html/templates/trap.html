@@ -1,24 +1,16 @@
 <tr data-trap-id="{{trapUID}}">
   <td>{{trapName}}</td>
+  <td>{{trapValue}} {{trapUnits}}</td>
   <td>
-    <div class="input-group">
-      <div class="form-control">{{trapValue}}</div>
-      <div class="input-group-append">
-        <span class="input-group-text">{{trapUnits}}</span>
-      </div>
-    </div>
+    {{#trapPcap}}<i class="fas fa-camera text-muted" id="{{trapUID}}_pcap" title="Will trigger packet capture"></i>{{/trapPcap}}
+    <i class="fas fa-circle text-muted" id="{{trapUID}}_led" title="Not triggered"></i>
   </td>
   <td>
-    <button type="button" class="btn btn-secondary" id="{{trapUID}}_delete">
-      <span class="fas fa-minus" aria-hidden="true"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="{{trapUID}}_reset" title="Reset">
+      <i class="fas fa-undo"></i>
     </button>
-    <button type="button" class="btn btn-secondary" id="{{trapUID}}_reset">
-      <span class="fas fa-sync-alt" aria-hidden="true"></span>
+    <button type="button" class="btn btn-sm btn-outline-danger" id="{{trapUID}}_delete" title="Delete">
+      <i class="fas fa-times"></i>
     </button>
-  </td>
-  <td>
-    <div>
-      <span class="fas fa-exclamation-triangle" id="{{trapUID}}_led"></span>
-    </div>
   </td>
 </tr>
