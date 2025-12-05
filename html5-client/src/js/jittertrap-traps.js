@@ -71,18 +71,37 @@
 
 
   actionTypes = (function (my) {
-    /* PCAP Trigger Action - triggers packet capture on threshold */
+    /* PCAP Trigger Action - triggers packet capture on threshold (one-shot) */
     my.pcapTriggerAction = {};
+    my.pcapTriggeredTraps = {};  /* Track which traps have fired */
 
     my.pcapTriggerAction.act = (trap, val) => {
+      /* Only trigger once per trap until reset */
+      if (my.pcapTriggeredTraps[trap.trapUID]) {
+        return;
+      }
+
       if (JT.pcapModule && JT.pcapModule.isRecording()) {
         const reason = 'Trap ' + trap.trapType + ' triggered at ' + val.toFixed(2);
         JT.pcapModule.trigger(reason);
         console.log('[PCAP] Trap trigger: ' + reason);
+        my.pcapTriggeredTraps[trap.trapUID] = true;
+
+        /* Update camera icon to show triggered state */
+        const pcapIcon = $('#' + trap.trapUID + '_pcap');
+        pcapIcon.removeClass('text-muted').addClass('text-success');
+        pcapIcon.attr('title', 'Captured at ' + val.toFixed(2) + ' - Reset to re-arm');
       }
     };
 
-    my.pcapTriggerAction.reset = () => {};
+    my.pcapTriggerAction.reset = (trap) => {
+      delete my.pcapTriggeredTraps[trap.trapUID];
+
+      /* Reset camera icon */
+      const pcapIcon = $('#' + trap.trapUID + '_pcap');
+      pcapIcon.removeClass('text-success').addClass('text-muted');
+      pcapIcon.attr('title', 'Will trigger packet capture');
+    };
 
     return my;
   }(actionTypes));
@@ -90,19 +109,18 @@
   actionTypes = (function (my) {
     my.blinkAction = {};
     my.blinkTimeoutHandles = {};
-    const handles = actionTypes.blinkTimeoutHandles;
 
     const ledOff = function (ledId) {
       const led = $("#"+ledId);
-      led.css("color", "#FF9900");
+      led.removeClass('text-danger text-warning').addClass('text-muted');
       my.blinkTimeoutHandles[ledId] = 0;
     };
 
     const ledOn = function (trap, val) {
       const ledId = trap.trapUID + "_led";
       const led = $("#"+ledId);
-      led.css("color", "red");
-      led.html("&nbsp;"+val.toFixed(2));
+      led.removeClass('text-muted text-warning').addClass('text-danger');
+      led.attr("title", "Triggered at " + val.toFixed(2));
       if (my.blinkTimeoutHandles[ledId]) {
         clearTimeout(my.blinkTimeoutHandles[ledId]);
       }
@@ -115,10 +133,13 @@
 
     my.blinkAction.reset = (trap) => {
       const ledId = trap.trapUID + "_led";
-      ledOff(ledId);
+      if (my.blinkTimeoutHandles[ledId]) {
+        clearTimeout(my.blinkTimeoutHandles[ledId]);
+        my.blinkTimeoutHandles[ledId] = 0;
+      }
       const led = $("#"+ledId);
-      led.css("color", "black");
-      led.html("&nbsp;");
+      led.removeClass('text-danger text-warning').addClass('text-muted');
+      led.attr("title", "Not triggered");
     };
 
     return my;
@@ -203,7 +224,7 @@
   /**
    *
    */
-  const addTrapToUI = function(trap){
+  const addTrapToUI = function(trap, triggerPcap){
     const trapValue        = $('#trap_value').val(),
           trapValueInt     = parseInt(trapValue, 10),
           trapTypeSelected = $('#trap_names option:selected').data('trapType'),
@@ -219,7 +240,8 @@
                               trapUID:  trap.trapUID,
                               trapName: trapNameSelected,
                               trapValue: trapValueInt,
-                              trapUnits: trapUnits
+                              trapUnits: trapUnits,
+                              trapPcap: triggerPcap
                             },
             rendered      = Mustache.render(template, template_data);
 
@@ -255,15 +277,18 @@
     const trapType            = $selectedTrapOption.data('trapType');
     const trapValue           = $('#trap_value').val();
     const trapValueInt        = parseInt(trapValue, 10);
+    const triggerPcap         = $('#trap_pcap_trigger').is(':checked');
 
     if (trapValueInt > 0) {
       const map = mapTrapIdToSeriesAndTest[trapType];
       const t = new Trap(trapType, map.series, map.test, trapValueInt);
       //t.addAction(actionTypes.logAction);
       t.addAction(actionTypes.blinkAction);
-      t.addAction(actionTypes.pcapTriggerAction);
+      if (triggerPcap) {
+        t.addAction(actionTypes.pcapTriggerAction);
+      }
       trapsBin[t.trapUID] = t;
-      addTrapToUI(t);
+      addTrapToUI(t, triggerPcap);
     }
   };
 

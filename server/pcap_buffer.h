@@ -16,8 +16,8 @@
 
 /* Configuration constants */
 #define PCAP_BUF_DEFAULT_DURATION_SEC   30
-#define PCAP_BUF_DEFAULT_PRE_TRIGGER    25
-#define PCAP_BUF_DEFAULT_POST_TRIGGER   5
+#define PCAP_BUF_DEFAULT_PRE_TRIGGER    27
+#define PCAP_BUF_DEFAULT_POST_TRIGGER   3
 #define PCAP_BUF_DEFAULT_MAX_MEM_MB     256
 #define PCAP_BUF_MIN_MEM_MB             16
 #define PCAP_BUF_MAX_MEM_MB             2048

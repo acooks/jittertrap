@@ -293,7 +293,7 @@ int jt_srv_send_pcap_status(void)
 		msg.total_packets = buf_stats.total_packets;
 		msg.total_bytes = buf_stats.total_bytes;
 		msg.dropped_packets = buf_stats.dropped_packets;
-		msg.current_memory_mb = buf_stats.current_memory / (1024 * 1024);
+		msg.current_memory_bytes = buf_stats.current_memory;
 		msg.buffer_percent = buf_stats.buffer_percent;
 
 		/* Calculate oldest packet age */

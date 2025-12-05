@@ -34,7 +34,7 @@ struct jt_msg_pcap_status {
 	uint64_t total_packets;     /* Packets currently in buffer */
 	uint64_t total_bytes;       /* Bytes currently in buffer */
 	uint64_t dropped_packets;   /* Packets dropped due to memory */
-	uint32_t current_memory_mb; /* Current memory usage in MB */
+	uint64_t current_memory_bytes; /* Current memory usage in bytes */
 	uint32_t buffer_percent;    /* How full the time window is (0-100) */
 	uint32_t oldest_age_sec;    /* Age of oldest packet in seconds */
 };

@@ -37,6 +37,11 @@
     selectedIface = $('#dev_select').val();
     JT.core.clearAllSeries();
     JT.charts.resetChart();
+
+    /* Auto-enable PCAP recording when interface is selected */
+    if (JT.pcapModule) {
+      JT.pcapModule.enable();
+    }
   };
 
   const handleMsgIfaces = function(params) {

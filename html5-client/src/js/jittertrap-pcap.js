@@ -15,31 +15,14 @@
     WRITING: 3
   };
 
-  const stateNames = {
-    [PCAP_STATE.DISABLED]: 'Disabled',
-    [PCAP_STATE.RECORDING]: 'Recording',
-    [PCAP_STATE.TRIGGERED]: 'Triggered',
-    [PCAP_STATE.WRITING]: 'Writing...'
-  };
-
   /* Current state */
   let pcapState = {
     state: PCAP_STATE.DISABLED,
     totalPackets: 0,
     totalBytes: 0,
     droppedPackets: 0,
-    memoryUsedMb: 0,
     bufferPercent: 0,
     oldestAgeSec: 0
-  };
-
-  /* Current config */
-  let pcapConfig = {
-    enabled: false,
-    maxMemoryMb: 256,
-    durationSec: 30,
-    preTriggerSec: 25,
-    postTriggerSec: 5
   };
 
   /**
@@ -60,60 +43,85 @@
   };
 
   /**
-   * Update UI elements based on current state
+   * Update capture button state based on pcap state
    */
-  const updateUI = function() {
-    const statusEl = $('#pcap-status');
+  const updateCaptureButton = function() {
+    const btn = $('#pcap-trigger-btn');
+
+    /* Update tooltip with buffer status */
+    let tooltip = '';
+    if (pcapState.state === PCAP_STATE.RECORDING) {
+      tooltip = 'Buffer: ' + pcapState.oldestAgeSec + 's, ' +
+                formatBytes(pcapState.totalBytes) + ', ' +
+                formatNumber(pcapState.totalPackets) + ' packets';
+    } else if (pcapState.state === PCAP_STATE.DISABLED) {
+      tooltip = 'Recording disabled - select an interface';
+    } else {
+      tooltip = 'Capture in progress...';
+    }
+    btn.attr('title', tooltip);
+
+    /* Update status badge */
     const statusBadge = $('#pcap-status-badge');
-    const triggerBtn = $('#pcap-trigger-btn');
-    const progressBar = $('#pcap-buffer-progress');
-    const enableSwitch = $('#pcap_enabled');
-
-    /* Update status text and badge */
-    statusEl.text(stateNames[pcapState.state] || 'Unknown');
-
+    const statusText = $('#pcap-status');
     switch (pcapState.state) {
     case PCAP_STATE.DISABLED:
-      statusBadge.removeClass('badge-success badge-warning badge-info')
-                 .addClass('badge-secondary');
-      triggerBtn.prop('disabled', true);
+      statusBadge.removeClass('badge-success badge-warning').addClass('badge-secondary');
+      statusText.text('Disabled');
       break;
     case PCAP_STATE.RECORDING:
-      statusBadge.removeClass('badge-secondary badge-warning badge-info')
-                 .addClass('badge-success');
-      triggerBtn.prop('disabled', false);
+      statusBadge.removeClass('badge-secondary badge-warning').addClass('badge-success');
+      statusText.text('Recording');
       break;
     case PCAP_STATE.TRIGGERED:
     case PCAP_STATE.WRITING:
-      statusBadge.removeClass('badge-secondary badge-success badge-info')
-                 .addClass('badge-warning');
-      triggerBtn.prop('disabled', true);
+      statusBadge.removeClass('badge-secondary badge-success').addClass('badge-warning');
+      statusText.text('Capturing...');
       break;
     }
 
-    /* Update enable switch */
-    enableSwitch.prop('checked', pcapState.state !== PCAP_STATE.DISABLED);
-
-    /* Update progress bar */
-    progressBar.css('width', pcapState.bufferPercent + '%');
-    progressBar.attr('aria-valuenow', pcapState.bufferPercent);
-    progressBar.text(pcapState.oldestAgeSec + 's');
-
-    /* Update statistics */
+    /* Update buffer time and statistics */
+    $('#pcap-buffer-time').text(pcapState.oldestAgeSec);
     $('#pcap-packets').text(formatNumber(pcapState.totalPackets));
     $('#pcap-bytes').text(formatBytes(pcapState.totalBytes));
-    $('#pcap-memory').text(pcapState.memoryUsedMb + ' MB');
-    $('#pcap-dropped').text(formatNumber(pcapState.droppedPackets));
+
+    switch (pcapState.state) {
+    case PCAP_STATE.DISABLED:
+      btn.prop('disabled', true)
+         .removeClass('btn-warning btn-success')
+         .addClass('btn-secondary')
+         .html('<i class="fas fa-camera"></i> Capture');
+      break;
+    case PCAP_STATE.RECORDING:
+      btn.prop('disabled', false)
+         .removeClass('btn-warning btn-success')
+         .addClass('btn-secondary')
+         .html('<i class="fas fa-camera"></i> Capture');
+      break;
+    case PCAP_STATE.TRIGGERED:
+      btn.prop('disabled', true)
+         .removeClass('btn-secondary btn-success')
+         .addClass('btn-warning')
+         .html('<i class="fas fa-spinner fa-spin"></i> Capturing...');
+      break;
+    case PCAP_STATE.WRITING:
+      btn.prop('disabled', true)
+         .removeClass('btn-secondary btn-success')
+         .addClass('btn-warning')
+         .html('<i class="fas fa-spinner fa-spin"></i> Writing...');
+      break;
+    }
   };
 
   /**
-   * Update config UI elements
+   * Show brief visual feedback on the capture button
    */
-  const updateConfigUI = function() {
-    $('#pcap_max_memory').val(pcapConfig.maxMemoryMb);
-    $('#pcap_duration').val(pcapConfig.durationSec);
-    $('#pcap_pre_trigger').val(pcapConfig.preTriggerSec);
-    $('#pcap_post_trigger').val(pcapConfig.postTriggerSec);
+  const flashCaptureButton = function() {
+    const btn = $('#pcap-trigger-btn');
+    btn.addClass('btn-success').removeClass('btn-secondary');
+    setTimeout(function() {
+      updateCaptureButton();
+    }, 200);
   };
 
   /**
@@ -124,24 +132,18 @@
     pcapState.totalPackets = params.total_packets;
     pcapState.totalBytes = params.total_bytes;
     pcapState.droppedPackets = params.dropped_packets;
-    pcapState.memoryUsedMb = params.current_memory_mb;
     pcapState.bufferPercent = params.buffer_percent;
     pcapState.oldestAgeSec = params.oldest_age_sec;
 
-    updateUI();
+    updateCaptureButton();
   };
 
   /**
-   * Handle pcap_config message from server
+   * Handle pcap_config message from server (unused but keep for protocol)
    */
   my.pcapModule.updateConfig = function(params) {
-    pcapConfig.enabled = params.enabled === 1;
-    pcapConfig.maxMemoryMb = params.max_memory_mb;
-    pcapConfig.durationSec = params.duration_sec;
-    pcapConfig.preTriggerSec = params.pre_trigger_sec;
-    pcapConfig.postTriggerSec = params.post_trigger_sec;
-
-    updateConfigUI();
+    /* Config handled server-side with defaults */
+    void(params);
   };
 
   /**
@@ -160,55 +162,27 @@
     link.click();
     document.body.removeChild(link);
 
-    /* Show notification */
-    my.pcapModule.showNotification(
-      'PCAP ready: ' + formatNumber(params.packet_count) + ' packets, ' +
-      formatBytes(params.file_size),
-      'success'
-    );
+    /* Brief success indication on button */
+    const btn = $('#pcap-trigger-btn');
+    btn.removeClass('btn-warning btn-secondary')
+       .addClass('btn-success')
+       .html('<i class="fas fa-check"></i> ' + formatNumber(params.packet_count) + ' pkts');
+
+    /* Reset after 2 seconds */
+    setTimeout(function() {
+      updateCaptureButton();
+    }, 2000);
   };
 
   /**
-   * Show notification to user
-   */
-  my.pcapModule.showNotification = function(message, type) {
-    type = type || 'info';
-
-    /* Use console for now, could be enhanced with toast notifications */
-    console.log('[PCAP] ' + message);
-
-    /* Try to use Bootstrap toast if available */
-    const toastContainer = $('#pcap-toast-container');
-    if (toastContainer.length) {
-      const toastHtml = `
-        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true"
-             data-delay="5000">
-          <div class="toast-header">
-            <strong class="mr-auto text-${type}">PCAP Capture</strong>
-            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast">
-              <span>&times;</span>
-            </button>
-          </div>
-          <div class="toast-body">${message}</div>
-        </div>
-      `;
-      const toast = $(toastHtml);
-      toastContainer.append(toast);
-      toast.toast('show');
-      toast.on('hidden.bs.toast', function() {
-        $(this).remove();
-      });
-    }
-  };
-
-  /**
-   * Send manual trigger request
+   * Send manual trigger request with visual feedback
    */
   my.pcapModule.triggerManual = function() {
     if (pcapState.state !== PCAP_STATE.RECORDING) {
       console.log('[PCAP] Cannot trigger - not recording');
       return;
     }
+    flashCaptureButton();
     JT.ws.pcap_trigger('Manual trigger');
   };
 
@@ -224,40 +198,16 @@
   };
 
   /**
-   * Enable or disable pcap recording
+   * Enable pcap recording (called automatically on interface select)
    */
-  my.pcapModule.setEnabled = function(enabled) {
+  my.pcapModule.enable = function() {
     const config = {
-      enabled: enabled ? 1 : 0,
-      max_memory_mb: parseInt($('#pcap_max_memory').val()) || pcapConfig.maxMemoryMb,
-      duration_sec: parseInt($('#pcap_duration').val()) || pcapConfig.durationSec,
-      pre_trigger_sec: parseInt($('#pcap_pre_trigger').val()) || pcapConfig.preTriggerSec,
-      post_trigger_sec: parseInt($('#pcap_post_trigger').val()) || pcapConfig.postTriggerSec
+      enabled: 1,
+      max_memory_mb: 256,
+      duration_sec: 30,
+      pre_trigger_sec: 27,
+      post_trigger_sec: 3
     };
-    JT.ws.pcap_config(config);
-  };
-
-  /**
-   * Apply configuration changes
-   */
-  my.pcapModule.applyConfig = function() {
-    const config = {
-      enabled: $('#pcap_enabled').is(':checked') ? 1 : 0,
-      max_memory_mb: parseInt($('#pcap_max_memory').val()) || 256,
-      duration_sec: parseInt($('#pcap_duration').val()) || 30,
-      pre_trigger_sec: parseInt($('#pcap_pre_trigger').val()) || 25,
-      post_trigger_sec: parseInt($('#pcap_post_trigger').val()) || 5
-    };
-
-    /* Validate */
-    if (config.pre_trigger_sec + config.post_trigger_sec > config.duration_sec) {
-      my.pcapModule.showNotification(
-        'Pre + Post trigger time cannot exceed buffer duration',
-        'warning'
-      );
-      return;
-    }
-
     JT.ws.pcap_config(config);
   };
 
@@ -276,14 +226,30 @@
   };
 
   /**
+   * Apply configuration from the settings form
+   */
+  my.pcapModule.applyConfig = function() {
+    const config = {
+      enabled: 1,
+      max_memory_mb: 256,
+      duration_sec: 30,
+      pre_trigger_sec: parseInt($('#pcap_pre_trigger').val()) || 27,
+      post_trigger_sec: parseInt($('#pcap_post_trigger').val()) || 3
+    };
+
+    /* Validate */
+    if (config.pre_trigger_sec + config.post_trigger_sec > config.duration_sec) {
+      alert('Pre + Post trigger time cannot exceed 30 seconds');
+      return;
+    }
+
+    JT.ws.pcap_config(config);
+  };
+
+  /**
    * Initialize UI event handlers
    */
   my.pcapModule.initUI = function() {
-    /* Enable/disable toggle */
-    $('#pcap_enabled').on('change', function() {
-      my.pcapModule.setEnabled($(this).is(':checked'));
-    });
-
     /* Manual trigger button */
     $('#pcap-trigger-btn').on('click', function() {
       my.pcapModule.triggerManual();
@@ -292,11 +258,6 @@
     /* Apply config button */
     $('#pcap-apply-config').on('click', function() {
       my.pcapModule.applyConfig();
-    });
-
-    /* Settings toggle */
-    $('#pcap-settings-toggle').on('click', function() {
-      $('#pcap-settings-panel').collapse('toggle');
     });
   };
 

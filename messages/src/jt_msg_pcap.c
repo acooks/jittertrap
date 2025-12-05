@@ -122,7 +122,7 @@ static const char *jt_pcap_status_test_msg =
     "\"total_packets\":45000,"
     "\"total_bytes\":23000000,"
     "\"dropped_packets\":0,"
-    "\"current_memory_mb\":128,"
+    "\"current_memory_bytes\":134217728,"
     "\"buffer_percent\":85,"
     "\"oldest_age_sec\":28"
     "}}";
@@ -144,11 +144,11 @@ int jt_pcap_status_printer(void *data, char *out, int len)
 	struct jt_msg_pcap_status *status = data;
 	snprintf(out, len,
 	         "PCAP Status: state=%u, pkts=%lu, bytes=%lu, "
-	         "mem=%uMB, buffer=%u%%",
+	         "mem=%luB, buffer=%u%%",
 	         status->state,
 	         (unsigned long)status->total_packets,
 	         (unsigned long)status->total_bytes,
-	         status->current_memory_mb, status->buffer_percent);
+	         (unsigned long)status->current_memory_bytes, status->buffer_percent);
 	return 0;
 }
 
@@ -182,9 +182,9 @@ int jt_pcap_status_unpacker(json_t *root, void **data)
 	if (val && json_is_integer(val))
 		status->dropped_packets = json_integer_value(val);
 
-	val = json_object_get(params, "current_memory_mb");
+	val = json_object_get(params, "current_memory_bytes");
 	if (val && json_is_integer(val))
-		status->current_memory_mb = json_integer_value(val);
+		status->current_memory_bytes = json_integer_value(val);
 
 	val = json_object_get(params, "buffer_percent");
 	if (val && json_is_integer(val))
@@ -214,8 +214,8 @@ int jt_pcap_status_packer(void *data, char **out)
 	                    json_integer(status->total_bytes));
 	json_object_set_new(params, "dropped_packets",
 	                    json_integer(status->dropped_packets));
-	json_object_set_new(params, "current_memory_mb",
-	                    json_integer(status->current_memory_mb));
+	json_object_set_new(params, "current_memory_bytes",
+	                    json_integer(status->current_memory_bytes));
 	json_object_set_new(params, "buffer_percent",
 	                    json_integer(status->buffer_percent));
 	json_object_set_new(params, "oldest_age_sec",
