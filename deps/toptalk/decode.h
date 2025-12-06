@@ -1,6 +1,8 @@
 #ifndef DECODE_H
 #define DECODE_H
 
+struct pcap_pkthdr;
+
 #define DECODE_ERRBUF_SIZE 80
 
 /* Ethernet */
