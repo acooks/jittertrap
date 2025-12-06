@@ -257,7 +257,7 @@
       // Marker types:
       //   'start'  - first RTT sample (▶)
       //   'resume' - resumption after gap (▶)
-      //   'idle'   - no data for >2s, connection still open (×)
+      //   'idle'   - no data for >2s, connection still open (⏸)
       //   'closed' - FIN/RST seen, connection terminated (■)
       const markerData = [];
       rttFlows.forEach(f => {
