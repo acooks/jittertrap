@@ -88,6 +88,21 @@ struct hdr_tcp {
 int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt,
                char *errstr);
 
+/* Extended flow packet structure with TCP-specific fields for RTT tracking */
+struct flow_pkt_tcp {
+	struct flow_pkt base;
+	uint32_t seq;               /* TCP sequence number */
+	uint32_t ack;               /* TCP acknowledgement number */
+	uint8_t flags;              /* TCP flags */
+	uint16_t payload_len;       /* TCP payload length (excluding headers) */
+};
+
+/* Extended TCP decode that also extracts seq/ack/flags for RTT tracking */
+int decode_tcp_extended(const struct hdr_tcp *packet,
+                        const uint8_t *end_of_packet,
+                        struct flow_pkt_tcp *pkt,
+                        char *errstr);
+
 struct hdr_udp {
 	uint16_t sport;   /* source port */
 	uint16_t dport;   /* destination port */

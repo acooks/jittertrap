@@ -120,6 +120,20 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 		}
 		tt->flows[i].packets = json_integer_value(t);
 
+		t = json_object_get(f, "rtt_us");
+		if (json_is_integer(t)) {
+			tt->flows[i].rtt_us = json_integer_value(t);
+		} else {
+			tt->flows[i].rtt_us = -1;  /* Default if not present */
+		}
+
+		t = json_object_get(f, "tcp_state");
+		if (json_is_integer(t)) {
+			tt->flows[i].tcp_state = json_integer_value(t);
+		} else {
+			tt->flows[i].tcp_state = -1;  /* Default if not present */
+		}
+
 		t = json_object_get(f, "sport");
 		if (!json_is_integer(t)) {
 			goto unpack_fail;
@@ -205,6 +219,10 @@ int jt_toptalk_packer(void *data, char **out)
 		                    json_integer(tt_msg->flows[i].bytes));
 		json_object_set_new(flows[i], "packets",
 		                    json_integer(tt_msg->flows[i].packets));
+		json_object_set_new(flows[i], "rtt_us",
+		                    json_integer(tt_msg->flows[i].rtt_us));
+		json_object_set_new(flows[i], "tcp_state",
+		                    json_integer(tt_msg->flows[i].tcp_state));
 		json_object_set_new(flows[i], "sport",
 		                    json_integer(tt_msg->flows[i].sport));
 		json_object_set_new(flows[i], "dport",

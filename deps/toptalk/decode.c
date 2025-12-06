@@ -227,6 +227,40 @@ int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt, char *errstr)
 	return 0;
 }
 
+int decode_tcp_extended(const struct hdr_tcp *packet,
+                        const uint8_t *end_of_packet,
+                        struct flow_pkt_tcp *pkt,
+                        char *errstr)
+{
+	unsigned int size_tcp = (TH_OFF(packet) * 4);
+
+	if (size_tcp < 20) {
+		snprintf(errstr, DECODE_ERRBUF_SIZE,
+		         "*** Invalid TCP header length: %u bytes", size_tcp);
+		return -1;
+	}
+
+	pkt->base.flow_rec.flow.proto = IPPROTO_TCP;
+	pkt->base.flow_rec.flow.sport = ntohs(packet->sport);
+	pkt->base.flow_rec.flow.dport = ntohs(packet->dport);
+
+	/* Extract TCP-specific fields for RTT tracking */
+	pkt->seq = ntohl(packet->seq);
+	pkt->ack = ntohl(packet->ack);
+	pkt->flags = packet->flags;
+
+	/* Calculate payload length: end of packet - start of payload */
+	const uint8_t *tcp_start = (const uint8_t *)packet;
+	const uint8_t *payload_start = tcp_start + size_tcp;
+	if (payload_start <= end_of_packet) {
+		pkt->payload_len = end_of_packet - payload_start;
+	} else {
+		pkt->payload_len = 0;
+	}
+
+	return 0;
+}
+
 int decode_udp(const struct hdr_udp *packet, struct flow_pkt *pkt, char *errstr)
 {
 	(void)errstr;

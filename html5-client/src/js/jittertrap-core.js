@@ -236,13 +236,23 @@
     for (let j = 0; j < fcount; j++) {
       const fkey = flowRank[interval][j];
       const flow = {"fkey": fkey, "values": []};
+      let lastRtt = -1;  /* Track latest RTT for this flow */
+      let lastTcpState = -1;  /* Track latest TCP state for this flow */
       for (let i = 0; i < slices; i++) {
         const slice = flowsTS[interval].get(i);
         /* the data point must exist to keep the series alignment intact */
-        const d = {"ts": slice.ts, "bytes":0, "packets":0};
+        const d = {"ts": slice.ts, "bytes":0, "packets":0, "rtt_us": -1, "tcp_state": -1};
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
+          d.rtt_us = slice[fkey].rtt_us;
+          d.tcp_state = slice[fkey].tcp_state;
+          if (d.rtt_us >= 0) {
+            lastRtt = d.rtt_us;
+          }
+          if (d.tcp_state >= 0) {
+            lastTcpState = d.tcp_state;
+          }
         }
         console.assert(d.bytes >= 0);
         console.assert(d.packets >= 0);
@@ -250,6 +260,8 @@
       }
       flow.tbytes = flowsTotals[interval][fkey].tbytes;
       flow.tpackets = flowsTotals[interval][fkey].tpackets;
+      flow.rtt_us = lastRtt;  /* Latest RTT value for legend display */
+      flow.tcp_state = lastTcpState;  /* Latest TCP state */
       chartSeries.push(flow);
     }
 
@@ -397,9 +409,13 @@
         flowRank[interval].push(fkey);
       }
 
-      /* set bytes, packets for this (intervalSize,timeSlice,flow)  */
-      sample_slice[fkey] =
-        {"bytes": msg.flows[i].bytes, "packets": msg.flows[i].packets};
+      /* set bytes, packets, rtt, tcp_state for this (intervalSize,timeSlice,flow)  */
+      sample_slice[fkey] = {
+        "bytes": msg.flows[i].bytes,
+        "packets": msg.flows[i].packets,
+        "rtt_us": msg.flows[i].rtt_us,
+        "tcp_state": msg.flows[i].tcp_state
+      };
 
       /* reset the time-to-live to the chart window length (in samples),
        * so that it can be removed when it ages beyond the window. */

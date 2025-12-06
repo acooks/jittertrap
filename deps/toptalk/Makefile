@@ -1,17 +1,20 @@
 PROG = toptalk
 LIB = toptalk.a
 TEST = test-toptalk
+TEST_RTT = test-tcp-rtt
 
 SRC = \
  decode.c \
  intervals.c \
- intervals_user.c
+ intervals_user.c \
+ tcp_rtt.c
 
 HEADERS = \
  intervals.h \
  decode.h \
  flow.h \
  intervals.h \
+ tcp_rtt.h
 
 ifndef INTERVAL_COUNT
 INTERVAL_COUNT = 8
@@ -43,7 +46,7 @@ CFLAGS_HARDENED = \
 CFLAGS := -g -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS)
 
 .PHONY: all
-all: $(LIB) $(TEST) $(PROG)
+all: $(LIB) $(TEST) $(TEST_RTT) $(PROG)
 
 %.o: %.c %.h Makefile ../make.config make.config
 	$(COMPILE.c) $(DEFINES) $< -o $@
@@ -63,10 +66,16 @@ $(TEST): $(LIB) test.c
 	@echo Building $(TEST)
 	$(CC) -o $(TEST) test.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
+$(TEST_RTT): $(LIB) test_tcp_rtt.c
+	@echo Building $(TEST_RTT)
+	$(CC) -o $(TEST_RTT) test_tcp_rtt.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+
 .PHONY: test
-test: $(TEST)
-	@echo "Test needs sudo for promiscuous network access..."
-	@sudo ./$(TEST) && echo -e "Test OK\n"
+test: $(TEST) $(TEST_RTT)
+	@echo "Running RTT unit tests (no root required)..."
+	@./$(TEST_RTT) && echo -e "RTT unit tests OK\n"
+	@echo "Running integration test (needs sudo for promiscuous network access)..."
+	@sudo ./$(TEST) && echo -e "Integration test OK\n"
 
 .PHONY: cppcheck
 cppcheck:
@@ -78,5 +87,5 @@ clang-analyze: clean
 
 .PHONY: clean
 clean:
-	rm $(LIB) $(PROG) $(TEST) *.o *.a || true
+	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) *.o *.a || true
 	rm *.gcno *.gcov *.gcda || true
