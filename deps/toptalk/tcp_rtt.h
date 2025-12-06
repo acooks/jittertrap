@@ -111,6 +111,14 @@ int64_t tcp_rtt_get_last(const struct flow *flow);
  */
 enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow);
 
+/* Get RTT and state in a single lookup (more efficient than separate calls)
+ * rtt_us: output, set to EWMA RTT in microseconds or -1 if unavailable
+ * state: output, set to connection state
+ * Returns 0 on success (entry found), -1 if flow not found or not TCP
+ */
+int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
+                     enum tcp_conn_state *state);
+
 /* Expire old RTT entries that haven't been active within window */
 void tcp_rtt_expire_old(struct timeval deadline, struct timeval window);
 

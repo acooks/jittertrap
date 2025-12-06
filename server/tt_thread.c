@@ -195,15 +195,16 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 		m->flows[f].sport = ttf->flow[f][interval].flow.sport;
 		m->flows[f].dport = ttf->flow[f][interval].flow.dport;
 
-		/* Get RTT and connection state for TCP flows */
-		if (ttf->flow[f][interval].flow.proto == IPPROTO_TCP) {
-			m->flows[f].rtt_us = tcp_rtt_get_ewma(
-			    &ttf->flow[f][interval].flow);
-			m->flows[f].tcp_state = tcp_rtt_get_state(
-			    &ttf->flow[f][interval].flow);
+		/* Get RTT and connection state for TCP flows (single lookup) */
+		int64_t rtt_us;
+		enum tcp_conn_state tcp_state;
+		if (tcp_rtt_get_info(&ttf->flow[f][interval].flow,
+		                     &rtt_us, &tcp_state) == 0) {
+			m->flows[f].rtt_us = rtt_us;
+			m->flows[f].tcp_state = tcp_state;
 		} else {
-			m->flows[f].rtt_us = -1;  /* RTT not available for non-TCP */
-			m->flows[f].tcp_state = -1;  /* State not available for non-TCP */
+			m->flows[f].rtt_us = -1;
+			m->flows[f].tcp_state = -1;
 		}
 
 		if (is_valid_proto(ttf->flow[f][interval].flow.proto)) {

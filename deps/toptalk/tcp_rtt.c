@@ -270,6 +270,40 @@ enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow)
 	return entry->state;
 }
 
+int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
+                     enum tcp_conn_state *state)
+{
+	if (flow->proto != IPPROTO_TCP) {
+		*rtt_us = -1;
+		*state = TCP_STATE_UNKNOWN;
+		return -1;
+	}
+
+	struct tcp_flow_key key;
+	int is_forward;
+	make_canonical_key(&key, flow, &is_forward);
+
+	struct tcp_rtt_entry *entry;
+	HASH_FIND(hh, rtt_table, &key, sizeof(struct tcp_flow_key), entry);
+
+	if (!entry) {
+		*rtt_us = -1;
+		*state = TCP_STATE_UNKNOWN;
+		return -1;
+	}
+
+	*state = entry->state;
+
+	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
+	if (dir->sample_count == 0) {
+		*rtt_us = -1;
+	} else {
+		*rtt_us = dir->rtt_ewma_us;
+	}
+
+	return 0;
+}
+
 void tcp_rtt_expire_old(struct timeval deadline, struct timeval window)
 {
 	struct tcp_rtt_entry *entry, *tmp;
