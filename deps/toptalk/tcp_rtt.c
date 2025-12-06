@@ -125,16 +125,19 @@ static void process_ack(struct tcp_rtt_direction *dir,
 
 	/* Update EWMA: rtt_ewma = (1-alpha)*rtt_ewma + alpha*rtt_sample
 	 * Using shift for efficiency: alpha = 1/8
+	 * Use atomic operations for lock-free access by reader thread.
 	 */
-	if (dir->sample_count == 0) {
-		dir->rtt_ewma_us = rtt_us;
+	uint32_t count = atomic_load_explicit(&dir->sample_count, memory_order_relaxed);
+	if (count == 0) {
+		atomic_store_explicit(&dir->rtt_ewma_us, rtt_us, memory_order_relaxed);
 	} else {
-		dir->rtt_ewma_us = dir->rtt_ewma_us -
-		                   (dir->rtt_ewma_us >> RTT_EWMA_ALPHA_SHIFT) +
-		                   (rtt_us >> RTT_EWMA_ALPHA_SHIFT);
+		int64_t ewma = atomic_load_explicit(&dir->rtt_ewma_us, memory_order_relaxed);
+		ewma = ewma - (ewma >> RTT_EWMA_ALPHA_SHIFT) +
+		       (rtt_us >> RTT_EWMA_ALPHA_SHIFT);
+		atomic_store_explicit(&dir->rtt_ewma_us, ewma, memory_order_relaxed);
 	}
-	dir->rtt_last_us = rtt_us;
-	dir->sample_count++;
+	atomic_store_explicit(&dir->rtt_last_us, rtt_us, memory_order_relaxed);
+	atomic_store_explicit(&dir->sample_count, count + 1, memory_order_release);
 
 	/* Remove matched entries (cumulative ACK covers all prior data) */
 	dir->seq_head = (dir->seq_head + matched_count) % MAX_SEQ_ENTRIES;
@@ -175,21 +178,22 @@ void tcp_rtt_process_packet(const struct flow *flow,
 		entry->flags_seen_rev |= flags;
 	}
 
-	/* Update connection state based on flags */
+	/* Update connection state based on flags (atomic for lock-free reader access) */
+	int current_state = atomic_load_explicit(&entry->state, memory_order_relaxed);
 	if (flags & TCP_FLAG_RST) {
-		entry->state = TCP_STATE_CLOSED;
+		atomic_store_explicit(&entry->state, TCP_STATE_CLOSED, memory_order_relaxed);
 	} else if (flags & TCP_FLAG_FIN) {
-		if (entry->state == TCP_STATE_FIN_WAIT) {
+		if (current_state == TCP_STATE_FIN_WAIT) {
 			/* FIN seen in both directions */
-			entry->state = TCP_STATE_CLOSED;
-		} else if (entry->state != TCP_STATE_CLOSED) {
-			entry->state = TCP_STATE_FIN_WAIT;
+			atomic_store_explicit(&entry->state, TCP_STATE_CLOSED, memory_order_relaxed);
+		} else if (current_state != TCP_STATE_CLOSED) {
+			atomic_store_explicit(&entry->state, TCP_STATE_FIN_WAIT, memory_order_relaxed);
 		}
-	} else if (entry->state == TCP_STATE_UNKNOWN ||
-	           entry->state == TCP_STATE_FIN_WAIT) {
+	} else if (current_state == TCP_STATE_UNKNOWN ||
+	           current_state == TCP_STATE_FIN_WAIT) {
 		/* Data packet - connection is active (unless closing) */
-		if (payload_len > 0 && entry->state != TCP_STATE_FIN_WAIT) {
-			entry->state = TCP_STATE_ACTIVE;
+		if (payload_len > 0 && current_state != TCP_STATE_FIN_WAIT) {
+			atomic_store_explicit(&entry->state, TCP_STATE_ACTIVE, memory_order_relaxed);
 		}
 	}
 
@@ -222,12 +226,12 @@ int64_t tcp_rtt_get_ewma(const struct flow *flow)
 	if (!entry)
 		return -1;
 
-	/* Return RTT for the direction this flow represents */
+	/* Return RTT for the direction this flow represents (atomic load) */
 	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
-	if (dir->sample_count == 0)
+	if (atomic_load_explicit(&dir->sample_count, memory_order_acquire) == 0)
 		return -1;
 
-	return dir->rtt_ewma_us;
+	return atomic_load_explicit(&dir->rtt_ewma_us, memory_order_relaxed);
 }
 
 int64_t tcp_rtt_get_last(const struct flow *flow)
@@ -245,11 +249,12 @@ int64_t tcp_rtt_get_last(const struct flow *flow)
 	if (!entry)
 		return -1;
 
+	/* Atomic load for lock-free access */
 	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
-	if (dir->sample_count == 0)
+	if (atomic_load_explicit(&dir->sample_count, memory_order_acquire) == 0)
 		return -1;
 
-	return dir->rtt_last_us;
+	return atomic_load_explicit(&dir->rtt_last_us, memory_order_relaxed);
 }
 
 enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow)
@@ -267,7 +272,7 @@ enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow)
 	if (!entry)
 		return TCP_STATE_UNKNOWN;
 
-	return entry->state;
+	return atomic_load_explicit(&entry->state, memory_order_relaxed);
 }
 
 int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
@@ -292,13 +297,14 @@ int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
 		return -1;
 	}
 
-	*state = entry->state;
+	/* Atomic loads for lock-free access */
+	*state = atomic_load_explicit(&entry->state, memory_order_relaxed);
 
 	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
-	if (dir->sample_count == 0) {
+	if (atomic_load_explicit(&dir->sample_count, memory_order_acquire) == 0) {
 		*rtt_us = -1;
 	} else {
-		*rtt_us = dir->rtt_ewma_us;
+		*rtt_us = atomic_load_explicit(&dir->rtt_ewma_us, memory_order_relaxed);
 	}
 
 	return 0;

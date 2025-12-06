@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <netinet/ip.h>
 #include <errno.h>
+#include <stdatomic.h>
 
 #include "flow.h"
 #include "timeywimey.h"
@@ -260,9 +261,12 @@ void handle_io(struct tt_thread_info *ti)
 		stamp_datetime(datetime, sizeof(datetime), t1);
 		mvprintw(0, 0, "%s", datetime);
 
-		pthread_mutex_lock(&ti->t5_mutex);
-		print_top_n(ti->t5);
-		pthread_mutex_unlock(&ti->t5_mutex);
+		/* Lock-free read of published t5 buffer */
+		struct tt_top_flows *t5 = atomic_load_explicit(&ti->t5,
+		                                               memory_order_acquire);
+		if (t5) {
+			print_top_n(t5);
+		}
 
 		refresh(); /* ncurses screen update */
 

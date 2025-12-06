@@ -19,10 +19,18 @@ struct flow {
 	uint8_t tclass;
 };
 
+/* Cached TCP RTT info - populated by tt_get_top5() for thread-safe access */
+struct flow_rtt_info {
+	int64_t rtt_us;           /* RTT in microseconds, -1 if unknown */
+	int32_t tcp_state;        /* TCP connection state, -1 if unknown */
+};
+
 struct flow_record {
 	struct flow flow;
 	int64_t bytes;
 	int64_t packets;
+	/* Cached TCP info - populated by writer thread for thread-safe reader access */
+	struct flow_rtt_info rtt;
 };
 
 struct flow_pkt {

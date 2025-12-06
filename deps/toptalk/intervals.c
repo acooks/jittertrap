@@ -357,6 +357,29 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[i].packets =
 		    rate_calc(tt_intervals[i], st_flows[i].packets);
 	}
+
+	/*
+	 * Populate cached RTT info for this flow.
+	 * This is done here (in the writer thread context) to avoid
+	 * race conditions with the reader thread accessing the hash tables.
+	 * We only need to do this once and copy to all intervals.
+	 */
+	int64_t rtt_us;
+	enum tcp_conn_state tcp_state;
+
+	/* Get RTT info */
+	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state) == 0) {
+		st_flows[0].rtt.rtt_us = rtt_us;
+		st_flows[0].rtt.tcp_state = tcp_state;
+	} else {
+		st_flows[0].rtt.rtt_us = -1;
+		st_flows[0].rtt.tcp_state = -1;
+	}
+
+	/* Copy RTT info to all intervals (same data for all) */
+	for (int i = 1; i < INTERVAL_COUNT; i++) {
+		st_flows[i].rtt = st_flows[0].rtt;
+	}
 }
 
 static void update_stats_tables(struct flow_pkt *pkt)
@@ -711,9 +734,19 @@ void *tt_intervals_run(void *p)
 	while (1) {
 		deadline = ts_add(deadline, interval);
 
-		pthread_mutex_lock(&ti->t5_mutex);
-		tt_get_top5(ti->t5, ts_to_tv(deadline));
-		pthread_mutex_unlock(&ti->t5_mutex);
+		/* Double-buffer: write to non-published buffer, then publish */
+		int write_idx = atomic_load_explicit(&ti->t5_write_idx,
+		                                     memory_order_relaxed);
+		struct tt_top_flows *write_buf = &ti->t5_buffers[write_idx];
+
+		tt_get_top5(write_buf, ts_to_tv(deadline));
+
+		/* Publish: atomically update pointer for readers */
+		atomic_store_explicit(&ti->t5, write_buf, memory_order_release);
+
+		/* Swap write index for next iteration */
+		atomic_store_explicit(&ti->t5_write_idx, 1 - write_idx,
+		                      memory_order_relaxed);
 
 		cnt = pcap_dispatch(ti->priv->pi.handle, max,
 		                    handle_packet, (u_char *)cbdata);
@@ -742,11 +775,13 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	/* Initialize TCP RTT tracking */
 	tcp_rtt_init();
 
-	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
-	if (!ti->t5) { return 1; }
+	/* Initialize double-buffer: clear both buffers, start writing to [0] */
+	memset(ti->t5_buffers, 0, sizeof(ti->t5_buffers));
+	atomic_store(&ti->t5, NULL);
+	atomic_store(&ti->t5_write_idx, 0);
 
 	ti->priv = calloc(1, sizeof(struct tt_thread_private));
-	if (!ti->priv) { goto cleanup1; }
+	if (!ti->priv) { return 1; }
 
 	err = init_pcap(&(ti->dev), &(ti->priv->pi));
 	if (err)
@@ -758,8 +793,6 @@ int tt_intervals_init(struct tt_thread_info *ti)
 
 cleanup:
 	free(ti->priv);
-cleanup1:
-	free(ti->t5);
 	return 1;
 }
 
@@ -767,7 +800,6 @@ int tt_intervals_free(struct tt_thread_info *ti)
 {
 	assert(ti);
 	assert(ti->priv);
-	assert(ti->t5);
 
 	clear_all_tables();
 
@@ -776,6 +808,9 @@ int tt_intervals_free(struct tt_thread_info *ti)
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
-	free(ti->t5);
+
+	/* Reset double-buffer state (buffers are static, no free needed) */
+	atomic_store(&ti->t5, NULL);
+	atomic_store(&ti->t5_write_idx, 0);
 	return 0;
 }

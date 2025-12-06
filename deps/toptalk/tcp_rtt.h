@@ -2,6 +2,7 @@
 #define TCP_RTT_H
 
 #include <stdint.h>
+#include <stdatomic.h>
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>
@@ -34,14 +35,17 @@ struct seq_entry {
 	struct timeval timestamp;   /* When the segment was sent */
 };
 
-/* RTT state for one direction of a TCP connection */
+/* RTT state for one direction of a TCP connection
+ * Fields accessed by reader thread are atomic for lock-free access.
+ * Writer thread updates these atomically; reader thread reads atomically.
+ */
 struct tcp_rtt_direction {
 	struct seq_entry pending_seqs[MAX_SEQ_ENTRIES];
-	int seq_head;               /* Circular buffer head */
-	int seq_count;              /* Number of entries in use */
-	int64_t rtt_ewma_us;        /* EWMA RTT in microseconds */
-	int64_t rtt_last_us;        /* Last RTT sample in microseconds */
-	uint32_t sample_count;      /* Number of RTT samples collected */
+	int seq_head;               /* Circular buffer head (writer only) */
+	int seq_count;              /* Number of entries in use (writer only) */
+	_Atomic int64_t rtt_ewma_us;   /* EWMA RTT in microseconds (lock-free) */
+	_Atomic int64_t rtt_last_us;   /* Last RTT sample in microseconds (lock-free) */
+	_Atomic uint32_t sample_count; /* Number of RTT samples collected (lock-free) */
 };
 
 /* Bidirectional flow key for RTT lookup (canonical ordering) */
@@ -68,7 +72,7 @@ struct tcp_rtt_entry {
 	struct tcp_rtt_direction fwd;  /* lo->hi direction */
 	struct tcp_rtt_direction rev;  /* hi->lo direction */
 	struct timeval last_activity;
-	enum tcp_conn_state state;     /* Connection state */
+	_Atomic int state;             /* Connection state (lock-free) */
 	uint8_t flags_seen_fwd;        /* Cumulative flags seen lo->hi */
 	uint8_t flags_seen_rev;        /* Cumulative flags seen hi->lo */
 	uint8_t _pad[2];               /* Alignment */

@@ -3,6 +3,8 @@
 cscope*.out
 toptalk
 test-toptalk
+test-tcp-rtt
+test-tcp-window
 *.o
 *.a
 *.patch
