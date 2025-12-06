@@ -1,0 +1,117 @@
+#ifndef TCP_RTT_H
+#define TCP_RTT_H
+
+#include <stdint.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <net/ethernet.h>
+#include "uthash.h"
+#include "flow.h"
+
+/* Maximum outstanding sequence numbers to track per direction */
+#define MAX_SEQ_ENTRIES 16
+
+/* EWMA alpha value (1/8 = 0.125, same as Linux TCP) */
+#define RTT_EWMA_ALPHA_SHIFT 3
+
+/* TCP connection states */
+enum tcp_conn_state {
+	TCP_STATE_UNKNOWN = 0,    /* Haven't seen enough to determine state */
+	TCP_STATE_ACTIVE,         /* Connection is active (data flowing) */
+	TCP_STATE_FIN_WAIT,       /* FIN seen, waiting for FIN-ACK */
+	TCP_STATE_CLOSED,         /* FIN/FIN-ACK complete or RST seen */
+};
+
+/* TCP flags we care about */
+#define TCP_FLAG_FIN  0x01
+#define TCP_FLAG_SYN  0x02
+#define TCP_FLAG_RST  0x04
+#define TCP_FLAG_ACK  0x10
+
+/* Structure for tracking an outstanding sequence number */
+struct seq_entry {
+	uint32_t seq_end;           /* Expected ACK value (seq + payload_len) */
+	struct timeval timestamp;   /* When the segment was sent */
+};
+
+/* RTT state for one direction of a TCP connection */
+struct tcp_rtt_direction {
+	struct seq_entry pending_seqs[MAX_SEQ_ENTRIES];
+	int seq_head;               /* Circular buffer head */
+	int seq_count;              /* Number of entries in use */
+	int64_t rtt_ewma_us;        /* EWMA RTT in microseconds */
+	int64_t rtt_last_us;        /* Last RTT sample in microseconds */
+	uint32_t sample_count;      /* Number of RTT samples collected */
+};
+
+/* Bidirectional flow key for RTT lookup (canonical ordering) */
+struct tcp_flow_key {
+	uint16_t ethertype;
+	uint16_t _pad;              /* Alignment padding */
+	union {
+		struct {
+			struct in_addr ip_lo;
+			struct in_addr ip_hi;
+		};
+		struct {
+			struct in6_addr ip6_lo;
+			struct in6_addr ip6_hi;
+		};
+	};
+	uint16_t port_lo;
+	uint16_t port_hi;
+};
+
+/* RTT tracking entry - one per TCP connection (bidirectional) */
+struct tcp_rtt_entry {
+	struct tcp_flow_key key;
+	struct tcp_rtt_direction fwd;  /* lo->hi direction */
+	struct tcp_rtt_direction rev;  /* hi->lo direction */
+	struct timeval last_activity;
+	enum tcp_conn_state state;     /* Connection state */
+	uint8_t flags_seen_fwd;        /* Cumulative flags seen lo->hi */
+	uint8_t flags_seen_rev;        /* Cumulative flags seen hi->lo */
+	uint8_t _pad[2];               /* Alignment */
+	UT_hash_handle hh;
+};
+
+/* Initialize RTT tracking subsystem */
+void tcp_rtt_init(void);
+
+/* Cleanup RTT tracking subsystem */
+void tcp_rtt_cleanup(void);
+
+/* Process a TCP packet for RTT tracking
+ * flow: the flow tuple (from normal flow tracking)
+ * seq: TCP sequence number
+ * ack: TCP acknowledgement number
+ * flags: TCP flags
+ * payload_len: length of TCP payload (excluding headers)
+ * timestamp: packet capture timestamp
+ */
+void tcp_rtt_process_packet(const struct flow *flow,
+                            uint32_t seq,
+                            uint32_t ack,
+                            uint8_t flags,
+                            uint16_t payload_len,
+                            struct timeval timestamp);
+
+/* Get EWMA RTT for a flow in microseconds
+ * Returns -1 if no RTT data available (non-TCP or no samples yet)
+ */
+int64_t tcp_rtt_get_ewma(const struct flow *flow);
+
+/* Get last RTT sample for a flow in microseconds
+ * Returns -1 if no RTT data available
+ */
+int64_t tcp_rtt_get_last(const struct flow *flow);
+
+/* Get connection state for a flow
+ * Returns TCP_STATE_UNKNOWN if flow not found
+ */
+enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow);
+
+/* Expire old RTT entries that haven't been active within window */
+void tcp_rtt_expire_old(struct timeval deadline, struct timeval window);
+
+#endif /* TCP_RTT_H */

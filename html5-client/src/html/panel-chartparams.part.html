@@ -90,15 +90,17 @@
 
                                                                                                                           <div class="legend-color-box-header flex-shrink-0">&nbsp;</div>
 
-                                                                                                                          <div style="width: 38%" class="text-right pr-2">Source IP:Port</div>
+                                                                                                                          <div style="width: 33%" class="text-right pr-2">Source IP:Port</div>
 
                                                                                                                           <div style="width: 5%" class="text-center flex-shrink-0">-></div>
 
-                                                                                                                          <div style="width: 38%" class="text-left pl-2">Destination IP:Port</div>
+                                                                                                                          <div style="width: 33%" class="text-left pl-2">Destination IP:Port</div>
 
                                                                                                                           <div style="width: 9%" class="flex-shrink-0">Proto</div>
 
-                                                                                                                          <div style="width: 10%" class="flex-shrink-0">T/Class</div>
+                                                                                                                          <div style="width: 7%" class="flex-shrink-0">T/Class</div>
+
+                                                                                                                          <div style="width: 13%" class="flex-shrink-0 text-right pr-2">RTT</div>
 
                                                                                                                         </div>
 
@@ -108,7 +110,34 @@
 
                                                                                                                       </div>
 
-                                                                                        
+                                                                                                                      <!-- RTT Chart Header -->
+                                                                                                                      <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
+                                                                                                                        <div class="d-flex align-items-center">
+                                                                                                                          <span class="font-weight-bold mr-3">TCP Round-Trip Time</span>
+                                                                                                                          <span class="text-muted small" style="font-size: 0.8em;">
+                                                                                                                            <span style="color: #888;">▶</span> Start/Resume
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="display: inline-flex; align-items: center; width: 10px; height: 1em; vertical-align: text-bottom;"><span style="display: inline-block; width: 3px; height: 10px; background: #888;"></span><span style="display: inline-block; width: 3px; height: 10px; margin-left: 2px; background: #888;"></span></span> Idle
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="display: inline-block; width: 8px; height: 8px; background: #888; vertical-align: middle;"></span> Closed
+                                                                                                                          </span>
+                                                                                                                        </div>
+                                                                                                                        <div class="form-group d-flex align-items-center mb-0">
+                                                                                                                          <label class="mr-2 mb-0">Y-Axis</label>
+                                                                                                                          <div class="btn-group btn-group-toggle" data-toggle="buttons" id="rtt-y-axis-scale">
+                                                                                                                            <label class="btn btn-secondary btn-sm">
+                                                                                                                              <input name="rtt-y-axis-log" type="radio" value="1">Log
+                                                                                                                            </label>
+                                                                                                                            <label class="btn btn-secondary btn-sm active">
+                                                                                                                              <input name="rtt-y-axis-log" type="radio" value="0" checked>Linear
+                                                                                                                            </label>
+                                                                                                                          </div>
+                                                                                                                        </div>
+                                                                                                                      </div>
+                                                                                                                      <!-- RTT Chart -->
+                                                                                                                      <div id="chartRtt" style="height: 250px; width:100%;" class="my-1"></div>
+
+
 
                                                                                                                     </div>
 

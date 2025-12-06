@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sched.h>
 #include <pcap.h>
+#include <pcap/sll.h>
 #include <pthread.h>
 #include <poll.h>
 #include <errno.h>
@@ -16,6 +17,7 @@
 #include "flow.h"
 #include "decode.h"
 #include "timeywimey.h"
+#include "tcp_rtt.h"
 
 #include "intervals.h"
 
@@ -56,6 +58,7 @@ typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
 /* userdata for callback used in pcap_dispatch */
 struct pcap_handler_user {
 	pcap_decoder decoder; /* callback / function pointer */
+	int datalink_type;    /* DLT_EN10MB or DLT_LINUX_SLL */
 	struct {
 		int err;
 		char errstr[DECODE_ERRBUF_SIZE];
@@ -221,6 +224,9 @@ static void expire_old_packets(struct timeval deadline)
 			break;
 		}
 	}
+
+	/* Also expire old RTT tracking entries */
+	tcp_rtt_expire_old(deadline, ref_window_size);
 }
 
 
@@ -438,6 +444,60 @@ void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t)
 	pthread_mutex_unlock(&ti->t5_mutex);
 }
 
+/* Find TCP header in packet for RTT tracking.
+ * Returns pointer to TCP header or NULL if not found.
+ * Also sets end_of_packet pointer for payload length calculation.
+ */
+static const struct hdr_tcp *find_tcp_header(const struct pcap_pkthdr *h,
+                                             const uint8_t *wirebits,
+                                             int datalink_type,
+                                             const uint8_t **end_of_packet)
+{
+	const uint8_t *ptr = wirebits;
+	*end_of_packet = wirebits + h->caplen;
+	uint16_t ethertype;
+
+	/* Skip link layer header based on datalink type */
+	if (datalink_type == DLT_EN10MB) {
+		const struct hdr_ethernet *eth = (const struct hdr_ethernet *)ptr;
+		ethertype = ntohs(eth->type);
+
+		if (ethertype == VLAN_TPID) {
+			ptr += HDR_LEN_ETHER_VLAN;
+			ethertype = ntohs(eth->tagged_type);
+		} else {
+			ptr += HDR_LEN_ETHER;
+		}
+	} else if (datalink_type == DLT_LINUX_SLL) {
+		const struct sll_header *sll = (const struct sll_header *)ptr;
+		ethertype = ntohs(sll->sll_protocol);
+		ptr += SLL_HDR_LEN;
+	} else {
+		return NULL;
+	}
+
+	/* Skip IP header */
+	if (ethertype == ETHERTYPE_IP) {
+		const struct hdr_ipv4 *ip = (const struct hdr_ipv4 *)ptr;
+		if (ip->ip_p != IPPROTO_TCP)
+			return NULL;
+		unsigned int ip_hdr_len = IP_HL(ip) * 4;
+		ptr += ip_hdr_len;
+	} else if (ethertype == ETHERTYPE_IPV6) {
+		const struct hdr_ipv6 *ip6 = (const struct hdr_ipv6 *)ptr;
+		if (ip6->next_hdr != IPPROTO_TCP)
+			return NULL;  /* Simplified: doesn't handle extension headers */
+		ptr += sizeof(struct hdr_ipv6);
+	} else {
+		return NULL;
+	}
+
+	if (ptr >= *end_of_packet)
+		return NULL;
+
+	return (const struct hdr_tcp *)ptr;
+}
+
 static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                           const uint8_t *wirebits)
 {
@@ -450,6 +510,28 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 	if (0 == cbdata->decoder(pcap_hdr, wirebits, &pkt, errstr)) {
 		update_stats_tables(&pkt);
+
+		/* Process TCP packets for RTT tracking */
+		if (pkt.flow_rec.flow.proto == IPPROTO_TCP) {
+			const uint8_t *end_of_packet;
+			const struct hdr_tcp *tcp_hdr = find_tcp_header(pcap_hdr,
+			                                                wirebits,
+			                                                cbdata->datalink_type,
+			                                                &end_of_packet);
+			if (tcp_hdr) {
+				struct flow_pkt_tcp tcp_pkt = { 0 };
+				if (0 == decode_tcp_extended(tcp_hdr, end_of_packet,
+				                             &tcp_pkt, errstr)) {
+					tcp_rtt_process_packet(&pkt.flow_rec.flow,
+					                       tcp_pkt.seq,
+					                       tcp_pkt.ack,
+					                       tcp_pkt.flags,
+					                       tcp_pkt.payload_len,
+					                       pkt.timestamp);
+				}
+			}
+		}
+
 		cbdata->result.err = 0;
 	} else {
 		cbdata->result.err = -1;
@@ -492,6 +574,7 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 	}
 
 	dlt = pcap_datalink(pi->handle);
+	pi->decoder_cbdata.datalink_type = dlt;
 	switch (dlt) {
 	case DLT_EN10MB:
 		pi->decoder_cbdata.decoder = decode_ethernet;
@@ -656,6 +739,9 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
+	/* Initialize TCP RTT tracking */
+	tcp_rtt_init();
+
 	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
 	if (!ti->t5) { return 1; }
 
@@ -684,6 +770,9 @@ int tt_intervals_free(struct tt_thread_info *ti)
 	assert(ti->t5);
 
 	clear_all_tables();
+
+	/* Cleanup TCP RTT tracking */
+	tcp_rtt_cleanup();
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
