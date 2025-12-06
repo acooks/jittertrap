@@ -18,6 +18,7 @@
 #include "decode.h"
 #include "timeywimey.h"
 #include "tcp_rtt.h"
+#include "tcp_window.h"
 
 #include "intervals.h"
 
@@ -225,8 +226,9 @@ static void expire_old_packets(struct timeval deadline)
 		}
 	}
 
-	/* Also expire old RTT tracking entries */
+	/* Also expire old RTT and window tracking entries */
 	tcp_rtt_expire_old(deadline, ref_window_size);
+	tcp_window_expire_old(deadline, ref_window_size);
 }
 
 
@@ -551,6 +553,15 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                       tcp_pkt.flags,
 					                       tcp_pkt.payload_len,
 					                       pkt.timestamp);
+					tcp_window_process_packet(&pkt.flow_rec.flow,
+					                          (const uint8_t *)tcp_hdr,
+					                          end_of_packet,
+					                          tcp_pkt.seq,
+					                          tcp_pkt.ack,
+					                          tcp_pkt.flags,
+					                          tcp_pkt.window,
+					                          tcp_pkt.payload_len,
+					                          pkt.timestamp);
 				}
 			}
 		}
@@ -772,8 +783,9 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
-	/* Initialize TCP RTT tracking */
+	/* Initialize TCP RTT and window tracking */
 	tcp_rtt_init();
+	tcp_window_init();
 
 	/* Initialize double-buffer: clear both buffers, start writing to [0] */
 	memset(ti->t5_buffers, 0, sizeof(ti->t5_buffers));
@@ -803,8 +815,9 @@ int tt_intervals_free(struct tt_thread_info *ti)
 
 	clear_all_tables();
 
-	/* Cleanup TCP RTT tracking */
+	/* Cleanup TCP RTT and window tracking */
 	tcp_rtt_cleanup();
+	tcp_window_cleanup();
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
