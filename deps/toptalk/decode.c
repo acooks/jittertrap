@@ -244,10 +244,11 @@ int decode_tcp_extended(const struct hdr_tcp *packet,
 	pkt->base.flow_rec.flow.sport = ntohs(packet->sport);
 	pkt->base.flow_rec.flow.dport = ntohs(packet->dport);
 
-	/* Extract TCP-specific fields for RTT tracking */
+	/* Extract TCP-specific fields for RTT/window tracking */
 	pkt->seq = ntohl(packet->seq);
 	pkt->ack = ntohl(packet->ack);
 	pkt->flags = packet->flags;
+	pkt->window = ntohs(packet->win);
 
 	/* Calculate payload length: end of packet - start of payload */
 	const uint8_t *tcp_start = (const uint8_t *)packet;

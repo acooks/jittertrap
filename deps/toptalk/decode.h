@@ -97,6 +97,7 @@ struct flow_pkt_tcp {
 	uint32_t ack;               /* TCP acknowledgement number */
 	uint8_t flags;              /* TCP flags */
 	uint16_t payload_len;       /* TCP payload length (excluding headers) */
+	uint16_t window;            /* TCP advertised window (raw, unscaled) */
 };
 
 /* Extended TCP decode that also extracts seq/ack/flags for RTT tracking */
