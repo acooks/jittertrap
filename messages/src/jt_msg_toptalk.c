@@ -134,6 +134,35 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 			tt->flows[i].tcp_state = -1;  /* Default if not present */
 		}
 
+		/* Window/Congestion tracking fields */
+		t = json_object_get(f, "rwnd_bytes");
+		tt->flows[i].rwnd_bytes = json_is_integer(t) ?
+		                          json_integer_value(t) : -1;
+
+		t = json_object_get(f, "window_scale");
+		tt->flows[i].window_scale = json_is_integer(t) ?
+		                            json_integer_value(t) : -1;
+
+		t = json_object_get(f, "zero_window_cnt");
+		tt->flows[i].zero_window_cnt = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		t = json_object_get(f, "dup_ack_cnt");
+		tt->flows[i].dup_ack_cnt = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "retransmit_cnt");
+		tt->flows[i].retransmit_cnt = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		t = json_object_get(f, "ece_cnt");
+		tt->flows[i].ece_cnt = json_is_integer(t) ?
+		                       json_integer_value(t) : 0;
+
+		t = json_object_get(f, "recent_events");
+		tt->flows[i].recent_events = json_is_integer(t) ?
+		                             json_integer_value(t) : 0;
+
 		t = json_object_get(f, "sport");
 		if (!json_is_integer(t)) {
 			goto unpack_fail;
@@ -223,6 +252,21 @@ int jt_toptalk_packer(void *data, char **out)
 		                    json_integer(tt_msg->flows[i].rtt_us));
 		json_object_set_new(flows[i], "tcp_state",
 		                    json_integer(tt_msg->flows[i].tcp_state));
+		/* Window/Congestion tracking fields */
+		json_object_set_new(flows[i], "rwnd_bytes",
+		                    json_integer(tt_msg->flows[i].rwnd_bytes));
+		json_object_set_new(flows[i], "window_scale",
+		                    json_integer(tt_msg->flows[i].window_scale));
+		json_object_set_new(flows[i], "zero_window_cnt",
+		                    json_integer(tt_msg->flows[i].zero_window_cnt));
+		json_object_set_new(flows[i], "dup_ack_cnt",
+		                    json_integer(tt_msg->flows[i].dup_ack_cnt));
+		json_object_set_new(flows[i], "retransmit_cnt",
+		                    json_integer(tt_msg->flows[i].retransmit_cnt));
+		json_object_set_new(flows[i], "ece_cnt",
+		                    json_integer(tt_msg->flows[i].ece_cnt));
+		json_object_set_new(flows[i], "recent_events",
+		                    json_integer(tt_msg->flows[i].recent_events));
 		json_object_set_new(flows[i], "sport",
 		                    json_integer(tt_msg->flows[i].sport));
 		json_object_set_new(flows[i], "dport",

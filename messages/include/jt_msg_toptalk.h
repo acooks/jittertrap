@@ -31,6 +31,14 @@ struct jt_msg_toptalk
 		int64_t packets;
 		int64_t rtt_us;          /* RTT in microseconds, -1 if not available */
 		int32_t tcp_state;       /* TCP connection state, -1 if not TCP */
+		/* Window/Congestion tracking fields */
+		int64_t rwnd_bytes;      /* Advertised window in bytes, -1 if unknown */
+		int32_t window_scale;    /* Window scale factor, -1 if unknown */
+		uint32_t zero_window_cnt; /* Zero-window events */
+		uint32_t dup_ack_cnt;    /* Duplicate ACK bursts (3+) */
+		uint32_t retransmit_cnt; /* Detected retransmissions */
+		uint32_t ece_cnt;        /* ECE flag count */
+		uint8_t recent_events;   /* Bitmask of recent congestion events */
 		uint16_t sport;
 		uint16_t dport;
 		char src[ADDR_LEN];
