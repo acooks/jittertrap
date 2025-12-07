@@ -77,7 +77,7 @@ static int select_iface(void *data)
 		syslog(LOG_WARNING,
 		       "ignoring request to switch to iface: [%s] - "
 		       "iface not in allowed list: [%s]\n",
-		       *iface, EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		       *iface, get_allowed_ifaces());
 		return -1;
 	}
 	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
@@ -98,8 +98,8 @@ static void get_first_iface(char *iface)
 	assert(NULL != i);
 	if (NULL == *i) {
 		syslog(LOG_WARNING, "No interfaces available. "
-		       "Allowed interfaces (compile-time): %s\n",
-		       EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		       "Allowed interfaces: %s\n",
+		       get_allowed_ifaces());
 	}
 	snprintf(iface, MAX_IFACE_LEN, "%s", *i);
 
@@ -210,8 +210,8 @@ int jt_srv_send_iface_list(void)
 	assert(NULL != iface);
 	if (NULL == *iface) {
 		fprintf(stderr, "No interfaces available. "
-		                "Allowed interfaces (compile-time): %s\n",
-		        EXPAND_AND_QUOTE(ALLOWED_IFACES));
+		                "Allowed interfaces: %s\n",
+		        get_allowed_ifaces());
 		free(ifaces);
 		free(il);
 		return -1;

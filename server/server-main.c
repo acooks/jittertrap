@@ -16,6 +16,7 @@
 #include "proto.h"
 #include "proto-jittertrap.h"
 #include "pcap_buffer.h"
+#include "netem.h"
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -61,6 +62,7 @@ static struct option options[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "port", required_argument, NULL, 'p' },
 	{ "interface", required_argument, NULL, 'i' },
+	{ "allowed", required_argument, NULL, 'a' },
 	{ "resource_path", required_argument, NULL, 'r' },
 #ifndef LWS_NO_DAEMONIZE
 	{ "daemonize", no_argument, NULL, 'D' },
@@ -136,7 +138,7 @@ int main(int argc, char **argv)
 	info.port = WEB_SERVER_PORT;
 
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "hi:p:r:dD", options, NULL);
+		n = getopt_long(argc, argv, "ha:i:p:r:dD", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -157,6 +159,9 @@ int main(int argc, char **argv)
 			interface_name[(sizeof interface_name) - 1] = '\0';
 			iface = interface_name;
 			break;
+		case 'a':
+			set_allowed_ifaces(optarg);
+			break;
 		case 'r':
 			resource_path = optarg;
 			mount.origin = resource_path;
@@ -170,6 +175,7 @@ int main(int argc, char **argv)
 			        "  -h, --help                Show this help message\n"
 			        "  -p, --port PORT           Web server port (default: %d)\n"
 			        "  -i, --interface IFACE     Bind web server to interface\n"
+			        "  -a, --allowed IFACES      Restrict capture to interfaces (colon-separated)\n"
 			        "  -r, --resource_path DIR   Path to web content (default: %s)\n"
 			        "  -d                        Enable debug logging\n"
 #ifndef LWS_NO_DAEMONIZE
@@ -177,7 +183,7 @@ int main(int argc, char **argv)
 #endif
 			        "\n"
 			        "Note: The network interface for packet capture is selected\n"
-			        "via the web UI, not at the command line.\n",
+			        "via the web UI. Use -a to restrict which interfaces are available.\n",
 			        WEB_SERVER_PORT, xstr(WEB_SERVER_DOCUMENT_ROOT));
 			exit(n == 'h' ? 0 : 1);
 		}
