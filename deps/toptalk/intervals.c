@@ -361,13 +361,14 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	}
 
 	/*
-	 * Populate cached RTT info for this flow.
+	 * Populate cached RTT and window info for this flow.
 	 * This is done here (in the writer thread context) to avoid
 	 * race conditions with the reader thread accessing the hash tables.
 	 * We only need to do this once and copy to all intervals.
 	 */
 	int64_t rtt_us;
 	enum tcp_conn_state tcp_state;
+	struct tcp_window_info win_info;
 
 	/* Get RTT info */
 	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state) == 0) {
@@ -378,9 +379,29 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[0].rtt.tcp_state = -1;
 	}
 
-	/* Copy RTT info to all intervals (same data for all) */
+	/* Get window/congestion info */
+	if (tcp_window_get_info(&ref_flow->f.flow, &win_info) == 0) {
+		st_flows[0].window.rwnd_bytes = win_info.rwnd_bytes;
+		st_flows[0].window.window_scale = win_info.window_scale;
+		st_flows[0].window.zero_window_cnt = win_info.zero_window_count;
+		st_flows[0].window.dup_ack_cnt = win_info.dup_ack_count;
+		st_flows[0].window.retransmit_cnt = win_info.retransmit_count;
+		st_flows[0].window.ece_cnt = win_info.ece_count;
+		st_flows[0].window.recent_events = win_info.recent_events;
+	} else {
+		st_flows[0].window.rwnd_bytes = -1;
+		st_flows[0].window.window_scale = -1;
+		st_flows[0].window.zero_window_cnt = 0;
+		st_flows[0].window.dup_ack_cnt = 0;
+		st_flows[0].window.retransmit_cnt = 0;
+		st_flows[0].window.ece_cnt = 0;
+		st_flows[0].window.recent_events = 0;
+	}
+
+	/* Copy RTT/window info to all intervals (same data for all) */
 	for (int i = 1; i < INTERVAL_COUNT; i++) {
 		st_flows[i].rtt = st_flows[0].rtt;
+		st_flows[i].window = st_flows[0].window;
 	}
 }
 
