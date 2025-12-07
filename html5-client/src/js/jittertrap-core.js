@@ -241,12 +241,25 @@
       for (let i = 0; i < slices; i++) {
         const slice = flowsTS[interval].get(i);
         /* the data point must exist to keep the series alignment intact */
-        const d = {"ts": slice.ts, "bytes":0, "packets":0, "rtt_us": -1, "tcp_state": -1};
+        const d = {
+          "ts": slice.ts, "bytes":0, "packets":0,
+          "rtt_us": -1, "tcp_state": -1,
+          "rwnd_bytes": -1, "window_scale": -1,
+          "zero_window_cnt": 0, "dup_ack_cnt": 0, "retransmit_cnt": 0,
+          "ece_cnt": 0, "recent_events": 0
+        };
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
           d.rtt_us = slice[fkey].rtt_us;
           d.tcp_state = slice[fkey].tcp_state;
+          d.rwnd_bytes = slice[fkey].rwnd_bytes;
+          d.window_scale = slice[fkey].window_scale;
+          d.zero_window_cnt = slice[fkey].zero_window_cnt;
+          d.dup_ack_cnt = slice[fkey].dup_ack_cnt;
+          d.retransmit_cnt = slice[fkey].retransmit_cnt;
+          d.ece_cnt = slice[fkey].ece_cnt;
+          d.recent_events = slice[fkey].recent_events;
           if (d.rtt_us >= 0) {
             lastRtt = d.rtt_us;
           }
@@ -409,12 +422,19 @@
         flowRank[interval].push(fkey);
       }
 
-      /* set bytes, packets, rtt, tcp_state for this (intervalSize,timeSlice,flow)  */
+      /* set bytes, packets, rtt, tcp_state, window for this (intervalSize,timeSlice,flow)  */
       sample_slice[fkey] = {
         "bytes": msg.flows[i].bytes,
         "packets": msg.flows[i].packets,
         "rtt_us": msg.flows[i].rtt_us,
-        "tcp_state": msg.flows[i].tcp_state
+        "tcp_state": msg.flows[i].tcp_state,
+        "rwnd_bytes": msg.flows[i].rwnd_bytes,
+        "window_scale": msg.flows[i].window_scale,
+        "zero_window_cnt": msg.flows[i].zero_window_cnt,
+        "dup_ack_cnt": msg.flows[i].dup_ack_cnt,
+        "retransmit_cnt": msg.flows[i].retransmit_cnt,
+        "ece_cnt": msg.flows[i].ece_cnt,
+        "recent_events": msg.flows[i].recent_events
       };
 
       /* reset the time-to-live to the chart window length (in samples),

@@ -137,6 +137,36 @@
                                                                                                                       <!-- RTT Chart -->
                                                                                                                       <div id="chartRtt" style="height: 250px; width:100%;" class="my-1"></div>
 
+                                                                                                                      <!-- Window Chart Header -->
+                                                                                                                      <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
+                                                                                                                        <div class="d-flex align-items-center">
+                                                                                                                          <span class="font-weight-bold mr-3">TCP Advertised Window</span>
+                                                                                                                          <span class="text-muted small" style="font-size: 0.8em;">
+                                                                                                                            <span style="color: #ff4444;">&#x26A0;</span> Zero Window
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="color: #ff8800;">&#x21BB;</span> Dup ACK
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="color: #ff0000;">&#x21A9;</span> Retrans
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="color: #8800ff;">&#x25BC;</span> ECE
+                                                                                                                            <span class="mx-2">|</span>
+                                                                                                                            <span style="color: #0088ff;">&#x25B2;</span> CWR
+                                                                                                                          </span>
+                                                                                                                        </div>
+                                                                                                                        <div class="form-group d-flex align-items-center mb-0">
+                                                                                                                          <label class="mr-2 mb-0">Y-Axis</label>
+                                                                                                                          <div class="btn-group btn-group-toggle" data-toggle="buttons" id="window-y-axis-scale">
+                                                                                                                            <label class="btn btn-secondary btn-sm active">
+                                                                                                                              <input name="window-y-axis-log" type="radio" value="1" checked>Log
+                                                                                                                            </label>
+                                                                                                                            <label class="btn btn-secondary btn-sm">
+                                                                                                                              <input name="window-y-axis-log" type="radio" value="0">Linear
+                                                                                                                            </label>
+                                                                                                                          </div>
+                                                                                                                        </div>
+                                                                                                                      </div>
+                                                                                                                      <!-- Window Chart -->
+                                                                                                                      <div id="chartWindow" style="height: 250px; width:100%;" class="my-1"></div>
 
 
                                                                                                                     </div>
