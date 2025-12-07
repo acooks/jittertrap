@@ -3,18 +3,39 @@
 [![Coverity Status](https://scan.coverity.com/projects/4088/badge.svg)](https://scan.coverity.com/projects/4088)
 [![Build Status](https://github.com/acooks/jittertrap/actions/workflows/main.yml/badge.svg)](https://github.com/acooks/jittertrap/actions/workflows/main.yml)
 
+JitterTrap is a real-time network performance analysis tool for engineers working with delay-sensitive networked applications and devices. It provides live measurements, per-flow TCP analysis, and network impairment emulation—all through a web-based interface.
 
-JitterTrap is a performance analysis tool for engineers working in the field of delay-sensitive networked applications and devices. It provides real-time measurements and network impairment emulation to facilitate development, integration and troubleshooting.
+### Key Features
 
-It has three broad areas of use:
-* real-time analysis of network congestion;
-* detection and measurement of unexpected delays, introduced by the device or application under test. That is, **characterising the source behaviour** with respect to throughput, packet rates, jitter;
-* introducing and controlling known network impairment conditions (eg. delay, jitter, packet loss) to verify the correct operation of the device or application under test. That is, **characterising the behaviour of the destination**, with respect to delay, jitter and loss.
+**Real-time Traffic Analysis**
+- Throughput (bits/s, packets/s) with configurable sampling intervals (5ms–1000ms)
+- Inter-packet gap measurement to detect buffering and scheduling issues
+- Top Talkers breakdown by flow (source/destination IP:port)
 
-The user interface is implemented as a web application. [Have a look at the demo](http://demo.jittertrap.net) hosted on a t2.micro instance at AWS Sydney. (Performance is highly variable and may suffer if you are far away or on an impaired network :-) )
+**TCP Flow Analysis**
+- **Round-Trip Time (RTT)** — measured from TCP sequence/ACK pairs, with EWMA smoothing
+- **Advertised Window** — tracks receive window with proper window scaling (RFC 7323)
+- **Connection State** — visual markers for SYN, FIN, RST events
+- **Congestion Events** — detects zero window, duplicate ACKs, retransmissions, ECN
 
+**Network Impairment Emulation**
+- Inject delay, jitter, and packet loss on egress traffic
+- Scriptable impairment programs for automated testing
 
-Please use GitHub Discussions for questions and suggestions.
+**Packet Capture**
+- 30-second rolling buffer with trap-triggered capture
+- Download as pcap for Wireshark analysis
+
+### Use Cases
+
+- **Characterise source behaviour** — measure throughput, packet rates, and jitter from devices under test
+- **Characterise destination behaviour** — inject impairments to verify application resilience to delay/loss
+- **Debug TCP performance** — identify RTT spikes, window limitations, and retransmission patterns
+- **Network congestion analysis** — real-time visibility into traffic patterns
+
+The user interface is a web application. [Try the demo](http://demo.jittertrap.net) hosted on AWS Sydney.
+
+Please use [GitHub Discussions](https://github.com/acooks/jittertrap/discussions) for questions and suggestions.
 
 
 ## Installing JitterTrap
@@ -59,8 +80,34 @@ Build:
     cd jittertrap
     make
 
-Run:
+Run `make help` to see build configuration options.
+
+## Running JitterTrap
+
+Basic usage:
 
     sudo ./server/jt-server --port 8080 --resource_path html5-client/output/
 
-Now point your web browser to the user interface, eg. http://localhost:8080/
+Then open http://localhost:8080/ in your browser.
+
+### Command-line Options
+
+| Option | Description |
+|--------|-------------|
+| `-p, --port PORT` | HTTP server port (default: 80) |
+| `-r, --resource_path PATH` | Path to web UI files |
+| `-a, --allowed IFACE` | Restrict to specific interface(s) (repeatable) |
+
+Example with interface filtering:
+
+    sudo ./server/jt-server -p 8080 -r html5-client/output/ --allowed eth0 --allowed eth1
+
+### Requirements
+
+JitterTrap requires root privileges (or `CAP_NET_ADMIN` capability) for:
+- Packet capture on network interfaces
+- Network impairment injection via tc/netem
+
+## Contributing
+
+Contributions are welcome! Please use [GitHub Issues](https://github.com/acooks/jittertrap/issues) for bug reports and [GitHub Discussions](https://github.com/acooks/jittertrap/discussions) for questions and feature suggestions.
