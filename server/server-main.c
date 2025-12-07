@@ -59,13 +59,12 @@ void sighandler(int sig __attribute__((unused)))
 
 static struct option options[] = {
 	{ "help", no_argument, NULL, 'h' },
-	{ "debug", required_argument, NULL, '1' },
 	{ "port", required_argument, NULL, 'p' },
 	{ "interface", required_argument, NULL, 'i' },
+	{ "resource_path", required_argument, NULL, 'r' },
 #ifndef LWS_NO_DAEMONIZE
 	{ "daemonize", no_argument, NULL, 'D' },
 #endif
-	{ "resource_path", required_argument, NULL, 'r' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -137,7 +136,7 @@ int main(int argc, char **argv)
 	info.port = WEB_SERVER_PORT;
 
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "ci:hsp:dDr:", options, NULL);
+		n = getopt_long(argc, argv, "hi:p:r:dD", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -147,14 +146,6 @@ int main(int argc, char **argv)
 			syslog_options &= ~LOG_PERROR;
 			break;
 #endif
-		/* opt that wont be a short opt either - for long --debug */
-		case '1':
-			debug_level = atoi(optarg);
-			debug_level =
-			    (debug_level > LOG_DEBUG) ? LOG_DEBUG : debug_level;
-			debug_level =
-			    (debug_level < LOG_EMERG) ? LOG_DEBUG : debug_level;
-			break;
 		case 'd':
 			debug_level = LOG_DEBUG;
 			break;
@@ -171,11 +162,24 @@ int main(int argc, char **argv)
 			mount.origin = resource_path;
 			break;
 		case 'h':
+		default:
 			fprintf(stderr,
-			        "Usage: " PROGNAME "[--port=<p>] "
-			        "[-d <log level>]"
-			        "[--resource_path <path>]\n");
-			exit(1);
+			        "Usage: " PROGNAME " [OPTIONS]\n"
+			        "\n"
+			        "Options:\n"
+			        "  -h, --help                Show this help message\n"
+			        "  -p, --port PORT           Web server port (default: %d)\n"
+			        "  -i, --interface IFACE     Bind web server to interface\n"
+			        "  -r, --resource_path DIR   Path to web content (default: %s)\n"
+			        "  -d                        Enable debug logging\n"
+#ifndef LWS_NO_DAEMONIZE
+			        "  -D, --daemonize           Run as a daemon\n"
+#endif
+			        "\n"
+			        "Note: The network interface for packet capture is selected\n"
+			        "via the web UI, not at the command line.\n",
+			        WEB_SERVER_PORT, xstr(WEB_SERVER_DOCUMENT_ROOT));
+			exit(n == 'h' ? 0 : 1);
 		}
 	}
 
