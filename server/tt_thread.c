@@ -212,6 +212,15 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 		m->flows[f].rtt_us = fr->rtt.rtt_us;
 		m->flows[f].tcp_state = fr->rtt.tcp_state;
 
+		/* Use cached window info from flow_record */
+		m->flows[f].rwnd_bytes = fr->window.rwnd_bytes;
+		m->flows[f].window_scale = fr->window.window_scale;
+		m->flows[f].zero_window_cnt = fr->window.zero_window_cnt;
+		m->flows[f].dup_ack_cnt = fr->window.dup_ack_cnt;
+		m->flows[f].retransmit_cnt = fr->window.retransmit_cnt;
+		m->flows[f].ece_cnt = fr->window.ece_cnt;
+		m->flows[f].recent_events = fr->window.recent_events;
+
 		if (is_valid_proto(fr->flow.proto)) {
 			snprintf(m->flows[f].proto, PROTO_LEN, "%s",
 			         protos[fr->flow.proto]);
