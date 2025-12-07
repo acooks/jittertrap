@@ -77,6 +77,8 @@
     my.charts.tput.tputChart.reset(my.core.getSelectedSeries());
     my.charts.pgaps.packetGapChart.reset();
     my.charts.toptalk.toptalkChart.reset();
+    my.charts.rtt.rttChart.reset();
+    my.charts.window.windowChart.reset();
   };
 
   let renderCount = 0;
@@ -91,6 +93,8 @@
     my.charts.tput.tputChart.redraw();
     my.charts.pgaps.packetGapChart.redraw();
     my.charts.toptalk.toptalkChart.redraw();
+    my.charts.rtt.rttChart.redraw();
+    my.charts.window.windowChart.redraw();
 
     isDirty = false; // Clear the dirty flag after drawing
     const tuneWindowSize = 5; // how often to adjust the updatePeriod.

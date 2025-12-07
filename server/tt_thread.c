@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <syslog.h>
+#include <stdatomic.h>
 
 #include <jansson.h>
 
@@ -142,7 +143,13 @@ int tt_thread_restart(char *iface)
 	if (ti.thread_id) {
 		pthread_cancel(ti.thread_id);
 		pthread_join(ti.thread_id, &res);
-		free(ti.t5);
+
+		/* After join, writer thread is dead. Reset the atomic pointer
+		 * so readers see NULL until new data is published.
+		 * Buffers are static in ti, so no free needed.
+		 */
+		atomic_store(&ti.t5, NULL);
+
 		free(ti.dev);
 	}
 
@@ -189,43 +196,58 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 	m->tpackets = ttf->total_packets;
 
 	for (int f = 0; f < flow_count; f++) {
-		m->flows[f].bytes = ttf->flow[f][interval].bytes;
-		m->flows[f].packets = ttf->flow[f][interval].packets;
-		m->flows[f].sport = ttf->flow[f][interval].flow.sport;
-		m->flows[f].dport = ttf->flow[f][interval].flow.dport;
-		if (is_valid_proto(ttf->flow[f][interval].flow.proto)) {
+		struct flow_record *fr = &ttf->flow[f][interval];
+
+		m->flows[f].bytes = fr->bytes;
+		m->flows[f].packets = fr->packets;
+		m->flows[f].sport = fr->flow.sport;
+		m->flows[f].dport = fr->flow.dport;
+
+		/*
+		 * Use cached RTT info from flow_record.
+		 * This data was populated by fill_short_int_flows() in the
+		 * writer thread, eliminating race conditions with hash table
+		 * access from this reader thread.
+		 */
+		m->flows[f].rtt_us = fr->rtt.rtt_us;
+		m->flows[f].tcp_state = fr->rtt.tcp_state;
+		m->flows[f].saw_syn = fr->rtt.saw_syn;
+
+		/* Use cached window info from flow_record */
+		m->flows[f].rwnd_bytes = fr->window.rwnd_bytes;
+		m->flows[f].window_scale = fr->window.window_scale;
+		m->flows[f].zero_window_cnt = fr->window.zero_window_cnt;
+		m->flows[f].dup_ack_cnt = fr->window.dup_ack_cnt;
+		m->flows[f].retransmit_cnt = fr->window.retransmit_cnt;
+		m->flows[f].ece_cnt = fr->window.ece_cnt;
+		m->flows[f].recent_events = fr->window.recent_events;
+
+		if (is_valid_proto(fr->flow.proto)) {
 			snprintf(m->flows[f].proto, PROTO_LEN, "%s",
-			         protos[ttf->flow[f][interval].flow.proto]);
+			         protos[fr->flow.proto]);
 		} else {
 			snprintf(m->flows[f].proto, PROTO_LEN, "%s", "__");
 		}
-		if (ttf->flow[f][interval].flow.ethertype == ETHERTYPE_IP) {
-			inet_ntop(AF_INET,
-			          &(ttf->flow[f][interval].flow.src_ip),
+		if (fr->flow.ethertype == ETHERTYPE_IP) {
+			inet_ntop(AF_INET, &(fr->flow.src_ip),
 			          s_addr_str, INET6_ADDRSTRLEN);
-			inet_ntop(AF_INET,
-			          &(ttf->flow[f][interval].flow.dst_ip),
+			inet_ntop(AF_INET, &(fr->flow.dst_ip),
 			          d_addr_str, INET6_ADDRSTRLEN);
-		} else if (ttf->flow[f][interval].flow.ethertype ==
-		           ETHERTYPE_IPV6) {
-			inet_ntop(AF_INET6,
-			          &(ttf->flow[f][interval].flow.src_ip6),
+		} else if (fr->flow.ethertype == ETHERTYPE_IPV6) {
+			inet_ntop(AF_INET6, &(fr->flow.src_ip6),
 			          s_addr_str, INET6_ADDRSTRLEN);
-			inet_ntop(AF_INET6,
-			          &(ttf->flow[f][interval].flow.dst_ip6),
+			inet_ntop(AF_INET6, &(fr->flow.dst_ip6),
 			          d_addr_str, INET6_ADDRSTRLEN);
 		} else {
 			snprintf(s_addr_str, INET6_ADDRSTRLEN,
-				 "Ethertype 0x%x\n",
-				 ttf->flow[f][interval].flow.ethertype);
+				 "Ethertype 0x%x\n", fr->flow.ethertype);
 		}
 		snprintf(m->flows[f].src, ADDR_LEN, "%s", s_addr_str);
 		snprintf(m->flows[f].dst, ADDR_LEN, "%s", d_addr_str);
 
-		if (is_valid_dscp(ttf->flow[f][interval].flow.tclass)) {
-			snprintf(
-			    m->flows[f].tclass, TCLASS_LEN, "%s",
-			    dscpvalues[ttf->flow[f][interval].flow.tclass]);
+		if (is_valid_dscp(fr->flow.tclass)) {
+			snprintf(m->flows[f].tclass, TCLASS_LEN, "%s",
+			         dscpvalues[fr->flow.tclass]);
 		} else {
 			snprintf(m->flows[f].tclass, TCLASS_LEN, "%s", "__");
 		}
@@ -243,15 +265,18 @@ inline static int message_producer(struct mq_tt_msg *m, void *data)
 int queue_tt_msg(int interval)
 {
 	struct mq_tt_msg msg;
-	struct tt_top_flows *t5 = ti.t5;
 	int cb_err;
 
-	pthread_mutex_lock(&ti.t5_mutex);
-	{
+	/* Lock-free read: atomically load the published buffer pointer.
+	 * The writer publishes a fully-populated buffer before updating the
+	 * pointer, so we always read consistent data (at most 1 tick stale).
+	 */
+	struct tt_top_flows *t5 = atomic_load_explicit(&ti.t5,
+	                                               memory_order_acquire);
+	if (t5) {
 		m2m(t5, &msg, interval);
 		mq_tt_produce(message_producer, &msg, &cb_err);
 	}
-	pthread_mutex_unlock(&ti.t5_mutex);
 	return 0;
 }
 

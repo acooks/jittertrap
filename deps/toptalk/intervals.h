@@ -2,6 +2,7 @@
 #define INTERVALS_H
 
 #include <pcap.h>
+#include <stdatomic.h>
 #include "utlist.h"
 #include "uthash.h"
 #include "decode.h"
@@ -30,7 +31,14 @@ struct tt_thread_info {
 	pthread_t thread_id;
 	pthread_attr_t attr;
         char *dev;
-        struct tt_top_flows *t5;
+	/* Double-buffer for lock-free reader access to top flows.
+	 * Writer fills t5_buffers[t5_write_idx], then publishes via atomic
+	 * pointer swap to t5. Readers atomically load t5 without locking.
+	 */
+	struct tt_top_flows t5_buffers[2];
+	_Atomic(struct tt_top_flows *) t5;
+	_Atomic int t5_write_idx;
+	/* Mutex retained only for restart synchronization */
 	pthread_mutex_t t5_mutex;
 	unsigned int decode_errors;
 	const char * const thread_name;

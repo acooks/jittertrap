@@ -24,6 +24,25 @@ static struct nl_cache *link_cache, *qdisc_cache;
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
+/* Runtime allowed interfaces list (colon-separated).
+ * Empty string means all interfaces are allowed.
+ * Initialized from compile-time default, can be overridden at runtime.
+ */
+static char *allowed_ifaces = NULL;
+
+const char *get_allowed_ifaces(void)
+{
+	if (allowed_ifaces)
+		return allowed_ifaces;
+	return EXPAND_AND_QUOTE(ALLOWED_IFACES);
+}
+
+void set_allowed_ifaces(const char *ifaces)
+{
+	free(allowed_ifaces);
+	allowed_ifaces = ifaces ? strdup(ifaces) : NULL;
+}
+
 int netem_init(void)
 {
 	/* Allocate and initialize a new netlink handle */
@@ -55,7 +74,7 @@ int netem_init(void)
 
 int is_iface_allowed(const char *needle)
 {
-	const char *haystack = EXPAND_AND_QUOTE(ALLOWED_IFACES);
+	const char *haystack = get_allowed_ifaces();
 	char *tokens = strdup(haystack);
 	char *iface;
 

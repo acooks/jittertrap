@@ -97,6 +97,16 @@
     let resizeTimer; // Timer for debounced resize handling
     let cachedFkeys = []; // Cache for legend optimization
 
+    // Cached values for tick formatter to avoid closure allocation
+    let cachedMaxTimestamp = 0;
+    const xTickFormatter = function(seconds) {
+      const relativeSeconds = seconds - cachedMaxTimestamp;
+      return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
+    };
+
+    // Reusable tick values array
+    const tickValuesCache = [];
+
     const updateTooltip = function(mousePos) {
         const tooltip = d3.select("#toptalk-tooltip");
         
@@ -455,8 +465,16 @@
       return true;
     };
 
+    /* Format RTT value for display */
+    const formatRtt = (rtt_us) => {
+      if (rtt_us < 0 || rtt_us === undefined) return "-";
+      if (rtt_us < 1000) return rtt_us.toFixed(0) + " us";
+      if (rtt_us < 1000000) return (rtt_us / 1000).toFixed(2) + " ms";
+      return (rtt_us / 1000000).toFixed(2) + " s";
+    };
+
     /* Update the legend DOM - only called when flows change */
-    const updateLegend = (fkeys) => {
+    const updateLegend = (fkeys, flowDataMap) => {
       const legendContainer = d3.select("#toptalkLegendContainer");
 
       // Remove old rows
@@ -480,14 +498,18 @@
         const row = d3.select(this);
         if (d === 'other') {
           row.append("div").classed("col", true).style("padding-left", "10px").text("Other Flows");
+          row.append("div").style("width", "13%").classed("flex-shrink-0 text-right pr-2", true).text("-");
         } else {
           const flow = parseFlowKey(d);
+          const flowData = flowDataMap.get(d);
+          const rtt = flowData ? flowData.rtt_us : -1;
 
-          row.append("div").style("width", "38%").classed("text-right pr-2", true).style("white-space", "nowrap").text(flow.sourceIP + ":" + flow.sourcePort);
+          row.append("div").style("width", "33%").classed("text-right pr-2", true).style("white-space", "nowrap").text(flow.sourceIP + ":" + flow.sourcePort);
           row.append("div").style("width", "5%").classed("text-center flex-shrink-0", true).text("->");
-          row.append("div").style("width", "38%").classed("text-left pl-2", true).style("white-space", "nowrap").text(flow.destIP + ":" + flow.destPort);
+          row.append("div").style("width", "33%").classed("text-left pl-2", true).style("white-space", "nowrap").text(flow.destIP + ":" + flow.destPort);
           row.append("div").style("width", "9%").classed("flex-shrink-0", true).text(flow.proto);
-          row.append("div").style("width", "10%").classed("flex-shrink-0", true).text(flow.tclass);
+          row.append("div").style("width", "7%").classed("flex-shrink-0", true).text(flow.tclass);
+          row.append("div").style("width", "13%").classed("flex-shrink-0 text-right pr-2 rtt-value", true).attr("data-fkey", d).text(formatRtt(rtt));
         }
       });
     };
@@ -523,22 +545,20 @@
 
         // Generate fixed tick positions in relative time (e.g., -20, -15, -10, -5, 0)
         const tickInterval = Math.max(1, Math.ceil(domainSpan / 10)); // ~10 ticks, minimum 1 second
-        const tickValues = [];
+        tickValuesCache.length = 0;  // Reuse array
         let iterations = 0;
         for (let relativeTime = 0; relativeTime >= -domainSpan && iterations < 100; relativeTime -= tickInterval) {
-          tickValues.unshift(maxTimestamp + relativeTime);
+          tickValuesCache.unshift(maxTimestamp + relativeTime);
           iterations++;
         }
 
         // Set explicit tick values to prevent scrolling
-        xAxis.tickValues(tickValues);
-        xGrid.tickValues(tickValues);
+        xAxis.tickValues(tickValuesCache);
+        xGrid.tickValues(tickValuesCache);
 
-        // Create custom formatter for seconds-based timestamps
-        xAxis.tickFormat(function(seconds) {
-          const relativeSeconds = seconds - maxTimestamp;
-          return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
-        });
+        // Use pre-defined formatter (update cached value for use in formatter)
+        cachedMaxTimestamp = maxTimestamp;
+        xAxis.tickFormat(xTickFormatter);
       }
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;
@@ -629,10 +649,26 @@
       barsbox.attr("transform",
                    "translate(" + margin.left + "," + (height + 55) + ")");
 
+      // Build flow data map for RTT lookup in legend
+      const flowDataMap = new Map();
+      processedChartData.forEach(f => {
+        flowDataMap.set(f.fkey, { rtt_us: f.rtt_us });
+      });
+
       // Only update legend when flow list changes
       if (!arraysEqual(fkeys, cachedFkeys)) {
-        updateLegend(fkeys);
+        updateLegend(fkeys, flowDataMap);
         cachedFkeys = fkeys.slice(); // Cache a copy
+      } else {
+        // Update RTT values even if flow list hasn't changed
+        processedChartData.forEach(f => {
+          if (f.fkey !== 'other') {
+            const rttElem = d3.select(`.rtt-value[data-fkey="${f.fkey}"]`);
+            if (!rttElem.empty()) {
+              rttElem.text(formatRtt(f.rtt_us));
+            }
+          }
+        });
       }
 
       // Update tooltip if active
@@ -650,6 +686,9 @@
         my.charts.setDirty();
       }, 100);
     });
+
+    /* Export getFlowColor for use by other charts (e.g., RTT chart) */
+    m.getFlowColor = getFlowColor;
 
     return m;
 

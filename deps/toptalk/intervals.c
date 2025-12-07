@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sched.h>
 #include <pcap.h>
+#include <pcap/sll.h>
 #include <pthread.h>
 #include <poll.h>
 #include <errno.h>
@@ -16,6 +17,8 @@
 #include "flow.h"
 #include "decode.h"
 #include "timeywimey.h"
+#include "tcp_rtt.h"
+#include "tcp_window.h"
 
 #include "intervals.h"
 
@@ -56,6 +59,7 @@ typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
 /* userdata for callback used in pcap_dispatch */
 struct pcap_handler_user {
 	pcap_decoder decoder; /* callback / function pointer */
+	int datalink_type;    /* DLT_EN10MB or DLT_LINUX_SLL */
 	struct {
 		int err;
 		char errstr[DECODE_ERRBUF_SIZE];
@@ -221,6 +225,10 @@ static void expire_old_packets(struct timeval deadline)
 			break;
 		}
 	}
+
+	/* Also expire old RTT and window tracking entries */
+	tcp_rtt_expire_old(deadline, ref_window_size);
+	tcp_window_expire_old(deadline, ref_window_size);
 }
 
 
@@ -351,6 +359,53 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[i].packets =
 		    rate_calc(tt_intervals[i], st_flows[i].packets);
 	}
+
+	/*
+	 * Populate cached RTT and window info for this flow.
+	 * This is done here (in the writer thread context) to avoid
+	 * race conditions with the reader thread accessing the hash tables.
+	 * We only need to do this once and copy to all intervals.
+	 */
+	int64_t rtt_us;
+	enum tcp_conn_state tcp_state;
+	int saw_syn;
+	struct tcp_window_info win_info;
+
+	/* Get RTT info */
+	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state, &saw_syn) == 0) {
+		st_flows[0].rtt.rtt_us = rtt_us;
+		st_flows[0].rtt.tcp_state = tcp_state;
+		st_flows[0].rtt.saw_syn = saw_syn;
+	} else {
+		st_flows[0].rtt.rtt_us = -1;
+		st_flows[0].rtt.tcp_state = -1;
+		st_flows[0].rtt.saw_syn = 0;
+	}
+
+	/* Get window/congestion info */
+	if (tcp_window_get_info(&ref_flow->f.flow, &win_info) == 0) {
+		st_flows[0].window.rwnd_bytes = win_info.rwnd_bytes;
+		st_flows[0].window.window_scale = win_info.window_scale;
+		st_flows[0].window.zero_window_cnt = win_info.zero_window_count;
+		st_flows[0].window.dup_ack_cnt = win_info.dup_ack_count;
+		st_flows[0].window.retransmit_cnt = win_info.retransmit_count;
+		st_flows[0].window.ece_cnt = win_info.ece_count;
+		st_flows[0].window.recent_events = win_info.recent_events;
+	} else {
+		st_flows[0].window.rwnd_bytes = -1;
+		st_flows[0].window.window_scale = -1;
+		st_flows[0].window.zero_window_cnt = 0;
+		st_flows[0].window.dup_ack_cnt = 0;
+		st_flows[0].window.retransmit_cnt = 0;
+		st_flows[0].window.ece_cnt = 0;
+		st_flows[0].window.recent_events = 0;
+	}
+
+	/* Copy RTT/window info to all intervals (same data for all) */
+	for (int i = 1; i < INTERVAL_COUNT; i++) {
+		st_flows[i].rtt = st_flows[0].rtt;
+		st_flows[i].window = st_flows[0].window;
+	}
 }
 
 static void update_stats_tables(struct flow_pkt *pkt)
@@ -438,6 +493,83 @@ void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t)
 	pthread_mutex_unlock(&ti->t5_mutex);
 }
 
+/* Find TCP header in packet for RTT tracking.
+ * Returns pointer to TCP header or NULL if not found.
+ * Also sets end_of_packet pointer for payload length calculation.
+ */
+static const struct hdr_tcp *find_tcp_header(const struct pcap_pkthdr *h,
+                                             const uint8_t *wirebits,
+                                             int datalink_type,
+                                             const uint8_t **end_of_packet)
+{
+	const uint8_t *ptr = wirebits;
+	*end_of_packet = wirebits + h->caplen;
+	uint16_t ethertype;
+
+	/* Skip link layer header based on datalink type */
+	if (datalink_type == DLT_EN10MB) {
+		const struct hdr_ethernet *eth = (const struct hdr_ethernet *)ptr;
+		ethertype = ntohs(eth->type);
+
+		if (ethertype == VLAN_TPID) {
+			ptr += HDR_LEN_ETHER_VLAN;
+			ethertype = ntohs(eth->tagged_type);
+		} else {
+			ptr += HDR_LEN_ETHER;
+		}
+	} else if (datalink_type == DLT_LINUX_SLL) {
+		const struct sll_header *sll = (const struct sll_header *)ptr;
+		ethertype = ntohs(sll->sll_protocol);
+		ptr += SLL_HDR_LEN;
+	} else {
+		return NULL;
+	}
+
+	/* Skip IP header */
+	if (ethertype == ETHERTYPE_IP) {
+		const struct hdr_ipv4 *ip = (const struct hdr_ipv4 *)ptr;
+		if (ip->ip_p != IPPROTO_TCP)
+			return NULL;
+		unsigned int ip_hdr_len = IP_HL(ip) * 4;
+		ptr += ip_hdr_len;
+	} else if (ethertype == ETHERTYPE_IPV6) {
+		const struct hdr_ipv6 *ip6 = (const struct hdr_ipv6 *)ptr;
+		uint8_t next_hdr = ip6->next_hdr;
+		ptr += sizeof(struct hdr_ipv6);
+
+		/* Skip extension headers to find TCP */
+		while (ptr < *end_of_packet) {
+			if (next_hdr == IPPROTO_TCP) {
+				break;  /* Found TCP */
+			}
+			/* Handle known extension headers */
+			if (next_hdr == IPPROTO_HOPOPTS ||
+			    next_hdr == IPPROTO_ROUTING ||
+			    next_hdr == IPPROTO_FRAGMENT ||
+			    next_hdr == IPPROTO_DSTOPTS) {
+				if (ptr + 2 > *end_of_packet)
+					return NULL;
+				next_hdr = ptr[0];
+				uint8_t hdr_len = ptr[1];
+				size_t ext_len = (hdr_len + 1) * 8;
+				ptr += ext_len;
+			} else {
+				/* Not TCP and not a known extension header */
+				return NULL;
+			}
+		}
+		if (next_hdr != IPPROTO_TCP)
+			return NULL;
+	} else {
+		return NULL;
+	}
+
+	if (ptr >= *end_of_packet)
+		return NULL;
+
+	return (const struct hdr_tcp *)ptr;
+}
+
 static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
                           const uint8_t *wirebits)
 {
@@ -450,6 +582,37 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 	if (0 == cbdata->decoder(pcap_hdr, wirebits, &pkt, errstr)) {
 		update_stats_tables(&pkt);
+
+		/* Process TCP packets for RTT tracking */
+		if (pkt.flow_rec.flow.proto == IPPROTO_TCP) {
+			const uint8_t *end_of_packet;
+			const struct hdr_tcp *tcp_hdr = find_tcp_header(pcap_hdr,
+			                                                wirebits,
+			                                                cbdata->datalink_type,
+			                                                &end_of_packet);
+			if (tcp_hdr) {
+				struct flow_pkt_tcp tcp_pkt = { 0 };
+				if (0 == decode_tcp_extended(tcp_hdr, end_of_packet,
+				                             &tcp_pkt, errstr)) {
+					tcp_rtt_process_packet(&pkt.flow_rec.flow,
+					                       tcp_pkt.seq,
+					                       tcp_pkt.ack,
+					                       tcp_pkt.flags,
+					                       tcp_pkt.payload_len,
+					                       pkt.timestamp);
+					tcp_window_process_packet(&pkt.flow_rec.flow,
+					                          (const uint8_t *)tcp_hdr,
+					                          end_of_packet,
+					                          tcp_pkt.seq,
+					                          tcp_pkt.ack,
+					                          tcp_pkt.flags,
+					                          tcp_pkt.window,
+					                          tcp_pkt.payload_len,
+					                          pkt.timestamp);
+				}
+			}
+		}
+
 		cbdata->result.err = 0;
 	} else {
 		cbdata->result.err = -1;
@@ -492,6 +655,7 @@ static int init_pcap(char **dev, struct pcap_info *pi)
 	}
 
 	dlt = pcap_datalink(pi->handle);
+	pi->decoder_cbdata.datalink_type = dlt;
 	switch (dlt) {
 	case DLT_EN10MB:
 		pi->decoder_cbdata.decoder = decode_ethernet;
@@ -628,9 +792,19 @@ void *tt_intervals_run(void *p)
 	while (1) {
 		deadline = ts_add(deadline, interval);
 
-		pthread_mutex_lock(&ti->t5_mutex);
-		tt_get_top5(ti->t5, ts_to_tv(deadline));
-		pthread_mutex_unlock(&ti->t5_mutex);
+		/* Double-buffer: write to non-published buffer, then publish */
+		int write_idx = atomic_load_explicit(&ti->t5_write_idx,
+		                                     memory_order_relaxed);
+		struct tt_top_flows *write_buf = &ti->t5_buffers[write_idx];
+
+		tt_get_top5(write_buf, ts_to_tv(deadline));
+
+		/* Publish: atomically update pointer for readers */
+		atomic_store_explicit(&ti->t5, write_buf, memory_order_release);
+
+		/* Swap write index for next iteration */
+		atomic_store_explicit(&ti->t5_write_idx, 1 - write_idx,
+		                      memory_order_relaxed);
 
 		cnt = pcap_dispatch(ti->priv->pi.handle, max,
 		                    handle_packet, (u_char *)cbdata);
@@ -656,11 +830,17 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
-	ti->t5 = calloc(1, sizeof(struct tt_top_flows));
-	if (!ti->t5) { return 1; }
+	/* Initialize TCP RTT and window tracking */
+	tcp_rtt_init();
+	tcp_window_init();
+
+	/* Initialize double-buffer: clear both buffers, start writing to [0] */
+	memset(ti->t5_buffers, 0, sizeof(ti->t5_buffers));
+	atomic_store(&ti->t5, NULL);
+	atomic_store(&ti->t5_write_idx, 0);
 
 	ti->priv = calloc(1, sizeof(struct tt_thread_private));
-	if (!ti->priv) { goto cleanup1; }
+	if (!ti->priv) { return 1; }
 
 	err = init_pcap(&(ti->dev), &(ti->priv->pi));
 	if (err)
@@ -672,8 +852,6 @@ int tt_intervals_init(struct tt_thread_info *ti)
 
 cleanup:
 	free(ti->priv);
-cleanup1:
-	free(ti->t5);
 	return 1;
 }
 
@@ -681,12 +859,18 @@ int tt_intervals_free(struct tt_thread_info *ti)
 {
 	assert(ti);
 	assert(ti->priv);
-	assert(ti->t5);
 
 	clear_all_tables();
 
+	/* Cleanup TCP RTT and window tracking */
+	tcp_rtt_cleanup();
+	tcp_window_cleanup();
+
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);
-	free(ti->t5);
+
+	/* Reset double-buffer state (buffers are static, no free needed) */
+	atomic_store(&ti->t5, NULL);
+	atomic_store(&ti->t5_write_idx, 0);
 	return 0;
 }

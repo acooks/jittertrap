@@ -9,11 +9,59 @@ SUBDIRS = deps/toptalk messages server cli-client html5-client docs
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 TESTDIRS = $(SUBDIRS:%=test-%)
 
-.PHONY: all $(SUBDIRS)
-
+.PHONY: all $(SUBDIRS) help config
 
 all: $(SUBDIRS)
 	@echo "Done."
+
+help:
+	@echo "JitterTrap Build System"
+	@echo "======================="
+	@echo ""
+	@echo "Targets:"
+	@echo "  all              Build everything (default)"
+	@echo "  clean            Remove build artifacts"
+	@echo "  install          Install to DESTDIR (default: /)"
+	@echo "  test             Run all tests"
+	@echo "  config           Show current build configuration"
+	@echo "  help             Show this help message"
+	@echo ""
+	@echo "Analysis targets:"
+	@echo "  cppcheck         Run cppcheck static analysis"
+	@echo "  clang-analyze    Run clang static analyzer"
+	@echo "  coverity-build   Create Coverity analysis archive"
+	@echo "  coverage         Generate code coverage report"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  Override settings on command line or edit make.config"
+	@echo "  Example: make SAMPLE_PERIOD_US=500 WEB_SERVER_PORT=8080"
+	@echo ""
+	@echo "  Run 'make config' to see current settings"
+
+config:
+	@echo "Current Build Configuration"
+	@echo "==========================="
+	@echo ""
+	@echo "Branding:"
+	@echo "  PRODUCT_BRANDING        = $(PRODUCT_BRANDING)"
+	@echo ""
+	@echo "Network Capture:"
+	@echo "  SAMPLE_PERIOD_US        = $(SAMPLE_PERIOD_US) (sampling interval in microseconds)"
+	@echo "  ALLOWED_IFACES          = $(ALLOWED_IFACES) (empty = all interfaces)"
+	@echo "  MAX_IFACE_LEN           = $(MAX_IFACE_LEN)"
+	@echo ""
+	@echo "Web Server:"
+	@echo "  WEB_SERVER_PORT         = $(WEB_SERVER_PORT)"
+	@echo "  WEB_SERVER_DOCUMENT_ROOT= $(WEB_SERVER_DOCUMENT_ROOT)"
+	@echo ""
+	@echo "Performance:"
+	@echo "  RT_CPU                  = $(RT_CPU) (CPU core for RT thread)"
+	@echo "  INTERVAL_COUNT          = $(INTERVAL_COUNT) (time intervals to track)"
+	@echo "  MAX_FLOW_COUNT          = $(MAX_FLOW_COUNT) (max concurrent flows)"
+	@echo ""
+	@echo "Feature Flags:"
+	@echo "  DISABLE_IMPAIRMENTS     = $(DISABLE_IMPAIRMENTS) (set to 1 to disable)"
+	@echo "  DISABLE_PCAP            = $(DISABLE_PCAP) (set to 1 to disable)"
 
 $(SUBDIRS):
 	@echo "Making $@"

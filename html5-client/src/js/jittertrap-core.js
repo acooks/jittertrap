@@ -236,13 +236,40 @@
     for (let j = 0; j < fcount; j++) {
       const fkey = flowRank[interval][j];
       const flow = {"fkey": fkey, "values": []};
+      let lastRtt = -1;  /* Track latest RTT for this flow */
+      let lastTcpState = -1;  /* Track latest TCP state for this flow */
+      let sawSyn = 0;  /* Track if SYN was ever observed for this flow */
       for (let i = 0; i < slices; i++) {
         const slice = flowsTS[interval].get(i);
         /* the data point must exist to keep the series alignment intact */
-        const d = {"ts": slice.ts, "bytes":0, "packets":0};
+        const d = {
+          "ts": slice.ts, "bytes":0, "packets":0,
+          "rtt_us": -1, "tcp_state": -1,
+          "rwnd_bytes": -1, "window_scale": -1,
+          "zero_window_cnt": 0, "dup_ack_cnt": 0, "retransmit_cnt": 0,
+          "ece_cnt": 0, "recent_events": 0
+        };
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
+          d.rtt_us = slice[fkey].rtt_us;
+          d.tcp_state = slice[fkey].tcp_state;
+          d.rwnd_bytes = slice[fkey].rwnd_bytes;
+          d.window_scale = slice[fkey].window_scale;
+          d.zero_window_cnt = slice[fkey].zero_window_cnt;
+          d.dup_ack_cnt = slice[fkey].dup_ack_cnt;
+          d.retransmit_cnt = slice[fkey].retransmit_cnt;
+          d.ece_cnt = slice[fkey].ece_cnt;
+          d.recent_events = slice[fkey].recent_events;
+          if (d.rtt_us >= 0) {
+            lastRtt = d.rtt_us;
+          }
+          if (d.tcp_state >= 0) {
+            lastTcpState = d.tcp_state;
+          }
+          if (slice[fkey].saw_syn) {
+            sawSyn = 1;
+          }
         }
         console.assert(d.bytes >= 0);
         console.assert(d.packets >= 0);
@@ -250,6 +277,9 @@
       }
       flow.tbytes = flowsTotals[interval][fkey].tbytes;
       flow.tpackets = flowsTotals[interval][fkey].tpackets;
+      flow.rtt_us = lastRtt;  /* Latest RTT value for legend display */
+      flow.tcp_state = lastTcpState;  /* Latest TCP state */
+      flow.saw_syn = sawSyn;  /* True if SYN was ever observed */
       chartSeries.push(flow);
     }
 
@@ -397,9 +427,21 @@
         flowRank[interval].push(fkey);
       }
 
-      /* set bytes, packets for this (intervalSize,timeSlice,flow)  */
-      sample_slice[fkey] =
-        {"bytes": msg.flows[i].bytes, "packets": msg.flows[i].packets};
+      /* set bytes, packets, rtt, tcp_state, window for this (intervalSize,timeSlice,flow)  */
+      sample_slice[fkey] = {
+        "bytes": msg.flows[i].bytes,
+        "packets": msg.flows[i].packets,
+        "rtt_us": msg.flows[i].rtt_us,
+        "tcp_state": msg.flows[i].tcp_state,
+        "saw_syn": msg.flows[i].saw_syn,
+        "rwnd_bytes": msg.flows[i].rwnd_bytes,
+        "window_scale": msg.flows[i].window_scale,
+        "zero_window_cnt": msg.flows[i].zero_window_cnt,
+        "dup_ack_cnt": msg.flows[i].dup_ack_cnt,
+        "retransmit_cnt": msg.flows[i].retransmit_cnt,
+        "ece_cnt": msg.flows[i].ece_cnt,
+        "recent_events": msg.flows[i].recent_events
+      };
 
       /* reset the time-to-live to the chart window length (in samples),
        * so that it can be removed when it ages beyond the window. */
