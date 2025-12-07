@@ -75,6 +75,24 @@
                             Use the <strong>Y-Axis</strong> toggle to switch between Log and Linear scale.
                           </td>
                         </tr>
+                        <tr>
+                          <td class="align-top"><strong>TCP Window</strong></td>
+                          <td>
+                            Shows the TCP advertised window (receive window) for each flow over time. The advertised window indicates how much data the receiver is willing to accept. Each flow uses the same color as in the Top Talkers chart.
+                            <br><br>
+                            <strong>Event Markers:</strong>
+                            <ul class="mb-0 mt-1">
+                              <li><span style="color: #ff4444;">&#x26A0;</span> <strong>Zero Window</strong> &mdash; receiver advertised zero window (flow control pause)</li>
+                              <li><span style="color: #ff8800;">&#x21BB;</span> <strong>Dup ACK</strong> &mdash; duplicate acknowledgement (possible packet loss)</li>
+                              <li><span style="color: #ff0000;">&#x21A9;</span> <strong>Retransmit</strong> &mdash; retransmitted segment detected</li>
+                              <li><span style="color: #8800ff;">&#x25BC;</span> <strong>ECE</strong> &mdash; ECN-Echo flag set (explicit congestion notification)</li>
+                              <li><span style="color: #0088ff;">&#x25B2;</span> <strong>CWR</strong> &mdash; Congestion Window Reduced flag set</li>
+                            </ul>
+                            Use the <strong>Y-Axis</strong> toggle to switch between Log and Linear scale. Log scale (default) is better for typical window sizes ranging from KB to MB.
+                            <br><br>
+                            <strong>Note:</strong> A <span style="border-bottom: 2px dotted #888;">dotted line</span> indicates the SYN handshake was not captured, so the window scale factor is unknown. The displayed values may be smaller than actual &mdash; modern TCP typically uses scale factors of 7-8, meaning actual windows are 128-256× larger than shown.
+                          </td>
+                        </tr>
                       </table>
 
                       <h6 class="font-weight-bold border-top pt-2 mt-3">Controls</h6>

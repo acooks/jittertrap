@@ -8,6 +8,15 @@
 
   my.charts.window = {};
 
+  // TCP connection states (matches server-side enum)
+  const TCP_STATE = {
+    UNKNOWN: 0,
+    SYN_SEEN: 1,
+    ACTIVE: 2,
+    FIN_WAIT: 3,
+    CLOSED: 4
+  };
+
   // Congestion event bitmask constants (match backend)
   const CONG_EVENT = {
     ZERO_WINDOW: 0x01,
@@ -285,7 +294,8 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      // Update window lines
+      // Update window lines - stop drawing after CLOSED state
+      // Use dotted line when window scale is unknown (missed SYN handshake)
       const lines = linesGroup.selectAll(".window-line")
           .data(windowFlowsCache, d => d.fkey);
 
@@ -296,11 +306,29 @@
           .attr("stroke-width", 2)
         .merge(lines)
           .attr("stroke", d => getFlowColor(d.fkey))
-          .attr("d", d => line(d.values));
+          .attr("stroke-dasharray", d => {
+            // Use dotted line if we never saw the SYN handshake
+            // (saw_syn is set if SYN was seen in either direction)
+            return d.saw_syn ? null : "4,4";
+          })
+          .attr("d", d => {
+            // Find first CLOSED point and stop drawing there
+            const values = d.values;
+            let stopIdx = values.length;
+            for (let i = 0; i < values.length; i++) {
+              if (values[i].tcp_state === TCP_STATE.CLOSED) {
+                // Include this point but stop after
+                stopIdx = i + 1;
+                break;
+              }
+            }
+            return line(values.slice(0, stopIdx));
+          });
 
       lines.exit().remove();
 
       // Build event marker data in place - reuse cache array
+      // Stop adding markers after CLOSED state (consistent with line drawing)
       markerDataCache.length = 0;
 
       for (let fi = 0; fi < windowFlowsCache.length; fi++) {
@@ -311,6 +339,9 @@
         for (let i = 0; i < values.length; i++) {
           const v = values[i];
           if (v.rwnd_bytes <= 0) continue;
+
+          // Stop processing after CLOSED state
+          if (v.tcp_state === TCP_STATE.CLOSED) break;
 
           const events = v.recent_events || 0;
           if (events === 0) continue;
