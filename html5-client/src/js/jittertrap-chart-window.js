@@ -36,6 +36,23 @@
     // Use the same color function as Top Talkers for consistent flow colors
     const getFlowColor = (fkey) => my.charts.toptalk.toptalkChart.getFlowColor(fkey);
 
+    // Reusable arrays to avoid allocations in redraw
+    let windowFlowsCache = [];
+    let markerDataCache = [];
+
+    // Cached values for tick formatter to avoid closure allocation
+    let cachedMaxTs = 0;
+    const xTickFormatter = function(s) {
+      const rel = s - cachedMaxTs;
+      return rel === 0 ? "0" : rel.toFixed(0);
+    };
+
+    // Reusable tick values array
+    const tickValuesCache = [];
+
+    // Pre-defined line accessor to avoid closure allocation
+    const lineYAccessor = function(d) { return yScale(d.rwnd_bytes); };
+
     const formatWindow = function(d) {
       if (d < 1024) return d.toFixed(0) + " B";
       if (d < 1024 * 1024) return (d / 1024).toFixed(1) + " KB";
@@ -144,23 +161,53 @@
 
       const flowData = JT.charts.getTopFlowsRef();
 
-      // Filter to TCP flows with window data
-      const windowFlows = flowData.filter(f =>
-          f.fkey !== 'other' &&
-          f.fkey.includes('/TCP/') &&
-          f.values.some(v => v.rwnd_bytes > 0)
-      );
+      // Compute time bounds and window min/max without creating intermediate arrays
+      let globalMinTs = Infinity;
+      let globalMaxTs = -Infinity;
+      let minWindow = Infinity;
+      let maxWindow = -Infinity;
+      let hasWindowData = false;
 
-      // Collect all valid window values to compute domains
-      const allValues = windowFlows.flatMap(f => f.values.filter(v => v.rwnd_bytes > 0));
+      // Clear and rebuild windowFlows cache in place
+      windowFlowsCache.length = 0;
 
-      // Get time bounds from all flows (not just window flows) so chart keeps scrolling
-      const allFlowValues = flowData.flatMap(f => f.values);
-      const [globalMinTs, globalMaxTs] = allFlowValues.length > 0
-          ? d3.extent(allFlowValues, d => d.ts)
-          : [0, 1];
+      for (let i = 0; i < flowData.length; i++) {
+        const f = flowData[i];
+        const values = f.values;
 
-      if (allValues.length === 0) {
+        // Update global time bounds from all flows
+        for (let j = 0; j < values.length; j++) {
+          const ts = values[j].ts;
+          if (ts < globalMinTs) globalMinTs = ts;
+          if (ts > globalMaxTs) globalMaxTs = ts;
+        }
+
+        // Check if this is a TCP flow with window data
+        if (f.fkey === 'other' || f.fkey.indexOf('/TCP/') === -1) continue;
+
+        let hasValidWindow = false;
+        for (let j = 0; j < values.length; j++) {
+          const rwnd = values[j].rwnd_bytes;
+          if (rwnd > 0) {
+            hasValidWindow = true;
+            hasWindowData = true;
+            if (rwnd < minWindow) minWindow = rwnd;
+            if (rwnd > maxWindow) maxWindow = rwnd;
+          }
+        }
+
+        if (hasValidWindow) {
+          windowFlowsCache.push(f);
+        }
+      }
+
+      // Handle edge case of no data
+      if (globalMinTs === Infinity) {
+        globalMinTs = 0;
+        globalMaxTs = 1;
+      }
+
+      if (!hasWindowData) {
         // No window data - clear lines/markers but keep X-axis scrolling
         linesGroup.selectAll(".window-line").remove();
         markersGroup.selectAll(".event-marker").remove();
@@ -171,15 +218,13 @@
         if (domainSpan > 0) {
           const tickCount = Math.min(10, Math.floor(domainSpan));
           const tickInterval = Math.max(1, Math.ceil(domainSpan / tickCount));
-          const tickValues = [];
-          for (let t = globalMaxTs; t >= globalMinTs && tickValues.length < 12; t -= tickInterval) {
-            tickValues.unshift(t);
+          tickValuesCache.length = 0;
+          for (let t = globalMaxTs; t >= globalMinTs && tickValuesCache.length < 12; t -= tickInterval) {
+            tickValuesCache.unshift(t);
           }
-          xAxis.tickValues(tickValues);
-          xAxis.tickFormat(s => {
-            const rel = s - globalMaxTs;
-            return rel === 0 ? "0" : rel.toFixed(0);
-          });
+          cachedMaxTs = globalMaxTs;
+          xAxis.tickValues(tickValuesCache);
+          xAxis.tickFormat(xTickFormatter);
         }
         svg.select(".x.axis").call(xAxis);
         return;
@@ -187,9 +232,6 @@
 
       // Set X domain
       xScale.domain([globalMinTs, globalMaxTs]);
-
-      const maxWindow = d3.max(allValues, d => d.rwnd_bytes);
-      const minWindow = d3.min(allValues, d => d.rwnd_bytes);
 
       if (useLogScale) {
         yScale = yScaleLog;
@@ -216,24 +258,22 @@
         yGrid.tickValues(null);
       }
 
-      // Update line generator's y accessor
-      line.y(d => yScale(d.rwnd_bytes));
+      // Update line generator's y accessor (uses pre-defined function to avoid closure)
+      line.y(lineYAccessor);
       yAxis.scale(yScale).tickFormat(formatWindow);
 
       // Update X axis with relative time format
       const domainSpan = globalMaxTs - globalMinTs;
       if (domainSpan > 0) {
         const tickInterval = Math.max(1, Math.ceil(domainSpan / 10));
-        const tickValues = [];
-        for (let relativeTime = 0; relativeTime >= -domainSpan && tickValues.length < 12; relativeTime -= tickInterval) {
-          tickValues.unshift(globalMaxTs + relativeTime);
+        tickValuesCache.length = 0;
+        for (let relativeTime = 0; relativeTime >= -domainSpan && tickValuesCache.length < 12; relativeTime -= tickInterval) {
+          tickValuesCache.unshift(globalMaxTs + relativeTime);
         }
-        xAxis.tickValues(tickValues);
-        xGrid.tickValues(tickValues);
-        xAxis.tickFormat(s => {
-          const rel = s - globalMaxTs;
-          return rel === 0 ? "0" : rel.toFixed(0);
-        });
+        cachedMaxTs = globalMaxTs;
+        xAxis.tickValues(tickValuesCache);
+        xGrid.tickValues(tickValuesCache);
+        xAxis.tickFormat(xTickFormatter);
       }
 
       // Update grids
@@ -247,7 +287,7 @@
 
       // Update window lines
       const lines = linesGroup.selectAll(".window-line")
-          .data(windowFlows, d => d.fkey);
+          .data(windowFlowsCache, d => d.fkey);
 
       lines.enter()
           .append("path")
@@ -260,36 +300,46 @@
 
       lines.exit().remove();
 
-      // Build event marker data based on recent_events bitmask
-      const markerData = [];
-      windowFlows.forEach(f => {
-        f.values.forEach(v => {
-          if (v.rwnd_bytes <= 0) return;
+      // Build event marker data in place - reuse cache array
+      markerDataCache.length = 0;
+
+      for (let fi = 0; fi < windowFlowsCache.length; fi++) {
+        const f = windowFlowsCache[fi];
+        const values = f.values;
+        const fkey = f.fkey;
+
+        for (let i = 0; i < values.length; i++) {
+          const v = values[i];
+          if (v.rwnd_bytes <= 0) continue;
 
           const events = v.recent_events || 0;
+          if (events === 0) continue;
+
+          const ts = v.ts;
+          const y = v.rwnd_bytes;
 
           // Only add markers for actual events
           if (events & CONG_EVENT.ZERO_WINDOW) {
-            markerData.push({ fkey: f.fkey, ts: v.ts, y: v.rwnd_bytes, type: 'zero_window' });
+            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'zero_window' });
           }
           if (events & CONG_EVENT.DUP_ACK) {
-            markerData.push({ fkey: f.fkey, ts: v.ts, y: v.rwnd_bytes, type: 'dup_ack' });
+            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'dup_ack' });
           }
           if (events & CONG_EVENT.RETRANSMIT) {
-            markerData.push({ fkey: f.fkey, ts: v.ts, y: v.rwnd_bytes, type: 'retransmit' });
+            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'retransmit' });
           }
           if (events & CONG_EVENT.ECE) {
-            markerData.push({ fkey: f.fkey, ts: v.ts, y: v.rwnd_bytes, type: 'ece' });
+            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'ece' });
           }
           if (events & CONG_EVENT.CWR) {
-            markerData.push({ fkey: f.fkey, ts: v.ts, y: v.rwnd_bytes, type: 'cwr' });
+            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'cwr' });
           }
-        });
-      });
+        }
+      }
 
       // Update event markers using text symbols
       const markers = markersGroup.selectAll(".event-marker")
-          .data(markerData, d => `${d.fkey}-${d.ts.toFixed(3)}-${d.type}`);
+          .data(markerDataCache, markerKey);
 
       const markersEnter = markers.enter()
           .append("text")
@@ -302,28 +352,39 @@
       markers.merge(markersEnter)
           .attr("x", d => xScale(d.ts))
           .attr("y", d => yScale(d.y) - 12)  // Offset above line
-          .attr("fill", d => {
-            switch(d.type) {
-              case 'zero_window': return '#ff4444';   // Red
-              case 'dup_ack': return '#ff8800';       // Orange
-              case 'retransmit': return '#ff0000';    // Red
-              case 'ece': return '#8800ff';           // Purple
-              case 'cwr': return '#0088ff';           // Blue
-              default: return '#888888';
-            }
-          })
-          .text(d => {
-            switch(d.type) {
-              case 'zero_window': return '\u26A0';    // Warning sign
-              case 'dup_ack': return '\u21BB';        // Clockwise arrow
-              case 'retransmit': return '\u21A9';     // Leftward arrow with hook
-              case 'ece': return '\u25BC';            // Down triangle
-              case 'cwr': return '\u25B2';            // Up triangle
-              default: return '?';
-            }
-          });
+          .attr("fill", markerFill)
+          .text(markerText);
 
       markers.exit().remove();
+    };
+
+    // Pre-allocated key function to avoid template literal allocation
+    const markerKey = function(d) {
+      return d.fkey + '-' + d.ts.toFixed(3) + '-' + d.type;
+    };
+
+    // Pre-allocated fill function
+    const markerFill = function(d) {
+      switch(d.type) {
+        case 'zero_window': return '#ff4444';   // Red
+        case 'dup_ack': return '#ff8800';       // Orange
+        case 'retransmit': return '#ff0000';    // Red
+        case 'ece': return '#8800ff';           // Purple
+        case 'cwr': return '#0088ff';           // Blue
+        default: return '#888888';
+      }
+    };
+
+    // Pre-allocated text function
+    const markerText = function(d) {
+      switch(d.type) {
+        case 'zero_window': return '\u26A0';    // Warning sign
+        case 'dup_ack': return '\u21BB';        // Clockwise arrow
+        case 'retransmit': return '\u21A9';     // Leftward arrow with hook
+        case 'ece': return '\u25BC';            // Down triangle
+        case 'cwr': return '\u25B2';            // Up triangle
+        default: return '?';
+      }
     };
 
     m.setLogScale = function(isLog) {

@@ -64,13 +64,14 @@
                           <td>
                             Shows round-trip time (RTT) for TCP flows over time. RTT is measured using TCP sequence numbers and acknowledgements. Each flow uses the same color as in the Top Talkers chart.
                             <br><br>
-                            <strong>Markers indicate flow activity:</strong>
+                            <strong>Markers:</strong>
                             <ul class="mb-0 mt-1">
-                              <li><span style="color: #888;">▶</span> <strong>Start/Resume</strong> &mdash; first RTT sample of a flow, or resumption after idle</li>
-                              <li><span style="display: inline-flex; align-items: center; width: 10px; height: 1em; vertical-align: text-bottom;"><span style="display: inline-block; width: 3px; height: 10px; background: #888;"></span><span style="display: inline-block; width: 3px; height: 10px; margin-left: 2px; background: #888;"></span></span> <strong>Idle</strong> &mdash; flow has gone idle (no RTT samples for &gt;2 seconds)</li>
-                              <li><span style="display: inline-block; width: 8px; height: 8px; background: #888; vertical-align: middle;"></span> <strong>Closed</strong> &mdash; TCP connection terminated (FIN or RST)</li>
+                              <li><span style="color: #888;">▶</span> <strong>New</strong> &mdash; new TCP connection (SYN handshake observed)</li>
+                              <li><span style="color: #888; vertical-align: middle;">&#x23F8;&#xFE0E;</span> <strong>Half-closed</strong> &mdash; FIN seen in one direction (data may still flow)</li>
+                              <li><span style="display: inline-block; width: 8px; height: 8px; background: #888; vertical-align: middle;"></span> <strong>Closed</strong> &mdash; TCP connection fully terminated (FIN in both directions, or RST)</li>
                             </ul>
-                            <br>
+                            Gaps in the line indicate idle periods where no RTT samples were collected.
+                            <br><br>
                             Use the <strong>Y-Axis</strong> toggle to switch between Log and Linear scale.
                           </td>
                         </tr>

@@ -11,9 +11,10 @@
   // TCP connection states (matches server-side enum)
   const TCP_STATE = {
     UNKNOWN: 0,
-    ACTIVE: 1,
-    FIN_WAIT: 2,
-    CLOSED: 3
+    SYN_SEEN: 1,
+    ACTIVE: 2,
+    FIN_WAIT: 3,
+    CLOSED: 4
   };
 
   my.charts.rtt.rttChart = (function (m) {
@@ -51,7 +52,23 @@
     let resizeTimer;
     let linesGroup = null;
 
-    const gapThreshold = 2;  // seconds - gap larger than this = idle
+    // Reusable arrays to avoid allocations in redraw
+    let rttFlowsCache = [];
+    let markerDataCache = [];
+    let cachedFlowKeys = [];
+
+    // Cached values for tick formatter to avoid closure allocation
+    let cachedMaxTs = 0;
+    const xTickFormatter = function(s) {
+      const rel = s - cachedMaxTs;
+      return rel === 0 ? "0" : rel.toFixed(0);
+    };
+
+    // Reusable tick values array
+    const tickValuesCache = [];
+
+    // Pre-defined line accessor to avoid closure allocation
+    const lineYAccessor = function(d) { return yScale(d.rtt_us); };
 
     m.reset = function() {
       d3.select("#chartRtt").selectAll("svg").remove();
@@ -140,23 +157,53 @@
 
       const flowData = JT.charts.getTopFlowsRef();
 
-      // Filter to TCP flows with RTT data
-      const rttFlows = flowData.filter(f =>
-          f.fkey !== 'other' &&
-          f.fkey.includes('/TCP/') &&
-          f.values.some(v => v.rtt_us > 0)
-      );
+      // Compute time bounds and RTT min/max without creating intermediate arrays
+      let globalMinTs = Infinity;
+      let globalMaxTs = -Infinity;
+      let minRtt = Infinity;
+      let maxRtt = -Infinity;
+      let hasRttData = false;
 
-      // Collect all valid RTT values to compute domains
-      const allValues = rttFlows.flatMap(f => f.values.filter(v => v.rtt_us > 0));
+      // Clear and rebuild rttFlows cache in place
+      rttFlowsCache.length = 0;
 
-      // Get time bounds from all flows (not just RTT flows) so chart keeps scrolling
-      const allFlowValues = flowData.flatMap(f => f.values);
-      const [globalMinTs, globalMaxTs] = allFlowValues.length > 0
-          ? d3.extent(allFlowValues, d => d.ts)
-          : [0, 1];
+      for (let i = 0; i < flowData.length; i++) {
+        const f = flowData[i];
+        const values = f.values;
 
-      if (allValues.length === 0) {
+        // Update global time bounds from all flows
+        for (let j = 0; j < values.length; j++) {
+          const ts = values[j].ts;
+          if (ts < globalMinTs) globalMinTs = ts;
+          if (ts > globalMaxTs) globalMaxTs = ts;
+        }
+
+        // Check if this is a TCP flow with RTT data
+        if (f.fkey === 'other' || f.fkey.indexOf('/TCP/') === -1) continue;
+
+        let hasValidRtt = false;
+        for (let j = 0; j < values.length; j++) {
+          const rtt = values[j].rtt_us;
+          if (rtt > 0) {
+            hasValidRtt = true;
+            hasRttData = true;
+            if (rtt < minRtt) minRtt = rtt;
+            if (rtt > maxRtt) maxRtt = rtt;
+          }
+        }
+
+        if (hasValidRtt) {
+          rttFlowsCache.push(f);
+        }
+      }
+
+      // Handle edge case of no data
+      if (globalMinTs === Infinity) {
+        globalMinTs = 0;
+        globalMaxTs = 1;
+      }
+
+      if (!hasRttData) {
         // No RTT data - clear lines/markers but keep X-axis scrolling
         linesGroup.selectAll(".rtt-line").remove();
         linesGroup.selectAll(".rtt-marker").remove();
@@ -167,25 +214,20 @@
         if (domainSpan > 0) {
           const tickCount = Math.min(10, Math.floor(domainSpan));
           const tickInterval = Math.max(1, Math.ceil(domainSpan / tickCount));
-          const tickValues = [];
-          for (let t = globalMaxTs; t >= globalMinTs && tickValues.length < 12; t -= tickInterval) {
-            tickValues.unshift(t);
+          tickValuesCache.length = 0;
+          for (let t = globalMaxTs; t >= globalMinTs && tickValuesCache.length < 12; t -= tickInterval) {
+            tickValuesCache.unshift(t);
           }
-          xAxis.tickValues(tickValues);
-          xAxis.tickFormat(s => {
-            const rel = s - globalMaxTs;
-            return rel === 0 ? "0" : rel.toFixed(0);
-          });
+          cachedMaxTs = globalMaxTs;
+          xAxis.tickValues(tickValuesCache);
+          xAxis.tickFormat(xTickFormatter);
         }
         svg.select(".x.axis").call(xAxis);
         return;
       }
 
-      // Use same X domain as Top Flows chart (from first flow's time extent)
+      // Set X domain
       xScale.domain([globalMinTs, globalMaxTs]);
-
-      const maxRtt = d3.max(allValues, d => d.rtt_us);
-      const minRtt = d3.min(allValues, d => d.rtt_us);
 
       if (useLogScale) {
         yScale = yScaleLog;
@@ -209,24 +251,22 @@
         yGrid.tickValues(null);
       }
 
-      // Update line generator's y accessor
-      line.y(d => yScale(d.rtt_us));
+      // Update line generator's y accessor (uses pre-defined function to avoid closure)
+      line.y(lineYAccessor);
       yAxis.scale(yScale).tickFormat(formatRtt);
 
       // Update X axis with relative time format (matching Top Flows chart)
       const domainSpan = globalMaxTs - globalMinTs;
       if (domainSpan > 0) {
         const tickInterval = Math.max(1, Math.ceil(domainSpan / 10));
-        const tickValues = [];
-        for (let relativeTime = 0; relativeTime >= -domainSpan && tickValues.length < 12; relativeTime -= tickInterval) {
-          tickValues.unshift(globalMaxTs + relativeTime);
+        tickValuesCache.length = 0;
+        for (let relativeTime = 0; relativeTime >= -domainSpan && tickValuesCache.length < 12; relativeTime -= tickInterval) {
+          tickValuesCache.unshift(globalMaxTs + relativeTime);
         }
-        xAxis.tickValues(tickValues);
-        xGrid.tickValues(tickValues);
-        xAxis.tickFormat(s => {
-          const rel = s - globalMaxTs;
-          return rel === 0 ? "0" : rel.toFixed(0);
-        });
+        cachedMaxTs = globalMaxTs;
+        xAxis.tickValues(tickValuesCache);
+        xGrid.tickValues(tickValuesCache);
+        xAxis.tickFormat(xTickFormatter);
       }
 
       // Update grids
@@ -238,9 +278,9 @@
       svg.select(".xGrid").call(xGrid);
       svg.select(".yGrid").call(yGrid);
 
-      // Update lines
+      // Update lines - stop drawing after CLOSED state
       const lines = linesGroup.selectAll(".rtt-line")
-          .data(rttFlows, d => d.fkey);
+          .data(rttFlowsCache, d => d.fkey);
 
       lines.enter()
           .append("path")
@@ -249,68 +289,96 @@
           .attr("stroke-width", 2)
         .merge(lines)
           .attr("stroke", d => getFlowColor(d.fkey))
-          .attr("d", d => line(d.values));
+          .attr("d", d => {
+            // Find first CLOSED point and stop drawing there
+            const values = d.values;
+            let stopIdx = values.length;
+            for (let i = 0; i < values.length; i++) {
+              if (values[i].tcp_state === TCP_STATE.CLOSED) {
+                // Include this point but stop after
+                stopIdx = i + 1;
+                break;
+              }
+            }
+            return line(values.slice(0, stopIdx));
+          });
 
       lines.exit().remove();
 
-      // Build marker data - first point, last point, and gap boundaries
+      // Build marker data in place - reuse cache array
       // Marker types:
-      //   'start'  - first RTT sample (▶)
-      //   'resume' - resumption after gap (▶)
-      //   'idle'   - no data for >2s, connection still open (⏸)
+      //   'new'    - SYN observed, connection starting (▶)
       //   'closed' - FIN/RST seen, connection terminated (■)
-      const markerData = [];
-      rttFlows.forEach(f => {
-        const validPts = f.values.filter(v => v.rtt_us > 0);
-        if (validPts.length === 0) return;
+      // Gaps in the line naturally show idle periods - no markers needed
+      markerDataCache.length = 0;
 
-        // Get the flow's TCP state (from most recent data point with state)
+      for (let fi = 0; fi < rttFlowsCache.length; fi++) {
+        const f = rttFlowsCache[fi];
+        const values = f.values;
+        const fkey = f.fkey;
+
+        // Find first and last valid RTT points without creating array
+        let firstValidIdx = -1;
+        let lastValidIdx = -1;
+
+        for (let i = 0; i < values.length; i++) {
+          if (values[i].rtt_us > 0) {
+            if (firstValidIdx === -1) firstValidIdx = i;
+            lastValidIdx = i;
+          }
+        }
+
+        if (firstValidIdx === -1) continue;
+
+        // Get the flow's TCP state
         const tcpState = f.tcp_state;
-        const isClosed = (tcpState === TCP_STATE.CLOSED || tcpState === TCP_STATE.FIN_WAIT);
+        const isHalfClosed = (tcpState === TCP_STATE.FIN_WAIT);
+        const isClosed = (tcpState === TCP_STATE.CLOSED);
 
-        // First point - mark as 'start'
-        const firstPt = validPts[0];
-        markerData.push({ fkey: f.fkey, ts: firstPt.ts, rtt_us: firstPt.rtt_us, type: 'start' });
+        const firstPt = values[firstValidIdx];
+        const lastPt = values[lastValidIdx];
 
-        let prevPt = firstPt;
-        for (let i = 1; i < validPts.length; i++) {
-          const pt = validPts[i];
-          if ((pt.ts - prevPt.ts) > gapThreshold) {
-            // Gap detected - mark end of previous segment as idle
-            markerData.push({ fkey: f.fkey, ts: prevPt.ts, rtt_us: prevPt.rtt_us, type: 'idle' });
-            // Mark start of new segment as resume
-            markerData.push({ fkey: f.fkey, ts: pt.ts, rtt_us: pt.rtt_us, type: 'resume' });
+        // New connection marker (SYN observed) - use flow-level saw_syn flag
+        if (f.saw_syn) {
+          markerDataCache.push({ fkey: fkey, ts: firstPt.ts, rtt_us: firstPt.rtt_us, type: 'new' });
+        }
+
+        // Find when state transitions occurred (for placing markers at transition point)
+        // This allows the line to continue if data arrives after CLOSED (pathological case)
+        let closedTransitionIdx = -1;
+        let halfClosedTransitionIdx = -1;
+
+        for (let i = 0; i < values.length; i++) {
+          if (values[i].rtt_us <= 0) continue;
+
+          const state = values[i].tcp_state;
+          if (state === TCP_STATE.CLOSED && closedTransitionIdx === -1) {
+            closedTransitionIdx = i;
           }
-          prevPt = pt;
-        }
-
-        // Last point - determine marker type based on tcp_state and recency
-        const lastPt = validPts[validPts.length - 1];
-        const timeSinceLastData = globalMaxTs - lastPt.ts;
-
-        let endMarkerType;
-        if (isClosed) {
-          endMarkerType = 'closed';
-        } else if (timeSinceLastData > gapThreshold) {
-          endMarkerType = 'idle';
-        } else {
-          // Active flow - no end marker needed (line extends to current time)
-          endMarkerType = null;
-        }
-
-        if (endMarkerType) {
-          // Don't duplicate if first == last (single point) - update existing marker
-          if (validPts.length === 1) {
-            markerData[markerData.length - 1].type = endMarkerType;
-          } else {
-            markerData.push({ fkey: f.fkey, ts: lastPt.ts, rtt_us: lastPt.rtt_us, type: endMarkerType });
+          if (state === TCP_STATE.FIN_WAIT && halfClosedTransitionIdx === -1) {
+            halfClosedTransitionIdx = i;
           }
         }
-      });
 
-      // Update markers
+        // Fully closed marker - place at first point where state became CLOSED
+        if (closedTransitionIdx !== -1) {
+          const pt = values[closedTransitionIdx];
+          markerDataCache.push({ fkey: fkey, ts: pt.ts, rtt_us: pt.rtt_us, type: 'closed' });
+        }
+
+        // Half-closed marker - only show if flow has stopped AND didn't transition to CLOSED
+        if (halfClosedTransitionIdx !== -1 && closedTransitionIdx === -1) {
+          const flowIsOngoing = (globalMaxTs - lastPt.ts) < 1.0;
+          if (!flowIsOngoing) {
+            const pt = values[halfClosedTransitionIdx];
+            markerDataCache.push({ fkey: fkey, ts: pt.ts, rtt_us: pt.rtt_us, type: 'half_closed' });
+          }
+        }
+      }
+
+      // Update markers - use stable key function
       const markers = linesGroup.selectAll(".rtt-marker")
-          .data(markerData, d => `${d.fkey}-${d.ts.toFixed(2)}-${d.type}`);
+          .data(markerDataCache, markerKey);
 
       const markersEnter = markers.enter()
           .append("g")
@@ -320,30 +388,23 @@
       markersEnter.each(function(d) {
         const g = d3.select(this);
         if (d.type === 'closed') {
-          // ■ for closed/terminated connection
+          // ■ for closed/terminated connection (FIN in both directions or RST)
           g.append("rect")
             .attr("class", "marker-shape")
             .attr("x", -4)
             .attr("y", -4)
             .attr("width", 8)
             .attr("height", 8);
-        } else if (d.type === 'idle') {
-          // ❚❚ pause symbol for idle (no data but connection still open)
-          // Two vertical bars with gap between them
-          g.append("rect")
+        } else if (d.type === 'half_closed') {
+          // ⏸ pause for half-closed (one FIN seen)
+          g.append("text")
             .attr("class", "marker-shape")
-            .attr("x", -5)
-            .attr("y", -4)
-            .attr("width", 3)
-            .attr("height", 8);
-          g.append("rect")
-            .attr("class", "marker-shape marker-shape-2")
-            .attr("x", 2)
-            .attr("y", -4)
-            .attr("width", 3)
-            .attr("height", 8);
-        } else if (d.type === 'start' || d.type === 'resume') {
-          // ▶ for start and resume
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", "12px")
+            .text('\u23F8\uFE0E');
+        } else if (d.type === 'new') {
+          // ▶ for new connection (SYN observed)
           g.append("path")
             .attr("class", "marker-shape")
             .attr("d", "M-4,-4 L4,0 L-4,4 Z");
@@ -352,14 +413,21 @@
 
       // Update all markers (position and color)
       const merged = markers.merge(markersEnter)
-          .attr("transform", d => `translate(${xScale(d.ts)},${yScale(d.rtt_us)})`);
-      merged.select(".marker-shape")
-          .attr("fill", d => getFlowColor(d.fkey));
-      // Also color the second rect for pause symbol
-      merged.select(".marker-shape-2")
+          .attr("transform", d => markerTransform(d));
+      merged.selectAll(".marker-shape")
           .attr("fill", d => getFlowColor(d.fkey));
 
       markers.exit().remove();
+    };
+
+    // Pre-allocated key function to avoid template literal allocation
+    const markerKey = function(d) {
+      return d.fkey + '-' + d.ts.toFixed(2) + '-' + d.type;
+    };
+
+    // Pre-allocated transform function
+    const markerTransform = function(d) {
+      return 'translate(' + xScale(d.ts) + ',' + yScale(d.rtt_us) + ')';
     };
 
     m.setLogScale = function(isLog) {

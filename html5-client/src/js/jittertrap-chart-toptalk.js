@@ -97,6 +97,16 @@
     let resizeTimer; // Timer for debounced resize handling
     let cachedFkeys = []; // Cache for legend optimization
 
+    // Cached values for tick formatter to avoid closure allocation
+    let cachedMaxTimestamp = 0;
+    const xTickFormatter = function(seconds) {
+      const relativeSeconds = seconds - cachedMaxTimestamp;
+      return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
+    };
+
+    // Reusable tick values array
+    const tickValuesCache = [];
+
     const updateTooltip = function(mousePos) {
         const tooltip = d3.select("#toptalk-tooltip");
         
@@ -535,22 +545,20 @@
 
         // Generate fixed tick positions in relative time (e.g., -20, -15, -10, -5, 0)
         const tickInterval = Math.max(1, Math.ceil(domainSpan / 10)); // ~10 ticks, minimum 1 second
-        const tickValues = [];
+        tickValuesCache.length = 0;  // Reuse array
         let iterations = 0;
         for (let relativeTime = 0; relativeTime >= -domainSpan && iterations < 100; relativeTime -= tickInterval) {
-          tickValues.unshift(maxTimestamp + relativeTime);
+          tickValuesCache.unshift(maxTimestamp + relativeTime);
           iterations++;
         }
 
         // Set explicit tick values to prevent scrolling
-        xAxis.tickValues(tickValues);
-        xGrid.tickValues(tickValues);
+        xAxis.tickValues(tickValuesCache);
+        xGrid.tickValues(tickValuesCache);
 
-        // Create custom formatter for seconds-based timestamps
-        xAxis.tickFormat(function(seconds) {
-          const relativeSeconds = seconds - maxTimestamp;
-          return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
-        });
+        // Use pre-defined formatter (update cached value for use in formatter)
+        cachedMaxTimestamp = maxTimestamp;
+        xAxis.tickFormat(xTickFormatter);
       }
 
       const yPow = d3.select('input[name="y-axis-is-log"]:checked').node().value;

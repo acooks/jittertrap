@@ -238,6 +238,7 @@
       const flow = {"fkey": fkey, "values": []};
       let lastRtt = -1;  /* Track latest RTT for this flow */
       let lastTcpState = -1;  /* Track latest TCP state for this flow */
+      let sawSyn = 0;  /* Track if SYN was ever observed for this flow */
       for (let i = 0; i < slices; i++) {
         const slice = flowsTS[interval].get(i);
         /* the data point must exist to keep the series alignment intact */
@@ -266,6 +267,9 @@
           if (d.tcp_state >= 0) {
             lastTcpState = d.tcp_state;
           }
+          if (slice[fkey].saw_syn) {
+            sawSyn = 1;
+          }
         }
         console.assert(d.bytes >= 0);
         console.assert(d.packets >= 0);
@@ -275,6 +279,7 @@
       flow.tpackets = flowsTotals[interval][fkey].tpackets;
       flow.rtt_us = lastRtt;  /* Latest RTT value for legend display */
       flow.tcp_state = lastTcpState;  /* Latest TCP state */
+      flow.saw_syn = sawSyn;  /* True if SYN was ever observed */
       chartSeries.push(flow);
     }
 
@@ -428,6 +433,7 @@
         "packets": msg.flows[i].packets,
         "rtt_us": msg.flows[i].rtt_us,
         "tcp_state": msg.flows[i].tcp_state,
+        "saw_syn": msg.flows[i].saw_syn,
         "rwnd_bytes": msg.flows[i].rwnd_bytes,
         "window_scale": msg.flows[i].window_scale,
         "zero_window_cnt": msg.flows[i].zero_window_cnt,

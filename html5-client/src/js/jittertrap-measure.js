@@ -8,10 +8,10 @@
   my.measurementsModule = {};
   const measurements = {};
 
-  measurements.rxRate = {};
-  measurements.txRate = {};
-  measurements.rxPacketRate = {};
-  measurements.txPacketRate = {};
+  measurements.rxRate = { min: 0, max: 0, mean: 0, maxZ: 0, meanZ: 0 };
+  measurements.txRate = { min: 0, max: 0, mean: 0, maxZ: 0, meanZ: 0 };
+  measurements.rxPacketRate = { min: 0, max: 0, mean: 0 };
+  measurements.txPacketRate = { min: 0, max: 0, mean: 0 };
 
   // Format bitrate with SI prefix (e.g., 1.234 Mbps, 678.9 kbps)
   const formatBitrate = function(d) {

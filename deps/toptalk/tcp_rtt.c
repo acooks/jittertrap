@@ -183,16 +183,25 @@ void tcp_rtt_process_packet(const struct flow *flow,
 	if (flags & TCP_FLAG_RST) {
 		atomic_store_explicit(&entry->state, TCP_STATE_CLOSED, memory_order_relaxed);
 	} else if (flags & TCP_FLAG_FIN) {
-		if (current_state == TCP_STATE_FIN_WAIT) {
-			/* FIN seen in both directions */
+		/* Check if FIN has been seen in BOTH directions (not just twice) */
+		int fin_fwd = entry->flags_seen_fwd & TCP_FLAG_FIN;
+		int fin_rev = entry->flags_seen_rev & TCP_FLAG_FIN;
+		if (fin_fwd && fin_rev) {
+			/* FIN seen in both directions - fully closed */
 			atomic_store_explicit(&entry->state, TCP_STATE_CLOSED, memory_order_relaxed);
 		} else if (current_state != TCP_STATE_CLOSED) {
+			/* FIN seen in one direction only - half-closed */
 			atomic_store_explicit(&entry->state, TCP_STATE_FIN_WAIT, memory_order_relaxed);
 		}
+	} else if (flags & TCP_FLAG_SYN) {
+		/* SYN seen - mark as new connection (unless already further along) */
+		if (current_state == TCP_STATE_UNKNOWN) {
+			atomic_store_explicit(&entry->state, TCP_STATE_SYN_SEEN, memory_order_relaxed);
+		}
 	} else if (current_state == TCP_STATE_UNKNOWN ||
-	           current_state == TCP_STATE_FIN_WAIT) {
-		/* Data packet - connection is active (unless closing) */
-		if (payload_len > 0 && current_state != TCP_STATE_FIN_WAIT) {
+	           current_state == TCP_STATE_SYN_SEEN) {
+		/* Data packet - connection is now active */
+		if (payload_len > 0) {
 			atomic_store_explicit(&entry->state, TCP_STATE_ACTIVE, memory_order_relaxed);
 		}
 	}
@@ -276,11 +285,12 @@ enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow)
 }
 
 int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
-                     enum tcp_conn_state *state)
+                     enum tcp_conn_state *state, int *saw_syn)
 {
 	if (flow->proto != IPPROTO_TCP) {
 		*rtt_us = -1;
 		*state = TCP_STATE_UNKNOWN;
+		*saw_syn = 0;
 		return -1;
 	}
 
@@ -294,11 +304,15 @@ int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
 	if (!entry) {
 		*rtt_us = -1;
 		*state = TCP_STATE_UNKNOWN;
+		*saw_syn = 0;
 		return -1;
 	}
 
 	/* Atomic loads for lock-free access */
 	*state = atomic_load_explicit(&entry->state, memory_order_relaxed);
+
+	/* Check if SYN was ever seen in either direction */
+	*saw_syn = ((entry->flags_seen_fwd | entry->flags_seen_rev) & TCP_FLAG_SYN) ? 1 : 0;
 
 	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
 	if (atomic_load_explicit(&dir->sample_count, memory_order_acquire) == 0) {

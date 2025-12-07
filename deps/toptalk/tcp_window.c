@@ -107,9 +107,6 @@ static int parse_window_scale(const uint8_t *tcp_header,
 			/* RFC 7323: max window scale is 14 */
 			if (scale > 14)
 				scale = 14;
-#if WINDOW_DEBUG
-			fprintf(stderr, "Window scale found: %u\n", scale);
-#endif
 			return scale;
 		}
 
@@ -288,7 +285,16 @@ void tcp_window_process_packet(const struct flow *flow,
 			atomic_store_explicit(&tx_dir->window_scale, (uint8_t)scale, memory_order_relaxed);
 			atomic_store_explicit(&tx_dir->scale_status, WSCALE_SEEN, memory_order_release);
 #if WINDOW_DEBUG
-			fprintf(stderr, "Window scale set for direction: %u\n", scale);
+			char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
+			if (flow->ethertype == ETHERTYPE_IP) {
+				inet_ntop(AF_INET, &flow->src_ip, src_str, sizeof(src_str));
+				inet_ntop(AF_INET, &flow->dst_ip, dst_str, sizeof(dst_str));
+			} else {
+				inet_ntop(AF_INET6, &flow->src_ip6, src_str, sizeof(src_str));
+				inet_ntop(AF_INET6, &flow->dst_ip6, dst_str, sizeof(dst_str));
+			}
+			fprintf(stderr, "SYN: %s:%d -> %s:%d is_fwd=%d scale=%d\n",
+			        src_str, flow->sport, dst_str, flow->dport, is_forward, scale);
 #endif
 		} else {
 			/* SYN without window scale option */
@@ -341,10 +347,11 @@ int tcp_window_get_info(const struct flow *flow,
 		info->rwnd_bytes = atomic_load_explicit(&dir->scaled_window, memory_order_relaxed);
 		info->window_scale = atomic_load_explicit(&dir->window_scale, memory_order_relaxed);
 	} else if (scale_status == WSCALE_NOT_PRESENT) {
+		/* SYN seen but no window scale option - raw value is accurate */
 		info->rwnd_bytes = atomic_load_explicit(&dir->raw_window, memory_order_relaxed);
 		info->window_scale = 0;
 	} else {
-		/* Scale unknown - return raw value, indicate unknown scale */
+		/* Scale unknown (missed the SYN) - return raw value, mark scale unknown */
 		info->rwnd_bytes = atomic_load_explicit(&dir->raw_window, memory_order_relaxed);
 		info->window_scale = -1;
 	}

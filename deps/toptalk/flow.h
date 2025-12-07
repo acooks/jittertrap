@@ -23,6 +23,7 @@ struct flow {
 struct flow_rtt_info {
 	int64_t rtt_us;           /* RTT in microseconds, -1 if unknown */
 	int32_t tcp_state;        /* TCP connection state, -1 if unknown */
+	int32_t saw_syn;          /* 1 if SYN was observed, 0 otherwise */
 };
 
 /* Cached TCP window/congestion info - populated by tt_get_top5() */

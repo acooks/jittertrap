@@ -368,15 +368,18 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	 */
 	int64_t rtt_us;
 	enum tcp_conn_state tcp_state;
+	int saw_syn;
 	struct tcp_window_info win_info;
 
 	/* Get RTT info */
-	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state) == 0) {
+	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state, &saw_syn) == 0) {
 		st_flows[0].rtt.rtt_us = rtt_us;
 		st_flows[0].rtt.tcp_state = tcp_state;
+		st_flows[0].rtt.saw_syn = saw_syn;
 	} else {
 		st_flows[0].rtt.rtt_us = -1;
 		st_flows[0].rtt.tcp_state = -1;
+		st_flows[0].rtt.saw_syn = 0;
 	}
 
 	/* Get window/congestion info */
@@ -531,9 +534,32 @@ static const struct hdr_tcp *find_tcp_header(const struct pcap_pkthdr *h,
 		ptr += ip_hdr_len;
 	} else if (ethertype == ETHERTYPE_IPV6) {
 		const struct hdr_ipv6 *ip6 = (const struct hdr_ipv6 *)ptr;
-		if (ip6->next_hdr != IPPROTO_TCP)
-			return NULL;  /* Simplified: doesn't handle extension headers */
+		uint8_t next_hdr = ip6->next_hdr;
 		ptr += sizeof(struct hdr_ipv6);
+
+		/* Skip extension headers to find TCP */
+		while (ptr < *end_of_packet) {
+			if (next_hdr == IPPROTO_TCP) {
+				break;  /* Found TCP */
+			}
+			/* Handle known extension headers */
+			if (next_hdr == IPPROTO_HOPOPTS ||
+			    next_hdr == IPPROTO_ROUTING ||
+			    next_hdr == IPPROTO_FRAGMENT ||
+			    next_hdr == IPPROTO_DSTOPTS) {
+				if (ptr + 2 > *end_of_packet)
+					return NULL;
+				next_hdr = ptr[0];
+				uint8_t hdr_len = ptr[1];
+				size_t ext_len = (hdr_len + 1) * 8;
+				ptr += ext_len;
+			} else {
+				/* Not TCP and not a known extension header */
+				return NULL;
+			}
+		}
+		if (next_hdr != IPPROTO_TCP)
+			return NULL;
 	} else {
 		return NULL;
 	}

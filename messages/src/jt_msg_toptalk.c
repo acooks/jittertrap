@@ -134,6 +134,10 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 			tt->flows[i].tcp_state = -1;  /* Default if not present */
 		}
 
+		t = json_object_get(f, "saw_syn");
+		tt->flows[i].saw_syn = json_is_integer(t) ?
+		                       json_integer_value(t) : 0;
+
 		/* Window/Congestion tracking fields */
 		t = json_object_get(f, "rwnd_bytes");
 		tt->flows[i].rwnd_bytes = json_is_integer(t) ?
@@ -252,6 +256,8 @@ int jt_toptalk_packer(void *data, char **out)
 		                    json_integer(tt_msg->flows[i].rtt_us));
 		json_object_set_new(flows[i], "tcp_state",
 		                    json_integer(tt_msg->flows[i].tcp_state));
+		json_object_set_new(flows[i], "saw_syn",
+		                    json_integer(tt_msg->flows[i].saw_syn));
 		/* Window/Congestion tracking fields */
 		json_object_set_new(flows[i], "rwnd_bytes",
 		                    json_integer(tt_msg->flows[i].rwnd_bytes));

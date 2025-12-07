@@ -211,6 +211,7 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 		 */
 		m->flows[f].rtt_us = fr->rtt.rtt_us;
 		m->flows[f].tcp_state = fr->rtt.tcp_state;
+		m->flows[f].saw_syn = fr->rtt.saw_syn;
 
 		/* Use cached window info from flow_record */
 		m->flows[f].rwnd_bytes = fr->window.rwnd_bytes;

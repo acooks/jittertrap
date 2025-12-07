@@ -18,6 +18,7 @@
 /* TCP connection states */
 enum tcp_conn_state {
 	TCP_STATE_UNKNOWN = 0,    /* Haven't seen enough to determine state */
+	TCP_STATE_SYN_SEEN,       /* SYN observed - new connection */
 	TCP_STATE_ACTIVE,         /* Connection is active (data flowing) */
 	TCP_STATE_FIN_WAIT,       /* FIN seen, waiting for FIN-ACK */
 	TCP_STATE_CLOSED,         /* FIN/FIN-ACK complete or RST seen */
@@ -118,10 +119,11 @@ enum tcp_conn_state tcp_rtt_get_state(const struct flow *flow);
 /* Get RTT and state in a single lookup (more efficient than separate calls)
  * rtt_us: output, set to EWMA RTT in microseconds or -1 if unavailable
  * state: output, set to connection state
+ * saw_syn: output, set to 1 if SYN was observed for this connection, 0 otherwise
  * Returns 0 on success (entry found), -1 if flow not found or not TCP
  */
 int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
-                     enum tcp_conn_state *state);
+                     enum tcp_conn_state *state, int *saw_syn);
 
 /* Expire old RTT entries that haven't been active within window */
 void tcp_rtt_expire_old(struct timeval deadline, struct timeval window);
