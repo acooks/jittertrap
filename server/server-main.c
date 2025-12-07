@@ -52,6 +52,16 @@ static struct lws_protocols protocols[] = {
 	                             .rx_buffer_size = 0 }
 };
 
+/* WebSocket extensions - enable permessage-deflate compression */
+static const struct lws_extension extensions[] = {
+	{
+		"permessage-deflate",
+		lws_extension_callback_pm_deflate,
+		"permessage-deflate; client_no_context_takeover"
+	},
+	{ NULL, NULL, NULL }  /* terminator */
+};
+
 void sighandler(int sig __attribute__((unused)))
 {
 	force_exit = 1;
@@ -223,6 +233,7 @@ int main(int argc, char **argv)
 
 	info.iface = iface;
 	info.protocols = protocols;
+	info.extensions = extensions;
 	info.mounts = &mount;
 	info.gid = -1;
 	info.uid = -1;
