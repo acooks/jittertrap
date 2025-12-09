@@ -1,6 +1,7 @@
 /* jittertrap-websocket.js */
 
 /* global JT:true */
+/* global pako:false */
 
 ((my) => {
   'use strict';
@@ -11,6 +12,108 @@
 
   /* the websocket object, see my.ws.init() */
   let sock = {};
+
+  /* Compression header byte used by server */
+  const WS_COMPRESS_HEADER = 0x01;
+
+  /*
+   * Preset dictionary for decompression - must match server's ws_dictionary.
+   * Contains common strings in JitterTrap JSON messages, ordered from
+   * less common (start) to most common (end) for zlib priority.
+   */
+  const WS_DICTIONARY = new TextEncoder().encode(
+    /* Common IP prefixes and network values */
+    '192.168.10.0.172.16.fe80:::ffff:' +
+    /* Protocol names */
+    'ICMPUDPTCP' +
+    /* Traffic class */
+    'BULKBECS0CS1' +
+    /* Less frequent message types */
+    'pcap_readypcap_statuspcap_configpcap_triggersample_period' +
+    'netem_paramsdev_selectiface_list' +
+    /* Field names (less frequent first) */
+    '"recent_events":' +
+    '"retransmit_cnt":' +
+    '"zero_window_cnt":' +
+    '"dup_ack_cnt":' +
+    '"ece_cnt":' +
+    '"window_scale":' +
+    '"rwnd_bytes":' +
+    '"saw_syn":' +
+    '"tcp_state":' +
+    '"rtt_us":' +
+    '"tclass":"' +
+    '"proto":"' +
+    '"dport":' +
+    '"sport":' +
+    '"dst":"' +
+    '"src":"' +
+    /* Stats message fields */
+    '"mean_tx_packet_gap":' +
+    '"mean_rx_packet_gap":' +
+    '"max_tx_packet_gap":' +
+    '"max_rx_packet_gap":' +
+    '"min_tx_packet_gap":' +
+    '"min_rx_packet_gap":' +
+    '"sd_whoosh":' +
+    '"max_whoosh":' +
+    '"mean_whoosh":' +
+    '"mean_tx_packets":' +
+    '"mean_rx_packets":' +
+    '"mean_tx_bytes":' +
+    '"mean_rx_bytes":' +
+    '"interval_ns":' +
+    /* Toptalk aggregate fields */
+    '"tpackets":' +
+    '"tbytes":' +
+    '"tflows":' +
+    /* Most common field names */
+    '"packets":' +
+    '"bytes":' +
+    '"flows":[' +
+    /* Most common JSON structure */
+    '"iface":"' +
+    '","p":{' +
+    '"msg":"' +
+    /* Most frequent message types (at the very end for priority) */
+    'toptalk' +
+    'stats' +
+    '}}'
+  );
+
+  /* Maximum decompressed message size (prevent decompression bombs) */
+  const MAX_DECOMPRESSED_SIZE = 64 * 1024;  /* 64 KB */
+
+  /* Pre-allocated pako options to avoid GC pressure
+   * Note: Cannot freeze - pako modifies the options object internally */
+  const pakoOptions = {
+    to: 'string',
+    dictionary: WS_DICTIONARY
+  };
+
+  /**
+   * Decompress deflate-compressed data using pako with preset dictionary
+   * @param {Uint8Array} data - Compressed data (including header byte)
+   * @returns {string} - Decompressed JSON string
+   */
+  const decompressMessage = function(data) {
+    try {
+      /* Skip the header byte and decompress using raw deflate with dictionary */
+      const compressed = data.subarray(1);
+      const decompressed = pako.inflateRaw(compressed, pakoOptions);
+
+      /* Guard against decompression bombs */
+      if (decompressed.length > MAX_DECOMPRESSED_SIZE) {
+        console.error("Decompressed message too large:", decompressed.length);
+        return null;
+      }
+
+      return decompressed;
+    } catch (e) {
+      console.error("Decompression failed:", e);
+      return null;
+    }
+  };
 
   /**
    * Websocket Callback Functions
@@ -150,9 +253,15 @@
 
   Object.freeze(messageHandlers); // Prevent modification of messageHandlers
 
+  /* Cache valid message types to avoid Object.keys() allocation on every message */
+  const validMessageTypes = new Set(Object.keys(messageHandlers));
+
   my.ws.init = function(uri) {
     // Initialize WebSocket
     sock = new WebSocket(uri, "jittertrap");
+
+    // Enable binary message support for compressed data
+    sock.binaryType = 'arraybuffer';
 
     sock.onopen = function(evt) {
       const msg = JSON.stringify({'msg': 'hello'});
@@ -179,8 +288,30 @@
 
     sock.onmessage = function(evt) {
       let msg;
+      let jsonStr;
+
+      // Handle binary (compressed) or text messages
+      if (evt.data instanceof ArrayBuffer) {
+        const data = new Uint8Array(evt.data);
+        if (data.length > 0 && data[0] === WS_COMPRESS_HEADER) {
+          // Compressed message - decompress it
+          jsonStr = decompressMessage(data);
+          if (!jsonStr) {
+            console.error("Failed to decompress message");
+            return;
+          }
+        } else {
+          // Binary but not our compression format - unexpected
+          console.log("Unexpected binary message format");
+          return;
+        }
+      } else {
+        // Text message - use as-is
+        jsonStr = evt.data;
+      }
+
       try {
-        msg = JSON.parse(evt.data);
+        msg = JSON.parse(jsonStr);
       }
       catch (err) {
         console.log("Error: " + err.message);
@@ -188,25 +319,18 @@
       }
 
       if (!msg || !msg.msg) {
-        console.log("unrecognised message: " + evt.data);
+        console.log("unrecognised message: " + jsonStr);
         return;
       }
 
-      // Validate message type to prevent potential DoS and prototype pollution
-      const isValidMessageType = (Object.keys(messageHandlers).includes(msg.msg)  &&
-          Object.prototype.hasOwnProperty.call(messageHandlers, msg.msg) &&
-          typeof messageHandlers[msg.msg] === 'function');
-
-      if (isValidMessageType) {
-        const handler = messageHandlers[msg.msg];
+      // Validate message type using cached Set (avoids Object.keys allocation)
+      if (validMessageTypes.has(msg.msg)) {
         try {
-          handler(msg.p);
+          messageHandlers[msg.msg](msg.p);
         } catch (e) {
           console.error("Error in message handler for", msg.msg, ":", e);
         }
       } else {
-        //It is possible that the message type is not implemented.
-        //It is also possible that Object.freeze failed.
         console.log("unhandled message type: " + msg.msg);
       }
     };
@@ -221,6 +345,34 @@
   my.ws.clear_netem = clear_netem;
   my.ws.pcap_config = pcap_config;
   my.ws.pcap_trigger = pcap_trigger;
+
+  /**
+   * Debug helper - decode compressed message from console
+   * Usage: JT.ws.decode(arrayBuffer) or JT.ws.decode(uint8Array)
+   */
+  my.ws.decode = function(data) {
+    let arr;
+    if (data instanceof ArrayBuffer) {
+      arr = new Uint8Array(data);
+    } else if (data instanceof Uint8Array) {
+      arr = data;
+    } else {
+      console.error("Expected ArrayBuffer or Uint8Array");
+      return null;
+    }
+    if (arr[0] !== WS_COMPRESS_HEADER) {
+      console.log("Not compressed (header byte:", arr[0], ")");
+      return new TextDecoder().decode(arr);
+    }
+    const json = decompressMessage(arr);
+    if (json) {
+      return JSON.parse(json);
+    }
+    return null;
+  };
+
+  /* Expose dictionary for debugging */
+  my.ws.dictionary = new TextDecoder().decode(WS_DICTIONARY);
 
 
 })(JT);

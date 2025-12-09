@@ -38,6 +38,7 @@ copydeps: createdirs
 	cp deps/js/bootstrap.bundle.min.js ${OUT}/js/
 	cp deps/js/mustache.min.js ${OUT}/js/
 	cp deps/js/d3.v7.min.js ${OUT}/js/
+	cp deps/js/pako.min.js ${OUT}/js/
 	cp deps/css/bootstrap.min.css ${OUT}/css/
 	cp deps/css/fontawesome.css ${OUT}/css/
 	cp deps/fonts/fa* ${OUT}/webfonts/

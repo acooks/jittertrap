@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <syslog.h>
 #include <libwebsockets.h>
@@ -10,6 +11,7 @@
 #include "jt_server_message_handler.h"
 
 #include "mq_msg_ws.h"
+#include "ws_compress.h"
 
 #include "proto-jittertrap.h"
 
@@ -24,16 +26,44 @@ static int lws_writer(struct mq_ws_msg *m, void *data)
 {
 	int len, n;
 	struct cb_data *d = (struct cb_data *)data;
+	unsigned char *compressed = NULL;
+	size_t compressed_len = 0;
+
 	assert(d);
-	len = snprintf((char *)d->buf, MAX_JSON_MSG_LEN, "%s", m->m);
-	assert(len >= 0);
-	if (len > 0) {
-		n = lws_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
-		if (n < len) {
-			/* short write :( */
-			fprintf(stderr, "Short write :(\n");
-			return -1;
+	len = strlen(m->m);
+
+	if (len <= 0) {
+		return 0;
+	}
+
+	/* Try to compress larger messages */
+	if (ws_should_compress(len)) {
+		int ret = ws_compress(m->m, len, &compressed, &compressed_len);
+		if (ret == 0) {
+			/* Compression successful - send as binary */
+			memcpy(d->buf, compressed, compressed_len);
+			free(compressed);
+			n = lws_write(d->wsi, d->buf, compressed_len,
+			              LWS_WRITE_BINARY);
+			if (n < (int)compressed_len) {
+				fprintf(stderr, "Short write (compressed)\n");
+				return -1;
+			}
+			return 0;
 		}
+		/* Compression not beneficial (ret=1) or error (ret=-1),
+		 * fall through to send uncompressed */
+		if (compressed) {
+			free(compressed);
+		}
+	}
+
+	/* Send uncompressed as text */
+	memcpy(d->buf, m->m, len);
+	n = lws_write(d->wsi, d->buf, len, LWS_WRITE_TEXT);
+	if (n < len) {
+		fprintf(stderr, "Short write :(\n");
+		return -1;
 	}
 	return 0;
 }

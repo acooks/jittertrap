@@ -18,6 +18,7 @@
 #include "pcap_buffer.h"
 #include "netem.h"
 #include "capabilities.h"
+#include "ws_compress.h"
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -53,15 +54,6 @@ static struct lws_protocols protocols[] = {
 	                             .rx_buffer_size = 0 }
 };
 
-/* WebSocket extensions - enable permessage-deflate compression */
-static const struct lws_extension extensions[] = {
-	{
-		"permessage-deflate",
-		lws_extension_callback_pm_deflate,
-		"permessage-deflate; client_no_context_takeover"
-	},
-	{ NULL, NULL, NULL }  /* terminator */
-};
 
 void sighandler(int sig __attribute__((unused)))
 {
@@ -227,6 +219,9 @@ int main(int argc, char **argv)
 	caps_init();
 	caps_log_status();
 
+	/* Initialize WebSocket compression */
+	ws_compress_init();
+
 	/* Fail fast if essential capabilities are missing */
 	if (!caps_can_capture()) {
 		syslog(LOG_ERR,
@@ -274,7 +269,6 @@ int main(int argc, char **argv)
 
 	info.iface = iface;
 	info.protocols = protocols;
-	info.extensions = extensions;
 	info.mounts = &mount;
 	info.gid = -1;
 	info.uid = -1;
