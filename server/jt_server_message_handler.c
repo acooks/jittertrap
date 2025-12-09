@@ -25,7 +25,7 @@
 #include "netem.h"
 
 #include "mq_msg_stats.h"
-#include "mq_msg_ws.h"
+#include "mq_ws_tiered.h"
 #include "mq_msg_tt.h"
 
 #include "jt_message_types.h"
@@ -45,7 +45,7 @@ enum {
 	JT_STATE_PAUSED
 };
 
-int g_jt_state = JT_STATE_STARTING;
+int g_jt_state = JT_STATE_STOPPED;  /* Start stopped, init on first client connect */
 char g_selected_iface[MAX_IFACE_LEN];
 unsigned long stats_consumer_id;
 unsigned long tt_consumer_id;
@@ -137,13 +137,82 @@ static void mq_stats_msg_to_jt_msg_stats(struct mq_stats_msg *mq_s,
 	msg_s->interval_ns = mq_s->interval_ns;
 }
 
-inline static int message_producer(struct mq_ws_msg *m, void *data)
+/* Tier-specific message producers */
+inline static int message_producer_1(struct mq_ws_1_msg *m, void *data)
 {
 	char *s = (char *)data;
 	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
 	return 0;
 }
 
+inline static int message_producer_2(struct mq_ws_2_msg *m, void *data)
+{
+	char *s = (char *)data;
+	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
+	return 0;
+}
+
+inline static int message_producer_3(struct mq_ws_3_msg *m, void *data)
+{
+	char *s = (char *)data;
+	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
+	return 0;
+}
+
+inline static int message_producer_4(struct mq_ws_4_msg *m, void *data)
+{
+	char *s = (char *)data;
+	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
+	return 0;
+}
+
+inline static int message_producer_5(struct mq_ws_5_msg *m, void *data)
+{
+	char *s = (char *)data;
+	snprintf(m->m, MAX_JSON_MSG_LEN, "%s", s);
+	return 0;
+}
+
+/* Route message to appropriate tier based on interval */
+static int jt_srv_send_tiered(int msg_type, void *msg_data, uint64_t interval_ns)
+{
+	char *tmpstr;
+	int cb_err, err = 0;
+	int tier;
+
+	/* convert from jt_msg_* to string */
+	err = jt_messages[msg_type].to_json_string(msg_data, &tmpstr);
+	if (err) {
+		return -1;
+	}
+
+	tier = mq_ws_interval_to_tier(interval_ns);
+
+	/* write the json string to the appropriate tier queue */
+	switch (tier) {
+	case 1:
+		err = mq_ws_1_produce(message_producer_1, tmpstr, &cb_err);
+		break;
+	case 2:
+		err = mq_ws_2_produce(message_producer_2, tmpstr, &cb_err);
+		break;
+	case 3:
+		err = mq_ws_3_produce(message_producer_3, tmpstr, &cb_err);
+		break;
+	case 4:
+		err = mq_ws_4_produce(message_producer_4, tmpstr, &cb_err);
+		break;
+	case 5:
+	default:
+		err = mq_ws_5_produce(message_producer_5, tmpstr, &cb_err);
+		break;
+	}
+
+	free(tmpstr);
+	return err;
+}
+
+/* Send config/control messages to tier 5 (guaranteed delivery) */
 int jt_srv_send(int msg_type, void *msg_data)
 {
 	char *tmpstr;
@@ -155,8 +224,8 @@ int jt_srv_send(int msg_type, void *msg_data)
 		return -1;
 	}
 
-	/* write the json string to a websocket message */
-	err = mq_ws_produce(message_producer, tmpstr, &cb_err);
+	/* Config messages always go to tier 5 (lowest rate, guaranteed) */
+	err = mq_ws_5_produce(message_producer_5, tmpstr, &cb_err);
 	free(tmpstr);
 	return err;
 }
@@ -429,7 +498,8 @@ static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
 	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
 	mq_stats_msg_to_jt_msg_stats(m, s);
-	if (0 == jt_srv_send(JT_MSG_STATS_V1, s)) {
+	/* Route to tiered queue based on interval */
+	if (0 == jt_srv_send_tiered(JT_MSG_STATS_V1, s, m->interval_ns)) {
 		return 0;
 	}
 	return 1;
@@ -459,7 +529,8 @@ static int tt_consumer(struct mq_tt_msg *m, void *data)
 
 	//jt_messages[JT_MSG_TOPTALK_V1].print(m);
 
-	if (0 == jt_srv_send(JT_MSG_TOPTALK_V1, (struct jt_msg_toptalk *)m)) {
+	/* Route to tiered queue based on interval */
+	if (0 == jt_srv_send_tiered(JT_MSG_TOPTALK_V1, &m->m, m->m.interval_ns)) {
 		return 0;
 	}
 	return 1;
@@ -487,10 +558,7 @@ static int jt_init(void)
 		return -1;
 	}
 
-	err = mq_ws_init("ws");
-	if (err) {
-		return -1;
-	}
+	/* mq_ws is initialized in main() before WebSocket loop starts */
 
 	iface = malloc(MAX_IFACE_LEN);
 	get_first_iface(iface);
@@ -509,6 +577,12 @@ static int jt_init(void)
 	assert(!err);
 
 	g_jt_state = JT_STATE_RUNNING;
+
+	/* Drain any messages that accumulated during init.
+	 * This prevents queue overflow between thread start and first tick. */
+	jt_srv_send_stats();
+	jt_srv_send_tt();
+
 	return 0;
 }
 
@@ -532,6 +606,18 @@ int jt_srv_resume(void)
 {
 	int err;
 
+	if (JT_STATE_STOPPED == g_jt_state) {
+		/* First client connected - mq_ws already initialized in main(),
+		 * trigger full init on next tick */
+		g_jt_state = JT_STATE_STARTING;
+		return 0;
+	}
+
+	if (JT_STATE_STARTING == g_jt_state) {
+		/* Initialization in progress, will complete on next tick */
+		return 0;
+	}
+
 	if (JT_STATE_PAUSED == g_jt_state) {
 		err = mq_stats_consumer_subscribe(&stats_consumer_id);
 		assert(!err);
@@ -541,8 +627,13 @@ int jt_srv_resume(void)
 
 		g_jt_state = JT_STATE_RUNNING;
 	}
-	assert(JT_STATE_RUNNING == g_jt_state);
+
 	return 0;
+}
+
+int jt_srv_is_ready(void)
+{
+	return (g_jt_state == JT_STATE_RUNNING || g_jt_state == JT_STATE_PAUSED);
 }
 
 /* Counter for periodic pcap status updates */
@@ -574,6 +665,10 @@ int jt_server_tick(void)
 		}
 		break;
 	case JT_STATE_PAUSED:
+		break;
+	case JT_STATE_STOPPED:
+	case JT_STATE_STOPPING:
+		/* Do nothing - waiting for client or shutting down */
 		break;
 	}
 	return 0;

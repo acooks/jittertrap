@@ -12,4 +12,5 @@ int jt_srv_send_pcap_config(void);
 int jt_srv_send_pcap_status(void);
 int jt_srv_resume(void);
 int jt_srv_pause(void);
+int jt_srv_is_ready(void);  /* Returns 1 if server is RUNNING, 0 otherwise */
 #endif

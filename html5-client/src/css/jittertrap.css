@@ -443,3 +443,21 @@ footer a {
   border-right: 1px solid #dee2e6;
   margin-right: 1rem !important;
 }
+
+/* Style for disabled interval options when server degrades resolution */
+#chopts_chartPeriod option:disabled {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+/* Resolution indicator shown when degraded from full resolution */
+#resolution-indicator {
+  font-size: 0.75rem;
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  margin-left: 0.5rem;
+  display: none;
+}
