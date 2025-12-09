@@ -187,6 +187,63 @@
     }
   };
 
+  const handleMsgError = function(params) {
+    console.error("Server error:", params.code, "-", params.text);
+
+    const errorMsgElement = $("#error-msg");
+    const errorModalElement = $("#error-modal");
+
+    let userMessage = params.text || "Unknown server error";
+
+    /* Add specific guidance for known error codes */
+    if (params.code === "max_connections") {
+      userMessage += "<br><br><strong>Tip:</strong> Close other JitterTrap tabs or windows and refresh this page.";
+    } else if (params.code === "too_slow") {
+      userMessage += "<br><br><strong>Tip:</strong> Your connection may be too slow. Try using a faster network or reducing the sample rate.";
+    }
+
+    errorMsgElement.html("<p>" + userMessage + "</p>");
+    errorModalElement.modal('show');
+  };
+
+  /**
+   * Handle resolution message from server - disables interval options that
+   * are faster than the current minimum supported interval.
+   *
+   * The server sends this when the client's connection speed requires
+   * degrading to a slower sample rate tier.
+   */
+  const handleMsgResolution = function(params) {
+    const minIntervalMs = params.min_interval_ms;
+    console.log("Resolution update: min_interval_ms =", minIntervalMs);
+
+    /* Disable interval options faster than current capability */
+    $("#chopts_chartPeriod option").each(function() {
+      const optionVal = parseInt($(this).val(), 10);
+      /* Option value is in ms, same as minIntervalMs */
+      $(this).prop('disabled', optionVal < minIntervalMs);
+    });
+
+    /* If currently selected interval is now disabled, switch to minimum available */
+    const selectedVal = parseInt($("#chopts_chartPeriod").val(), 10);
+    if (selectedVal < minIntervalMs) {
+      console.log("Switching from disabled interval", selectedVal, "to", minIntervalMs);
+      $("#chopts_chartPeriod").val(minIntervalMs).trigger('change');
+    }
+
+    /* Update the resolution indicator if present */
+    const resolutionIndicator = $("#resolution-indicator");
+    if (resolutionIndicator.length) {
+      if (minIntervalMs > 5) {
+        /* Show indicator when degraded from full resolution */
+        resolutionIndicator.text(minIntervalMs + "ms min").show();
+      } else {
+        /* Hide when at full resolution */
+        resolutionIndicator.hide();
+      }
+    }
+  };
+
 
   /**
    * Websocket Sending Functions
@@ -249,6 +306,8 @@
     pcap_config: handleMsgPcapConfig,
     pcap_status: handleMsgPcapStatus,
     pcap_ready: handleMsgPcapReady,
+    error: handleMsgError,
+    resolution: handleMsgResolution,
   };
 
   Object.freeze(messageHandlers); // Prevent modification of messageHandlers

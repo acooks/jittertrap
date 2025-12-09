@@ -4,9 +4,10 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "mq_msg_ws.h"
+/* Test using tier 1 queue (5ms interval) as representative */
+#include "mq_msg_ws_1.h"
 
-int message_producer(struct mq_ws_msg *m, void *data)
+int message_producer(struct mq_ws_1_msg *m, void *data)
 {
 	int *d = (int *)data;
 	sprintf(m->m, "message %d", *d);
@@ -14,14 +15,14 @@ int message_producer(struct mq_ws_msg *m, void *data)
 }
 
 /* a callback for consuming messages. */
-int message_printer(struct mq_ws_msg *m, void *data __attribute__((unused)))
+int message_printer(struct mq_ws_1_msg *m, void *data __attribute__((unused)))
 {
 	assert(m);
 	printf("m: %s\n", m->m);
 	return 0;
 }
 
-int string_copier(struct mq_ws_msg *m, void *data)
+int string_copier(struct mq_ws_1_msg *m, void *data)
 {
 	char *s;
 
@@ -33,13 +34,13 @@ int string_copier(struct mq_ws_msg *m, void *data)
 	return 0;
 }
 
-int benchmark_produce(struct mq_ws_msg *m, void *data __attribute__((unused)))
+int benchmark_produce(struct mq_ws_1_msg *m, void *data __attribute__((unused)))
 {
 	m->m[0] = '\0';
 	return 0;
 }
 
-int benchmark_consumer(struct mq_ws_msg *m __attribute__((unused)),
+int benchmark_consumer(struct mq_ws_1_msg *m __attribute__((unused)),
                        void *data __attribute__((unused)))
 {
 	return 0;
@@ -84,19 +85,19 @@ int test_consume_from_empty()
 	unsigned long id;
 
 	printf("test for consume-from-empty case\n");
-	err = mq_ws_init("consume from empty test");
+	err = mq_ws_1_init("consume from empty test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
-	err = mq_ws_consume(id, message_printer, msg, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, msg, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");
@@ -107,71 +108,94 @@ int test_produce_overflow()
 {
 	int i, err, cb_err;
 	unsigned long id;
+	unsigned int dropped;
 
-	printf("test for produce overflow handling.\n");
+	printf("test for slow consumer handling (skip instead of block).\n");
 
-	err = mq_ws_init("produce overflow test");
+	err = mq_ws_1_init("slow consumer test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
-	for (i = 0; i < mq_ws_maxlen() - 1; i++) {
-		err = mq_ws_produce(message_producer, &i, &cb_err);
+	/* Verify consumer starts with 0 dropped messages */
+	dropped = mq_ws_1_consumer_dropped_count(id);
+	assert(dropped == 0);
+
+	/* Fill the queue to capacity */
+	for (i = 0; i < mq_ws_1_maxlen() - 1; i++) {
+		err = mq_ws_1_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}
-	printf("queue full: %d messages\n", i + 1);
-	err = mq_ws_produce(message_producer, &i, &cb_err);
-	assert(-JT_WS_MQ_FULL == err);
+	printf("queue at capacity: %d messages\n", i);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	/* Now produce more - this should skip the slow consumer, not block */
+	err = mq_ws_1_produce(message_producer, &i, &cb_err);
+	assert(!err);  /* Should succeed now (skips slow consumer) */
+
+	/* Verify messages were dropped */
+	dropped = mq_ws_1_consumer_dropped_count(id);
+	assert(dropped > 0);
+	printf("consumer dropped %u messages\n", dropped);
+
+	/* Produce more and verify drops continue to be tracked */
+	for (i = 0; i < 100; i++) {
+		err = mq_ws_1_produce(message_producer, &i, &cb_err);
+		assert(!err);
+	}
+
+	/* Verify more drops were recorded */
+	unsigned int final_dropped = mq_ws_1_consumer_dropped_count(id);
+	assert(final_dropped > dropped);
+	printf("consumer total dropped: %u messages\n", final_dropped);
+
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 	printf("OK.\n");
 	return 0;
 }
 
-/* test for filling up the queue, then emptying it */
+/* test for producing messages, then consuming them */
 int test_produce_consume()
 {
 	int i, err, cb_err;
 	unsigned long id;
 	char s[MAX_JSON_MSG_LEN];
+	int msg_count = mq_ws_1_maxlen() - 1;  /* Max queue capacity */
 
-	printf("Testing produce-til-full, consume-til-empty case \n");
+	printf("Testing produce-then-consume case (%d messages)\n", msg_count);
 
-	err = mq_ws_init("pc test");
+	err = mq_ws_1_init("pc test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
-	/* fill up the queue */
-	i = 0;
-	do {
-		err = mq_ws_produce(message_producer, &i, &cb_err);
-		if (!err) {
-			i++;
-		}
-	} while (!err);
-	printf("queue max length: %d\n", i);
-
-	/* we hava a full message queue, now consume it all */
-	for (; i > 0; i--) {
-		err = mq_ws_consume(id, message_printer, s, &cb_err);
+	/* produce a known number of messages (queue capacity) */
+	for (i = 0; i < msg_count; i++) {
+		err = mq_ws_1_produce(message_producer, &i, &cb_err);
 		assert(!err);
 	}
+	printf("produced %d messages\n", msg_count);
+
+	/* consume all messages */
+	for (i = 0; i < msg_count; i++) {
+		err = mq_ws_1_consume(id, message_printer, s, &cb_err);
+		assert(!err);
+	}
+	printf("consumed %d messages\n", msg_count);
 
 	/* consuming from an empty queue must return error  */
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");
@@ -187,36 +211,36 @@ int test_ppcc()
 
 	printf("Testing PPCC case\n");
 
-	err = mq_ws_init("ppcc test");
+	err = mq_ws_1_init("ppcc test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
 	msg_id = 1;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
 	msg_id = 2;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = mq_ws_consume(id, string_copier, s, &cb_err);
+	err = mq_ws_1_consume(id, string_copier, s, &cb_err);
 	assert(!err);
 	printf("consumed 1: %s\n", s);
 
-	err = mq_ws_consume(id, string_copier, s, &cb_err);
+	err = mq_ws_1_consume(id, string_copier, s, &cb_err);
 	assert(!err);
 	printf("consumed 2: %s\n", s);
 
 	/* consuming from an empty queue must return error */
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");
@@ -232,34 +256,34 @@ int test_pcpc()
 
 	printf("Testing PCPC case\n");
 
-	err = mq_ws_init("pcpc test");
+	err = mq_ws_1_init("pcpc test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
 	msg_id = 1;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	msg_id = 2;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");
@@ -275,37 +299,37 @@ int test_pccpcc()
 
 	printf("Testing PCCP case\n");
 
-	err = mq_ws_init("pccp test");
+	err = mq_ws_1_init("pccp test");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 
 	msg_id = 1;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
 	msg_id = 2;
-	err = mq_ws_produce(message_producer, &msg_id, &cb_err);
+	err = mq_ws_1_produce(message_producer, &msg_id, &cb_err);
 	assert(!err);
 
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(!err);
 
 	/* consuming from an empty queue must return error */
-	err = mq_ws_consume(id, message_printer, s, &cb_err);
+	err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 	assert(-JT_WS_MQ_EMPTY == err);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");
@@ -321,15 +345,16 @@ int benchmark()
 	struct timespec end;
 	struct timespec diff;
 	double rate;
+	int msg_count = mq_ws_1_maxlen() - 1;  /* Max queue capacity */
 
 #define TEST_ITERATIONS 100000
 
 	printf("Benchmarking... %d iterations \n", TEST_ITERATIONS);
 
-	err = mq_ws_init("benchmark");
+	err = mq_ws_1_init("benchmark");
 	assert(!err);
 
-	err = mq_ws_consumer_subscribe(&id);
+	err = mq_ws_1_consumer_subscribe(&id);
 	assert(!err);
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
@@ -337,26 +362,22 @@ int benchmark()
 	j = TEST_ITERATIONS;
 	while (j--) {
 
-		/* fill up the queue */
-		i = 0;
-		do {
+		/* produce messages up to queue capacity */
+		for (i = 0; i < msg_count; i++) {
 			int msg_id = j * i;
-			err =
-			    mq_ws_produce(benchmark_produce, &msg_id, &cb_err);
-			if (!err) {
-				i++;
-			}
-		} while (!err);
+			err = mq_ws_1_produce(benchmark_produce, &msg_id, &cb_err);
+			assert(!err);
+		}
 
-		/* we hava a full message queue, now consume it all */
-		for (; i > 0; i--) {
-			err = mq_ws_consume(id, benchmark_consumer, s, &cb_err);
+		/* consume all messages */
+		for (i = 0; i < msg_count; i++) {
+			err = mq_ws_1_consume(id, benchmark_consumer, s, &cb_err);
 			assert(!err);
 		}
 
 		/* queue must be empty and consuming from an empty queue
 		 *  must return error */
-		err = mq_ws_consume(id, message_printer, s, &cb_err);
+		err = mq_ws_1_consume(id, message_printer, s, &cb_err);
 		assert(-JT_WS_MQ_EMPTY == err);
 	}
 	clock_gettime(CLOCK_MONOTONIC, &end);
@@ -366,10 +387,10 @@ int benchmark()
 
 	printf("Rate: %f msgs/s\n", rate);
 
-	err = mq_ws_consumer_unsubscribe(id);
+	err = mq_ws_1_consumer_unsubscribe(id);
 	assert(!err);
 
-	err = mq_ws_destroy();
+	err = mq_ws_1_destroy();
 	assert(!err);
 
 	printf("OK.\n");

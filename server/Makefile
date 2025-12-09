@@ -30,7 +30,11 @@ SOURCES = \
  server-main.c \
  proto.c \
  proto-jittertrap.c \
- mq_msg_ws.c \
+ mq_msg_ws_1.c \
+ mq_msg_ws_2.c \
+ mq_msg_ws_3.c \
+ mq_msg_ws_4.c \
+ mq_msg_ws_5.c \
  mq_msg_stats.c \
  mq_msg_tt.c \
  jt_server_message_handler.c \
@@ -51,7 +55,12 @@ HEADERS = \
  proto.h \
  proto-jittertrap.h \
  mq_generic.h \
- mq_msg_ws.h \
+ mq_ws_tiered.h \
+ mq_msg_ws_1.h \
+ mq_msg_ws_2.h \
+ mq_msg_ws_3.h \
+ mq_msg_ws_4.h \
+ mq_msg_ws_5.h \
  mq_msg_stats.h \
  mq_msg_tt.h \
  jt_server_message_handler.h \
@@ -71,7 +80,11 @@ OBJECTS += compute_thread.o
 OBJECTS += server-main.o
 OBJECTS += proto.o
 OBJECTS += proto-jittertrap.o
-OBJECTS += mq_msg_ws.o
+OBJECTS += mq_msg_ws_1.o
+OBJECTS += mq_msg_ws_2.o
+OBJECTS += mq_msg_ws_3.o
+OBJECTS += mq_msg_ws_4.o
+OBJECTS += mq_msg_ws_5.o
 OBJECTS += mq_msg_stats.o
 OBJECTS += mq_msg_tt.o
 OBJECTS += jt_server_message_handler.o
@@ -143,12 +156,14 @@ indent:
 
 
 MQ_DEPENDS = mq_generic.c mq_generic.h
-MQ_SOURCES = mq_msg_ws.c mq_msg_stats.c
-MQ_HEADERS = mq_msg_ws.h mq_msg_stats.h
+MQ_WS_TIERED_SOURCES = mq_msg_ws_1.c mq_msg_ws_2.c mq_msg_ws_3.c mq_msg_ws_4.c mq_msg_ws_5.c
+MQ_WS_TIERED_HEADERS = mq_ws_tiered.h mq_msg_ws_1.h mq_msg_ws_2.h mq_msg_ws_3.h mq_msg_ws_4.h mq_msg_ws_5.h
+MQ_SOURCES = $(MQ_WS_TIERED_SOURCES) mq_msg_stats.c
+MQ_HEADERS = $(MQ_WS_TIERED_HEADERS) mq_msg_stats.h
 MQ_TEST_SOURCES = test_mq.c $(MQ_SOURCES)
 MQ_MT_TEST_SOURCES = test_mq_mt.c $(MQ_SOURCES)
 MQ_MULTI_TEST_SOURCES = test_multi_mq.c $(MQ_SOURCES)
-MQ_TEST_HEADERS = mq_msg_ws.h mq_generic.h
+MQ_TEST_HEADERS = $(MQ_WS_TIERED_HEADERS) mq_generic.h
 
 test-mq: $(MQ_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_DEPENDS) $(MQ_HEADERS)
 	$(CC) -o test-mq $(MQ_TEST_SOURCES) $(CFLAGS) -O0 $(DEFINES)
@@ -168,11 +183,21 @@ test-pcap: test_pcap_buffer.c pcap_buffer.o
 .PHONY: test
 test: test-mq test-mq-mt test-multi-mq test-slist test-pcap
 	./test-mq >/dev/null
-	./test-mq-mt >/dev/null
+	./test-mq-mt
 	./test-multi-mq >/dev/null
 	./test-slist
 	./test-pcap
 	@echo -e "Test OK\n"
+
+# Performance benchmark target - builds with optimization and SPEED_TEST
+# Uses high stale threshold (1M) so consumers don't get marked stale during benchmark
+bench-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)
+	$(CC) -o bench-mq-mt $(MQ_MT_TEST_SOURCES) $(CFLAGS) -O2 -DSPEED_TEST -DMAX_DROPPED_BEFORE_STALE=1000000 $(DEFINES)
+
+.PHONY: benchmark
+benchmark: bench-mq-mt
+	@echo "Running message queue benchmark (1M iterations, no sleeps)..."
+	./bench-mq-mt
 
 TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
 
@@ -182,5 +207,5 @@ test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 .PHONY: clean
 clean:
 	rm $(PROG) *.o || true
-	rm test-mq test-mq-mt test-multi-mq test-pcap || true
+	rm test-mq test-mq-mt test-multi-mq test-pcap bench-mq-mt || true
 	rm *.gcno *.gcov *.gcda || true

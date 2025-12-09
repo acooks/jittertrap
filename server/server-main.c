@@ -19,6 +19,7 @@
 #include "netem.h"
 #include "capabilities.h"
 #include "ws_compress.h"
+#include "mq_ws_tiered.h"
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -266,6 +267,14 @@ int main(int argc, char **argv)
 	if (pcap_buf_init(NULL) != 0) {
 		syslog(LOG_WARNING, "Could not initialize pcap buffer\n");
 	}
+
+	/* Initialize all 5 tiered WebSocket message queues early - must be available
+	 * before any client connects and tries to subscribe */
+	mq_ws_1_init("ws_tier1");
+	mq_ws_2_init("ws_tier2");
+	mq_ws_3_init("ws_tier3");
+	mq_ws_4_init("ws_tier4");
+	mq_ws_5_init("ws_tier5");
 
 	info.iface = iface;
 	info.protocols = protocols;
