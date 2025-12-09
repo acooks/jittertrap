@@ -5,6 +5,7 @@
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 #include <sched.h>
+#include <string.h>
 #include <pcap.h>
 #include <pcap/sll.h>
 #include <pthread.h>
@@ -732,9 +733,19 @@ static void set_affinity(struct tt_thread_info *ti)
 static int init_realtime(struct tt_thread_info *ti)
 {
 	struct sched_param schedparm;
+	int ret;
+
 	memset(&schedparm, 0, sizeof(schedparm));
 	schedparm.sched_priority = ti->thread_prio;
-	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	ret = sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	if (ret != 0) {
+		fprintf(stderr,
+		        "[%s] Failed to set SCHED_FIFO priority %d: %s. "
+		        "Running without real-time scheduling. "
+		        "Grant CAP_SYS_NICE for RT priority.\n",
+		        ti->thread_name, ti->thread_prio,
+		        strerror(errno));
+	}
 	set_affinity(ti);
 	return 0;
 }

@@ -296,7 +296,18 @@ int netem_set_params(const char *iface, struct netem_params *params)
 	rtnl_qdisc_put(qdisc);
 
 	if (err < 0) {
-		syslog(LOG_ERR, "Unable to add qdisc: %s\n", nl_geterror(err));
+		/*
+		 * NLE_PERM (-10) or -EPERM (-1) indicates permission denied.
+		 * This happens when running without CAP_NET_ADMIN.
+		 */
+		if (err == -EPERM || err == -10) {
+			syslog(LOG_WARNING,
+			       "Unable to add qdisc: permission denied. "
+			       "Network impairment features require CAP_NET_ADMIN.");
+		} else {
+			syslog(LOG_ERR, "Unable to add qdisc: %s\n",
+			       nl_geterror(err));
+		}
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return err;
 	}
