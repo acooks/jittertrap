@@ -43,6 +43,7 @@ SOURCES = \
  slist.c \
  intervals_user.c \
  pcap_buffer.c \
+ capabilities.c \
 
 
 HEADERS = \
@@ -62,6 +63,7 @@ HEADERS = \
  sample_buf.h \
  slist.h \
  pcap_buffer.h \
+ capabilities.h \
 
 OBJECTS += compute_thread.o
 OBJECTS += server-main.o
@@ -79,6 +81,7 @@ OBJECTS += netem.o
 OBJECTS += slist.o
 OBJECTS += intervals_user.o
 OBJECTS += pcap_buffer.o
+OBJECTS += capabilities.o
 
 
 MESSAGEHEADERS = \
@@ -113,7 +116,7 @@ CFLAGS_HARDENED = \
  -fPIE -pie -Wl,-z,relro,-z,now
 
 CFLAGS :=  -W -Wall -pedantic -Wformat-security -std=c11 -g -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
-LDFLAGS := -lwebsockets -ljansson -lm -lpcap -lrt $(LDFLAGS)
+LDFLAGS := -lwebsockets -ljansson -lm -lpcap -lrt -lcap $(LDFLAGS)
 
 .PHONY: all
 all: $(PROG) Makefile ../make.config

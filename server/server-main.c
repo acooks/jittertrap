@@ -17,6 +17,7 @@
 #include "proto-jittertrap.h"
 #include "pcap_buffer.h"
 #include "netem.h"
+#include "capabilities.h"
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -221,6 +222,46 @@ int main(int argc, char **argv)
 	lws_set_log_level(LOG_UPTO(debug_level), lwsl_emit_syslog);
 
 	syslog(LOG_NOTICE, "jittertrap server\n");
+
+	/* Check and log available capabilities */
+	caps_init();
+	caps_log_status();
+
+	/* Fail fast if essential capabilities are missing */
+	if (!caps_can_capture()) {
+		syslog(LOG_ERR,
+		       "Cannot start: CAP_NET_RAW is required for packet capture.");
+		if (info.port < 1024) {
+			fprintf(stderr,
+			        "Error: CAP_NET_RAW capability required.\n"
+			        "Run as root, or grant capabilities:\n"
+			        "  sudo setcap 'cap_net_raw,cap_net_admin,cap_sys_nice,cap_net_bind_service+ep' %s\n",
+			        argv[0]);
+		} else {
+			fprintf(stderr,
+			        "Error: CAP_NET_RAW capability required.\n"
+			        "Run as root, or grant capabilities:\n"
+			        "  sudo setcap 'cap_net_raw,cap_net_admin,cap_sys_nice+ep' %s\n",
+			        argv[0]);
+		}
+		return 1;
+	}
+
+	/* Fail fast if privileged port requested without capability */
+	if (info.port < 1024 && !caps_can_bind_low_port()) {
+		syslog(LOG_ERR,
+		       "Cannot bind to port %d without CAP_NET_BIND_SERVICE or root.",
+		       info.port);
+		fprintf(stderr,
+		        "Error: Port %d requires root or CAP_NET_BIND_SERVICE.\n"
+		        "Either:\n"
+		        "  1. Use a non-privileged port: %s -p 8080\n"
+		        "  2. Run as root\n"
+		        "  3. Add capability: sudo setcap 'cap_net_raw,cap_net_admin,cap_sys_nice,cap_net_bind_service+ep' %s\n",
+		        info.port, argv[0], argv[0]);
+		return 1;
+	}
+
 	syslog(LOG_INFO, "Using resource path \"%s\"\n", resource_path);
 
 	/* Initialize pcap buffer with default config */

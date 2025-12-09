@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <stdatomic.h>
+#include <string.h>
 
 #include <jansson.h>
 
@@ -336,9 +337,19 @@ static void set_affinity(void)
 static int init_realtime(void)
 {
 	struct sched_param schedparm;
+	int ret;
+
 	memset(&schedparm, 0, sizeof(schedparm));
 	schedparm.sched_priority = iti.thread_prio;
-	sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	ret = sched_setscheduler(0, SCHED_FIFO, &schedparm);
+	if (ret != 0) {
+		syslog(LOG_WARNING,
+		       "[%s] Failed to set SCHED_FIFO priority %d: %s. "
+		       "Running without real-time scheduling. "
+		       "Grant CAP_SYS_NICE for RT priority.",
+		       iti.thread_name, iti.thread_prio,
+		       strerror(errno));
+	}
 	set_affinity();
 	return 0;
 }
