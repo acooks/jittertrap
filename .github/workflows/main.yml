@@ -34,3 +34,24 @@ jobs:
     - name: Run tests
       run: sudo make test
 
+  test_asan:
+    name: AddressSanitizer Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Install Build Dependencies
+      run: |
+          sudo apt-get update
+          sudo apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libwebsockets-dev libncurses5-dev libpcap-dev pkgconf libcap-dev
+
+    - name: Build dependencies
+      run: make deps/toptalk messages
+
+    - name: Run AddressSanitizer tests
+      run: make test-asan
+      env:
+        ASAN_OPTIONS: abort_on_error=1
+

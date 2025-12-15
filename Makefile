@@ -92,7 +92,7 @@ cppcheck:
 	cppcheck --enable=style,warning,performance,portability messages/ server/ cli-client/
 
 clang-analyze:
-	scan-build make messages server cli-client
+	scan-build $(MAKE) messages server cli-client
 
 coverage:
 	CFLAGS="-fprofile-arcs -ftest-coverage" $(MAKE) clean test
@@ -115,3 +115,32 @@ test: $(TESTDIRS)
 $(TESTDIRS):
 	@echo "Test $@"
 	@$(MAKE) --silent -C $(@:test-%=%) test
+
+# AddressSanitizer testing
+.PHONY: test-asan
+test-asan:
+	@echo "Running AddressSanitizer tests..."
+	@$(MAKE) -C server test-asan
+	@echo "All ASan tests passed!"
+
+.PHONY: test-video-asan
+test-video-asan:
+	@echo "Running video AddressSanitizer tests..."
+	@$(MAKE) -C server test-video-asan
+	@echo "All video ASan tests passed!"
+
+# Fuzzing targets
+.PHONY: fuzz-build
+fuzz-build:
+	@echo "Building fuzz harnesses..."
+	@$(MAKE) -C server/fuzz
+
+.PHONY: fuzz
+fuzz: fuzz-build
+	@echo "Running fuzzer (press Ctrl+C to stop)..."
+	@$(MAKE) -C server/fuzz run-fuzz-rtp
+
+.PHONY: fuzz-quick
+fuzz-quick: fuzz-build
+	@echo "Running 60-second fuzz session..."
+	@$(MAKE) -C server/fuzz fuzz-quick
