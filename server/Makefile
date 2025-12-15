@@ -26,6 +26,16 @@ ifeq ($(DISABLE_PCAP), 1)
 DEFINES += -DDISABLE_PCAP
 endif
 
+# WebRTC video playback support (requires libdatachannel)
+ifeq ($(ENABLE_WEBRTC_PLAYBACK), 1)
+DEFINES += -DENABLE_WEBRTC_PLAYBACK
+LIBDATACHANNEL_CFLAGS = -I/usr/include/rtc
+LIBDATACHANNEL_LDFLAGS = -ldatachannel
+else
+LIBDATACHANNEL_CFLAGS =
+LIBDATACHANNEL_LDFLAGS =
+endif
+
 SOURCES = \
  server-main.c \
  proto.c \
@@ -49,6 +59,7 @@ SOURCES = \
  pcap_buffer.c \
  capabilities.c \
  ws_compress.c \
+ webrtc_bridge.c \
 
 
 HEADERS = \
@@ -75,6 +86,7 @@ HEADERS = \
  pcap_buffer.h \
  capabilities.h \
  ws_compress.h \
+ webrtc_bridge.h \
 
 OBJECTS += compute_thread.o
 OBJECTS += server-main.o
@@ -98,6 +110,7 @@ OBJECTS += intervals_user.o
 OBJECTS += pcap_buffer.o
 OBJECTS += capabilities.o
 OBJECTS += ws_compress.o
+OBJECTS += webrtc_bridge.o
 
 
 MESSAGEHEADERS = \
@@ -110,6 +123,7 @@ MESSAGEHEADERS = \
  ../messages/include/jt_msg_sample_period.h \
  ../messages/include/jt_msg_set_netem.h \
  ../messages/include/jt_msg_pcap.h \
+ ../messages/include/jt_msg_video.h \
 
 MAKEDEPENDS = Makefile ../make.config $(MESSAGEHEADERS)
 
@@ -125,18 +139,38 @@ PKGCONFIG_LIBNL = \
 TOPTALK_LIB = ../deps/toptalk/toptalk.a
 MESSAGES = ../messages/jt-messages.a
 
+# Build type: debug (default) or release
+# debug: ASan enabled, -Og optimization, better for development
+# release: -O2 optimization, FORTIFY_SOURCE, better for production
+BUILD_TYPE ?= debug
+
 CFLAGS_HARDENED = \
  -fPIC \
  -fstack-protector \
  --param ssp-buffer-size=4 \
- -fPIE -pie -Wl,-z,relro,-z,now
+ -fPIE -pie -Wl,-z,relro,-z,now \
+ -Warray-bounds \
+ -Wstringop-overflow
 
-CFLAGS :=  -W -Wall -pedantic -Wformat-security -std=c11 -g -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
-LDFLAGS := -lwebsockets -ljansson -lm -lpcap -lrt -lcap -lz $(LDFLAGS)
+ifeq ($(BUILD_TYPE),release)
+# Release build: full optimization with FORTIFY_SOURCE
+CFLAGS_OPT = -O2 -D_FORTIFY_SOURCE=2
+CFLAGS_SANITIZER =
+LDFLAGS_SANITIZER =
+else
+# Debug build: minimal optimization with ASan for catching bugs early
+CFLAGS_OPT = -Og
+CFLAGS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS_SANITIZER = -fsanitize=address
+endif
+
+CFLAGS :=  -W -Wall -pedantic -Wformat-security -std=c11 -g $(CFLAGS_OPT) -pthread $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(LIBDATACHANNEL_CFLAGS) $(CFLAGS)
+LDFLAGS := -lwebsockets -ljansson -lm -lpcap -lrt -lcap -lz $(LDFLAGS_SANITIZER) $(LIBDATACHANNEL_LDFLAGS) $(LDFLAGS)
 
 .PHONY: all
 all: $(PROG) Makefile ../make.config
 	@echo -----------------------------------
+	@echo Build type: $(BUILD_TYPE)
 	@echo Sample period: $(SAMPLE_PERIOD_US)us
 	@echo Web server port: $(WEB_SERVER_PORT)
 	@echo Web server document root: $(WEB_SERVER_DOCUMENT_ROOT)
@@ -203,6 +237,23 @@ TOPTALK_TEST_SOURCES = test-toptalk.c timeywimey.c
 
 test-toptalk: $(TOPTALK_LIB) $(TOPTALK_TEST_SOURCES)
 	$(CC) -o test-toptalk $(TOPTALK_TEST_SOURCES) $(TOPTALK_LIB) $(INCLUDES) $(CFLAGS) -O0 $(DEFINES) -lpcap
+
+# AddressSanitizer test targets
+# These rebuild all tests with ASan instrumentation
+# Note: UBSan (-fsanitize=undefined) can be added if libubsan is available
+SANITIZER_FLAGS = -fsanitize=address -fno-omit-frame-pointer -g -O1
+
+.PHONY: test-asan
+test-asan: clean
+	@echo "Building and running tests with AddressSanitizer..."
+	$(MAKE) CFLAGS="$(CFLAGS) $(SANITIZER_FLAGS)" LDFLAGS="$(LDFLAGS) $(SANITIZER_FLAGS)" \
+		test-mq test-mq-mt test-multi-mq test-slist test-pcap
+	ASAN_OPTIONS=detect_leaks=0 ./test-mq >/dev/null
+	ASAN_OPTIONS=detect_leaks=0 ./test-mq-mt
+	ASAN_OPTIONS=detect_leaks=0 ./test-multi-mq >/dev/null
+	ASAN_OPTIONS=detect_leaks=0 ./test-slist
+	ASAN_OPTIONS=detect_leaks=0 ./test-pcap
+	@echo "ASan tests passed!"
 
 .PHONY: clean
 clean:

@@ -18,6 +18,12 @@ JitterTrap is a real-time network performance analysis tool for engineers workin
 - **Connection State** — visual markers for SYN, FIN, RST events
 - **Congestion Events** — detects zero window, duplicate ACKs, retransmissions, ECN
 
+**Video & Audio Stream Analysis**
+- Automatic detection of RTP video streams (H.264, H.265, VP8/VP9) and MPEG-TS
+- Codec identification, resolution, framerate, and bitrate extraction
+- Jitter measurement and packet loss tracking per stream
+- Optional in-browser video playback via WebRTC (requires `ENABLE_WEBRTC_PLAYBACK=1`)
+
 **Network Impairment Emulation**
 - Inject delay, jitter, and packet loss on egress traffic
 - Scriptable impairment programs for automated testing
@@ -80,7 +86,15 @@ Build:
     cd jittertrap
     make
 
-Run `make help` to see build configuration options.
+Run `make help` to see build configuration options, or `make config` to see current settings.
+
+### Optional Features
+
+**WebRTC Video Playback** — watch detected video streams in your browser:
+
+    make ENABLE_WEBRTC_PLAYBACK=1
+
+Requires [libdatachannel](https://github.com/paullouisageneau/libdatachannel) to be installed. This library is not yet packaged for most distributions and must be built from source.
 
 ## Running JitterTrap
 

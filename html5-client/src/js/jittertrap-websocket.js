@@ -16,6 +16,9 @@
   /* Compression header byte used by server */
   const WS_COMPRESS_HEADER = 0x01;
 
+  /* Video segment header byte */
+  /* Note: Video segments are now delivered via separate video WebSocket */
+
   /*
    * Preset dictionary for decompression - must match server's ws_dictionary.
    * Contains common strings in JitterTrap JSON messages, ordered from
@@ -31,7 +34,33 @@
     /* Less frequent message types */
     'pcap_readypcap_statuspcap_configpcap_triggersample_period' +
     'netem_paramsdev_selectiface_list' +
-    /* Field names (less frequent first) */
+    /* Video telemetry fields (less common - only video flows) */
+    '"video_codec_source":' +
+    '"video_bitrate_kbps":' +
+    '"video_gop_frames":' +
+    '"video_keyframes":' +
+    '"video_frames":' +
+    '"video_fps_x100":' +
+    '"video_profile":' +
+    '"video_level":' +
+    '"video_width":' +
+    '"video_height":' +
+    '"video_jitter_hist":[' +
+    '"video_jitter_us":' +
+    '"video_seq_loss":' +
+    '"video_cc_errors":' +
+    '"video_codec":' +
+    '"video_ssrc":' +
+    '"video_type":' +
+    /* Audio telemetry fields (less common - only audio flows) */
+    '"audio_bitrate_kbps":' +
+    '"audio_sample_rate":' +
+    '"audio_jitter_us":' +
+    '"audio_seq_loss":' +
+    '"audio_codec":' +
+    '"audio_ssrc":' +
+    '"audio_type":' +
+    /* TCP congestion/window fields */
     '"recent_events":' +
     '"retransmit_cnt":' +
     '"zero_window_cnt":' +
@@ -42,6 +71,28 @@
     '"saw_syn":' +
     '"tcp_state":' +
     '"rtt_us":' +
+    /* TCP health indicator fields */
+    '"health_rtt_hist":[' +
+    '"health_rtt_samples":' +
+    '"health_status":' +
+    '"health_flags":' +
+    /* IPG histogram fields (medium frequency) */
+    '"ipg_hist":[' +
+    '"ipg_samples":' +
+    '"ipg_mean_us":' +
+    /* Frame size histogram fields (all flows) */
+    '"frame_size_hist":[' +
+    '"frame_size_samples":' +
+    '"frame_size_variance":' +
+    '"frame_size_mean":' +
+    '"frame_size_min":' +
+    '"frame_size_max":' +
+    /* PPS histogram fields (all flows) */
+    '"pps_hist":[' +
+    '"pps_samples":' +
+    '"pps_variance":' +
+    '"pps_mean":' +
+    /* Address fields */
     '"tclass":"' +
     '"proto":"' +
     '"dport":' +
@@ -71,6 +122,9 @@
     '"packets":' +
     '"bytes":' +
     '"flows":[' +
+    /* Common histogram patterns (zeros are very frequent) */
+    ',0,0,0,0' +
+    '[0,0,0,0' +
     /* Most common JSON structure */
     '"iface":"' +
     '","p":{' +
@@ -122,7 +176,9 @@
 
   const handleMsgUpdateStats = function (params) {
     // params.s contains network statistics as rates per second (e.g., bytes/sec, packets/sec)
-    JT.core.processDataMsg(params.s, params.ival_ns);
+    // params.t contains the timestamp (tv_sec, tv_nsec) from the server
+    const timestamp = params.t.tv_sec + params.t.tv_nsec / 1e9;
+    JT.core.processDataMsg(params.s, params.ival_ns, timestamp);
     JT.charts.setDirty();
   };
 
@@ -184,6 +240,25 @@
   const handleMsgPcapReady = function(params) {
     if (JT.pcapModule) {
       JT.pcapModule.handleFileReady(params);
+    }
+  };
+
+  /* WebRTC message handlers */
+  const handleMsgWebrtcAnswer = function(params) {
+    if (JT.webrtc) {
+      JT.webrtc.handleAnswer(params);
+    }
+  };
+
+  const handleMsgWebrtcIce = function(params) {
+    if (JT.webrtc) {
+      JT.webrtc.handleIce(params);
+    }
+  };
+
+  const handleMsgWebrtcStatus = function(params) {
+    if (JT.webrtc) {
+      JT.webrtc.handleStatus(params);
     }
   };
 
@@ -306,6 +381,9 @@
     pcap_config: handleMsgPcapConfig,
     pcap_status: handleMsgPcapStatus,
     pcap_ready: handleMsgPcapReady,
+    webrtc_answer: handleMsgWebrtcAnswer,
+    webrtc_ice: handleMsgWebrtcIce,
+    webrtc_status: handleMsgWebrtcStatus,
     error: handleMsgError,
     resolution: handleMsgResolution,
   };
@@ -360,6 +438,7 @@
             return;
           }
         } else {
+          /* Note: Video segments are now delivered via separate video WebSocket */
           // Binary but not our compression format - unexpected
           console.log("Unexpected binary message format");
           return;
@@ -404,6 +483,7 @@
   my.ws.clear_netem = clear_netem;
   my.ws.pcap_config = pcap_config;
   my.ws.pcap_trigger = pcap_trigger;
+  my.ws.send = (msg) => sock.send(msg);
 
   /**
    * Debug helper - decode compressed message from console

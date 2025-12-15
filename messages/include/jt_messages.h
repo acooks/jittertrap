@@ -15,6 +15,7 @@
 #include "jt_msg_set_netem.h"
 #include "jt_msg_hello.h"
 #include "jt_msg_pcap.h"
+#include "jt_msg_video.h"
 
 static const struct jt_msg_type jt_messages[] =
     {[JT_MSG_STATS_V1] = { .type = JT_MSG_STATS_V1,
@@ -114,6 +115,54 @@ static const struct jt_msg_type jt_messages[] =
 		               .print = jt_pcap_ready_printer,
 		               .free = jt_pcap_ready_free,
 		               .get_test_msg = jt_pcap_ready_test_msg_get },
+
+     [JT_MSG_VIDEO_ERROR_V1] = { .type = JT_MSG_VIDEO_ERROR_V1,
+		                .key = "video_error",
+		                .to_struct = jt_video_error_unpacker,
+		                .to_json_string = jt_video_error_packer,
+		                .print = jt_video_error_printer,
+		                .free = jt_video_error_free,
+		                .get_test_msg = jt_video_error_test_msg_get },
+
+     [JT_MSG_WEBRTC_OFFER_V1] = { .type = JT_MSG_WEBRTC_OFFER_V1,
+		                 .key = "webrtc_offer",
+		                 .to_struct = jt_webrtc_offer_unpacker,
+		                 .to_json_string = jt_webrtc_offer_packer,
+		                 .print = jt_webrtc_offer_printer,
+		                 .free = jt_webrtc_offer_free,
+		                 .get_test_msg = jt_webrtc_offer_test_msg_get },
+
+     [JT_MSG_WEBRTC_ANSWER_V1] = { .type = JT_MSG_WEBRTC_ANSWER_V1,
+		                  .key = "webrtc_answer",
+		                  .to_struct = jt_webrtc_answer_unpacker,
+		                  .to_json_string = jt_webrtc_answer_packer,
+		                  .print = jt_webrtc_answer_printer,
+		                  .free = jt_webrtc_answer_free,
+		                  .get_test_msg = jt_webrtc_answer_test_msg_get },
+
+     [JT_MSG_WEBRTC_ICE_V1] = { .type = JT_MSG_WEBRTC_ICE_V1,
+		               .key = "webrtc_ice",
+		               .to_struct = jt_webrtc_ice_unpacker,
+		               .to_json_string = jt_webrtc_ice_packer,
+		               .print = jt_webrtc_ice_printer,
+		               .free = jt_webrtc_ice_free,
+		               .get_test_msg = jt_webrtc_ice_test_msg_get },
+
+     [JT_MSG_WEBRTC_STOP_V1] = { .type = JT_MSG_WEBRTC_STOP_V1,
+		                .key = "webrtc_stop",
+		                .to_struct = jt_webrtc_stop_unpacker,
+		                .to_json_string = jt_webrtc_stop_packer,
+		                .print = jt_webrtc_stop_printer,
+		                .free = jt_webrtc_stop_free,
+		                .get_test_msg = jt_webrtc_stop_test_msg_get },
+
+     [JT_MSG_WEBRTC_STATUS_V1] = { .type = JT_MSG_WEBRTC_STATUS_V1,
+		                  .key = "webrtc_status",
+		                  .to_struct = jt_webrtc_status_unpacker,
+		                  .to_json_string = jt_webrtc_status_packer,
+		                  .print = jt_webrtc_status_printer,
+		                  .free = jt_webrtc_status_free,
+		                  .get_test_msg = jt_webrtc_status_test_msg_get },
 
      [JT_MSG_END] = {
 	     .type = JT_MSG_END, .key = NULL, .to_struct = NULL, .print = NULL

@@ -46,6 +46,20 @@
 
   const timeScaleTable = { "5ms": 5, "10ms": 10, "20ms": 20, "50ms": 50, "100ms": 100, "200ms": 200, "500ms": 500, "1000ms": 1000};
 
+  /* Interval refinement mapping for smooth chart animation.
+   * When viewing at a slower interval (e.g., 100ms), use a faster interval
+   * (e.g., 20ms) for provisional data points that fill gaps between authoritative
+   * points. This creates smooth scrolling animation while preserving correct
+   * decimation when authoritative data arrives.
+   * Key: authoritative interval (ms), Value: refinement interval (ms) */
+  const intervalRefinement = {
+    100: 20,    // 5 provisional points per authoritative
+    50: 10,     // 5 provisional points
+    200: 50,    // 4 provisional points
+    500: 100,   // 5 provisional points
+    1000: 200   // 5 provisional points
+  };
+
   /* a prototype object to encapsulate timeseries data. */
   const Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
@@ -157,24 +171,24 @@
   };
 
   const updatePacketGapChartData = function (data, mean, minMax) {
-
-    const chartPeriod = my.charts.getChartPeriod();
     const len = data.size;
 
     mean.length = 0;
     minMax.length = 0;
 
     for (let i = 0; i < len; i++) {
-      const x = i * chartPeriod;
       const pg = data.get(i);
+      // pgaps data now contains timestamp in seconds
+      const x = pg.timestamp;
       mean.push({x: x, y: pg.mean});
       minMax.push({x: x, y: [pg.min, pg.max]});
-      //console.log(x + " " + pg.min + " " + pg.max);
     }
   };
 
   const updateStats = function (series, timeScale) {
-    const sortedData = series.samples[timeScale].slice(0);
+    // Extract just the values from {timestamp, value} objects for stats calculation
+    const rawData = series.samples[timeScale].slice(0);
+    const sortedData = rawData.map(d => d.value);
     series.stats.cur = sortedData[sortedData.length-1];
     sortedData.sort(numSort);
 
@@ -196,13 +210,15 @@
   };
 
   const updateMainChartData = function(samples, chartSeries) {
-    const chartPeriod = my.charts.getChartPeriod();
     const len = samples.size;
 
     chartSeries.length = 0;
 
     for (let i = 0; i < len; i++) {
-      chartSeries.push({timestamp: i*chartPeriod, value: samples.get(i)});
+      const sample = samples.get(i);
+      // Sample now contains {timestamp: seconds, value: rate}
+      // Chart expects timestamp in seconds (same as flow charts)
+      chartSeries.push({timestamp: sample.timestamp, value: sample.value});
     }
   };
 
@@ -213,42 +229,236 @@
       else if (chartSamples[interval] < sampleCount) chartSamples[interval]++;
   };
 
+  /* Object pool for data points to reduce GC pressure.
+   * Instead of creating ~4000 new objects per update (20 flows × 200 samples),
+   * we reuse pre-allocated objects from this pool. */
+  const DATA_POINT_POOL_SIZE = sampleWindowSize * 50;  // 200 samples × 50 flows max
+  const dataPointPool = [];
+  let dataPointPoolIndex = 0;
+
+  // Initialize data point pool once
+  for (let i = 0; i < DATA_POINT_POOL_SIZE; i++) {
+    dataPointPool.push({
+      ts: 0, bytes: 0, packets: 0,
+      rtt_us: -1, tcp_state: -1,
+      rwnd_bytes: -1, window_scale: -1,
+      zero_window_cnt: 0, dup_ack_cnt: 0, retransmit_cnt: 0,
+      ece_cnt: 0, recent_events: 0
+    });
+  }
+
+  /* Reset a pooled data point to default values */
+  const resetDataPoint = function(d, ts) {
+    d.ts = ts;
+    d.bytes = 0;
+    d.packets = 0;
+    d.rtt_us = -1;
+    d.tcp_state = -1;
+    d.rwnd_bytes = -1;
+    d.window_scale = -1;
+    d.zero_window_cnt = 0;
+    d.dup_ack_cnt = 0;
+    d.retransmit_cnt = 0;
+    d.ece_cnt = 0;
+    d.recent_events = 0;
+    return d;
+  };
+
+  /* Get a pooled data point object, resetting it to defaults */
+  const getPooledDataPoint = function(ts) {
+    if (dataPointPoolIndex >= DATA_POINT_POOL_SIZE) {
+      // Pool exhausted - create new object (fallback, shouldn't happen often)
+      return resetDataPoint({}, ts);
+    }
+    const obj = dataPointPool[dataPointPoolIndex++];
+    return resetDataPoint(obj, ts);
+  };
+
+  /* Flow object cache to reuse flow objects across updates.
+   * Keyed by fkey, these objects persist and get their values array reused. */
+  const flowObjectCache = new Map();
+  const DEFAULT_RTT_HIST = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  const DEFAULT_IPG_HIST = [0,0,0,0,0,0,0,0,0,0,0,0];
+
+  /* Get or create a flow object from the cache */
+  const getOrCreateFlow = function(fkey) {
+    let flow = flowObjectCache.get(fkey);
+    if (!flow) {
+      flow = {
+        fkey: fkey,
+        values: [],
+        tbytes: 0, tpackets: 0,
+        rtt_us: -1, tcp_state: -1, saw_syn: 0,
+        video_type: 0, video_codec: 0, video_jitter_us: 0,
+        video_seq_loss: 0, video_cc_errors: 0, video_ssrc: 0,
+        video_codec_source: 0, video_width: 0, video_height: 0,
+        video_profile: 0, video_level: 0, video_fps_x100: 0,
+        video_bitrate_kbps: 0, video_gop_frames: 0, video_keyframes: 0, video_frames: 0,
+        audio_type: 0, audio_codec: 0, audio_jitter_us: 0,
+        audio_seq_loss: 0, audio_ssrc: 0, audio_bitrate_kbps: 0,
+        health_rtt_hist: DEFAULT_RTT_HIST.slice(),
+        health_rtt_samples: 0, health_status: 0, health_flags: 0,
+        ipg_hist: DEFAULT_IPG_HIST.slice(),
+        ipg_samples: 0, ipg_mean_us: 0,
+        frame_size_hist: null, frame_size_samples: 0, frame_size_mean: 0,
+        frame_size_variance: 0, frame_size_min: 0, frame_size_max: 0,
+        pps_hist: null, pps_samples: 0, pps_mean: 0, pps_variance: 0
+      };
+      flowObjectCache.set(fkey, flow);
+    }
+    // Clear the values array for reuse (much faster than creating new array)
+    flow.values.length = 0;
+    return flow;
+  };
+
+  /* Reset the data point pool index at start of each update cycle */
+  const resetDataPointPool = function() {
+    dataPointPoolIndex = 0;
+  };
+
+  /* Extract flow identity from a key (everything after the interval prefix).
+   * Used for frontier tracking (same flow has different keys at different intervals).
+   * Cached to avoid repeated substring allocations (reduces GC pressure). */
+  const flowIdentityCache = new Map();
+  const getFlowIdentity = function(fkey) {
+    let identity = flowIdentityCache.get(fkey);
+    if (identity === undefined) {
+      const firstSlash = fkey.indexOf('/');
+      identity = fkey.substring(firstSlash + 1);
+      flowIdentityCache.set(fkey, identity);
+    }
+    return identity;
+  };
+
+  /* Translate a flow key from one interval to another.
+   * fkey format: interval/src/sport/dst/dport/proto/tclass */
+  const translateFlowKey = function(fkey, toInterval) {
+    const firstSlash = fkey.indexOf('/');
+    return toInterval + fkey.substring(firstSlash);
+  };
+
   const updateTopFlowChartData = function(interval) {
     const chartPeriod = my.charts.getChartPeriod();
     const chartSeries = JT.charts.getTopFlowsRef();
-    const fcount = flowRank[interval].length;
+    const intervalMs = interval / 1E6;
 
     updateSampleCounts(interval);
 
     console.assert(Number(chartPeriod) > 0);
-    console.assert(Number(interval / 1E6) > 0);
-    // careful, chartPeriod is a string. interval is in ns, so convert to ms.
-    if (Number(chartPeriod) !== Number(interval / 1E6)) {
-      // only update chart if selected chartPeriod matches new data message
+    console.assert(Number(intervalMs) > 0);
+
+    // Determine if this interval is authoritative (matches chartPeriod) or
+    // refinement (faster interval for smooth animation)
+    const isAuthoritative = (Number(chartPeriod) === Number(intervalMs));
+    const expectedRefinement = intervalRefinement[Number(chartPeriod)];
+    const isRefinement = (expectedRefinement === Number(intervalMs));
+
+    if (!isAuthoritative && !isRefinement) {
+      // Neither authoritative nor refinement for current view - ignore
       return;
     }
 
+    // Determine the authoritative interval (for flow ranking and totals)
+    const authIntervalNs = Number(chartPeriod) * 1E6;
+    const refinementIntervalNs = expectedRefinement ? expectedRefinement * 1E6 : null;
+
+    // Must have authoritative data to proceed (need flowRank)
+    if (!flowRank[authIntervalNs] || flowRank[authIntervalNs].length === 0) {
+      return;
+    }
+
+    // Update frontier when authoritative data arrives
+    // Only advance forward (monotonic) to prevent jitter from out-of-order messages
+    if (isAuthoritative && flowsTS[authIntervalNs] && flowsTS[authIntervalNs].size > 0) {
+      const latestSlice = flowsTS[authIntervalNs].get(flowsTS[authIntervalNs].size - 1);
+      const latestTs = latestSlice.ts;
+      if (latestTs > currentChartTime) {
+        currentChartTime = latestTs;
+      }
+      // Update frontier for all flows in the latest slice
+      for (const key in latestSlice) {
+        if (key === 'ts') continue;
+        const flowId = getFlowIdentity(key);
+        authoritativeFrontier.set(flowId, latestTs);
+      }
+    }
+
+    // Update current time from refinement data for smooth X-axis scrolling
+    // Only advance forward (monotonic) to prevent jitter from out-of-order messages
+    if (isRefinement && refinementIntervalNs && flowsTS[refinementIntervalNs] &&
+        flowsTS[refinementIntervalNs].size > 0) {
+      const latestRefSlice = flowsTS[refinementIntervalNs].get(flowsTS[refinementIntervalNs].size - 1);
+      if (latestRefSlice.ts > currentChartTime) {
+        currentChartTime = latestRefSlice.ts;
+      }
+    }
+
+    const fcount = flowRank[authIntervalNs].length;
     chartSeries.length = 0;
+    resetDataPointPool();  // Reset pool index at start of each update cycle
 
-    const slices = flowsTS[interval].size;
+    const authSlices = flowsTS[authIntervalNs] ? flowsTS[authIntervalNs].size : 0;
 
-    /* get the top 10 from the ranking... */
+    /* get the top flows from the authoritative ranking... */
     for (let j = 0; j < fcount; j++) {
-      const fkey = flowRank[interval][j];
-      const flow = {"fkey": fkey, "values": []};
+      const fkey = flowRank[authIntervalNs][j];
+      const flowId = getFlowIdentity(fkey);  // For frontier lookup and refinement key translation
+      const frontier = authoritativeFrontier.get(flowId) || 0;
+      const flow = getOrCreateFlow(fkey);  // Reuse cached flow object
       let lastRtt = -1;  /* Track latest RTT for this flow */
       let lastTcpState = -1;  /* Track latest TCP state for this flow */
       let sawSyn = 0;  /* Track if SYN was ever observed for this flow */
-      for (let i = 0; i < slices; i++) {
-        const slice = flowsTS[interval].get(i);
+      /* Video stream tracking */
+      let lastVideoType = 0;
+      let lastVideoCodec = 0;
+      let lastVideoJitterUs = 0;
+      let lastVideoSeqLoss = 0;
+      let lastVideoCcErrors = 0;
+      let lastVideoSsrc = 0;
+      /* Extended video telemetry tracking */
+      let lastVideoCodecSource = 0;
+      let lastVideoWidth = 0;
+      let lastVideoHeight = 0;
+      let lastVideoProfile = 0;
+      let lastVideoLevel = 0;
+      let lastVideoFpsX100 = 0;
+      let lastVideoBitrateKbps = 0;
+      let lastVideoGopFrames = 0;
+      let lastVideoKeyframes = 0;
+      let lastVideoFrames = 0;
+      /* Audio stream tracking */
+      let lastAudioType = 0;
+      let lastAudioCodec = 0;
+      let lastAudioJitterUs = 0;
+      let lastAudioSeqLoss = 0;
+      let lastAudioSsrc = 0;
+      let lastAudioBitrateKbps = 0;
+      /* TCP health tracking - use pre-defined constant to avoid allocations */
+      let lastHealthRttHist = DEFAULT_RTT_HIST;
+      let lastHealthRttSamples = 0;
+      let lastHealthStatus = 0;
+      let lastHealthFlags = 0;
+      /* IPG histogram tracking (all flows) - use pre-defined constant to avoid allocations */
+      let lastIpgHist = DEFAULT_IPG_HIST;
+      let lastIpgSamples = 0;
+      let lastIpgMeanUs = 0;
+      /* Frame size histogram tracking (all flows) */
+      let lastFrameSizeHist = null;
+      let lastFrameSizeSamples = 0;
+      let lastFrameSizeMean = 0;
+      let lastFrameSizeVariance = 0;
+      let lastFrameSizeMin = 0;
+      let lastFrameSizeMax = 0;
+      /* PPS histogram tracking (all flows) */
+      let lastPpsHist = null;
+      let lastPpsSamples = 0;
+      let lastPpsMean = 0;
+      let lastPpsVariance = 0;
+      // Process authoritative data points (all of them)
+      for (let i = 0; i < authSlices; i++) {
+        const slice = flowsTS[authIntervalNs].get(i);
         /* the data point must exist to keep the series alignment intact */
-        const d = {
-          "ts": slice.ts, "bytes":0, "packets":0,
-          "rtt_us": -1, "tcp_state": -1,
-          "rwnd_bytes": -1, "window_scale": -1,
-          "zero_window_cnt": 0, "dup_ack_cnt": 0, "retransmit_cnt": 0,
-          "ece_cnt": 0, "recent_events": 0
-        };
+        const d = getPooledDataPoint(slice.ts);  // Reuse pooled object
         if (slice[fkey]) {
           d.bytes = slice[fkey].bytes;
           d.packets = slice[fkey].packets;
@@ -270,35 +480,147 @@
           if (slice[fkey].saw_syn) {
             sawSyn = 1;
           }
+          /* Track video stream info - update if video detected */
+          if (slice[fkey].video_type > 0) {
+            lastVideoType = slice[fkey].video_type;
+            lastVideoCodec = slice[fkey].video_codec;
+            lastVideoJitterUs = slice[fkey].video_jitter_us;
+            lastVideoSeqLoss = slice[fkey].video_seq_loss;
+            lastVideoCcErrors = slice[fkey].video_cc_errors;
+            lastVideoSsrc = slice[fkey].video_ssrc;
+            /* Extended video telemetry */
+            lastVideoCodecSource = slice[fkey].video_codec_source;
+            lastVideoWidth = slice[fkey].video_width;
+            lastVideoHeight = slice[fkey].video_height;
+            lastVideoProfile = slice[fkey].video_profile;
+            lastVideoLevel = slice[fkey].video_level;
+            lastVideoFpsX100 = slice[fkey].video_fps_x100;
+            lastVideoBitrateKbps = slice[fkey].video_bitrate_kbps;
+            lastVideoGopFrames = slice[fkey].video_gop_frames;
+            lastVideoKeyframes = slice[fkey].video_keyframes;
+            lastVideoFrames = slice[fkey].video_frames;
+          }
+          /* Track audio stream info - update if audio detected */
+          if (slice[fkey].audio_type > 0) {
+            lastAudioType = slice[fkey].audio_type;
+            lastAudioCodec = slice[fkey].audio_codec;
+            lastAudioJitterUs = slice[fkey].audio_jitter_us;
+            lastAudioSeqLoss = slice[fkey].audio_seq_loss;
+            lastAudioSsrc = slice[fkey].audio_ssrc;
+            lastAudioBitrateKbps = slice[fkey].audio_bitrate_kbps;
+          }
+          /* Track TCP health info - update if samples present */
+          if (slice[fkey].health_rtt_samples > 0) {
+            lastHealthRttHist = slice[fkey].health_rtt_hist || DEFAULT_RTT_HIST;
+            lastHealthRttSamples = slice[fkey].health_rtt_samples;
+            lastHealthStatus = slice[fkey].health_status;
+            lastHealthFlags = slice[fkey].health_flags;
+          }
+          /* Track IPG histogram info - update if samples present */
+          if (slice[fkey].ipg_samples > 0) {
+            lastIpgHist = slice[fkey].ipg_hist || DEFAULT_IPG_HIST;
+            lastIpgSamples = slice[fkey].ipg_samples;
+            lastIpgMeanUs = slice[fkey].ipg_mean_us;
+          }
+          /* Track frame size histogram info - update if samples present */
+          if (slice[fkey].frame_size_samples > 0) {
+            lastFrameSizeHist = slice[fkey].frame_size_hist;
+            lastFrameSizeSamples = slice[fkey].frame_size_samples;
+            lastFrameSizeMean = slice[fkey].frame_size_mean;
+            lastFrameSizeVariance = slice[fkey].frame_size_variance;
+            lastFrameSizeMin = slice[fkey].frame_size_min;
+            lastFrameSizeMax = slice[fkey].frame_size_max;
+          }
+          /* Track PPS histogram info - update if samples present */
+          if (slice[fkey].pps_samples > 0) {
+            lastPpsHist = slice[fkey].pps_hist;
+            lastPpsSamples = slice[fkey].pps_samples;
+            lastPpsMean = slice[fkey].pps_mean;
+            lastPpsVariance = slice[fkey].pps_variance;
+          }
         }
         console.assert(d.bytes >= 0);
         console.assert(d.packets >= 0);
         flow.values.push(d);
       }
-      flow.tbytes = flowsTotals[interval][fkey].tbytes;
-      flow.tpackets = flowsTotals[interval][fkey].tpackets;
+
+      // Note: Refinement data is NOT added as separate data points.
+      // Adding mixed-resolution points (100ms + 20ms) creates visual discontinuity.
+      // Instead, refinement data triggers more frequent redraws (via setDirty),
+      // which provides smoother animation without adding artifacts.
+      // The X-axis domain is updated based on refinement timestamps in the chart code.
+
+      flow.tbytes = flowsTotals[authIntervalNs][fkey].tbytes;
+      flow.tpackets = flowsTotals[authIntervalNs][fkey].tpackets;
       flow.rtt_us = lastRtt;  /* Latest RTT value for legend display */
       flow.tcp_state = lastTcpState;  /* Latest TCP state */
       flow.saw_syn = sawSyn;  /* True if SYN was ever observed */
+      /* Video stream info for legend display */
+      flow.video_type = lastVideoType;
+      flow.video_codec = lastVideoCodec;
+      flow.video_jitter_us = lastVideoJitterUs;
+      flow.video_seq_loss = lastVideoSeqLoss;
+      flow.video_cc_errors = lastVideoCcErrors;
+      flow.video_ssrc = lastVideoSsrc;
+      /* Extended video telemetry for legend display */
+      flow.video_codec_source = lastVideoCodecSource;
+      flow.video_width = lastVideoWidth;
+      flow.video_height = lastVideoHeight;
+      flow.video_profile = lastVideoProfile;
+      flow.video_level = lastVideoLevel;
+      flow.video_fps_x100 = lastVideoFpsX100;
+      flow.video_bitrate_kbps = lastVideoBitrateKbps;
+      flow.video_gop_frames = lastVideoGopFrames;
+      flow.video_keyframes = lastVideoKeyframes;
+      flow.video_frames = lastVideoFrames;
+      /* Audio stream info for legend display */
+      flow.audio_type = lastAudioType;
+      flow.audio_codec = lastAudioCodec;
+      flow.audio_jitter_us = lastAudioJitterUs;
+      flow.audio_seq_loss = lastAudioSeqLoss;
+      flow.audio_ssrc = lastAudioSsrc;
+      flow.audio_bitrate_kbps = lastAudioBitrateKbps;
+      /* TCP health info for legend display */
+      flow.health_rtt_hist = lastHealthRttHist;
+      flow.health_rtt_samples = lastHealthRttSamples;
+      flow.health_status = lastHealthStatus;
+      flow.health_flags = lastHealthFlags;
+      /* IPG histogram info for legend display (all flows) */
+      flow.ipg_hist = lastIpgHist;
+      flow.ipg_samples = lastIpgSamples;
+      flow.ipg_mean_us = lastIpgMeanUs;
+      /* Frame size histogram info for legend display (all flows) */
+      flow.frame_size_hist = lastFrameSizeHist;
+      flow.frame_size_samples = lastFrameSizeSamples;
+      flow.frame_size_mean = lastFrameSizeMean;
+      flow.frame_size_variance = lastFrameSizeVariance;
+      flow.frame_size_min = lastFrameSizeMin;
+      flow.frame_size_max = lastFrameSizeMax;
+      /* PPS histogram info for legend display (all flows) */
+      flow.pps_hist = lastPpsHist;
+      flow.pps_samples = lastPpsSamples;
+      flow.pps_mean = lastPpsMean;
+      flow.pps_variance = lastPpsVariance;
       chartSeries.push(flow);
     }
 
   };
 
-  const updateSeries = function (series, yVal, selectedSeries, timeScale) {
+  const updateSeries = function (series, yVal, selectedSeries, timeScale, timestamp) {
     const periodMs = timeScaleTable[timeScale];
-    series.samples[timeScale].push(series.rateFormatter(yVal));
+    // Store timestamp (in seconds) with each sample for absolute time positioning
+    series.samples[timeScale].push({timestamp: timestamp, value: series.rateFormatter(yVal)});
 
-    if (my.charts.getChartPeriod() == timeScaleTable[timeScale]) {
+    // Only process when interval matches the selected chart period
+    if (my.charts.getChartPeriod() == periodMs) {
       updateStats(series, timeScale);
       JT.measurementsModule.updateSeries(series.name, series.stats);
       JT.trapModule.checkTriggers(series.name, series.stats);
 
-      /* update the charts data */
+      // Update chart data for the selected series
+      // Smooth scrolling comes from currentChartTime being updated by flow refinement data
       if (series.name === selectedSeries.name) {
-        updateMainChartData(series.samples[timeScale],
-                            JT.charts.getMainChartRef());
-
+        updateMainChartData(series.samples[timeScale], JT.charts.getMainChartRef());
         updatePacketGapChartData(series.pgaps[timeScale],
                                  JT.charts.getPacketGapMeanRef(),
                                  JT.charts.getPacketGapMinMaxRef());
@@ -306,9 +628,10 @@
     }
   };
 
-  const updateData = function (d, sSeries, timeScale) {
+  const updateData = function (d, sSeries, timeScale, timestamp) {
     sBin.rxRate.pgaps[timeScale].push(
       {
+        "timestamp": timestamp,  // Server timestamp in seconds
         "min"  : d.min_rx_pgap,
         "max"  : d.max_rx_pgap,
         "mean" : d.mean_rx_pgap / 1000.0
@@ -317,6 +640,7 @@
 
     sBin.txRate.pgaps[timeScale].push(
       {
+        "timestamp": timestamp,  // Server timestamp in seconds
         "min"  : d.min_tx_pgap,
         "max"  : d.max_tx_pgap,
         "mean" : d.mean_tx_pgap / 1000.0
@@ -325,6 +649,7 @@
 
     sBin.rxPacketRate.pgaps[timeScale].push(
       {
+        "timestamp": timestamp,  // Server timestamp in seconds
         "min"  : d.min_rx_pgap,
         "max"  : d.max_rx_pgap,
         "mean" : d.mean_rx_pgap / 1000.0
@@ -333,45 +658,56 @@
 
     sBin.txPacketRate.pgaps[timeScale].push(
       {
+        "timestamp": timestamp,  // Server timestamp in seconds
         "min"  : d.min_tx_pgap,
         "max"  : d.max_tx_pgap,
         "mean" : d.mean_tx_pgap / 1000.0
       }
     );
 
-    updateSeries(sBin.txRate, d.tx, sSeries, timeScale);
-    updateSeries(sBin.rxRate, d.rx, sSeries, timeScale);
-    updateSeries(sBin.txPacketRate, d.txP, sSeries, timeScale);
-    updateSeries(sBin.rxPacketRate, d.rxP, sSeries, timeScale);
+    updateSeries(sBin.txRate, d.tx, sSeries, timeScale, timestamp);
+    updateSeries(sBin.rxRate, d.rx, sSeries, timeScale, timestamp);
+    updateSeries(sBin.txPacketRate, d.txP, sSeries, timeScale, timestamp);
+    updateSeries(sBin.rxPacketRate, d.rxP, sSeries, timeScale, timestamp);
   };
 
-  my.core.processDataMsg = function (stats, interval) {
+  my.core.processDataMsg = function (stats, interval, timestamp) {
     const selectedSeries = sBin[selectedSeriesName];
+    const intervalMs = interval / 1E6;
+    const chartPeriod = my.charts.getChartPeriod();
+
+    // Update currentChartTime from stats data for smooth scrolling
+    // Use any interval <= chartPeriod for smoother updates (not just the specific refinement interval)
+    // This helps when refinement data (e.g. 20ms) arrives sporadically due to tier/network issues
+    // Only advance forward (monotonic) to prevent jitter from out-of-order messages
+    if (intervalMs <= chartPeriod && timestamp > currentChartTime) {
+      currentChartTime = timestamp;
+    }
 
     switch (interval) {
       case 5000000:
-           updateData(stats, selectedSeries, '5ms');
+           updateData(stats, selectedSeries, '5ms', timestamp);
            break;
       case 10000000:
-           updateData(stats, selectedSeries, '10ms');
+           updateData(stats, selectedSeries, '10ms', timestamp);
            break;
       case 20000000:
-           updateData(stats, selectedSeries, '20ms');
+           updateData(stats, selectedSeries, '20ms', timestamp);
            break;
       case 50000000:
-           updateData(stats, selectedSeries, '50ms');
+           updateData(stats, selectedSeries, '50ms', timestamp);
            break;
       case 100000000:
-           updateData(stats, selectedSeries, '100ms');
+           updateData(stats, selectedSeries, '100ms', timestamp);
            break;
       case 200000000:
-           updateData(stats, selectedSeries, '200ms');
+           updateData(stats, selectedSeries, '200ms', timestamp);
            break;
       case 500000000:
-           updateData(stats, selectedSeries, '500ms');
+           updateData(stats, selectedSeries, '500ms', timestamp);
            break;
       case 1000000000:
-           updateData(stats, selectedSeries, '1000ms');
+           updateData(stats, selectedSeries, '1000ms', timestamp);
            break;
       default:
            console.log("unknown interval: " + interval);
@@ -386,12 +722,106 @@
   let flowsTS = {};
   let flowsTotals = {};
 
+  /* Track last authoritative timestamp per flow for progressive refinement.
+   * Key: flowKey (without interval prefix), Value: timestamp of last authoritative data point.
+   * Used to determine boundary between authoritative and provisional data. */
+  const authoritativeFrontier = new Map();
+
+  /* Track the "current time" for smooth X-axis scrolling.
+   * Updated from refinement data to provide smooth animation between authoritative updates. */
+  let currentChartTime = 0;
+
   /* discard all previous flow data, like when changing capture interface */
   const clearFlows = function () {
     flows = {};
     flowRank = {};
     flowsTS = {};
     flowsTotals = {};
+    authoritativeFrontier.clear();
+    flowIdentityCache.clear();
+    flowObjectCache.clear();
+    currentChartTime = 0;
+  };
+
+  /* Get current chart time for smooth X-axis scrolling */
+  my.core.getCurrentChartTime = function() {
+    return currentChartTime;
+  };
+
+  /* Get the refinement interval for smooth animation.
+   * Returns the interval in seconds, or 0 if no refinement available.
+   * Used by charts to calculate display lag for smooth scrolling. */
+  my.core.getRefinementIntervalSec = function() {
+    const chartPeriod = my.charts.getChartPeriod();
+    const refinementMs = intervalRefinement[chartPeriod];
+    return refinementMs ? refinementMs / 1000 : 0;
+  };
+
+  /* Get the display lag for smooth scrolling (right edge buffer).
+   * Returns one authoritative interval to keep the newest data point off-screen.
+   * This prevents "popping" caused by D3's curveBasis interpolation being
+   * affected by new data points near the visible edge.
+   * Returns 0 if no refinement available. */
+  my.core.getDisplayLagSec = function() {
+    const chartPeriod = my.charts.getChartPeriod();
+    const refinementMs = intervalRefinement[chartPeriod];
+    // Use one authoritative interval as display lag
+    return refinementMs ? chartPeriod / 1000 : 0;
+  };
+
+  /* Get the left margin for smooth scrolling.
+   * Returns one authoritative interval - this SHRINKS the visible window
+   * so the oldest data is off-screen (to the left) when it ages out.
+   * Returns 0 if no refinement available (no smooth scrolling needed). */
+  my.core.getLeftMarginSec = function() {
+    const chartPeriod = my.charts.getChartPeriod();
+    const refinementMs = intervalRefinement[chartPeriod];
+    // Only apply margin if refinement is available (smooth scrolling active)
+    return refinementMs ? chartPeriod / 1000 : 0;
+  };
+
+  /* Reusable object for getChartDomain to avoid per-call allocations */
+  const chartDomainResult = {
+    currentTime: 0,
+    xMin: 0,
+    xMax: 0,
+    windowWidthSec: 0,
+    displayLagSec: 0,
+    leftMarginSec: 0,
+    visibleWidthSec: 0,
+    isValid: false
+  };
+
+  /* Get chart domain parameters for smooth scrolling.
+   * Returns an object with all values needed to set X-axis domain and ticks.
+   * WARNING: Returns a shared object that is reused across calls.
+   * Callers must consume values immediately and not store the reference. */
+  my.core.getChartDomain = function() {
+    const currentTime = currentChartTime;
+    const chartPeriodMs = my.charts.getChartPeriod();
+    const samples = sampleCount;
+    const windowWidthSec = samples * (chartPeriodMs / 1000);
+    const displayLagSec = my.core.getDisplayLagSec();
+    const leftMarginSec = my.core.getLeftMarginSec();
+
+    chartDomainResult.currentTime = currentTime;
+    chartDomainResult.windowWidthSec = windowWidthSec;
+    chartDomainResult.displayLagSec = displayLagSec;
+    chartDomainResult.leftMarginSec = leftMarginSec;
+
+    if (currentTime > 0) {
+      chartDomainResult.xMin = currentTime - windowWidthSec + leftMarginSec;
+      chartDomainResult.xMax = currentTime - displayLagSec;
+      chartDomainResult.visibleWidthSec = windowWidthSec - displayLagSec - leftMarginSec;
+      chartDomainResult.isValid = true;
+    } else {
+      chartDomainResult.xMin = 0;
+      chartDomainResult.xMax = 0;
+      chartDomainResult.visibleWidthSec = 0;
+      chartDomainResult.isValid = false;
+    }
+
+    return chartDomainResult;
   };
 
   const getFlowKey = function (interval, flow) {
@@ -427,28 +857,69 @@
         flowRank[interval].push(fkey);
       }
 
-      /* set bytes, packets, rtt, tcp_state, window for this (intervalSize,timeSlice,flow)  */
-      sample_slice[fkey] = {
-        "bytes": msg.flows[i].bytes,
-        "packets": msg.flows[i].packets,
-        "rtt_us": msg.flows[i].rtt_us,
-        "tcp_state": msg.flows[i].tcp_state,
-        "saw_syn": msg.flows[i].saw_syn,
-        "rwnd_bytes": msg.flows[i].rwnd_bytes,
-        "window_scale": msg.flows[i].window_scale,
-        "zero_window_cnt": msg.flows[i].zero_window_cnt,
-        "dup_ack_cnt": msg.flows[i].dup_ack_cnt,
-        "retransmit_cnt": msg.flows[i].retransmit_cnt,
-        "ece_cnt": msg.flows[i].ece_cnt,
-        "recent_events": msg.flows[i].recent_events
-      };
+      /* Reuse the JSON-parsed flow object directly instead of copying all properties.
+       * This eliminates ~20 object allocations per message.
+       * Just set defaults for optional fields that might be undefined. */
+      const flow = msg.flows[i];
+
+      /* Set defaults for optional video fields */
+      if (flow.video_type === undefined) flow.video_type = 0;
+      if (flow.video_codec === undefined) flow.video_codec = 0;
+      if (flow.video_jitter_us === undefined) flow.video_jitter_us = 0;
+      if (flow.video_seq_loss === undefined) flow.video_seq_loss = 0;
+      if (flow.video_cc_errors === undefined) flow.video_cc_errors = 0;
+      if (flow.video_ssrc === undefined) flow.video_ssrc = 0;
+      if (flow.video_codec_source === undefined) flow.video_codec_source = 0;
+      if (flow.video_width === undefined) flow.video_width = 0;
+      if (flow.video_height === undefined) flow.video_height = 0;
+      if (flow.video_profile === undefined) flow.video_profile = 0;
+      if (flow.video_level === undefined) flow.video_level = 0;
+      if (flow.video_fps_x100 === undefined) flow.video_fps_x100 = 0;
+      if (flow.video_bitrate_kbps === undefined) flow.video_bitrate_kbps = 0;
+      if (flow.video_gop_frames === undefined) flow.video_gop_frames = 0;
+      if (flow.video_keyframes === undefined) flow.video_keyframes = 0;
+      if (flow.video_frames === undefined) flow.video_frames = 0;
+
+      /* Set defaults for optional audio fields */
+      if (flow.audio_type === undefined) flow.audio_type = 0;
+      if (flow.audio_codec === undefined) flow.audio_codec = 0;
+      if (flow.audio_sample_rate === undefined) flow.audio_sample_rate = 0;
+      if (flow.audio_jitter_us === undefined) flow.audio_jitter_us = 0;
+      if (flow.audio_seq_loss === undefined) flow.audio_seq_loss = 0;
+      if (flow.audio_ssrc === undefined) flow.audio_ssrc = 0;
+      if (flow.audio_bitrate_kbps === undefined) flow.audio_bitrate_kbps = 0;
+
+      /* Set defaults for optional health fields
+       * Use shared constants for read-only histograms (reduces GC pressure) */
+      if (flow.health_rtt_hist === undefined) flow.health_rtt_hist = DEFAULT_RTT_HIST;
+      if (flow.health_rtt_samples === undefined) flow.health_rtt_samples = 0;
+      if (flow.health_status === undefined) flow.health_status = 0;
+      if (flow.health_flags === undefined) flow.health_flags = 0;
+
+      /* Set defaults for optional histogram fields */
+      if (flow.ipg_hist === undefined) flow.ipg_hist = DEFAULT_IPG_HIST;
+      if (flow.ipg_samples === undefined) flow.ipg_samples = 0;
+      if (flow.ipg_mean_us === undefined) flow.ipg_mean_us = 0;
+      if (flow.frame_size_hist === undefined) flow.frame_size_hist = null;
+      if (flow.frame_size_samples === undefined) flow.frame_size_samples = 0;
+      if (flow.frame_size_mean === undefined) flow.frame_size_mean = 0;
+      if (flow.frame_size_variance === undefined) flow.frame_size_variance = 0;
+      if (flow.frame_size_min === undefined) flow.frame_size_min = 0;
+      if (flow.frame_size_max === undefined) flow.frame_size_max = 0;
+      if (flow.pps_hist === undefined) flow.pps_hist = null;
+      if (flow.pps_samples === undefined) flow.pps_samples = 0;
+      if (flow.pps_mean === undefined) flow.pps_mean = 0;
+      if (flow.pps_variance === undefined) flow.pps_variance = 0;
+
+      sample_slice[fkey] = flow;
+
 
       /* reset the time-to-live to the chart window length (in samples),
        * so that it can be removed when it ages beyond the window. */
       flowsTotals[interval][fkey].ttl = sampleWindowSize;
       /* update totals for the flow */
-      flowsTotals[interval][fkey].tbytes += msg.flows[i].bytes;
-      flowsTotals[interval][fkey].tpackets += msg.flows[i].packets;
+      flowsTotals[interval][fkey].tbytes += flow.bytes;
+      flowsTotals[interval][fkey].tpackets += flow.packets;
 
       console.assert(
         ((flowsTotals[interval][fkey].tbytes === 0)
@@ -458,28 +929,42 @@
          && (flowsTotals[interval][fkey].tpackets != 0)
         )
       );
-
-      /* update flow ranks table, descending order */
-      flowRank[interval].sort((a, b) =>
-        flowsTotals[interval][b].tbytes - flowsTotals[interval][a].tbytes);
     }
+
+    /* Update flow ranks table ONCE after all flows processed (was inside loop - very inefficient!)
+     * Sort descending by total bytes. Use closure to capture current totals. */
+    const totals = flowsTotals[interval];
+    flowRank[interval].sort((a, b) => totals[b].tbytes - totals[a].tbytes);
   };
 
 
   /* reduce the time-to-live for the flow and expire it when no samples are
    * within the visible chart window */
-  const expireOldFlowsAndUpdateRank = function (interval) {
-    let fkey;
-    let ft = flowsTotals[interval];
-    for (fkey in ft) {
-      if (ft.hasOwnProperty(fkey)) {
-        ft[fkey].ttl -= 1;
+  /* Reusable set for collecting expired keys - avoids allocations */
+  const expiredKeys = new Set();
 
-        if (ft[fkey].ttl <= 0) {
-          delete ft[fkey];
-          flowRank[interval] = flowRank[interval].filter(o => o !== fkey);
-        }
+  const expireOldFlowsAndUpdateRank = function (interval) {
+    const ft = flowsTotals[interval];
+    const rank = flowRank[interval];
+    expiredKeys.clear();
+
+    /* First pass: decrement TTL and collect expired keys */
+    for (const fkey of Object.keys(ft)) {
+      ft[fkey].ttl -= 1;
+      if (ft[fkey].ttl <= 0) {
+        expiredKeys.add(fkey);
       }
+    }
+
+    /* Second pass: remove expired keys in batch (avoid repeated filter calls) */
+    if (expiredKeys.size > 0) {
+      /* Remove from flowsTotals and identity cache */
+      for (const fkey of expiredKeys) {
+        delete ft[fkey];
+        flowIdentityCache.delete(fkey);  // Clean up cached identity
+      }
+      /* Filter flowRank once for all expired keys */
+      flowRank[interval] = rank.filter(o => !expiredKeys.has(o));
     }
 
     /* We must have the same number of flow keys in the flowsTotals and

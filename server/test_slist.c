@@ -54,4 +54,13 @@ int main(int argc, char *argv[])
 	slist_clear(list);
 	assert(0 == slist_size(list));
 
+	/* Cleanup - free all allocated memory */
+	for (int i = 0; i < NODECNT; i++) {
+		free(nodes1[i]->s);
+		free(nodes1[i]);
+	}
+	free(list->meta);
+	free(list);
+
+	return 0;
 }

@@ -114,7 +114,10 @@ char **netem_list_ifaces(void)
 	while (link) {
 		char *j = rtnl_link_get_name(link);
 
-		if ((strcmp("lo", j) != 0) && is_iface_allowed(j)) {
+		/* Include loopback only if explicitly allowed via -a lo.
+		 * This allows testing with loopback while keeping it hidden
+		 * by default in the UI interface list. */
+		if (is_iface_allowed(j)) {
 			*i = malloc(strlen(j) + 1);
 			assert(NULL != *i);
 			sprintf(*i, "%s", j);

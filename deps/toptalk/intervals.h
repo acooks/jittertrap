@@ -57,6 +57,10 @@ int tt_intervals_free(struct tt_thread_info *ti);
 void tt_set_pcap_callback(void (*store_cb)(const struct pcap_pkthdr *, const uint8_t *),
                           void (*iface_cb)(int dlt));
 
+/* Optional callback for VLC passthrough (RTP packet forwarding) */
+typedef void (*tt_rtp_forward_cb)(const struct flow *f, const uint8_t *rtp_data, size_t rtp_len);
+void tt_set_rtp_forward_callback(tt_rtp_forward_cb cb);
+
 #define handle_error_en(en, msg) \
         do {                                                                   \
                 errno = en;                                                    \

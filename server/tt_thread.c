@@ -20,6 +20,9 @@
 
 #include "tt_thread.h"
 #include "pcap_buffer.h"
+#ifdef ENABLE_WEBRTC_PLAYBACK
+#include "webrtc_bridge.h"
+#endif
 
 struct tt_thread_info ti = {
 	0,
@@ -120,6 +123,7 @@ int is_valid_proto(int potential_proto)
 static void pcap_store_cb(const struct pcap_pkthdr *hdr, const uint8_t *data)
 {
 	pcap_buf_store_packet(hdr, data);
+	/* Video playback now uses its own pcap handle with BPF filter */
 }
 
 /* Callback for interface/datalink changes */
@@ -129,15 +133,33 @@ static void pcap_iface_cb(int dlt)
 	pcap_buf_clear();
 }
 
+#ifdef ENABLE_WEBRTC_PLAYBACK
+/* Callback wrapper for WebRTC video forwarding */
+static void rtp_forward_cb(const struct flow *f, const uint8_t *rtp_data, size_t rtp_len)
+{
+	/* Extract SSRC from RTP header (bytes 8-11, big-endian) */
+	if (rtp_len >= 12) {
+		uint32_t ssrc = ((uint32_t)rtp_data[8] << 24) |
+		                ((uint32_t)rtp_data[9] << 16) |
+		                ((uint32_t)rtp_data[10] << 8) |
+		                ((uint32_t)rtp_data[11]);
+		webrtc_bridge_forward_rtp(rtp_data, rtp_len, f, ssrc);
+	}
+}
+#endif
+
 int tt_thread_restart(char *iface)
 {
 	int err;
 	void *res;
 	static int callbacks_registered = 0;
 
-	/* Register pcap buffer callbacks once */
+	/* Register callbacks once */
 	if (!callbacks_registered) {
 		tt_set_pcap_callback(pcap_store_cb, pcap_iface_cb);
+#ifdef ENABLE_WEBRTC_PLAYBACK
+		tt_set_rtp_forward_callback(rtp_forward_cb);
+#endif
 		callbacks_registered = 1;
 	}
 
@@ -222,6 +244,138 @@ static int m2m(struct tt_top_flows *ttf, struct mq_tt_msg *msg, int interval)
 		m->flows[f].retransmit_cnt = fr->window.retransmit_cnt;
 		m->flows[f].ece_cnt = fr->window.ece_cnt;
 		m->flows[f].recent_events = fr->window.recent_events;
+
+		/* Use cached health info from flow_record */
+		memcpy(m->flows[f].health_rtt_hist, fr->health.rtt_hist,
+		       sizeof(m->flows[f].health_rtt_hist));
+		m->flows[f].health_rtt_samples = fr->health.rtt_samples;
+		m->flows[f].health_status = fr->health.health_status;
+		m->flows[f].health_flags = fr->health.health_flags;
+
+		/* Use cached IPG histogram from flow_record (all flows) */
+		memcpy(m->flows[f].ipg_hist, fr->ipg.ipg_hist,
+		       sizeof(m->flows[f].ipg_hist));
+		m->flows[f].ipg_samples = fr->ipg.ipg_samples;
+		m->flows[f].ipg_mean_us = fr->ipg.ipg_mean_us;
+
+		/* Use cached frame size histogram from flow_record */
+		memcpy(m->flows[f].frame_size_hist, fr->pkt_size.frame_hist,
+		       sizeof(m->flows[f].frame_size_hist));
+		m->flows[f].frame_size_samples = fr->pkt_size.frame_samples;
+		m->flows[f].frame_size_min = fr->pkt_size.frame_min;
+		m->flows[f].frame_size_max = fr->pkt_size.frame_max;
+		if (fr->pkt_size.frame_samples > 0) {
+			uint32_t mean = fr->pkt_size.frame_sum / fr->pkt_size.frame_samples;
+			m->flows[f].frame_size_mean = mean;
+			/* Variance = E[X^2] - E[X]^2 */
+			uint64_t mean_sq = fr->pkt_size.frame_sum_sq / fr->pkt_size.frame_samples;
+			m->flows[f].frame_size_variance = (uint32_t)(mean_sq - (uint64_t)mean * mean);
+		} else {
+			m->flows[f].frame_size_mean = 0;
+			m->flows[f].frame_size_variance = 0;
+		}
+
+		/* Use cached PPS histogram from flow_record */
+		memcpy(m->flows[f].pps_hist, fr->pps.pps_hist,
+		       sizeof(m->flows[f].pps_hist));
+		m->flows[f].pps_samples = fr->pps.pps_samples;
+		if (fr->pps.pps_samples > 0) {
+			uint32_t mean = fr->pps.pps_sum / fr->pps.pps_samples;
+			m->flows[f].pps_mean = mean;
+			/* Variance = E[X^2] - E[X]^2 */
+			uint64_t mean_sq = fr->pps.pps_sum_sq / fr->pps.pps_samples;
+			m->flows[f].pps_variance = (uint32_t)(mean_sq - (uint64_t)mean * mean);
+		} else {
+			m->flows[f].pps_mean = 0;
+			m->flows[f].pps_variance = 0;
+		}
+
+		/* Use cached video stream info from flow_record
+		 * Only set video_type if there's an actual video codec detected,
+		 * not just for any RTP stream (audio-only streams should not
+		 * have video_type set).
+		 */
+		if (fr->video.stream_type == 1) { /* VIDEO_STREAM_RTP */
+			/* Only set video_type if there's a video codec, not audio-only */
+			m->flows[f].video_type = (fr->video.rtp.codec != 0) ? 1 : 0;
+			m->flows[f].video_codec = fr->video.rtp.codec;
+			m->flows[f].video_jitter_us = fr->video.rtp.jitter_us;
+			memcpy(m->flows[f].video_jitter_hist, fr->video.rtp.jitter_hist,
+			       sizeof(m->flows[f].video_jitter_hist));
+			m->flows[f].video_seq_loss = fr->video.rtp.seq_loss;
+			m->flows[f].video_ssrc = fr->video.rtp.ssrc;
+			m->flows[f].video_cc_errors = 0;
+			/* Extended telemetry fields */
+			m->flows[f].video_codec_source = fr->video.rtp.codec_source;
+			m->flows[f].video_width = fr->video.rtp.width;
+			m->flows[f].video_height = fr->video.rtp.height;
+			m->flows[f].video_profile = fr->video.rtp.profile_idc;
+			m->flows[f].video_level = fr->video.rtp.level_idc;
+			m->flows[f].video_fps_x100 = fr->video.rtp.fps_x100;
+			m->flows[f].video_bitrate_kbps = fr->video.rtp.bitrate_kbps;
+			m->flows[f].video_gop_frames = fr->video.rtp.gop_frames;
+			m->flows[f].video_keyframes = fr->video.rtp.keyframe_count;
+			m->flows[f].video_frames = fr->video.rtp.frame_count;
+		} else if (fr->video.stream_type == 2) { /* VIDEO_STREAM_MPEG_TS */
+			m->flows[f].video_type = 2;  /* MPEG-TS always has video */
+			m->flows[f].video_codec = fr->video.mpegts.codec;
+			m->flows[f].video_cc_errors = fr->video.mpegts.cc_errors;
+			m->flows[f].video_jitter_us = 0;
+			memset(m->flows[f].video_jitter_hist, 0,
+			       sizeof(m->flows[f].video_jitter_hist));
+			m->flows[f].video_seq_loss = 0;
+			m->flows[f].video_ssrc = 0;
+			/* Clear extended fields for MPEG-TS (not yet implemented) */
+			m->flows[f].video_codec_source = 0;
+			m->flows[f].video_width = 0;
+			m->flows[f].video_height = 0;
+			m->flows[f].video_profile = 0;
+			m->flows[f].video_level = 0;
+			m->flows[f].video_fps_x100 = 0;
+			m->flows[f].video_bitrate_kbps = 0;
+			m->flows[f].video_gop_frames = 0;
+			m->flows[f].video_keyframes = 0;
+			m->flows[f].video_frames = 0;
+		} else {
+			m->flows[f].video_type = 0;  /* Not a video stream */
+			m->flows[f].video_codec = 0;
+			m->flows[f].video_jitter_us = 0;
+			memset(m->flows[f].video_jitter_hist, 0,
+			       sizeof(m->flows[f].video_jitter_hist));
+			m->flows[f].video_seq_loss = 0;
+			m->flows[f].video_cc_errors = 0;
+			m->flows[f].video_ssrc = 0;
+			/* Clear extended fields */
+			m->flows[f].video_codec_source = 0;
+			m->flows[f].video_width = 0;
+			m->flows[f].video_height = 0;
+			m->flows[f].video_profile = 0;
+			m->flows[f].video_level = 0;
+			m->flows[f].video_fps_x100 = 0;
+			m->flows[f].video_bitrate_kbps = 0;
+			m->flows[f].video_gop_frames = 0;
+			m->flows[f].video_keyframes = 0;
+			m->flows[f].video_frames = 0;
+		}
+
+		/* Copy cached audio stream info from flow_record */
+		if (fr->video.rtp.audio_codec != 0) {
+			m->flows[f].audio_type = 1;  /* JT_AUDIO_TYPE_RTP */
+			m->flows[f].audio_codec = fr->video.rtp.audio_codec;
+			m->flows[f].audio_sample_rate = fr->video.rtp.sample_rate_khz;
+			m->flows[f].audio_jitter_us = fr->video.rtp.jitter_us;
+			m->flows[f].audio_seq_loss = fr->video.rtp.seq_loss;
+			m->flows[f].audio_ssrc = fr->video.rtp.ssrc;
+			m->flows[f].audio_bitrate_kbps = fr->video.rtp.bitrate_kbps;
+		} else {
+			m->flows[f].audio_type = 0;
+			m->flows[f].audio_codec = 0;
+			m->flows[f].audio_sample_rate = 0;
+			m->flows[f].audio_jitter_us = 0;
+			m->flows[f].audio_seq_loss = 0;
+			m->flows[f].audio_ssrc = 0;
+			m->flows[f].audio_bitrate_kbps = 0;
+		}
 
 		if (is_valid_proto(fr->flow.proto)) {
 			snprintf(m->flows[f].proto, PROTO_LEN, "%s",

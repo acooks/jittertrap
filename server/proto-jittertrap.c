@@ -376,7 +376,32 @@ int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
-		jt_server_msg_receive(in, len);
+		{
+			/*
+			 * Handle fragmented WebSocket messages.
+			 * Large messages (like Chromium's SDP offers ~7KB) get split
+			 * into multiple fragments. We accumulate them until we see
+			 * the final fragment.
+			 */
+			size_t remaining = sizeof(pss->rx_buf) - pss->rx_len;
+			if (len >= remaining) {
+				syslog(LOG_ERR, "WebSocket message too large (%zu + %zu >= %zu), dropping\n",
+				       pss->rx_len, len, sizeof(pss->rx_buf));
+				pss->rx_len = 0;
+				break;
+			}
+
+			/* Append this fragment to the buffer */
+			memcpy(pss->rx_buf + pss->rx_len, in, len);
+			pss->rx_len += len;
+
+			/* Check if this is the final fragment */
+			if (lws_is_final_fragment(wsi)) {
+				/* Complete message received, process it */
+				jt_server_msg_receive(pss->rx_buf, pss->rx_len);
+				pss->rx_len = 0;
+			}
+		}
 		break;
 
 	/*

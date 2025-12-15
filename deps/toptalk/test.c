@@ -11,7 +11,11 @@ int main(int argc, char *argv[])
 {
 	int err;
 	void *res;
-	struct tt_thread_info ti = {
+	/* Use static to avoid stack overflow - tt_thread_info contains large
+	 * t5_buffers array (~200KB) which exceeds stack when AddressSanitizer
+	 * is enabled (ASAN multiplies stack usage ~3x).
+	 */
+	static struct tt_thread_info ti = {
 		0,
 		.thread_name = "tt-test",
 		.thread_prio = 0

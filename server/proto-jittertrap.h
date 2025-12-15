@@ -3,6 +3,8 @@
 
 #include <time.h>
 
+#include "jittertrap.h"
+
 /* jittertrap protocol */
 
 /*
@@ -27,6 +29,10 @@ struct per_session_data__jittertrap {
 	unsigned int drops_window;     /* drops in current window */
 	unsigned int delivered_window; /* delivered in current window */
 	time_t window_start;           /* window start time */
+
+	/* Fragment accumulation buffer for large WebSocket messages */
+	char rx_buf[MAX_JSON_MSG_LEN]; /* accumulate fragmented messages */
+	size_t rx_len;                 /* current accumulated length */
 };
 
 int callback_jittertrap(struct lws *wsi, enum lws_callback_reasons reason,

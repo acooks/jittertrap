@@ -6,7 +6,7 @@
 #endif
 
 #ifndef MAX_JSON_MSG_LEN
-#define MAX_JSON_MSG_LEN 16384
+#define MAX_JSON_MSG_LEN 65536  /* 64KB - toptalk with 40 flows + histograms */
 #endif
 
 #define MESSAGES_PER_SECOND 200

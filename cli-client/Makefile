@@ -32,8 +32,29 @@ INCLUDES = \
  -I . \
  -I ../messages/include/ \
 
-LDLIBS := -lwebsockets -ljansson -lrt $(LDLIBS)
-CFLAGS := -W -Wall -pedantic -std=c11 -g -pthread $(CFLAGS)
+# Build type: debug (default) or release
+BUILD_TYPE ?= debug
+
+CFLAGS_HARDENED = \
+ -fPIC \
+ -fstack-protector \
+ --param ssp-buffer-size=4 \
+ -fPIE -pie -Wl,-z,relro,-z,now \
+ -Warray-bounds \
+ -Wstringop-overflow
+
+ifeq ($(BUILD_TYPE),release)
+CFLAGS_OPT = -O2 -D_FORTIFY_SOURCE=2
+CFLAGS_SANITIZER =
+LDFLAGS_SANITIZER =
+else
+CFLAGS_OPT = -Og
+CFLAGS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS_SANITIZER = -fsanitize=address
+endif
+
+LDLIBS := -lwebsockets -ljansson -lrt $(LDFLAGS_SANITIZER) $(LDLIBS)
+CFLAGS := -W -Wall -pedantic -std=c11 -g $(CFLAGS_OPT) -pthread $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(CFLAGS)
 
 MESSAGES = ../messages/jt-messages.a
 
