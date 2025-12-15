@@ -20,8 +20,14 @@
 #include "timeywimey.h"
 #include "tcp_rtt.h"
 #include "tcp_window.h"
+#include "video_detect.h"
+#include "video_metrics.h"
+#include "rtsp_tap.h"
 
 #include "intervals.h"
+
+/* Global RTSP tap state - shared across all packet processing */
+static struct rtsp_tap_state g_rtsp_tap;
 
 /* Optional packet capture callback - set by server if needed */
 static void (*pcap_store_callback)(const struct pcap_pkthdr *, const uint8_t *) = NULL;
@@ -38,8 +44,27 @@ void tt_set_pcap_callback(void (*store_cb)(const struct pcap_pkthdr *, const uin
 	if (pcap_store_callback) pcap_store_callback(hdr, data); \
 } while(0)
 
+/* Optional RTP forward callback for VLC passthrough */
+static tt_rtp_forward_cb rtp_forward_callback = NULL;
+
+void tt_set_rtp_forward_callback(tt_rtp_forward_cb cb)
+{
+	rtp_forward_callback = cb;
+}
+
+/* IPG tracking state - stored per flow in the hash table */
+struct ipg_state {
+	struct timeval last_pkt_time;  /* Timestamp of last packet */
+	uint32_t ipg_hist[IPG_HIST_BUCKETS];
+	uint32_t ipg_samples;
+	int64_t ipg_sum_us;            /* Sum of all IPG values for mean calc */
+	uint8_t initialized;           /* 1 if we've seen at least one packet */
+};
+
 struct flow_hash {
 	struct flow_record f;
+	struct ipg_state ipg;          /* IPG tracking state */
+	uint32_t pkt_count_this_interval;  /* Packet count for PPS calculation */
 	union {
 		UT_hash_handle r_hh;  /* sliding window reference table */
 		UT_hash_handle ts_hh; /* time series tables */
@@ -141,6 +166,9 @@ static void init_intervals(struct timeval now)
 	}
 }
 
+/* Forward declaration for pps_to_bucket (defined later with other bucket functions) */
+static inline int pps_to_bucket(uint32_t pps);
+
 static void expire_old_interval_tables(struct timeval now)
 {
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
@@ -149,12 +177,127 @@ static void expire_old_interval_tables(struct timeval now)
 		/* interval elapsed? */
 		if (0 < tv_cmp(now, interval_end[i])) {
 
+			/* For the smallest interval (i=0), update PPS histogram
+			 * for each flow based on packets seen in this interval.
+			 * This gives us the distribution of per-interval packet rates.
+			 */
+			if (i == 0) {
+				struct flow_hash *iter, *tmp;
+				HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
+					uint32_t pps = iter->pkt_count_this_interval;
+					if (pps > 0) {
+						int bucket = pps_to_bucket(pps);
+						iter->f.pps.pps_hist[bucket]++;
+						iter->f.pps.pps_samples++;
+						iter->f.pps.pps_sum += pps;
+						iter->f.pps.pps_sum_sq += (uint64_t)pps * pps;
+					}
+					iter->pkt_count_this_interval = 0;
+				}
+			}
+
 			/* clear the hash table */
 			clear_table(i);
 			interval_start[i] = interval_end[i];
 			interval_end[i] = tv_add(interval_end[i], interval);
 		}
 	}
+}
+
+/* Map IPG value in microseconds to histogram bucket (same scale as jitter) */
+static inline int ipg_to_bucket(int64_t ipg_us)
+{
+	if (ipg_us < 10) return 0;
+	if (ipg_us < 50) return 1;
+	if (ipg_us < 100) return 2;
+	if (ipg_us < 500) return 3;
+	if (ipg_us < 1000) return 4;
+	if (ipg_us < 2000) return 5;
+	if (ipg_us < 5000) return 6;
+	if (ipg_us < 10000) return 7;
+	if (ipg_us < 20000) return 8;
+	if (ipg_us < 50000) return 9;
+	if (ipg_us < 100000) return 10;
+	return 11;  /* >= 100ms */
+}
+
+/* Map packet size in bytes to histogram bucket (20 buckets)
+ *
+ * Designed to capture VoIP, MPEG-TS video, and tunnel MTU ceilings.
+ * See struct flow_pkt_size_info in flow.h for bucket descriptions.
+ */
+static inline int pkt_size_to_bucket(uint32_t bytes)
+{
+	/* Small packets (VoIP focus) */
+	if (bytes < 64) return 0;        /* <64B - undersized */
+	if (bytes < 100) return 1;       /* 64-100B - minimum ACKs */
+	if (bytes < 160) return 2;       /* 100-160B - G.729 VoIP */
+	if (bytes < 220) return 3;       /* 160-220B - G.711 20ms */
+	if (bytes < 300) return 4;       /* 220-300B - G.711 30ms */
+
+	/* Medium packets (MPEG-TS focus) */
+	if (bytes < 400) return 5;       /* 300-400B - MPEG-TS 2x */
+	if (bytes < 576) return 6;       /* 400-576B - MPEG-TS 3x */
+	if (bytes < 760) return 7;       /* 576-760B - MPEG-TS 4x */
+	if (bytes < 950) return 8;       /* 760-950B - MPEG-TS 5x */
+	if (bytes < 1140) return 9;      /* 950-1140B - MPEG-TS 6x */
+	if (bytes < 1320) return 10;     /* 1140-1320B - MPEG-TS 7x */
+
+	/* Near MTU (tunnel ceiling focus) */
+	if (bytes < 1400) return 11;     /* 1320-1400B - pre-tunnel */
+	if (bytes < 1430) return 12;     /* 1400-1430B - WireGuard */
+	if (bytes < 1460) return 13;     /* 1430-1460B - VXLAN */
+	if (bytes < 1480) return 14;     /* 1460-1480B - GRE */
+	if (bytes < 1492) return 15;     /* 1480-1492B - MPLS */
+
+	/* Full MTU */
+	if (bytes < 1500) return 16;     /* 1492-1500B - near MTU */
+	if (bytes < 1518) return 17;     /* 1500-1518B - standard */
+
+	/* Oversized */
+	if (bytes < 2000) return 18;     /* 1518-2000B - VLAN/small jumbo */
+	return 19;                       /* >=2000B - jumbo frames */
+}
+
+/* Map PPS (packets per second) to histogram bucket (log scale) */
+static inline int pps_to_bucket(uint32_t pps)
+{
+	if (pps < 10) return 0;
+	if (pps < 50) return 1;
+	if (pps < 100) return 2;
+	if (pps < 500) return 3;
+	if (pps < 1000) return 4;
+	if (pps < 2000) return 5;
+	if (pps < 5000) return 6;
+	if (pps < 10000) return 7;
+	if (pps < 20000) return 8;
+	if (pps < 50000) return 9;
+	if (pps < 100000) return 10;
+	return 11;  /* >= 100K pps */
+}
+
+/* Update IPG tracking for a flow */
+static void update_ipg(struct ipg_state *ipg, const struct timeval *pkt_time)
+{
+	if (!ipg->initialized) {
+		ipg->last_pkt_time = *pkt_time;
+		ipg->initialized = 1;
+		return;
+	}
+
+	/* Calculate time delta from last packet */
+	int64_t delta_us = (pkt_time->tv_sec - ipg->last_pkt_time.tv_sec) * 1000000LL +
+	                   (pkt_time->tv_usec - ipg->last_pkt_time.tv_usec);
+
+	/* Only track positive deltas (handle out-of-order timestamps) */
+	if (delta_us > 0) {
+		int bucket = ipg_to_bucket(delta_us);
+		ipg->ipg_hist[bucket]++;
+		ipg->ipg_samples++;
+		ipg->ipg_sum_us += delta_us;
+	}
+
+	ipg->last_pkt_time = *pkt_time;
 }
 
 static int bytes_cmp(struct flow_hash *f1, struct flow_hash *f2)
@@ -227,9 +370,10 @@ static void expire_old_packets(struct timeval deadline)
 		}
 	}
 
-	/* Also expire old RTT and window tracking entries */
+	/* Also expire old RTT, window, and video tracking entries */
 	tcp_rtt_expire_old(deadline, ref_window_size);
 	tcp_window_expire_old(deadline, ref_window_size);
+	video_metrics_expire_old(deadline, ref_window_size);
 }
 
 
@@ -290,6 +434,24 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 		fte->f.bytes += pkt->flow_rec.bytes;
 		fte->f.packets += pkt->flow_rec.packets;
 	}
+
+	/* Update IPG tracking for this flow */
+	update_ipg(&fte->ipg, &pkt->timestamp);
+
+	/* Update packet size histogram for this flow */
+	uint32_t frame_size = (uint32_t)pkt->flow_rec.bytes;
+	int size_bucket = pkt_size_to_bucket(frame_size);
+	fte->f.pkt_size.frame_hist[size_bucket]++;
+	fte->f.pkt_size.frame_samples++;
+	fte->f.pkt_size.frame_sum += frame_size;
+	fte->f.pkt_size.frame_sum_sq += (uint64_t)frame_size * frame_size;
+	if (fte->f.pkt_size.frame_min == 0 || frame_size < fte->f.pkt_size.frame_min)
+		fte->f.pkt_size.frame_min = frame_size;
+	if (frame_size > fte->f.pkt_size.frame_max)
+		fte->f.pkt_size.frame_max = frame_size;
+
+	/* Track packet count for PPS calculation at interval boundary */
+	fte->pkt_count_this_interval++;
 
 	totals.bytes += pkt->flow_rec.bytes;
 	assert(totals.bytes >= 0);
@@ -402,10 +564,44 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[0].window.recent_events = 0;
 	}
 
-	/* Copy RTT/window info to all intervals (same data for all) */
+	/* Get TCP health info (RTT histogram and health status) */
+	struct tcp_health_result health_result;
+	if (tcp_rtt_get_health(&ref_flow->f.flow,
+	                       st_flows[0].window.retransmit_cnt,
+	                       ref_flow->f.packets,
+	                       st_flows[0].window.zero_window_cnt,
+	                       &health_result) == 0) {
+		memcpy(st_flows[0].health.rtt_hist, health_result.rtt_hist,
+		       sizeof(st_flows[0].health.rtt_hist));
+		st_flows[0].health.rtt_samples = health_result.rtt_samples;
+		st_flows[0].health.health_status = health_result.health_status;
+		st_flows[0].health.health_flags = health_result.health_flags;
+	} else {
+		memset(&st_flows[0].health, 0, sizeof(st_flows[0].health));
+	}
+
+	/* Get video stream metrics (for UDP flows) */
+	struct flow_video_info video_info;
+	if (video_metrics_get(&ref_flow->f.flow, &video_info) == 0) {
+		st_flows[0].video = video_info;
+	} else {
+		memset(&st_flows[0].video, 0, sizeof(st_flows[0].video));
+	}
+
+	/* Copy IPG histogram from flow tracking state */
+	memcpy(st_flows[0].ipg.ipg_hist, ref_flow->ipg.ipg_hist,
+	       sizeof(st_flows[0].ipg.ipg_hist));
+	st_flows[0].ipg.ipg_samples = ref_flow->ipg.ipg_samples;
+	st_flows[0].ipg.ipg_mean_us = ref_flow->ipg.ipg_samples > 0 ?
+	                              ref_flow->ipg.ipg_sum_us / ref_flow->ipg.ipg_samples : 0;
+
+	/* Copy RTT/window/health/ipg/video info to all intervals (same data for all) */
 	for (int i = 1; i < INTERVAL_COUNT; i++) {
 		st_flows[i].rtt = st_flows[0].rtt;
 		st_flows[i].window = st_flows[0].window;
+		st_flows[i].health = st_flows[0].health;
+		st_flows[i].ipg = st_flows[0].ipg;
+		st_flows[i].video = st_flows[0].video;
 	}
 }
 
@@ -492,6 +688,101 @@ void tt_update_ref_window_size(struct tt_thread_info *ti, struct timeval t)
 	pthread_mutex_lock(&ti->t5_mutex);
 	ref_window_size = t;
 	pthread_mutex_unlock(&ti->t5_mutex);
+}
+
+/* Find UDP payload in packet for video stream detection.
+ * Returns pointer to UDP payload or NULL if not found.
+ * Also sets payload_len to the UDP payload length.
+ */
+static const uint8_t *find_udp_payload(const struct pcap_pkthdr *h,
+                                       const uint8_t *wirebits,
+                                       int datalink_type,
+                                       size_t *payload_len)
+{
+	const uint8_t *ptr = wirebits;
+	const uint8_t *end_of_packet = wirebits + h->caplen;
+	uint16_t ethertype;
+
+	*payload_len = 0;
+
+	/* Skip link layer header based on datalink type */
+	if (datalink_type == DLT_EN10MB) {
+		const struct hdr_ethernet *eth = (const struct hdr_ethernet *)ptr;
+		ethertype = ntohs(eth->type);
+
+		if (ethertype == VLAN_TPID) {
+			ptr += HDR_LEN_ETHER_VLAN;
+			ethertype = ntohs(eth->tagged_type);
+		} else {
+			ptr += HDR_LEN_ETHER;
+		}
+	} else if (datalink_type == DLT_LINUX_SLL) {
+		const struct sll_header *sll = (const struct sll_header *)ptr;
+		ethertype = ntohs(sll->sll_protocol);
+		ptr += SLL_HDR_LEN;
+	} else {
+		return NULL;
+	}
+
+	/* Skip IP header */
+	if (ethertype == ETHERTYPE_IP) {
+		const struct hdr_ipv4 *ip = (const struct hdr_ipv4 *)ptr;
+		if (ip->ip_p != IPPROTO_UDP)
+			return NULL;
+		unsigned int ip_hdr_len = IP_HL(ip) * 4;
+		ptr += ip_hdr_len;
+	} else if (ethertype == ETHERTYPE_IPV6) {
+		const struct hdr_ipv6 *ip6 = (const struct hdr_ipv6 *)ptr;
+		uint8_t next_hdr = ip6->next_hdr;
+		ptr += sizeof(struct hdr_ipv6);
+
+		/* Skip extension headers to find UDP */
+		while (ptr < end_of_packet) {
+			if (next_hdr == IPPROTO_UDP) {
+				break;
+			}
+			if (next_hdr == IPPROTO_HOPOPTS ||
+			    next_hdr == IPPROTO_ROUTING ||
+			    next_hdr == IPPROTO_FRAGMENT ||
+			    next_hdr == IPPROTO_DSTOPTS) {
+				if (ptr + 2 > end_of_packet)
+					return NULL;
+				next_hdr = ptr[0];
+				uint8_t hdr_len = ptr[1];
+				size_t ext_len = (hdr_len + 1) * 8;
+				ptr += ext_len;
+			} else {
+				return NULL;
+			}
+		}
+		if (next_hdr != IPPROTO_UDP)
+			return NULL;
+	} else {
+		return NULL;
+	}
+
+	if (ptr + sizeof(struct hdr_udp) > end_of_packet)
+		return NULL;
+
+	/* Skip UDP header (8 bytes) to get to payload */
+	const struct hdr_udp *udp = (const struct hdr_udp *)ptr;
+	uint16_t udp_len = ntohs(udp->ip_len);
+
+	ptr += sizeof(struct hdr_udp);
+
+	/* Calculate actual payload length */
+	if (udp_len > sizeof(struct hdr_udp)) {
+		*payload_len = udp_len - sizeof(struct hdr_udp);
+		/* Clamp to actual captured data */
+		if (ptr + *payload_len > end_of_packet) {
+			*payload_len = end_of_packet - ptr;
+		}
+	}
+
+	if (*payload_len == 0)
+		return NULL;
+
+	return ptr;
 }
 
 /* Find TCP header in packet for RTT tracking.
@@ -610,7 +901,103 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                          tcp_pkt.window,
 					                          tcp_pkt.payload_len,
 					                          pkt.timestamp);
+
+					/* Process RTSP traffic on port 554 */
+					if (tcp_pkt.payload_len > 0 &&
+					    (pkt.flow_rec.flow.sport == 554 ||
+					     pkt.flow_rec.flow.dport == 554)) {
+						/* Calculate TCP payload pointer */
+						unsigned int tcp_hdr_len = TH_OFF(tcp_hdr) * 4;
+						const uint8_t *tcp_payload =
+						    (const uint8_t *)tcp_hdr + tcp_hdr_len;
+						if (tcp_payload + tcp_pkt.payload_len <= end_of_packet) {
+							uint64_t ts_ns =
+							    (uint64_t)pkt.timestamp.tv_sec * 1000000000ULL +
+							    (uint64_t)pkt.timestamp.tv_usec * 1000ULL;
+							rtsp_tap_process_packet(&g_rtsp_tap,
+							                        &pkt.flow_rec.flow,
+							                        tcp_payload,
+							                        tcp_pkt.payload_len,
+							                        ts_ns);
+						}
+					}
 				}
+			}
+		}
+
+		/* Process UDP packets for video stream detection and metrics */
+		if (pkt.flow_rec.flow.proto == IPPROTO_UDP) {
+			size_t udp_payload_len;
+			const uint8_t *udp_payload = find_udp_payload(pcap_hdr,
+			                                              wirebits,
+			                                              cbdata->datalink_type,
+			                                              &udp_payload_len);
+			if (udp_payload && udp_payload_len > 0) {
+				struct flow_video_info video_info;
+				enum video_stream_type vtype =
+				    video_detect(udp_payload, udp_payload_len, &video_info);
+
+					if (vtype == VIDEO_STREAM_RTP) {
+					/* Process RTP metrics */
+					video_metrics_rtp_process(&pkt.flow_rec.flow,
+					                          &video_info.rtp,
+					                          pkt.timestamp);
+
+					/* Extract RTP payload for frame/keyframe tracking */
+					size_t rtp_hdr_size = RTP_HDR_MIN_SIZE +
+					    (RTP_CSRC_COUNT((struct hdr_rtp *)udp_payload) * 4);
+					if (RTP_EXTENSION((struct hdr_rtp *)udp_payload) &&
+					    udp_payload_len > rtp_hdr_size + 4) {
+						uint16_t ext_len = ntohs(*(uint16_t *)(udp_payload + rtp_hdr_size + 2));
+						rtp_hdr_size += 4 + (ext_len * 4);
+					}
+
+					if (udp_payload_len > rtp_hdr_size) {
+						const uint8_t *rtp_payload = udp_payload + rtp_hdr_size;
+						size_t rtp_payload_len = udp_payload_len - rtp_hdr_size;
+						uint32_t rtp_ts = video_detect_get_rtp_timestamp(
+						    udp_payload, udp_payload_len);
+
+						/* Detect keyframe for frame counting */
+						int is_keyframe = video_detect_is_keyframe(
+						    rtp_payload, rtp_payload_len, video_info.rtp.codec);
+
+						/* Update frame metrics (called per-packet for bitrate) */
+						video_metrics_update_frame(&pkt.flow_rec.flow,
+						                           video_info.rtp.ssrc,
+						                           is_keyframe,
+						                           rtp_ts,
+						                           udp_payload_len);
+					}
+
+					/* Forward to VLC passthrough if callback registered */
+					if (rtp_forward_callback) {
+						rtp_forward_callback(&pkt.flow_rec.flow,
+						                     udp_payload,
+						                     udp_payload_len);
+					}
+				} else if (vtype == VIDEO_STREAM_MPEG_TS) {
+					/* Process MPEG-TS metrics */
+					video_metrics_mpegts_process(&pkt.flow_rec.flow,
+					                             &video_info.mpegts,
+					                             udp_payload,
+					                             udp_payload_len);
+				} else {
+					/* Try audio detection if no video detected */
+					struct rtp_info audio_info;
+					if (audio_detect_rtp(udp_payload, udp_payload_len, &audio_info)) {
+						/* Process RTP audio metrics */
+						video_metrics_rtp_process(&pkt.flow_rec.flow,
+						                          &audio_info,
+						                          pkt.timestamp);
+						/* Store audio info in video union (reuses RTP fields) */
+						video_info.stream_type = VIDEO_STREAM_RTP;
+						video_info.rtp = audio_info;
+					}
+				}
+
+				/* Store in packet's flow record for aggregation */
+				pkt.flow_rec.video = video_info;
 			}
 		}
 
@@ -841,9 +1228,11 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	flow_ref_table = NULL;
 	pkt_list_ref_head = NULL;
 
-	/* Initialize TCP RTT and window tracking */
+	/* Initialize TCP RTT, window, video metrics, and RTSP tap tracking */
 	tcp_rtt_init();
 	tcp_window_init();
+	video_metrics_init();
+	rtsp_tap_init(&g_rtsp_tap);
 
 	/* Initialize double-buffer: clear both buffers, start writing to [0] */
 	memset(ti->t5_buffers, 0, sizeof(ti->t5_buffers));
@@ -873,9 +1262,10 @@ int tt_intervals_free(struct tt_thread_info *ti)
 
 	clear_all_tables();
 
-	/* Cleanup TCP RTT and window tracking */
+	/* Cleanup TCP RTT, window, and video metrics tracking */
 	tcp_rtt_cleanup();
 	tcp_window_cleanup();
+	video_metrics_cleanup();
 
 	free_pcap(&(ti->priv->pi));
 	free(ti->priv);

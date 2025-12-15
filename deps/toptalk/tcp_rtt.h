@@ -36,6 +36,9 @@ struct seq_entry {
 	struct timeval timestamp;   /* When the segment was sent */
 };
 
+/* RTT histogram bucket count - log-scale from 0us to >1s */
+#define RTT_HIST_BUCKETS 14
+
 /* RTT state for one direction of a TCP connection
  * Fields accessed by reader thread are atomic for lock-free access.
  * Writer thread updates these atomically; reader thread reads atomically.
@@ -47,6 +50,8 @@ struct tcp_rtt_direction {
 	_Atomic int64_t rtt_ewma_us;   /* EWMA RTT in microseconds (lock-free) */
 	_Atomic int64_t rtt_last_us;   /* Last RTT sample in microseconds (lock-free) */
 	_Atomic uint32_t sample_count; /* Number of RTT samples collected (lock-free) */
+	/* RTT histogram for percentile calculation (atomic for lock-free access) */
+	_Atomic uint32_t rtt_hist[RTT_HIST_BUCKETS];
 };
 
 /* Bidirectional flow key for RTT lookup (canonical ordering) */
@@ -127,5 +132,24 @@ int tcp_rtt_get_info(const struct flow *flow, int64_t *rtt_us,
 
 /* Expire old RTT entries that haven't been active within window */
 void tcp_rtt_expire_old(struct timeval deadline, struct timeval window);
+
+/* Health info structure for returning histogram and calculated metrics */
+struct tcp_health_result {
+	uint32_t rtt_hist[RTT_HIST_BUCKETS]; /* RTT histogram buckets */
+	uint32_t rtt_samples;
+	uint8_t health_status;    /* TCP_HEALTH_* from flow.h */
+	uint8_t health_flags;     /* TCP_HEALTH_FLAG_* from flow.h */
+};
+
+/* Get RTT histogram and health status for a flow
+ * Copies the histogram and determines health status based on
+ * tail latency ratio and other metrics from window tracking.
+ * Returns 0 on success, -1 if flow not found or not TCP
+ */
+int tcp_rtt_get_health(const struct flow *flow,
+                       uint32_t retransmit_cnt,
+                       uint32_t total_packets,
+                       uint32_t zero_window_cnt,
+                       struct tcp_health_result *result);
 
 #endif /* TCP_RTT_H */

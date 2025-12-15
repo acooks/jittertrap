@@ -6,6 +6,7 @@
 #include <netinet/ip.h>
 
 #include "tcp_rtt.h"
+#include "flow.h"  /* For TCP_HEALTH_* constants */
 #include "decode.h"
 #include "timeywimey.h"
 
@@ -13,6 +14,30 @@
 #define RTT_DEBUG 0
 
 static struct tcp_rtt_entry *rtt_table = NULL;
+
+/* Convert RTT in microseconds to histogram bucket index.
+ * Log-scale buckets for better resolution at low latencies:
+ * 0: 0-99us, 1: 100-199us, 2: 200-499us, 3: 500-999us,
+ * 4: 1-2ms, 5: 2-5ms, 6: 5-10ms, 7: 10-20ms, 8: 20-50ms,
+ * 9: 50-100ms, 10: 100-200ms, 11: 200-500ms, 12: 500ms-1s, 13: >1s
+ */
+static int rtt_to_bucket(int64_t rtt_us)
+{
+	if (rtt_us < 100) return 0;
+	if (rtt_us < 200) return 1;
+	if (rtt_us < 500) return 2;
+	if (rtt_us < 1000) return 3;
+	if (rtt_us < 2000) return 4;
+	if (rtt_us < 5000) return 5;
+	if (rtt_us < 10000) return 6;
+	if (rtt_us < 20000) return 7;
+	if (rtt_us < 50000) return 8;
+	if (rtt_us < 100000) return 9;
+	if (rtt_us < 200000) return 10;
+	if (rtt_us < 500000) return 11;
+	if (rtt_us < 1000000) return 12;
+	return 13; /* > 1s */
+}
 
 /* Create canonical key (lower IP/port first for consistent lookup) */
 static void make_canonical_key(struct tcp_flow_key *key,
@@ -138,6 +163,10 @@ static void process_ack(struct tcp_rtt_direction *dir,
 	}
 	atomic_store_explicit(&dir->rtt_last_us, rtt_us, memory_order_relaxed);
 	atomic_store_explicit(&dir->sample_count, count + 1, memory_order_release);
+
+	/* Update histogram for percentile calculation */
+	int bucket = rtt_to_bucket(rtt_us);
+	atomic_fetch_add_explicit(&dir->rtt_hist[bucket], 1, memory_order_relaxed);
 
 	/* Remove matched entries (cumulative ACK covers all prior data) */
 	dir->seq_head = (dir->seq_head + matched_count) % MAX_SEQ_ENTRIES;
@@ -350,4 +379,124 @@ void tcp_rtt_cleanup(void)
 		free(entry);
 	}
 	rtt_table = NULL;
+}
+
+/* Get RTT histogram and determine health status */
+int tcp_rtt_get_health(const struct flow *flow,
+                       uint32_t retransmit_cnt,
+                       uint32_t total_packets,
+                       uint32_t zero_window_cnt,
+                       struct tcp_health_result *result)
+{
+	memset(result, 0, sizeof(*result));
+
+	if (flow->proto != IPPROTO_TCP) {
+		result->health_status = TCP_HEALTH_UNKNOWN;
+		return -1;
+	}
+
+	struct tcp_flow_key key;
+	int is_forward;
+	make_canonical_key(&key, flow, &is_forward);
+
+	struct tcp_rtt_entry *entry;
+	HASH_FIND(hh, rtt_table, &key, sizeof(struct tcp_flow_key), entry);
+
+	if (!entry) {
+		result->health_status = TCP_HEALTH_UNKNOWN;
+		return -1;
+	}
+
+	struct tcp_rtt_direction *dir = is_forward ? &entry->fwd : &entry->rev;
+	uint32_t sample_count = atomic_load_explicit(&dir->sample_count,
+	                                              memory_order_acquire);
+
+	/* Copy histogram to result (atomic loads) */
+	for (int i = 0; i < RTT_HIST_BUCKETS; i++) {
+		result->rtt_hist[i] = atomic_load_explicit(&dir->rtt_hist[i],
+		                                           memory_order_relaxed);
+	}
+	result->rtt_samples = sample_count;
+
+	/* Need at least 10 samples for meaningful health assessment */
+	if (sample_count < 10) {
+		result->health_status = TCP_HEALTH_UNKNOWN;
+		return 0;
+	}
+
+#if RTT_DEBUG
+	fprintf(stderr, "Health: sample_count=%u, is_forward=%d\n",
+	        sample_count, is_forward);
+	for (int i = 0; i < RTT_HIST_BUCKETS; i++) {
+		if (result->rtt_hist[i] > 0)
+			fprintf(stderr, "  bucket[%d] = %u\n", i, result->rtt_hist[i]);
+	}
+#endif
+
+	/* Calculate p50 and p99 bucket indices for tail latency check */
+	uint32_t p50_target = sample_count / 2;
+	uint32_t p99_target = sample_count * 99 / 100;
+
+	uint32_t cumulative = 0;
+	int p50_bucket = -1, p99_bucket = -1;
+
+	for (int i = 0; i < RTT_HIST_BUCKETS; i++) {
+		cumulative += result->rtt_hist[i];
+		if (p50_bucket < 0 && cumulative >= p50_target) {
+			p50_bucket = i;
+		}
+		if (p99_bucket < 0 && cumulative >= p99_target) {
+			p99_bucket = i;
+			break;
+		}
+	}
+
+	/* Calculate health status based on thresholds:
+	 * - Retransmit %: Warning > 0.5%, Problem > 2%
+	 * - RTT p99/p50 bucket spread: Warning if 3+ buckets apart, Problem if 5+
+	 *   (each bucket is roughly 2x, so 3 buckets ≈ 8x, 5 buckets ≈ 32x)
+	 * - Zero window events: Warning > 0, Problem > 3
+	 */
+	result->health_status = TCP_HEALTH_GOOD;
+	result->health_flags = 0;
+
+	/* Check retransmit rate */
+	if (total_packets > 0) {
+		/* Calculate retransmit percentage x100 (e.g., 150 = 1.50%) */
+		uint32_t retransmit_pct_x100 = (retransmit_cnt * 10000) / total_packets;
+
+		if (retransmit_pct_x100 > 200) {  /* > 2% */
+			result->health_flags |= TCP_HEALTH_FLAG_HIGH_LOSS;
+			result->health_status = TCP_HEALTH_PROBLEM;
+		} else if (retransmit_pct_x100 > 50) {  /* > 0.5% */
+			result->health_flags |= TCP_HEALTH_FLAG_ELEVATED_LOSS;
+			if (result->health_status < TCP_HEALTH_WARNING)
+				result->health_status = TCP_HEALTH_WARNING;
+		}
+	}
+
+	/* Check tail latency spread (bucket difference instead of ratio) */
+	if (p50_bucket >= 0 && p99_bucket >= 0) {
+		int bucket_spread = p99_bucket - p50_bucket;
+		if (bucket_spread >= 5) {  /* ~32x latency difference */
+			result->health_flags |= TCP_HEALTH_FLAG_HIGH_TAIL_LATENCY;
+			result->health_status = TCP_HEALTH_PROBLEM;
+		} else if (bucket_spread >= 3) {  /* ~8x latency difference */
+			result->health_flags |= TCP_HEALTH_FLAG_HIGH_TAIL_LATENCY;
+			if (result->health_status < TCP_HEALTH_WARNING)
+				result->health_status = TCP_HEALTH_WARNING;
+		}
+	}
+
+	/* Check zero window events */
+	if (zero_window_cnt > 3) {
+		result->health_flags |= TCP_HEALTH_FLAG_WINDOW_STARVATION;
+		result->health_status = TCP_HEALTH_PROBLEM;
+	} else if (zero_window_cnt > 0) {
+		result->health_flags |= TCP_HEALTH_FLAG_WINDOW_STARVATION;
+		if (result->health_status < TCP_HEALTH_WARNING)
+			result->health_status = TCP_HEALTH_WARNING;
+	}
+
+	return 0;
 }

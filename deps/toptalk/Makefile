@@ -3,21 +3,29 @@ LIB = toptalk.a
 TEST = test-toptalk
 TEST_RTT = test-tcp-rtt
 TEST_WINDOW = test-tcp-window
+TEST_VIDEO = test-video-detect
+TEST_RTSP = test-rtsp-tap
 
 SRC = \
  decode.c \
  intervals.c \
  intervals_user.c \
+ rtsp_tap.c \
  tcp_rtt.c \
- tcp_window.c
+ tcp_window.c \
+ video_detect.c \
+ video_metrics.c
 
 HEADERS = \
  intervals.h \
  decode.h \
  flow.h \
  intervals.h \
+ rtsp_tap.h \
  tcp_rtt.h \
- tcp_window.h
+ tcp_window.h \
+ video_detect.h \
+ video_metrics.h
 
 ifndef INTERVAL_COUNT
 INTERVAL_COUNT = 8
@@ -35,21 +43,37 @@ endif
 PKGCONFIG_PCAP = $$(pkg-config --libs libpcap)
 PKGCONFIG_CURSES = $$(pkg-config --cflags --libs ncursesw)
 
-LDFLAGS := -lrt -lpthread \
- $(PKGCONFIG_PCAP) \
- $(PKGCONFIG_CURSES) \
- $(LDFLAGS)
+# Build type: debug (default) or release
+BUILD_TYPE ?= debug
 
 CFLAGS_HARDENED = \
  -fPIC \
  -fstack-protector \
  --param ssp-buffer-size=4 \
- -fPIE -pie -Wl,-z,relro,-z,now
+ -fPIE -pie -Wl,-z,relro,-z,now \
+ -Warray-bounds \
+ -Wstringop-overflow
 
-CFLAGS := -g -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS)
+ifeq ($(BUILD_TYPE),release)
+CFLAGS_OPT = -O2 -D_FORTIFY_SOURCE=2
+CFLAGS_SANITIZER =
+LDFLAGS_SANITIZER =
+else
+CFLAGS_OPT = -Og
+CFLAGS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS_SANITIZER = -fsanitize=address
+endif
+
+LDFLAGS := -lrt -lpthread \
+ $(PKGCONFIG_PCAP) \
+ $(PKGCONFIG_CURSES) \
+ $(LDFLAGS_SANITIZER) \
+ $(LDFLAGS)
+
+CFLAGS := -g $(CFLAGS_OPT) -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(CFLAGS)
 
 .PHONY: all
-all: $(LIB) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(PROG)
+all: $(LIB) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) $(PROG)
 
 %.o: %.c %.h Makefile ../make.config make.config
 	$(COMPILE.c) $(DEFINES) $< -o $@
@@ -77,12 +101,24 @@ $(TEST_WINDOW): $(LIB) test_tcp_window.c
 	@echo Building $(TEST_WINDOW)
 	$(CC) -o $(TEST_WINDOW) test_tcp_window.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
+$(TEST_VIDEO): $(LIB) test_video_detect.c
+	@echo Building $(TEST_VIDEO)
+	$(CC) -o $(TEST_VIDEO) test_video_detect.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+
+$(TEST_RTSP): $(LIB) test_rtsp_tap.c
+	@echo Building $(TEST_RTSP)
+	$(CC) -o $(TEST_RTSP) test_rtsp_tap.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+
 .PHONY: test
-test: $(TEST) $(TEST_RTT) $(TEST_WINDOW)
+test: $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP)
 	@echo "Running RTT unit tests (no root required)..."
 	@./$(TEST_RTT) && echo -e "RTT unit tests OK\n"
 	@echo "Running window unit tests (no root required)..."
 	@./$(TEST_WINDOW) && echo -e "Window unit tests OK\n"
+	@echo "Running video detection unit tests (no root required)..."
+	@./$(TEST_VIDEO) && echo -e "Video detection unit tests OK\n"
+	@echo "Running RTSP tap unit tests (no root required)..."
+	@./$(TEST_RTSP) && echo -e "RTSP tap unit tests OK\n"
 	@echo "Running integration test (needs sudo for promiscuous network access)..."
 	@sudo ./$(TEST) && echo -e "Integration test OK\n"
 
@@ -96,5 +132,5 @@ clang-analyze: clean
 
 .PHONY: clean
 clean:
-	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) *.o *.a || true
+	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) *.o *.a || true
 	rm *.gcno *.gcov *.gcda || true
