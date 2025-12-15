@@ -62,6 +62,7 @@ config:
 	@echo "Feature Flags:"
 	@echo "  DISABLE_IMPAIRMENTS     = $(DISABLE_IMPAIRMENTS) (set to 1 to disable)"
 	@echo "  DISABLE_PCAP            = $(DISABLE_PCAP) (set to 1 to disable)"
+	@echo "  ENABLE_WEBRTC_PLAYBACK  = $(ENABLE_WEBRTC_PLAYBACK) (set to 1 to enable, requires libdatachannel)"
 
 $(SUBDIRS):
 	@echo "Making $@"
