@@ -20,6 +20,9 @@
 #include "capabilities.h"
 #include "ws_compress.h"
 #include "mq_ws_tiered.h"
+#ifdef ENABLE_WEBRTC_PLAYBACK
+#include "webrtc_bridge.h"
+#endif
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -45,9 +48,9 @@ static struct lws_protocols protocols[] = {
 	            .callback = callback_jittertrap,
 	            .per_session_data_size =
 	                sizeof(struct per_session_data__jittertrap),
-	                        .rx_buffer_size = 0,
-	                        .tx_packet_size = 16384,	        },
-
+	            .rx_buffer_size = 32768,  /* Large enough for Chromium's SDP offers */
+	            .tx_packet_size = 16384,
+	        },
 	    /* terminator */
 	    [PROTOCOL_TERMINATOR] = {.name = NULL,
 	                             .callback = NULL,
@@ -268,6 +271,13 @@ int main(int argc, char **argv)
 		syslog(LOG_WARNING, "Could not initialize pcap buffer\n");
 	}
 
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	/* Initialize WebRTC bridge for in-browser video playback */
+	if (webrtc_bridge_init() != 0) {
+		syslog(LOG_WARNING, "Could not initialize WebRTC bridge\n");
+	}
+#endif
+
 	/* Initialize all 5 tiered WebSocket message queues early - must be available
 	 * before any client connects and tries to subscribe */
 	mq_ws_1_init("ws_tier1");
@@ -299,13 +309,18 @@ int main(int argc, char **argv)
 		*  The lws_service() timeout doesn't seem to work as expected.
 		*  This helps slow things down, but it's not a proper solution.
                 */
-		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 5E5 };
+		const struct timespec rqtp = {.tv_sec = 0, .tv_nsec = 2E6 };
 		nanosleep(&rqtp, NULL);
 
 		n = lws_service(context, 1);
 	}
 
 	lws_context_destroy(context);
+
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	/* Cleanup WebRTC bridge */
+	webrtc_bridge_cleanup();
+#endif
 
 	syslog(LOG_INFO, "jittertrap server exited cleanly\n");
 

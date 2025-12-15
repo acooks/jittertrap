@@ -14,6 +14,7 @@ SOURCES = \
  src/jt_msg_set_netem.c \
  src/jt_msg_hello.c \
  src/jt_msg_pcap.c \
+ src/jt_msg_video.c \
  src/jt_messages.c \
 
 HEADERS = \
@@ -27,6 +28,7 @@ HEADERS = \
  include/jt_msg_set_netem.h \
  include/jt_msg_hello.h \
  include/jt_msg_pcap.h \
+ include/jt_msg_video.h \
 
 OBJECTS += jt_msg_stats.o
 OBJECTS += jt_msg_toptalk.o
@@ -37,6 +39,7 @@ OBJECTS += jt_msg_sample_period.o
 OBJECTS += jt_msg_set_netem.o
 OBJECTS += jt_msg_hello.o
 OBJECTS += jt_msg_pcap.o
+OBJECTS += jt_msg_video.o
 OBJECTS += jt_messages.o
 
 INCLUDES = \
@@ -44,14 +47,29 @@ INCLUDES = \
  -I include \
  -I ../deps/toptalk
 
+# Build type: debug (default) or release
+BUILD_TYPE ?= debug
+
 CFLAGS_HARDENED = \
  -fPIC \
  -fstack-protector \
  --param ssp-buffer-size=4 \
- -fPIE -pie -Wl,-z,relro,-z,now
+ -fPIE -pie -Wl,-z,relro,-z,now \
+ -Warray-bounds \
+ -Wstringop-overflow
 
-CFLAGS := -Wall -Wpedantic -flto -std=c11 -pthread $(CFLAGS_HARDENED) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
-LDLIBS := -ljansson $(LDLIBS)
+ifeq ($(BUILD_TYPE),release)
+CFLAGS_OPT = -O2 -D_FORTIFY_SOURCE=2 -flto
+CFLAGS_SANITIZER =
+LDFLAGS_SANITIZER =
+else
+CFLAGS_OPT = -Og
+CFLAGS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS_SANITIZER = -fsanitize=address
+endif
+
+CFLAGS := -Wall -Wpedantic -std=c11 $(CFLAGS_OPT) -pthread $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(INCLUDES) $(DEFINES) $(PKGCONFIG_LIBNL) $(CFLAGS)
+LDLIBS := -ljansson $(LDFLAGS_SANITIZER) $(LDLIBS)
 
 AR ?= gcc-ar
 

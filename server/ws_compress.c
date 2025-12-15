@@ -34,7 +34,33 @@ static const char ws_dictionary[] =
 	/* Less frequent message types */
 	"pcap_readypcap_statuspcap_configpcap_triggersample_period"
 	"netem_paramsdev_selectiface_list"
-	/* Field names (less frequent first) */
+	/* Video telemetry fields (less common - only video flows) */
+	"\"video_codec_source\":"
+	"\"video_bitrate_kbps\":"
+	"\"video_gop_frames\":"
+	"\"video_keyframes\":"
+	"\"video_frames\":"
+	"\"video_fps_x100\":"
+	"\"video_profile\":"
+	"\"video_level\":"
+	"\"video_width\":"
+	"\"video_height\":"
+	"\"video_jitter_hist\":["
+	"\"video_jitter_us\":"
+	"\"video_seq_loss\":"
+	"\"video_cc_errors\":"
+	"\"video_codec\":"
+	"\"video_ssrc\":"
+	"\"video_type\":"
+	/* Audio telemetry fields (less common - only audio flows) */
+	"\"audio_bitrate_kbps\":"
+	"\"audio_sample_rate\":"
+	"\"audio_jitter_us\":"
+	"\"audio_seq_loss\":"
+	"\"audio_codec\":"
+	"\"audio_ssrc\":"
+	"\"audio_type\":"
+	/* TCP congestion/window fields */
 	"\"recent_events\":"
 	"\"retransmit_cnt\":"
 	"\"zero_window_cnt\":"
@@ -45,6 +71,28 @@ static const char ws_dictionary[] =
 	"\"saw_syn\":"
 	"\"tcp_state\":"
 	"\"rtt_us\":"
+	/* TCP health indicator fields */
+	"\"health_rtt_hist\":["
+	"\"health_rtt_samples\":"
+	"\"health_status\":"
+	"\"health_flags\":"
+	/* IPG histogram fields (medium frequency) */
+	"\"ipg_hist\":["
+	"\"ipg_samples\":"
+	"\"ipg_mean_us\":"
+	/* Frame size histogram fields (all flows) */
+	"\"frame_size_hist\":["
+	"\"frame_size_samples\":"
+	"\"frame_size_variance\":"
+	"\"frame_size_mean\":"
+	"\"frame_size_min\":"
+	"\"frame_size_max\":"
+	/* PPS histogram fields (all flows) */
+	"\"pps_hist\":["
+	"\"pps_samples\":"
+	"\"pps_variance\":"
+	"\"pps_mean\":"
+	/* Address fields */
 	"\"tclass\":\""
 	"\"proto\":\""
 	"\"dport\":"
@@ -74,6 +122,9 @@ static const char ws_dictionary[] =
 	"\"packets\":"
 	"\"bytes\":"
 	"\"flows\":["
+	/* Common histogram patterns (zeros are very frequent) */
+	",0,0,0,0"
+	"[0,0,0,0"
 	/* Most common JSON structure */
 	"\"iface\":\""
 	"\",\"p\":{"

@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -167,6 +168,223 @@ int jt_toptalk_unpacker(json_t *root, void **data)
 		tt->flows[i].recent_events = json_is_integer(t) ?
 		                             json_integer_value(t) : 0;
 
+		/* TCP health indicator fields (optional) */
+		t = json_object_get(f, "health_rtt_hist");
+		if (json_is_array(t)) {
+			size_t hist_size = json_array_size(t);
+			for (size_t h = 0; h < 14 && h < hist_size; h++) {
+				json_t *bucket = json_array_get(t, h);
+				tt->flows[i].health_rtt_hist[h] = json_is_integer(bucket) ?
+				                                  json_integer_value(bucket) : 0;
+			}
+		} else {
+			memset(tt->flows[i].health_rtt_hist, 0,
+			       sizeof(tt->flows[i].health_rtt_hist));
+		}
+
+		t = json_object_get(f, "health_rtt_samples");
+		tt->flows[i].health_rtt_samples = json_is_integer(t) ?
+		                                  json_integer_value(t) : 0;
+
+		t = json_object_get(f, "health_status");
+		tt->flows[i].health_status = json_is_integer(t) ?
+		                             json_integer_value(t) : 0;
+
+		t = json_object_get(f, "health_flags");
+		tt->flows[i].health_flags = json_is_integer(t) ?
+		                            json_integer_value(t) : 0;
+
+		/* IPG histogram (optional) */
+		t = json_object_get(f, "ipg_hist");
+		if (json_is_array(t)) {
+			size_t hist_size = json_array_size(t);
+			for (size_t h = 0; h < 12 && h < hist_size; h++) {
+				json_t *bucket = json_array_get(t, h);
+				tt->flows[i].ipg_hist[h] = json_is_integer(bucket) ?
+				                           json_integer_value(bucket) : 0;
+			}
+		} else {
+			memset(tt->flows[i].ipg_hist, 0,
+			       sizeof(tt->flows[i].ipg_hist));
+		}
+
+		t = json_object_get(f, "ipg_samples");
+		tt->flows[i].ipg_samples = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "ipg_mean_us");
+		tt->flows[i].ipg_mean_us = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		/* Frame size histogram (optional) */
+		t = json_object_get(f, "frame_size_hist");
+		if (json_is_array(t)) {
+			size_t hist_size = json_array_size(t);
+			for (size_t h = 0; h < 20 && h < hist_size; h++) {
+				json_t *bucket = json_array_get(t, h);
+				tt->flows[i].frame_size_hist[h] = json_is_integer(bucket) ?
+				                                  json_integer_value(bucket) : 0;
+			}
+		} else {
+			memset(tt->flows[i].frame_size_hist, 0,
+			       sizeof(tt->flows[i].frame_size_hist));
+		}
+
+		t = json_object_get(f, "frame_size_samples");
+		tt->flows[i].frame_size_samples = json_is_integer(t) ?
+		                                  json_integer_value(t) : 0;
+
+		t = json_object_get(f, "frame_size_mean");
+		tt->flows[i].frame_size_mean = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		t = json_object_get(f, "frame_size_variance");
+		tt->flows[i].frame_size_variance = json_is_integer(t) ?
+		                                   json_integer_value(t) : 0;
+
+		t = json_object_get(f, "frame_size_min");
+		tt->flows[i].frame_size_min = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		t = json_object_get(f, "frame_size_max");
+		tt->flows[i].frame_size_max = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		/* PPS histogram (optional) */
+		t = json_object_get(f, "pps_hist");
+		if (json_is_array(t)) {
+			size_t hist_size = json_array_size(t);
+			for (size_t h = 0; h < 12 && h < hist_size; h++) {
+				json_t *bucket = json_array_get(t, h);
+				tt->flows[i].pps_hist[h] = json_is_integer(bucket) ?
+				                           json_integer_value(bucket) : 0;
+			}
+		} else {
+			memset(tt->flows[i].pps_hist, 0,
+			       sizeof(tt->flows[i].pps_hist));
+		}
+
+		t = json_object_get(f, "pps_samples");
+		tt->flows[i].pps_samples = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "pps_mean");
+		tt->flows[i].pps_mean = json_is_integer(t) ?
+		                        json_integer_value(t) : 0;
+
+		t = json_object_get(f, "pps_variance");
+		tt->flows[i].pps_variance = json_is_integer(t) ?
+		                            json_integer_value(t) : 0;
+
+		/* Video stream fields (optional) */
+		t = json_object_get(f, "video_type");
+		tt->flows[i].video_type = json_is_integer(t) ?
+		                          json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_codec");
+		tt->flows[i].video_codec = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_jitter_us");
+		tt->flows[i].video_jitter_us = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		/* Video jitter histogram (optional) */
+		t = json_object_get(f, "video_jitter_hist");
+		if (json_is_array(t)) {
+			size_t hist_size = json_array_size(t);
+			for (size_t h = 0; h < 12 && h < hist_size; h++) {
+				json_t *bucket = json_array_get(t, h);
+				tt->flows[i].video_jitter_hist[h] = json_is_integer(bucket) ?
+				                                    json_integer_value(bucket) : 0;
+			}
+		} else {
+			memset(tt->flows[i].video_jitter_hist, 0,
+			       sizeof(tt->flows[i].video_jitter_hist));
+		}
+
+		t = json_object_get(f, "video_seq_loss");
+		tt->flows[i].video_seq_loss = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_cc_errors");
+		tt->flows[i].video_cc_errors = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_ssrc");
+		tt->flows[i].video_ssrc = json_is_integer(t) ?
+		                          json_integer_value(t) : 0;
+
+		/* Extended video telemetry fields (optional) */
+		t = json_object_get(f, "video_codec_source");
+		tt->flows[i].video_codec_source = json_is_integer(t) ?
+		                                  json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_width");
+		tt->flows[i].video_width = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_height");
+		tt->flows[i].video_height = json_is_integer(t) ?
+		                            json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_profile");
+		tt->flows[i].video_profile = json_is_integer(t) ?
+		                             json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_level");
+		tt->flows[i].video_level = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_fps_x100");
+		tt->flows[i].video_fps_x100 = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_bitrate_kbps");
+		tt->flows[i].video_bitrate_kbps = json_is_integer(t) ?
+		                                  json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_gop_frames");
+		tt->flows[i].video_gop_frames = json_is_integer(t) ?
+		                                json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_keyframes");
+		tt->flows[i].video_keyframes = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		t = json_object_get(f, "video_frames");
+		tt->flows[i].video_frames = json_is_integer(t) ?
+		                            json_integer_value(t) : 0;
+
+		/* Audio stream fields (optional) */
+		t = json_object_get(f, "audio_type");
+		tt->flows[i].audio_type = json_is_integer(t) ?
+		                          json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_codec");
+		tt->flows[i].audio_codec = json_is_integer(t) ?
+		                           json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_sample_rate");
+		tt->flows[i].audio_sample_rate = json_is_integer(t) ?
+		                                 json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_jitter_us");
+		tt->flows[i].audio_jitter_us = json_is_integer(t) ?
+		                               json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_seq_loss");
+		tt->flows[i].audio_seq_loss = json_is_integer(t) ?
+		                              json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_ssrc");
+		tt->flows[i].audio_ssrc = json_is_integer(t) ?
+		                          json_integer_value(t) : 0;
+
+		t = json_object_get(f, "audio_bitrate_kbps");
+		tt->flows[i].audio_bitrate_kbps = json_is_integer(t) ?
+		                                  json_integer_value(t) : 0;
+
 		t = json_object_get(f, "sport");
 		if (!json_is_integer(t)) {
 			goto unpack_fail;
@@ -273,10 +491,134 @@ int jt_toptalk_packer(void *data, char **out)
 		                    json_integer(tt_msg->flows[i].ece_cnt));
 		json_object_set_new(flows[i], "recent_events",
 		                    json_integer(tt_msg->flows[i].recent_events));
+		/* TCP health fields (only include if health status is known) */
+		if (tt_msg->flows[i].health_status > 0 ||
+		    tt_msg->flows[i].health_rtt_samples > 0) {
+			/* Send histogram as JSON array */
+			json_t *hist_arr = json_array();
+			for (int h = 0; h < 14; h++) {
+				json_array_append_new(hist_arr,
+				        json_integer(tt_msg->flows[i].health_rtt_hist[h]));
+			}
+			json_object_set_new(flows[i], "health_rtt_hist", hist_arr);
+			json_object_set_new(flows[i], "health_rtt_samples",
+			                    json_integer(tt_msg->flows[i].health_rtt_samples));
+			json_object_set_new(flows[i], "health_status",
+			                    json_integer(tt_msg->flows[i].health_status));
+			json_object_set_new(flows[i], "health_flags",
+			                    json_integer(tt_msg->flows[i].health_flags));
+		}
+		/* IPG histogram (for all flows with samples) */
+		if (tt_msg->flows[i].ipg_samples > 0) {
+			json_t *ipg_hist_arr = json_array();
+			for (int h = 0; h < 12; h++) {
+				json_array_append_new(ipg_hist_arr,
+				        json_integer(tt_msg->flows[i].ipg_hist[h]));
+			}
+			json_object_set_new(flows[i], "ipg_hist", ipg_hist_arr);
+			json_object_set_new(flows[i], "ipg_samples",
+			                    json_integer(tt_msg->flows[i].ipg_samples));
+			json_object_set_new(flows[i], "ipg_mean_us",
+			                    json_integer(tt_msg->flows[i].ipg_mean_us));
+		}
+		/* Frame size histogram (for all flows with samples) */
+		if (tt_msg->flows[i].frame_size_samples > 0) {
+			json_t *frame_hist_arr = json_array();
+			for (int h = 0; h < 20; h++) {
+				json_array_append_new(frame_hist_arr,
+				        json_integer(tt_msg->flows[i].frame_size_hist[h]));
+			}
+			json_object_set_new(flows[i], "frame_size_hist", frame_hist_arr);
+			json_object_set_new(flows[i], "frame_size_samples",
+			                    json_integer(tt_msg->flows[i].frame_size_samples));
+			json_object_set_new(flows[i], "frame_size_mean",
+			                    json_integer(tt_msg->flows[i].frame_size_mean));
+			json_object_set_new(flows[i], "frame_size_variance",
+			                    json_integer(tt_msg->flows[i].frame_size_variance));
+			json_object_set_new(flows[i], "frame_size_min",
+			                    json_integer(tt_msg->flows[i].frame_size_min));
+			json_object_set_new(flows[i], "frame_size_max",
+			                    json_integer(tt_msg->flows[i].frame_size_max));
+		}
+		/* PPS histogram (for all flows with samples) */
+		if (tt_msg->flows[i].pps_samples > 0) {
+			json_t *pps_hist_arr = json_array();
+			for (int h = 0; h < 12; h++) {
+				json_array_append_new(pps_hist_arr,
+				        json_integer(tt_msg->flows[i].pps_hist[h]));
+			}
+			json_object_set_new(flows[i], "pps_hist", pps_hist_arr);
+			json_object_set_new(flows[i], "pps_samples",
+			                    json_integer(tt_msg->flows[i].pps_samples));
+			json_object_set_new(flows[i], "pps_mean",
+			                    json_integer(tt_msg->flows[i].pps_mean));
+			json_object_set_new(flows[i], "pps_variance",
+			                    json_integer(tt_msg->flows[i].pps_variance));
+		}
+		/* Video stream fields (only include if video stream detected) */
+		if (tt_msg->flows[i].video_type != 0) {
+			json_object_set_new(flows[i], "video_type",
+			                    json_integer(tt_msg->flows[i].video_type));
+			json_object_set_new(flows[i], "video_codec",
+			                    json_integer(tt_msg->flows[i].video_codec));
+			json_object_set_new(flows[i], "video_jitter_us",
+			                    json_integer(tt_msg->flows[i].video_jitter_us));
+			/* Send jitter histogram as JSON array */
+			json_t *jitter_hist_arr = json_array();
+			for (int h = 0; h < 12; h++) {
+				json_array_append_new(jitter_hist_arr,
+				        json_integer(tt_msg->flows[i].video_jitter_hist[h]));
+			}
+			json_object_set_new(flows[i], "video_jitter_hist", jitter_hist_arr);
+			json_object_set_new(flows[i], "video_seq_loss",
+			                    json_integer(tt_msg->flows[i].video_seq_loss));
+			json_object_set_new(flows[i], "video_cc_errors",
+			                    json_integer(tt_msg->flows[i].video_cc_errors));
+			json_object_set_new(flows[i], "video_ssrc",
+			                    json_integer(tt_msg->flows[i].video_ssrc));
+			/* Extended video telemetry fields */
+			json_object_set_new(flows[i], "video_codec_source",
+			                    json_integer(tt_msg->flows[i].video_codec_source));
+			json_object_set_new(flows[i], "video_width",
+			                    json_integer(tt_msg->flows[i].video_width));
+			json_object_set_new(flows[i], "video_height",
+			                    json_integer(tt_msg->flows[i].video_height));
+			json_object_set_new(flows[i], "video_profile",
+			                    json_integer(tt_msg->flows[i].video_profile));
+			json_object_set_new(flows[i], "video_level",
+			                    json_integer(tt_msg->flows[i].video_level));
+			json_object_set_new(flows[i], "video_fps_x100",
+			                    json_integer(tt_msg->flows[i].video_fps_x100));
+			json_object_set_new(flows[i], "video_bitrate_kbps",
+			                    json_integer(tt_msg->flows[i].video_bitrate_kbps));
+			json_object_set_new(flows[i], "video_gop_frames",
+			                    json_integer(tt_msg->flows[i].video_gop_frames));
+			json_object_set_new(flows[i], "video_keyframes",
+			                    json_integer(tt_msg->flows[i].video_keyframes));
+			json_object_set_new(flows[i], "video_frames",
+			                    json_integer(tt_msg->flows[i].video_frames));
+		}
+		/* Audio stream fields (only include if audio stream detected) */
+		if (tt_msg->flows[i].audio_type != 0) {
+			json_object_set_new(flows[i], "audio_type",
+			                    json_integer(tt_msg->flows[i].audio_type));
+			json_object_set_new(flows[i], "audio_codec",
+			                    json_integer(tt_msg->flows[i].audio_codec));
+			json_object_set_new(flows[i], "audio_sample_rate",
+			                    json_integer(tt_msg->flows[i].audio_sample_rate));
+			json_object_set_new(flows[i], "audio_jitter_us",
+			                    json_integer(tt_msg->flows[i].audio_jitter_us));
+			json_object_set_new(flows[i], "audio_seq_loss",
+			                    json_integer(tt_msg->flows[i].audio_seq_loss));
+			json_object_set_new(flows[i], "audio_ssrc",
+			                    json_integer(tt_msg->flows[i].audio_ssrc));
+			json_object_set_new(flows[i], "audio_bitrate_kbps",
+			                    json_integer(tt_msg->flows[i].audio_bitrate_kbps));
+		}
 		json_object_set_new(flows[i], "sport",
-		                    json_integer(tt_msg->flows[i].sport));
+		                    json_integer(ntohs(tt_msg->flows[i].sport)));
 		json_object_set_new(flows[i], "dport",
-		                    json_integer(tt_msg->flows[i].dport));
+		                    json_integer(ntohs(tt_msg->flows[i].dport)));
 		json_object_set_new(flows[i], "src",
 		                    json_string(tt_msg->flows[i].src));
 		json_object_set_new(flows[i], "dst",

@@ -32,6 +32,9 @@
 #include "jt_messages.h"
 
 #include "pcap_buffer.h"
+#ifdef ENABLE_WEBRTC_PLAYBACK
+#include "webrtc_bridge.h"
+#endif
 
 
 #define QUOTE(str) #str
@@ -494,6 +497,141 @@ static int trigger_pcap(void *data)
 #endif
 }
 
+/* ========== WebRTC handlers ========== */
+
+static int handle_webrtc_offer(void *data)
+{
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	struct jt_msg_webrtc_offer *msg = data;
+	char sdp_answer[8192];
+	int viewer_id;
+
+	syslog(LOG_INFO, "WebRTC offer received: fkey=%s ssrc=%u codec=%d\n",
+	       msg->fkey, msg->ssrc, msg->codec);
+
+	viewer_id = webrtc_bridge_handle_offer(msg->sdp, msg->fkey, msg->ssrc,
+	                                        msg->codec, sdp_answer,
+	                                        sizeof(sdp_answer));
+	if (viewer_id < 0) {
+		struct jt_msg_video_error errmsg;
+		const char *code;
+		const char *message;
+
+		switch (viewer_id) {
+		case WEBRTC_ERR_NO_SLOTS:
+			code = "no_slots";
+			message = "Maximum concurrent viewers reached. Please close another video and try again.";
+			syslog(LOG_WARNING, "WebRTC offer rejected: no viewer slots available\n");
+			break;
+		case WEBRTC_ERR_NOT_INIT:
+			code = "not_initialized";
+			message = "WebRTC bridge not initialized";
+			syslog(LOG_ERR, "WebRTC offer failed: bridge not initialized\n");
+			break;
+		case WEBRTC_ERR_BAD_PARAMS:
+			code = "bad_params";
+			message = "Invalid WebRTC offer parameters";
+			syslog(LOG_ERR, "WebRTC offer failed: bad parameters\n");
+			break;
+		case WEBRTC_ERR_SDP_FAILED:
+		default:
+			code = "webrtc_failed";
+			message = "Failed to create WebRTC session";
+			syslog(LOG_ERR, "WebRTC offer failed: SDP negotiation error\n");
+			break;
+		}
+
+		snprintf(errmsg.code, sizeof(errmsg.code), "%s", code);
+		snprintf(errmsg.message, sizeof(errmsg.message), "%s", message);
+		jt_srv_send(JT_MSG_VIDEO_ERROR_V1, &errmsg);
+		return -1;
+	}
+
+	/* Send answer back to browser */
+	struct jt_msg_webrtc_answer answer;
+	answer.viewer_id = viewer_id;
+	snprintf(answer.sdp, sizeof(answer.sdp), "%s", sdp_answer);
+	jt_srv_send(JT_MSG_WEBRTC_ANSWER_V1, &answer);
+
+	syslog(LOG_INFO, "WebRTC answer sent, viewer_id=%d\n", viewer_id);
+	return 0;
+#else
+	(void)data;
+	syslog(LOG_WARNING, "WebRTC playback not enabled (compile with ENABLE_WEBRTC_PLAYBACK=1)\n");
+	struct jt_msg_video_error errmsg;
+	snprintf(errmsg.code, sizeof(errmsg.code), "not_available");
+	snprintf(errmsg.message, sizeof(errmsg.message),
+	         "WebRTC playback not enabled on server");
+	jt_srv_send(JT_MSG_VIDEO_ERROR_V1, &errmsg);
+	return -1;
+#endif
+}
+
+static int handle_webrtc_ice(void *data)
+{
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	struct jt_msg_webrtc_ice *msg = data;
+
+	syslog(LOG_DEBUG, "WebRTC ICE candidate: viewer_id=%d mid=%s\n",
+	       msg->viewer_id, msg->mid);
+
+	int err = webrtc_bridge_add_ice_candidate(msg->viewer_id,
+	                                           msg->candidate, msg->mid);
+	if (err != 0) {
+		syslog(LOG_ERR, "WebRTC add ICE candidate failed\n");
+		return -1;
+	}
+	return 0;
+#else
+	(void)data;
+	return -1;
+#endif
+}
+
+static int handle_webrtc_stop(void *data)
+{
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	struct jt_msg_webrtc_stop *msg = data;
+
+	syslog(LOG_INFO, "WebRTC stop requested: viewer_id=%d\n", msg->viewer_id);
+
+	webrtc_bridge_close_viewer(msg->viewer_id);
+	return 0;
+#else
+	(void)data;
+	return 0;
+#endif
+}
+
+int jt_srv_send_webrtc_status(int viewer_id)
+{
+#ifdef ENABLE_WEBRTC_PLAYBACK
+	struct jt_msg_webrtc_status msg;
+	uint64_t packets_sent, bytes_sent;
+	int waiting_for_keyframe;
+
+	msg.viewer_id = viewer_id;
+
+	if (webrtc_bridge_get_stats(viewer_id, &packets_sent, &bytes_sent,
+	                            &waiting_for_keyframe) == 0) {
+		msg.active = 1;
+		msg.waiting_for_keyframe = waiting_for_keyframe;
+		msg.packets_sent = packets_sent;
+		msg.bytes_sent = bytes_sent;
+	} else {
+		msg.active = 0;
+		msg.waiting_for_keyframe = 0;
+		msg.packets_sent = 0;
+		msg.bytes_sent = 0;
+	}
+
+	return jt_srv_send(JT_MSG_WEBRTC_STATUS_V1, &msg);
+#else
+	(void)viewer_id;
+	return -1;
+#endif
+}
+
 static int stats_consumer(struct mq_stats_msg *m, void *data)
 {
 	struct jt_msg_stats *s = (struct jt_msg_stats *)data;
@@ -657,10 +795,13 @@ int jt_server_tick(void)
 		jt_srv_send_stats();
 		jt_srv_send_tt();
 
-		/* Periodically send pcap status */
+		/* Periodically send pcap status and check WebRTC viewer timeouts */
 		pcap_status_tick++;
 		if (pcap_status_tick >= PCAP_STATUS_INTERVAL) {
 			jt_srv_send_pcap_status();
+#ifdef ENABLE_WEBRTC_PLAYBACK
+			webrtc_bridge_check_timeouts();
+#endif
 			pcap_status_tick = 0;
 		}
 		break;
@@ -680,7 +821,7 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 	json_error_t error;
 	void *data;
 	const int *msg_type;
-	char in_safe[1024];
+	char in_safe[MAX_JSON_MSG_LEN];
 
 	if (len <= 0) {
 		syslog(LOG_ERR, "error: message cannot have negative length");
@@ -689,9 +830,8 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 
 	/* in_unsafe is not null-terminated and len doesn't include \0 */
 	if ((long unsigned int)len >= sizeof(in_safe)) {
-		snprintf(in_safe, sizeof(in_safe), "%s", in_unsafe);
-		syslog(LOG_DEBUG, "invalid message truncated and ignored: %s\n",
-			in_safe);
+		syslog(LOG_ERR, "message too large (%d bytes, max %zu), ignored\n",
+			len, sizeof(in_safe));
 		return -1;
 	}
 
@@ -706,7 +846,7 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 
 	// iterate over array of msg types using pointer arithmetic.
 	for (msg_type = msg_type_arr; *msg_type != JT_MSG_END; msg_type++) {
-		char printable[1024];
+		char printable[MAX_JSON_MSG_LEN];
 		int err;
 
 		// check if the message type matches.
@@ -745,6 +885,15 @@ static int jt_msg_handler(char *in_unsafe, int len, const int *msg_type_arr)
 			break;
 		case JT_MSG_PCAP_TRIGGER_V1:
 			err = trigger_pcap(data);
+			break;
+		case JT_MSG_WEBRTC_OFFER_V1:
+			err = handle_webrtc_offer(data);
+			break;
+		case JT_MSG_WEBRTC_ICE_V1:
+			err = handle_webrtc_ice(data);
+			break;
+		case JT_MSG_WEBRTC_STOP_V1:
+			err = handle_webrtc_stop(data);
 			break;
 		default:
 			/* no way to get here, right? */

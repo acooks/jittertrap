@@ -22,6 +22,16 @@ typedef enum {
 	JT_MSG_PCAP_TRIGGER_V1  = 152,  /* C2S */
 	JT_MSG_PCAP_READY_V1    = 153,  /* S2C */
 
+	/* Video error message (shared by all video playback methods) */
+	JT_MSG_VIDEO_ERROR_V1   = 163,  /* S2C: playback error notification */
+
+	/* WebRTC video playback messages */
+	JT_MSG_WEBRTC_OFFER_V1  = 180,  /* C2S: WebRTC SDP offer */
+	JT_MSG_WEBRTC_ANSWER_V1 = 181,  /* S2C: WebRTC SDP answer */
+	JT_MSG_WEBRTC_ICE_V1    = 182,  /* Bidirectional: ICE candidate */
+	JT_MSG_WEBRTC_STOP_V1   = 183,  /* C2S: stop WebRTC session */
+	JT_MSG_WEBRTC_STATUS_V1 = 184,  /* S2C: WebRTC session status */
+
 	/* terminator */
 	JT_MSG_END              = 255
 } jt_msg_type_id_t;
@@ -36,6 +46,10 @@ static const int jt_msg_types_s2c[] = {
 	JT_MSG_PCAP_CONFIG_V1,
 	JT_MSG_PCAP_STATUS_V1,
 	JT_MSG_PCAP_READY_V1,
+	JT_MSG_VIDEO_ERROR_V1,
+	JT_MSG_WEBRTC_ANSWER_V1,
+	JT_MSG_WEBRTC_ICE_V1,
+	JT_MSG_WEBRTC_STATUS_V1,
 
 	/* terminator */
 	JT_MSG_END
@@ -47,6 +61,9 @@ static const int jt_msg_types_c2s[] = {
 	JT_MSG_HELLO_V1,
 	JT_MSG_PCAP_CONFIG_V1,
 	JT_MSG_PCAP_TRIGGER_V1,
+	JT_MSG_WEBRTC_OFFER_V1,
+	JT_MSG_WEBRTC_ICE_V1,
+	JT_MSG_WEBRTC_STOP_V1,
 
 	/* terminator */
 	JT_MSG_END
