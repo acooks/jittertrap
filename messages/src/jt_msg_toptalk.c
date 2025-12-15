@@ -452,9 +452,9 @@ int jt_toptalk_packer(void *data, char **out)
 	json_object_set_new(params, "interval_ns",
 	                    json_integer(tt_msg->interval_ns));
 
-	json_object_set(timestamp, "tv_sec", json_integer(tt_msg->timestamp.tv_sec));
-	json_object_set(timestamp, "tv_nsec", json_integer(tt_msg->timestamp.tv_nsec));
-	json_object_set(params, "timestamp", timestamp);
+	json_object_set_new(timestamp, "tv_sec", json_integer(tt_msg->timestamp.tv_sec));
+	json_object_set_new(timestamp, "tv_nsec", json_integer(tt_msg->timestamp.tv_nsec));
+	json_object_set_new(params, "timestamp", timestamp);
 
 	/* tt_msg->tflows is the Total flows recorded, not the number of flows
 	 * listed in the message, so it will be more than MAX_FLOWS...
@@ -643,8 +643,7 @@ int jt_toptalk_packer(void *data, char **out)
 	json_decref(flows_arr);
 	json_object_clear(params);
 	json_decref(params);
-	json_object_clear(timestamp);
-	json_decref(timestamp);
+	/* timestamp ownership transferred to params via json_object_set_new() */
 	json_object_clear(t);
 	json_decref(t);
 	return 0;
