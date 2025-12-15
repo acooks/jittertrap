@@ -164,6 +164,777 @@
                   </div>
                 </div>
 
+                <!-- TCP Analysis -->
+                <div class="card">
+                  <div class="card-header py-2 px-3" id="helpTcpHead">
+                    <button class="btn btn-link collapsed p-0" type="button" data-toggle="collapse" data-target="#helpTcp">
+                      <i class="fas fa-network-wired mr-2"></i>TCP Analysis
+                    </button>
+                  </div>
+                  <div id="helpTcp" class="collapse" data-parent="#helpAccordion">
+                    <div class="card-body">
+                      <p>JitterTrap provides deep visibility into TCP behavior through the <strong>TCP RTT</strong> and <strong>TCP Window</strong> charts. This is especially valuable when troubleshooting interactive, responsive, or real-time systems where TCP may be introducing unexpected latency or throughput problems.</p>
+
+                      <div class="alert alert-info py-2" role="alert">
+                        <i class="fas fa-lightbulb mr-1"></i>
+                        <strong>When to suspect TCP issues:</strong> If your application feels sluggish, has inconsistent response times, or throughput doesn't match network capacity &mdash; even when packet loss is low &mdash; TCP's behavior may be the cause.
+                      </div>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Common TCP Problems</h6>
+                      <p>These problems are particularly impactful for real-time and interactive systems. Each section describes what to look for in JitterTrap.</p>
+
+                      <table class="table table-sm">
+                        <tbody>
+                          <!-- Bufferbloat -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-water mr-1"></i> Bufferbloat</strong></td>
+                          </tr>
+                          <tr>
+                            <td style="width: 140px;" class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Latency increases dramatically under load. A connection that shows 20ms RTT when idle may spike to 500ms+ when saturated. Interactive applications become sluggish during bulk transfers.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>RTT chart</strong> correlates with <strong>Throughput chart</strong> &mdash; RTT rises as throughput increases</li>
+                                <li>RTT may be 10-50&times; higher under load than when idle</li>
+                                <li>No packet loss or retransmits (buffers absorb everything)</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              Over-sized buffers in routers, switches, cable modems, or endpoint network stacks. Packets queue instead of being dropped, hiding congestion from TCP while adding latency.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Enable AQM (Active Queue Management) like fq_codel or CAKE on routers. Reduce buffer sizes. Use ECN if supported. Consider if UDP would be more appropriate for your use case.
+                            </td>
+                          </tr>
+
+                          <!-- Zero Window / Receive Window Starvation -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-hand-paper mr-1"></i> Receive Window Starvation</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Throughput suddenly drops to zero, then slowly recovers. The sender is blocked waiting for the receiver to consume data.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>TCP Window chart</strong> shows collapse toward zero</li>
+                                <li><span style="color: #ff4444;">&#x26A0;</span> <strong>Zero Window</strong> markers appear</li>
+                                <li>Throughput drops to zero during window collapse</li>
+                                <li>Recovery is gradual as receiver slowly advertises more space</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              The receiving application isn't reading data fast enough. Common causes: GC pauses, disk I/O blocking, thread starvation, slow processing, or the application being suspended.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Profile the receiving application. Look for blocking operations in the read path. Increase receive buffer sizes (SO_RCVBUF). Consider async I/O or dedicated reader threads.
+                            </td>
+                          </tr>
+
+                          <!-- Head-of-Line Blocking -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-traffic-light mr-1"></i> Head-of-Line Blocking</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Intermittent freezes or stalls even with a good network. Data arrives in bursts after delays. Application-level latency is much higher than network RTT.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>Packet Gap chart</strong> shows periodic large gaps followed by bursts</li>
+                                <li><span style="color: #ff0000;">&#x21A9;</span> <strong>Retransmit</strong> markers precede the gaps</li>
+                                <li>RTT remains stable (network is fine), but application stalls</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              TCP guarantees in-order delivery. A single lost packet blocks all subsequent data from being delivered to the application until the retransmit arrives. This is fundamental to TCP and cannot be fixed.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              If your application can tolerate out-of-order or lost data, <strong>use UDP instead</strong>. For real-time media, gaming, or telemetry, UDP with application-level recovery is usually better. QUIC solves this for HTTP/3.
+                            </td>
+                          </tr>
+
+                          <!-- Nagle + Delayed ACK -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-clock mr-1"></i> Nagle's Algorithm + Delayed ACK</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Small messages have ~40ms latency even on fast networks. Request-response protocols feel sluggish. Latency is suspiciously consistent at 40ms multiples.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>RTT chart</strong> shows consistent 40ms or 200ms values</li>
+                                <li><strong>Packet Gap chart</strong> shows periodic 40ms gaps</li>
+                                <li>Pattern is very regular, not random like congestion</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              <strong>Nagle's algorithm</strong> (sender) delays small packets hoping to batch them. <strong>Delayed ACK</strong> (receiver) waits up to 40ms before acknowledging. Together they create a deadlock: sender waits for ACK, receiver waits to piggyback ACK on response.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Set <code>TCP_NODELAY</code> socket option to disable Nagle. Ensure request-response protocols send complete messages in single writes. Some systems also allow tuning delayed ACK timeout.
+                            </td>
+                          </tr>
+
+                          <!-- Congestion Window Collapse -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-chart-line mr-1"></i> Congestion Window Collapse</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Throughput drops dramatically after packet loss, then slowly recovers over seconds. Classic "sawtooth" throughput pattern.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>Throughput chart</strong> shows sawtooth pattern</li>
+                                <li><span style="color: #ff0000;">&#x21A9;</span> <strong>Retransmit</strong> markers at each throughput drop</li>
+                                <li>Recovery takes multiple RTTs (slow start)</li>
+                                <li>Average throughput may be far below link capacity</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              TCP's loss-based congestion control interprets any packet loss as congestion and cuts the sending rate. It then slowly probes for capacity (slow start / congestion avoidance). This is working as designed but may not suit your needs.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Use BBR congestion control instead of CUBIC/Reno if available. Enable ECN to get early congestion signals. For real-time traffic, consider UDP with application-level rate control.
+                            </td>
+                          </tr>
+
+                          <!-- RTO Stalls -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-hourglass-end mr-1"></i> Retransmission Timeout (RTO) Stalls</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              Long stalls (1-3+ seconds) followed by a burst of activity. Much worse than typical packet loss recovery.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>RTT chart</strong> shows gaps of 1+ seconds</li>
+                                <li>Multiple <span style="color: #ff0000;">&#x21A9;</span> <strong>Retransmit</strong> markers clustered after the gap</li>
+                                <li>Pattern: silence, then burst of retransmits, then recovery</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              When fast retransmit (3 dup ACKs) fails, TCP falls back to RTO-based recovery. The minimum RTO is often 200ms-1s, and it doubles with each failed attempt (exponential backoff). A lost retransmit can cause multi-second stalls.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Investigate why fast retransmit is failing (tail loss, small windows). Enable TLP (Tail Loss Probe) and RACK if available. For latency-sensitive applications, these stalls may be unacceptable &mdash; consider UDP.
+                            </td>
+                          </tr>
+
+                          <!-- Silly Window Syndrome -->
+                          <tr class="table-light">
+                            <td colspan="2"><strong><i class="fas fa-compress-arrows-alt mr-1"></i> Silly Window Syndrome</strong></td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Symptoms</td>
+                            <td>
+                              High packet rate but low throughput. Efficiency is terrible. Lots of small packets instead of full-sized segments.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">In JitterTrap</td>
+                            <td>
+                              <ul class="mb-0">
+                                <li><strong>TCP Window chart</strong> shows very small values (bytes, not KB)</li>
+                                <li><strong>Top Talkers</strong> shows high packet count but low byte count</li>
+                                <li>Throughput is a fraction of expected</li>
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">Root Cause</td>
+                            <td>
+                              Receiver advertises tiny windows (e.g., after window starvation recovery). Sender sends tiny segments to fill the advertised window. Overhead dominates.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="align-top text-muted">What to Do</td>
+                            <td>
+                              Most TCP stacks have SWS avoidance built in. If you're seeing this, check for broken or embedded TCP implementations. Increase receive buffer sizes.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">TCP vs UDP: When TCP Hurts</h6>
+                      <p>
+                        TCP is designed for reliable, ordered delivery of bulk data. These guarantees come at a cost that's often invisible until you look closely:
+                      </p>
+                      <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                          <tr>
+                            <th>TCP Behavior</th>
+                            <th>Cost for Real-Time Systems</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Guaranteed delivery</td>
+                            <td>Stalls waiting for retransmits of data that may no longer be relevant</td>
+                          </tr>
+                          <tr>
+                            <td>In-order delivery</td>
+                            <td>Head-of-line blocking &mdash; one lost packet blocks everything behind it</td>
+                          </tr>
+                          <tr>
+                            <td>Congestion control</td>
+                            <td>Throughput collapse after loss; slow recovery; competing flows affect each other</td>
+                          </tr>
+                          <tr>
+                            <td>Connection establishment</td>
+                            <td>1.5 RTT before first data byte; connection state on both ends</td>
+                          </tr>
+                          <tr>
+                            <td>Flow control</td>
+                            <td>Slow receiver blocks fast sender, even if data could be dropped</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <p>
+                        <strong>Consider UDP when:</strong> You can tolerate some loss, need lowest latency, data has a "freshness" deadline, or you want application-level control over retransmission decisions.
+                      </p>
+                      <p class="mb-0">
+                        <strong>Examples:</strong> VoIP, video conferencing, gaming, live telemetry, sensor data, financial trading, DNS.
+                      </p>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Interpreting JitterTrap's TCP Charts</h6>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 180px;" class="align-top"><strong>Healthy TCP Flow</strong></td>
+                          <td>
+                            <ul class="mb-0">
+                              <li>RTT is stable and close to network baseline</li>
+                              <li>Window stays large (hundreds of KB to MB)</li>
+                              <li>Few or no retransmit/dup ACK markers</li>
+                              <li>Throughput matches expected capacity</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Network Congestion</strong></td>
+                          <td>
+                            <ul class="mb-0">
+                              <li>RTT increases when throughput is high</li>
+                              <li>Retransmit markers correlate with throughput drops</li>
+                              <li>ECE markers may appear (if ECN enabled)</li>
+                              <li>Multiple flows affected simultaneously</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Application Bottleneck</strong></td>
+                          <td>
+                            <ul class="mb-0">
+                              <li>Window shrinks or hits zero (receiver not reading)</li>
+                              <li>RTT stays normal (network is fine)</li>
+                              <li>Throughput limited by window, not network</li>
+                              <li>Only one flow affected</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Lossy Link</strong></td>
+                          <td>
+                            <ul class="mb-0">
+                              <li>Frequent retransmit markers without RTT increase</li>
+                              <li>Dup ACK markers appear regularly</li>
+                              <li>Throughput varies but doesn't correlate with RTT</li>
+                              <li>Random pattern, not related to load</li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Collapsible TCP Technical Background -->
+                      <div class="border-top pt-2 mt-3">
+                        <a class="text-muted" data-toggle="collapse" href="#helpTcpTechnical" role="button" aria-expanded="false">
+                          <i class="fas fa-caret-right mr-1"></i><i class="fas fa-caret-down mr-1 d-none"></i>
+                          <strong>Technical Background</strong> <small>(click to expand)</small>
+                        </a>
+                        <div class="collapse mt-2" id="helpTcpTechnical">
+                          <div class="card card-body bg-light">
+
+                            <h6 class="font-weight-bold">TCP Flow Control: The Receive Window</h6>
+                            <p>
+                              Every TCP ACK includes a <strong>window</strong> field advertising how many bytes the receiver is willing to accept. This prevents a fast sender from overwhelming a slow receiver.
+                            </p>
+                            <pre class="bg-white p-2 border rounded" style="font-size: 0.85em;">Sender                                    Receiver
+   |  ---- data (1000 bytes) ---->            |
+   |  <---- ACK, window=64000 ----            |  "I can accept 64KB more"
+   |  ---- data (1000 bytes) ---->            |
+   |  <---- ACK, window=63000 ----            |  "Now 63KB" (read 0 bytes)
+   |  ---- data (1000 bytes) ---->            |
+   |  <---- ACK, window=65000 ----            |  "65KB" (app read 3KB)</pre>
+                            <p>
+                              The sender can have up to <code>window</code> bytes of unacknowledged data in flight. If the window shrinks to zero, the sender must stop and wait.
+                            </p>
+                            <p class="mb-0">
+                              <strong>Window scaling:</strong> The 16-bit window field limits the window to 64KB, which is too small for high-bandwidth or high-latency links. TCP window scaling (negotiated in the SYN handshake) multiplies the field by 2<sup>scale</sup>. Modern systems use scale factors of 7-8 (128-256&times;), allowing windows of 8-16MB.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">Congestion Control: CWND and Slow Start</h6>
+                            <p>
+                              Besides the receive window (rwnd), TCP maintains a <strong>congestion window</strong> (cwnd) limiting how much data can be in flight based on estimated network capacity. The actual limit is <code>min(rwnd, cwnd)</code>.
+                            </p>
+                            <pre class="bg-white p-2 border rounded" style="font-size: 0.85em;">Time &rarr;
+
+cwnd: [1] [2] [4] [8] [16] [32] [64] ... [128] &darr; [64] [65] [66] ...
+       |                                        |
+       Slow Start (exponential)                 Loss detected!
+                                                 &darr; cwnd halved, then
+                                                 Congestion Avoidance (linear)</pre>
+                            <p>
+                              <strong>Slow Start:</strong> cwnd starts small (1-10 segments) and doubles every RTT until loss or threshold.<br>
+                              <strong>Congestion Avoidance:</strong> After loss, cwnd increases by ~1 segment per RTT (additive increase).<br>
+                              <strong>On loss:</strong> cwnd is halved (multiplicative decrease). This creates the sawtooth pattern.
+                            </p>
+                            <p class="mb-0">
+                              Recovery from loss is slow because TCP must re-probe for capacity. A single loss event can take seconds to recover, during which throughput is degraded.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">Retransmission: Fast Retransmit vs RTO</h6>
+                            <p>
+                              TCP has two mechanisms to detect and recover from loss:
+                            </p>
+                            <ul>
+                              <li><strong>Fast Retransmit:</strong> 3 duplicate ACKs trigger immediate retransmit (doesn't wait for timeout). Works when subsequent packets arrive, generating dup ACKs.</li>
+                              <li><strong>RTO (Retransmission Timeout):</strong> If no ACKs arrive, TCP waits for a timeout (often 200ms-1s minimum), then retransmits. Timeout doubles on each retry.</li>
+                            </ul>
+                            <p class="mb-0">
+                              <strong>Tail loss</strong> is particularly problematic: if the last packets of a burst are lost, there are no subsequent packets to trigger dup ACKs, so TCP must wait for RTO. This causes multi-second stalls for what might be a single lost packet.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">Nagle's Algorithm</h6>
+                            <p>
+                              Nagle's algorithm (RFC 896) prevents sending small packets when previous data is unacknowledged:
+                            </p>
+                            <pre class="bg-white p-2 border rounded" style="font-size: 0.85em;">if (unacked_data > 0 && new_data < MSS):
+    buffer new_data until ACK received
+else:
+    send immediately</pre>
+                            <p>
+                              This is efficient for bulk transfers but terrible for interactive protocols. Combined with <strong>delayed ACK</strong> (receiver waits 40-200ms before sending ACK), it creates artificial latency.
+                            </p>
+                            <p class="mb-0">
+                              <strong>Solution:</strong> Set <code>TCP_NODELAY</code> socket option to disable Nagle's algorithm.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">ECN (Explicit Congestion Notification)</h6>
+                            <p>
+                              ECN allows routers to signal congestion without dropping packets:
+                            </p>
+                            <ol class="mb-0">
+                              <li>Router marks packet with CE (Congestion Experienced) in IP header</li>
+                              <li>Receiver sets <strong>ECE</strong> (ECN-Echo) flag in TCP ACK</li>
+                              <li>Sender reduces cwnd and sets <strong>CWR</strong> (Congestion Window Reduced)</li>
+                            </ol>
+                            <p class="mt-2 mb-0">
+                              ECN provides earlier congestion signals than loss, allowing TCP to react before queues overflow. JitterTrap shows ECE and CWR markers on the TCP Window chart.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">RTT Measurement</h6>
+                            <p>
+                              JitterTrap measures RTT by tracking TCP sequence numbers and their acknowledgements:
+                            </p>
+                            <pre class="bg-white p-2 border rounded mb-0" style="font-size: 0.85em;">RTT = time(ACK received) - time(segment sent)
+
+For segment with sequence S:
+  - Record send_time when packet with seq=S observed
+  - Record ack_time when ACK covering S observed
+  - RTT sample = ack_time - send_time</pre>
+                            <p class="mt-2 mb-0">
+                              This passive measurement doesn't require modifying endpoints. Accuracy depends on seeing both directions of the flow. Retransmitted segments are excluded (ambiguous which transmission was ACKed).
+                            </p>
+
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Video Stream Analysis -->
+                <div class="card">
+                  <div class="card-header py-2 px-3" id="helpVideoHead">
+                    <button class="btn btn-link collapsed p-0" type="button" data-toggle="collapse" data-target="#helpVideo">
+                      <i class="fas fa-video mr-2"></i>Video &amp; Audio Stream Analysis
+                    </button>
+                  </div>
+                  <div id="helpVideo" class="collapse" data-parent="#helpAccordion">
+                    <div class="card-body">
+                      <p>JitterTrap automatically detects and analyzes RTP video and audio streams by passively observing network traffic. When a media flow is detected, an icon appears in the Top Talkers legend:</p>
+                      <ul>
+                        <li><span style="color: #e74c3c;">&#x25B6;</span> <strong>Video stream</strong> &mdash; click to expand details and play video</li>
+                        <li><span style="color: #3498db;">&#x266B;</span> <strong>Audio stream</strong> &mdash; click to expand details</li>
+                      </ul>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Video Playback</h6>
+                      <p>You can watch detected video streams directly in your browser using WebRTC:</p>
+                      <ol>
+                        <li>Click the <span style="color: #e74c3c;">&#x25B6;</span> icon next to a video flow to expand details</li>
+                        <li>Click the <strong>Play Video</strong> button</li>
+                        <li>A video player window appears showing the live stream</li>
+                        <li>Press <strong>Escape</strong> or click the <strong>&times;</strong> button to close</li>
+                      </ol>
+
+                      <p><strong>How it works:</strong> JitterTrap captures RTP packets from the network and forwards them to your browser via WebRTC. The browser decodes and displays the video. This is a <em>passive tap</em> &mdash; JitterTrap observes traffic without modifying it.</p>
+
+                      <p><strong>Requirements:</strong></p>
+                      <ul>
+                        <li>Modern browser with WebRTC support (Chrome, Firefox, Edge, Safari)</li>
+                        <li>H.264 video codec (most common for IP cameras and streaming)</li>
+                        <li>The stream must have keyframes (IDR frames) &mdash; playback starts when one is received</li>
+                      </ul>
+
+                      <p><strong>Latency:</strong> Expect 100-500ms of latency depending on GOP size. Streams with frequent keyframes (low GOP) start faster and have lower latency.</p>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Video Metrics</h6>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;" class="align-top"><strong>Type</strong></td>
+                          <td>Stream type: <strong>RTP</strong> for Real-time Transport Protocol streams, or <strong>MPEG-TS</strong> for transport streams.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Codec</strong></td>
+                          <td>
+                            Video codec detected from the RTP payload:
+                            <ul class="mb-0 mt-1">
+                              <li><strong>H.264</strong> &mdash; AVC, widely used for IP cameras and streaming</li>
+                              <li><strong>H.265</strong> &mdash; HEVC, newer codec with better compression</li>
+                              <li><strong>VP8/VP9</strong> &mdash; Google's open codecs, common in WebRTC</li>
+                              <li><strong>AV1</strong> &mdash; newest open codec with excellent compression</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Source</strong></td>
+                          <td>
+                            How the codec was identified:
+                            <ul class="mb-0 mt-1">
+                              <li><strong>In-band</strong> &mdash; detected from packet payload inspection (NAL units)</li>
+                              <li><strong>SDP</strong> &mdash; obtained from RTSP signaling (more reliable)</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Resolution</strong></td>
+                          <td>Video frame dimensions (e.g., "1920x1080") extracted from SPS (Sequence Parameter Set) NAL units. May show "-" until an SPS is received, which typically occurs at stream start or with each keyframe.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Profile</strong></td>
+                          <td>
+                            Codec profile and level (e.g., "High@L4.0"). Higher profiles support more features; higher levels support higher resolutions and bitrates.
+                            <br><br>
+                            <em>H.264 profiles:</em> Baseline (simple), Main (B-frames), High (best quality)<br>
+                            <em>H.265 profiles:</em> Main, Main 10 (10-bit color), Main Still Picture
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>FPS</strong></td>
+                          <td>
+                            Frames per second, calculated as a <strong>1-second rolling average</strong>. Each unique RTP timestamp represents one video frame.
+                            <br><br>
+                            <em>Note:</em> Small variations (e.g., 29.97 vs 30.00 fps) are normal and reflect the source timing.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Bitrate</strong></td>
+                          <td>
+                            Video stream bitrate in kbps or Mbps, calculated as a <strong>1-second rolling average</strong>. Measures RTP payload bytes (excluding headers).
+                            <br><br>
+                            Bitrate varies with scene complexity &mdash; static scenes compress better than motion.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Jitter</strong></td>
+                          <td>
+                            Packet arrival time variation, calculated as a <strong>1-second rolling average</strong> of the mean absolute deviation from expected timing.
+                            <ul class="mb-0 mt-1">
+                              <li><strong>&lt; 500 &mu;s</strong> &mdash; Excellent (local networks)</li>
+                              <li><strong>500 &mu;s - 2 ms</strong> &mdash; Good (managed networks)</li>
+                              <li><strong>2-10 ms</strong> &mdash; Fair (may indicate congestion)</li>
+                              <li><strong>&gt; 10 ms</strong> &mdash; Poor (likely causing artifacts)</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>GOP</strong></td>
+                          <td>Group of Pictures &mdash; frames between keyframes. Typical: 30-60 for streaming, 1-2 for ultra-low-latency, 250+ for broadcast.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Keyframes</strong></td>
+                          <td>Total IDR (H.264) or IRAP (H.265) frames observed since detection.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Seq Loss</strong></td>
+                          <td>RTP sequence number gaps detected, indicating lost or severely reordered packets.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>SSRC</strong></td>
+                          <td>Synchronization Source &mdash; 32-bit identifier (hex) uniquely identifying this RTP stream.</td>
+                        </tr>
+                      </table>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Audio Streams</h6>
+                      <p>JitterTrap detects RTP audio streams and displays them with a <span style="color: #3498db;">&#x266B;</span> icon. Click to expand and see:</p>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 140px;" class="align-top"><strong>Codec</strong></td>
+                          <td>
+                            Audio codec detected from RTP payload type:
+                            <ul class="mb-0 mt-1">
+                              <li><strong>PCMU/PCMA</strong> &mdash; G.711 (uncompressed, 64 kbps)</li>
+                              <li><strong>G.729</strong> &mdash; Low bitrate voice codec (8 kbps)</li>
+                              <li><strong>Opus</strong> &mdash; Modern codec, excellent quality (6-510 kbps)</li>
+                              <li><strong>AAC</strong> &mdash; Advanced Audio Coding, common in streaming</li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Sample Rate</strong></td>
+                          <td>Audio sampling frequency (e.g., 8 kHz for telephony, 48 kHz for high-quality audio).</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Bitrate</strong></td>
+                          <td>Audio stream bitrate, typically 64-256 kbps depending on codec.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Jitter</strong></td>
+                          <td>Packet timing variance. Audio is more sensitive to jitter than video &mdash; values above 20-30ms may cause audible glitches.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Seq Loss</strong></td>
+                          <td>RTP sequence gaps. Even small losses can cause audible clicks or dropouts.</td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>SSRC</strong></td>
+                          <td>Stream identifier. Audio and video from the same source typically have different SSRCs.</td>
+                        </tr>
+                      </table>
+
+                      <h6 class="font-weight-bold border-top pt-2 mt-3">Troubleshooting Video Playback</h6>
+                      <table class="table table-sm table-borderless">
+                        <tr>
+                          <td style="width: 200px;" class="align-top"><strong>"Waiting for keyframe"</strong></td>
+                          <td>
+                            Playback cannot start until a keyframe (IDR) arrives. This is normal &mdash; wait for the next keyframe, which depends on the stream's GOP setting.
+                            <br><br>
+                            <em>Tip:</em> Streams with GOP=30 at 30fps send keyframes every second. GOP=300 means one keyframe every 10 seconds.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Black screen after starting</strong></td>
+                          <td>
+                            Usually means waiting for a keyframe. Check the "Keyframes" counter &mdash; if it's increasing, one should arrive soon.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Playback stutters or freezes</strong></td>
+                          <td>
+                            Check <strong>Jitter</strong> and <strong>Seq Loss</strong>. High jitter (&gt;10ms) or packet loss causes decoder stalls. The network path may be congested.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Green/purple artifacts</strong></td>
+                          <td>
+                            Packet loss corrupted reference frames. Wait for the next keyframe to recover, or check network for packet loss causes.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>"Codec not supported"</strong></td>
+                          <td>
+                            Your browser cannot decode this codec. H.264 is widely supported; H.265 requires Safari or Edge. Try a different browser.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Video detected but no Play button</strong></td>
+                          <td>
+                            The server may not have WebRTC support enabled, or the codec couldn't be identified. Check that Resolution and Profile show values (not "-").
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="align-top"><strong>Multiple SSRCs on same flow</strong></td>
+                          <td>
+                            The source is sending multiple streams (e.g., simulcast, or audio+video). Each SSRC appears as a separate entry in the legend.
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Collapsible Technical Background -->
+                      <div class="border-top pt-2 mt-3">
+                        <a class="text-muted" data-toggle="collapse" href="#helpVideoTechnical" role="button" aria-expanded="false">
+                          <i class="fas fa-caret-right mr-1"></i><i class="fas fa-caret-down mr-1 d-none"></i>
+                          <strong>Technical Background</strong> <small>(click to expand)</small>
+                        </a>
+                        <div class="collapse mt-2" id="helpVideoTechnical">
+                          <div class="card card-body bg-light">
+                            <h6 class="font-weight-bold">RTP (Real-time Transport Protocol)</h6>
+                            <p>
+                              RTP is the standard protocol for streaming media over IP networks. Each RTP packet contains:
+                            </p>
+                            <ul>
+                              <li><strong>Sequence number</strong> (16-bit) &mdash; detects packet loss and reordering</li>
+                              <li><strong>Timestamp</strong> (32-bit) &mdash; synchronizes playback timing</li>
+                              <li><strong>SSRC</strong> (32-bit) &mdash; identifies the stream source</li>
+                              <li><strong>Payload type</strong> (7-bit) &mdash; indicates codec (though often dynamically assigned)</li>
+                              <li><strong>Marker bit</strong> &mdash; typically indicates end of a video frame</li>
+                            </ul>
+                            <p class="mb-0">
+                              RTP usually runs over UDP on even-numbered ports (e.g., 5004), with RTCP control messages on the next odd port (e.g., 5005).
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">RTSP (Real Time Streaming Protocol)</h6>
+                            <p>
+                              RTSP is a signaling protocol (like SIP for VoIP) that sets up RTP streams. An RTSP session typically:
+                            </p>
+                            <ol class="mb-0">
+                              <li><strong>DESCRIBE</strong> &mdash; client requests stream information</li>
+                              <li><strong>Server sends SDP</strong> &mdash; describes available media (codec, resolution, ports)</li>
+                              <li><strong>SETUP</strong> &mdash; client requests specific tracks</li>
+                              <li><strong>PLAY</strong> &mdash; server starts sending RTP packets</li>
+                            </ol>
+                            <p class="mt-2 mb-0">
+                              JitterTrap passively observes RTSP signaling to learn codec information from SDP, which is more reliable than guessing from packet inspection.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">H.264/H.265 NAL Units</h6>
+                            <p>
+                              A <strong>NAL (Network Abstraction Layer) unit</strong> is the basic packaging unit for H.264/H.265 video data. Think of it as an envelope that wraps different types of video information.
+                            </p>
+                            <p>
+                              Video codecs need to send different types of data: configuration info, keyframes, and delta frames. NAL units provide a standard way to identify what type of data is inside, delimit where one chunk ends and another begins, and transport video over networks.
+                            </p>
+                            <p><strong>NAL unit structure:</strong></p>
+                            <pre class="bg-white p-2 border rounded" style="font-size: 0.85em;">+----------------+---------------------------+
+| NAL Header     | NAL Payload               |
+| (1-2 bytes)    | (variable length)         |
++----------------+---------------------------+</pre>
+                            <p class="mt-2"><strong>Common NAL types (H.264):</strong></p>
+                            <table class="table table-sm table-bordered" style="font-size: 0.9em;">
+                              <thead class="thead-light">
+                                <tr><th style="width: 50px;">Type</th><th style="width: 100px;">Name</th><th>Description</th></tr>
+                              </thead>
+                              <tbody>
+                                <tr><td>1</td><td>Non-IDR slice</td><td>Part of a P or B frame (needs previous frames to decode)</td></tr>
+                                <tr><td>5</td><td>IDR slice</td><td>Keyframe &mdash; can be decoded independently</td></tr>
+                                <tr><td>6</td><td>SEI</td><td>Supplemental info (timecodes, captions, etc.)</td></tr>
+                                <tr><td>7</td><td><strong>SPS</strong></td><td>Sequence Parameter Set &mdash; resolution, profile, level</td></tr>
+                                <tr><td>8</td><td><strong>PPS</strong></td><td>Picture Parameter Set &mdash; encoding settings</td></tr>
+                              </tbody>
+                            </table>
+                            <p><strong>Why this matters for JitterTrap:</strong></p>
+                            <ul>
+                              <li><strong>SPS parsing</strong> &mdash; JitterTrap reads the SPS to extract resolution, profile, and level. Without an SPS, we can't know the video dimensions.</li>
+                              <li><strong>IDR detection</strong> &mdash; Playback can only start at an IDR (keyframe) because non-IDR frames reference previous frames we didn't capture. That's why you see "Waiting for keyframe".</li>
+                              <li><strong>GOP calculation</strong> &mdash; By counting frames between IDRs, we measure the Group of Pictures size.</li>
+                            </ul>
+                            <p><strong>What arrives in a typical stream:</strong></p>
+                            <pre class="bg-white p-2 border rounded" style="font-size: 0.85em;">Time &rarr;
+
+[SPS][PPS][IDR][P][P][P][P][P][P][P]...[IDR][P][P]...
+ &uarr;    &uarr;    &uarr;                            &uarr;
+ |    |    |                            Next keyframe (GOP boundary)
+ |    |    Keyframe - playback can start here
+ |    Encoding parameters
+ Resolution, profile, level</pre>
+                            <p class="mb-0">
+                              IP cameras typically send SPS+PPS before each IDR, so you get fresh configuration with every keyframe. This is why resolution/profile often shows "-" until the first keyframe arrives.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">SSRC and Stream Multiplexing</h6>
+                            <p>
+                              A single UDP flow (IP:port pair) can carry multiple RTP streams, each with a different SSRC. Common scenarios:
+                            </p>
+                            <ul class="mb-0">
+                              <li><strong>Audio + Video</strong> &mdash; same ports, different SSRCs</li>
+                              <li><strong>Simulcast</strong> &mdash; multiple quality levels, each with its own SSRC</li>
+                              <li><strong>SSRC collision</strong> &mdash; rare, but SSRCs can change mid-stream if detected</li>
+                            </ul>
+                            <p class="mt-2 mb-0">
+                              JitterTrap tracks each SSRC separately, so audio and video from the same source appear as distinct entries even if they share an IP/port.
+                            </p>
+
+                            <h6 class="font-weight-bold mt-3">Jitter Calculation</h6>
+                            <p>
+                              For each packet, JitterTrap computes:
+                            </p>
+                            <pre class="bg-white p-2 border rounded mb-0" style="font-size: 0.85em;">D = (arrival_time - prev_arrival) - (rtp_timestamp - prev_timestamp) / clock_rate</pre>
+                            <p class="mt-2 mb-0">
+                              This measures the difference between actual and expected inter-packet time. The displayed jitter is the mean |D| over the last second. Unlike RFC 3550's smoothed jitter (which has an 1/16 smoothing factor), this shows actual recent variance and responds quickly to network changes.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Traps & Measurements -->
                 <div class="card">
                   <div class="card-header py-2 px-3" id="helpTrapsHead">

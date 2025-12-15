@@ -14,6 +14,9 @@
   /* Dirty flag signals when a redraw is needed. */
   let isDirty = true;
 
+  /* Flow selection state - null means no selection (all flows at full opacity) */
+  let selectedFlowKey = null;
+
 
   /* time (milliseconds) represented by each point on the chart */
   params.plotPeriod        = 100;
@@ -118,6 +121,21 @@
   }
 
   my.charts.setDirty = function () {
+    isDirty = true;
+  };
+
+  /* Flow selection functions for highlighting */
+  my.charts.setSelectedFlow = function (flowKey) {
+    selectedFlowKey = flowKey;
+    isDirty = true;
+  };
+
+  my.charts.getSelectedFlow = function () {
+    return selectedFlowKey;
+  };
+
+  my.charts.clearSelectedFlow = function () {
+    selectedFlowKey = null;
     isDirty = true;
   };
 

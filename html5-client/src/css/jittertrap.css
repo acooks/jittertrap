@@ -5,11 +5,14 @@
 }
 
 .axis-label {
-  font-size: .9em;
+  font-size: 0.9em;
+  fill: #000;
+  opacity: 1;
 }
 
-.axis .tick {
-  font-size: .8em;
+.axis {
+  font-size: .7em;
+  fill: #000;
 }
 
 .legendheading {
@@ -23,8 +26,14 @@
   shape-rendering: crispEdges;
 }
 
-.tick {
-  opacity: 0.4;
+.tick line {
+  stroke: #222;
+  opacity: 0.5;
+}
+
+.tick text {
+  fill: #222;
+  opacity: 1;
 }
 
 .xGrid {
@@ -78,6 +87,26 @@
   cursor: default;
 }
 
+/* Flow selection highlighting in legend */
+.toptalk-legend-row {
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.toptalk-legend-row:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.toptalk-legend-row.selected {
+  background-color: rgba(0, 123, 255, 0.15);
+  border-left: 3px solid #007bff;
+  padding-left: 5px;
+}
+
+.toptalk-legend-row.deselected {
+  opacity: 0.5;
+}
+
 .legend-color-box-header,
 .legend-color-box {
   width: 18px;
@@ -94,11 +123,11 @@
   }
 
   .axis-label {
-    font-size: 0.75em;
+    font-size: 0.85em;
   }
 
   .axis .tick {
-    font-size: 0.7em;
+    font-size: 0.8em;
   }
 
   /* Compact legend text */
@@ -460,4 +489,669 @@ footer a {
   padding: 0.15rem 0.4rem;
   margin-left: 0.5rem;
   display: none;
+}
+
+/* Video stream icon styling */
+.video-stream-icon {
+  font-size: 14px;
+  transition: transform 0.15s ease;
+}
+
+.video-stream-icon:hover {
+  transform: scale(1.3);
+}
+
+/* Video icon tooltip styling (native browser tooltip via title attribute) */
+.video-icon[title] {
+  position: relative;
+}
+
+/* Expandable video details row */
+.video-details-row-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  margin: 4px 0 8px 20px;
+  padding: 10px 15px;
+  font-size: 11px;
+}
+
+.video-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.video-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.video-label {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: 70px;
+}
+
+.video-value {
+  color: #212529;
+  min-width: 80px;
+}
+
+.video-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dee2e6;
+}
+
+.video-actions .vlc-btn {
+  font-size: 11px;
+  padding: 4px 12px;
+}
+
+.video-actions .vlc-status {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}
+
+.video-actions .vlc-connection-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.video-actions .vlc-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.video-actions .vlc-url,
+.video-actions .vlc-url-link {
+  font-family: monospace;
+  background-color: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.video-actions .vlc-url:hover,
+.video-actions .vlc-url-link:hover {
+  background-color: #dee2e6;
+  text-decoration: underline;
+}
+
+.video-actions .vlc-stop {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.video-actions .vlc-status-active {
+  color: #28a745;
+  font-weight: 500;
+}
+
+/* Video playback overlay */
+.video-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-container {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+
+.video-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(100% - 40px);
+}
+
+.video-close {
+  color: #fff;
+  font-size: 24px;
+  opacity: 0.7;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.video-close:hover {
+  opacity: 1;
+}
+
+#video-player,
+#webrtc-player {
+  width: 100%;
+  max-width: 1280px;
+  max-height: 70vh;
+  background-color: #000;
+}
+
+.video-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #2a2a2a;
+  border-top: 1px solid #333;
+}
+
+.video-status {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.video-resolution {
+  color: #888;
+  font-size: 11px;
+  margin-left: 10px;
+  font-family: monospace;
+}
+
+
+#webrtc-fullscreen-btn {
+  margin-left: auto;
+  margin-right: 5px;
+  font-size: 14px;
+  padding: 2px 8px;
+}
+
+/* Fullscreen mode adjustments */
+.video-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
+}
+
+.video-container:fullscreen .video-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background-color: rgba(42, 42, 42, 0.8);
+}
+
+.video-container:fullscreen .video-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background-color: rgba(42, 42, 42, 0.8);
+}
+
+.video-container:fullscreen #webrtc-player {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
+/* Audio stream icon styling */
+.audio-stream-icon {
+  font-size: 14px;
+  transition: transform 0.15s ease;
+}
+
+.audio-stream-icon:hover {
+  transform: scale(1.3);
+}
+
+/* Expandable audio details row - matches video panel styling */
+.audio-details-row-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  margin: 4px 0 8px 20px;
+  padding: 10px 15px;
+  font-size: 11px;
+}
+
+.audio-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.audio-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.audio-label {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: 70px;
+}
+
+.audio-value {
+  color: #212529;
+  min-width: 80px;
+}
+
+/* Expandable health details row */
+.health-details-row-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  margin: 2px 0 4px 20px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.health-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.health-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.health-label {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: 70px;
+}
+
+.health-value {
+  color: #212529;
+  min-width: 80px;
+}
+
+.health-issues {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #dee2e6;
+}
+
+.health-issues-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 6px;
+}
+
+.health-issue-item {
+  font-size: 11px;
+}
+
+/* RTT histogram visualization */
+.rtt-histogram {
+  margin-top: 6px;
+}
+
+.rtt-histogram-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.rtt-histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 35px;
+  gap: 1px;
+  background: #f8f9fa;
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.rtt-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+.rtt-bar {
+  width: 100%;
+  background: #28a745;
+  border-radius: 1px 1px 0 0;
+}
+
+.rtt-bar-empty {
+  background: #e9ecef;
+  height: 1px !important;
+}
+
+.rtt-bar-container:hover .rtt-bar:not(.rtt-bar-empty) {
+  background: #1e7e34;
+}
+
+.rtt-histogram-labels {
+  display: flex;
+  font-size: 9px;
+  color: #495057;
+  margin-top: 2px;
+}
+
+.rtt-histogram-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Jitter histogram visualization (similar to RTT, but uses different color) */
+.jitter-histogram {
+  margin-top: 6px;
+}
+
+.jitter-histogram-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.jitter-histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 35px;
+  gap: 1px;
+  background: #f8f9fa;
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.jitter-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+.jitter-bar {
+  width: 100%;
+  background: #dc3545;  /* Red to match video stream color */
+  border-radius: 1px 1px 0 0;
+}
+
+.jitter-bar-empty {
+  background: #e9ecef;
+  height: 1px !important;
+}
+
+.jitter-bar-container:hover .jitter-bar:not(.jitter-bar-empty) {
+  background: #c82333;
+}
+
+.jitter-histogram-labels {
+  display: flex;
+  font-size: 9px;
+  color: #495057;
+  margin-top: 2px;
+}
+
+.jitter-histogram-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* IPG histogram visualization (for all flows - uses blue/purple color) */
+.ipg-histogram {
+  margin-top: 6px;
+}
+
+.ipg-histogram-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.ipg-histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 35px;
+  gap: 1px;
+  background: #f8f9fa;
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.ipg-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+.ipg-bar {
+  width: 100%;
+  background: #6f42c1;  /* Purple to distinguish from RTT (green) and jitter (red) */
+  border-radius: 1px 1px 0 0;
+}
+
+.ipg-bar-empty {
+  background: #e9ecef;
+  height: 1px !important;
+}
+
+.ipg-bar-container:hover .ipg-bar:not(.ipg-bar-empty) {
+  background: #5a32a3;
+}
+
+.ipg-histogram-labels {
+  display: flex;
+  font-size: 9px;
+  color: #495057;
+  margin-top: 2px;
+}
+
+.ipg-histogram-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Frame size histogram visualization (teal color) */
+.frame-size-histogram {
+  margin-top: 6px;
+}
+
+.frame-size-histogram-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.frame-size-histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 35px;
+  gap: 1px;
+  background: #f8f9fa;
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.frame-size-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+.frame-size-bar {
+  width: 100%;
+  background: #17a2b8;  /* Teal */
+  border-radius: 1px 1px 0 0;
+}
+
+.frame-size-bar-empty {
+  background: #e9ecef;
+  height: 1px !important;
+}
+
+.frame-size-bar-container:hover .frame-size-bar:not(.frame-size-bar-empty) {
+  background: #117a8b;
+}
+
+.frame-size-histogram-labels {
+  display: flex;
+  font-size: 8px;  /* Smaller for 20 buckets */
+  color: #495057;
+  margin-top: 2px;
+}
+
+.frame-size-histogram-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* PPS histogram visualization (blue color) */
+.pps-histogram {
+  margin-top: 6px;
+}
+
+.pps-histogram-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.pps-histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 35px;
+  gap: 1px;
+  background: #f8f9fa;
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.pps-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+.pps-bar {
+  width: 100%;
+  background: #007bff;  /* Blue */
+  border-radius: 1px 1px 0 0;
+}
+
+.pps-bar-empty {
+  background: #e9ecef;
+  height: 1px !important;
+}
+
+.pps-bar-container:hover .pps-bar:not(.pps-bar-empty) {
+  background: #0056b3;
+}
+
+.pps-histogram-labels {
+  display: flex;
+  font-size: 9px;
+  color: #495057;
+  margin-top: 2px;
+}
+
+.pps-histogram-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive video sizing */
+@media (max-width: 768px) {
+  .video-container {
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  #video-player {
+    max-height: 60vh;
+  }
+
+  .video-header {
+    padding: 8px 12px;
+  }
+
+  .video-controls {
+    padding: 8px 12px;
+  }
 }

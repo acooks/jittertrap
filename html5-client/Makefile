@@ -28,6 +28,7 @@ concat: createdirs
 	cat src/js/jittertrap-chart-window.js              >> ${CONCAT}
 	cat src/js/jittertrap-traps.js                     >> ${CONCAT}
 	cat src/js/jittertrap-pcap.js                      >> ${CONCAT}
+	cat src/js/jittertrap-webrtc.js                    >> ${CONCAT}
 	cat src/js/jittertrap-programs.js                  >> ${CONCAT}
 	cat src/js/jittertrap-version.js                   >> ${CONCAT}
 	cat src/js/jittertrap.js                           >> ${CONCAT}
@@ -116,5 +117,6 @@ install:
 	install -m 0644 ${OUT}/index.html ${DESTDIR}/var/lib/jittertrap/
 	install -m 0644 ${OUT}/favicon.svg ${DESTDIR}/var/lib/jittertrap/
 
+.PHONY: test
 test:
-	true
+	@echo "No JavaScript tests currently defined"

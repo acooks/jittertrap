@@ -46,6 +46,13 @@
 
     let svg = {};
 
+    // Cached max timestamp for tick formatter (avoids closure allocation)
+    let cachedMaxTimestamp = 0;
+    const xTickFormatter = function(seconds) {
+      const relativeSeconds = seconds - cachedMaxTimestamp;
+      return relativeSeconds % 1 === 0 ? relativeSeconds.toString() : relativeSeconds.toFixed(1);
+    };
+
     m.reset = function(selectedSeries) {
 
       d3.select("#chartThroughput").selectAll("svg").remove();
@@ -134,9 +141,17 @@
         .attr("class", "yGrid")
         .call(yGrid);
 
+      // Add clip path to prevent drawing outside chart area
+      graph.append("defs").append("clipPath")
+        .attr("id", "clip-tput")
+        .append("rect")
+        .attr("width", width)
+        .attr("height", height);
+
       graph.append("path")
          .datum(chartData)
          .attr("class", "line")
+         .attr("clip-path", "url(#clip-tput)")
          .attr("d", line);
 
       my.charts.resizeChart("#chartThroughput", size)();
@@ -156,27 +171,36 @@
       xScale.range([0, width]);
       yScale.range([height, 0]);
 
-      /* Scale the range of the data again */
-      xScale.domain(d3.extent(chartData, d => d.timestamp));
+      /* Use shared domain calculation for synchronized smooth scrolling */
+      const domain = JT.core.getChartDomain();
+
+      if (domain.isValid) {
+        // Fixed window from the start - smooth scrolling enabled immediately
+        xScale.domain([domain.xMin, domain.xMax]);
+      } else {
+        // Fallback to data extent if no valid domain yet
+        xScale.domain(d3.extent(chartData, d => d.timestamp));
+      }
       yScale.domain([0, d3.max(chartData, d => d.value)]);
 
       // Update time formatter: 0 = now (max), negative = past (oscilloscope style)
       const domainExtent = xScale.domain();
       const maxTimestamp = domainExtent[1];
       const minTimestamp = domainExtent[0];
-      const domainSpanMs = maxTimestamp - minTimestamp;
+      const domainSpanSec = maxTimestamp - minTimestamp;  // Domain is now in seconds
 
       // Generate fixed tick positions in relative time to prevent scrolling
-      const tickIntervalMs = Math.max(1000, Math.ceil(domainSpanMs / 10 / 1000) * 1000); // Round to whole seconds, minimum 1s
+      const tickIntervalSec = Math.max(1, Math.ceil(domainSpanSec / 10)); // Round to whole seconds, minimum 1s
       const tickValues = [];
       let iterations = 0;
-      for (let relativeTime = 0; relativeTime >= -domainSpanMs && iterations < 100; relativeTime -= tickIntervalMs) {
+      for (let relativeTime = 0; relativeTime >= -domainSpanSec && iterations < 100; relativeTime -= tickIntervalSec) {
         tickValues.unshift(maxTimestamp + relativeTime);
         iterations++;
       }
 
       xAxis.tickValues(tickValues);
-      xAxis.tickFormat(my.charts.createTimeFormatter(maxTimestamp));
+      cachedMaxTimestamp = maxTimestamp;  // Update cached value for formatter
+      xAxis.tickFormat(xTickFormatter);
       xGrid.tickValues(tickValues);
 
       // Update grids

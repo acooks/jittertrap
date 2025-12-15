@@ -48,6 +48,26 @@
     // Reusable arrays to avoid allocations in redraw
     let windowFlowsCache = [];
     let markerDataCache = [];
+    let tempLineValues = [];  // Reusable array for line drawing
+
+    // Pool for marker data objects to avoid allocation
+    const markerObjectPool = [];
+    let markerPoolIndex = 0;
+
+    const getPooledMarker = function(fkey, ts, y, type) {
+      if (markerPoolIndex < markerObjectPool.length) {
+        const obj = markerObjectPool[markerPoolIndex++];
+        obj.fkey = fkey;
+        obj.ts = ts;
+        obj.y = y;
+        obj.type = type;
+        return obj;
+      }
+      const obj = { fkey, ts, y, type };
+      markerObjectPool.push(obj);
+      markerPoolIndex++;
+      return obj;
+    };
 
     // Cached values for tick formatter to avoid closure allocation
     let cachedMaxTs = 0;
@@ -116,6 +136,15 @@
       const graph = svg.append("g")
          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+      // Add clipPath inside graph group so it shares the same coordinate system
+      // This ensures clipping at (0,0) to (width,height) in chart space
+      graph.append("defs")
+         .append("clipPath")
+         .attr("id", "window-clip")
+         .append("rect")
+         .attr("width", width)
+         .attr("height", height);
+
       graph.append("g")
          .attr("class", "xGrid")
          .attr("transform", "translate(0," + height + ")")
@@ -151,10 +180,12 @@
          .text("Advertised Window");
 
       linesGroup = graph.append("g")
-         .attr("class", "window-lines");
+         .attr("class", "window-lines")
+         .attr("clip-path", "url(#window-clip)");
 
       markersGroup = graph.append("g")
-         .attr("class", "event-markers");
+         .attr("class", "event-markers")
+         .attr("clip-path", "url(#window-clip)");
 
       line = d3.line()
                .defined(d => d.rwnd_bytes > 0)
@@ -239,8 +270,13 @@
         return;
       }
 
-      // Set X domain
-      xScale.domain([globalMinTs, globalMaxTs]);
+      // Get domain parameters from shared utility for smooth scrolling
+      const domain = JT.core.getChartDomain();
+
+      // Use lagged domain for smooth scrolling, fall back to data extent if not yet valid
+      const xMax = domain.isValid ? domain.xMax : globalMaxTs;
+      const xMin = domain.isValid ? domain.xMin : globalMinTs;
+      xScale.domain([xMin, xMax]);
 
       if (useLogScale) {
         yScale = yScaleLog;
@@ -271,15 +307,21 @@
       line.y(lineYAccessor);
       yAxis.scale(yScale).tickFormat(formatWindow);
 
-      // Update X axis with relative time format
-      const domainSpan = globalMaxTs - globalMinTs;
-      if (domainSpan > 0) {
-        const tickInterval = Math.max(1, Math.ceil(domainSpan / 10));
+      // Update X axis with relative time format (matching Top Flows chart)
+      // Generate tick positions at ROUND intervals for clean axis labels
+      if (domain.isValid) {
+        const tickInterval = Math.max(1, Math.ceil(domain.visibleWidthSec / 10));
+
+        // Generate ticks at round relative-time positions (0, -20, -40, etc.)
         tickValuesCache.length = 0;
-        for (let relativeTime = 0; relativeTime >= -domainSpan && tickValuesCache.length < 12; relativeTime -= tickInterval) {
-          tickValuesCache.unshift(globalMaxTs + relativeTime);
+        for (let relativeTime = 0; relativeTime >= -domain.windowWidthSec && tickValuesCache.length < 15; relativeTime -= tickInterval) {
+          const absoluteTime = domain.currentTime + relativeTime;
+          if (absoluteTime >= domain.xMin && absoluteTime <= domain.xMax) {
+            tickValuesCache.unshift(absoluteTime);
+          }
         }
-        cachedMaxTs = globalMaxTs;
+        // Use currentTime as reference for stable tick labels
+        cachedMaxTs = domain.currentTime;
         xAxis.tickValues(tickValuesCache);
         xGrid.tickValues(tickValuesCache);
         xAxis.tickFormat(xTickFormatter);
@@ -299,6 +341,9 @@
       const lines = linesGroup.selectAll(".window-line")
           .data(windowFlowsCache, d => d.fkey);
 
+      // Get selected flow for highlighting
+      const selectedKey = my.charts.getSelectedFlow();
+
       lines.enter()
           .append("path")
           .attr("class", "window-line")
@@ -306,6 +351,10 @@
           .attr("stroke-width", 2)
         .merge(lines)
           .attr("stroke", d => getFlowColor(d.fkey))
+          .attr("stroke-opacity", d => {
+            if (selectedKey === null) return 1.0;
+            return d.fkey === selectedKey ? 1.0 : 0.3;
+          })
           .attr("stroke-dasharray", d => {
             // Use dotted line if we never saw the SYN handshake
             // (saw_syn is set if SYN was seen in either direction)
@@ -322,14 +371,20 @@
                 break;
               }
             }
-            return line(values.slice(0, stopIdx));
+            // Use reusable array instead of slice() to avoid allocation
+            tempLineValues.length = stopIdx;
+            for (let i = 0; i < stopIdx; i++) {
+              tempLineValues[i] = values[i];
+            }
+            return line(tempLineValues);
           });
 
       lines.exit().remove();
 
-      // Build event marker data in place - reuse cache array
+      // Build event marker data in place - reuse cache array and pooled objects
       // Stop adding markers after CLOSED state (consistent with line drawing)
       markerDataCache.length = 0;
+      markerPoolIndex = 0;  // Reset pool for this frame
 
       for (let fi = 0; fi < windowFlowsCache.length; fi++) {
         const f = windowFlowsCache[fi];
@@ -349,21 +404,21 @@
           const ts = v.ts;
           const y = v.rwnd_bytes;
 
-          // Only add markers for actual events
+          // Only add markers for actual events - use pooled objects
           if (events & CONG_EVENT.ZERO_WINDOW) {
-            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'zero_window' });
+            markerDataCache.push(getPooledMarker(fkey, ts, y, 'zero_window'));
           }
           if (events & CONG_EVENT.DUP_ACK) {
-            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'dup_ack' });
+            markerDataCache.push(getPooledMarker(fkey, ts, y, 'dup_ack'));
           }
           if (events & CONG_EVENT.RETRANSMIT) {
-            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'retransmit' });
+            markerDataCache.push(getPooledMarker(fkey, ts, y, 'retransmit'));
           }
           if (events & CONG_EVENT.ECE) {
-            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'ece' });
+            markerDataCache.push(getPooledMarker(fkey, ts, y, 'ece'));
           }
           if (events & CONG_EVENT.CWR) {
-            markerDataCache.push({ fkey: fkey, ts: ts, y: y, type: 'cwr' });
+            markerDataCache.push(getPooledMarker(fkey, ts, y, 'cwr'));
           }
         }
       }
@@ -384,6 +439,10 @@
           .attr("x", d => xScale(d.ts))
           .attr("y", d => yScale(d.y) - 12)  // Offset above line
           .attr("fill", markerFill)
+          .attr("opacity", d => {
+            if (selectedKey === null) return 1.0;
+            return d.fkey === selectedKey ? 1.0 : 0.3;
+          })
           .text(markerText);
 
       markers.exit().remove();
