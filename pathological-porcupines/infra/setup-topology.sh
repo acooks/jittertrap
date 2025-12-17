@@ -79,7 +79,17 @@ else
     echo "  Bridge exists: br0"
 fi
 
-# Step 4: Assign IP addresses
+# Step 4: Disable IPv6 on test interfaces (reduces noise in observations)
+echo "Disabling IPv6 on test interfaces..."
+ip netns exec $NS_SOURCE sysctl -qw net.ipv6.conf.all.disable_ipv6=1
+ip netns exec $NS_SOURCE sysctl -qw net.ipv6.conf.default.disable_ipv6=1
+ip netns exec $NS_DEST sysctl -qw net.ipv6.conf.all.disable_ipv6=1
+ip netns exec $NS_DEST sysctl -qw net.ipv6.conf.default.disable_ipv6=1
+ip netns exec $NS_OBSERVER sysctl -qw net.ipv6.conf.veth-src.disable_ipv6=1
+ip netns exec $NS_OBSERVER sysctl -qw net.ipv6.conf.veth-dst.disable_ipv6=1
+ip netns exec $NS_OBSERVER sysctl -qw net.ipv6.conf.br0.disable_ipv6=1
+
+# Step 5: Assign IPv4 addresses
 # Host side (management)
 if ! ip addr show dev veth-host 2>/dev/null | grep -q "10.0.0.1"; then
     ip addr add $HOST_MGMT_IP dev veth-host
@@ -114,7 +124,7 @@ fi
 ip netns exec $NS_DEST ip link set veth-dst up
 ip netns exec $NS_DEST ip link set lo up
 
-# Step 5: Verify connectivity
+# Step 6: Verify connectivity
 echo ""
 echo "Verifying topology..."
 sleep 0.5  # Allow ARP to settle
