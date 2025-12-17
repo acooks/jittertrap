@@ -48,6 +48,60 @@ Issues discovered while running pathological-porcupines tests.
 
 ---
 
+## RST-Terminated Flows Missing from TCP Charts
+
+**Test:** `tcp-lifecycle/rst-storm`
+**Date:** 2024-12-16
+
+### Issue: TCP RTT and Window charts empty for RST flows
+
+**Observed:** RST-terminated connections appear in the Top Flows list but the TCP Round-Trip Time and TCP Advertised Window charts show no data points.
+
+**Expected:** Some indication of RST flows in TCP charts, or at minimum RST markers.
+
+**Cause:** RST connections are terminated immediately after accept (SO_LINGER 0), before:
+- Any data exchange occurs (no RTT samples)
+- Window advertisements are captured
+- Meaningful TCP state is established
+
+**Impact:** RST storms are only observable via:
+- Top Flows table (shows many short-lived flows)
+- Throughput chart (brief bursts)
+- Flow count
+
+**Workaround:** Use tcpdump to observe RST packets directly:
+```bash
+sudo ip netns exec pp-observer tcpdump -i br0 'tcp[tcpflags] & tcp-rst != 0'
+```
+
+**Status:** Known limitation - RST flows too short-lived for TCP metrics
+
+---
+
+## RTP Detection Requires Standard Ports
+
+**Test:** `rtp/rtp-sequence-gap`, `rtp/rtp-jitter-spike`
+**Date:** 2024-12-16
+
+### Issue: RTP flows shown as generic UDP
+
+**Observed:** RTP test traffic on port 9999 was classified as "UDP" instead of "RTP" in JitterTrap flow table. No RTP-specific metrics (sequence tracking, jitter calculation) were applied.
+
+**Expected:** JitterTrap should detect RTP traffic and show RTP-specific metrics.
+
+**Cause:** JitterTrap likely uses port-based heuristics to detect RTP traffic. Port 9999 is not a standard RTP port.
+
+**Fix:** Changed RTP tests to use port 5004 (standard RTP data port per RFC 3551).
+
+**Note:** If JitterTrap still doesn't detect RTP, it may require:
+- Deep packet inspection of RTP headers
+- Configuration to specify which ports/flows are RTP
+- Standard RTP port range (even ports 16384-32767)
+
+**Status:** Port changed to 5004 - retest needed
+
+---
+
 ## Notes
 
 These issues were discovered using the `tcp-timing/persist-timer` test which creates a TCP flow with:
