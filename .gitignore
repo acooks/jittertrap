@@ -21,4 +21,5 @@ deps/toptalk/*.o
 
 # Pathological porcupines test suite
 pathological-porcupines/infra/node_modules/
+pathological-porcupines/infra/package-lock.json
 pathological-porcupines/screenshots/

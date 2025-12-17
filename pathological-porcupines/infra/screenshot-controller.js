@@ -105,16 +105,13 @@ class ScreenshotController {
         await this.page.select(selector, found.value);
 
         // Call JitterTrap's dev_select function to send WebSocket message
-        // This is what the change handler does internally
         await this.page.evaluate(() => {
           if (typeof JT !== 'undefined' && JT.ws && JT.ws.dev_select) {
             JT.ws.dev_select();
-            console.log('Called JT.ws.dev_select()');
           } else {
             // Fallback: trigger change event
             const el = document.querySelector('#dev_select');
             if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log('Triggered change event');
           }
         });
 
@@ -153,9 +150,12 @@ class ScreenshotController {
       // Set viewport after page creation for consistent sizing
       await this.page.setViewport({ width: 1920, height: 1080 });
 
-      // Pipe ALL browser console messages to our log for debugging
+      // Log browser errors and warnings
       this.page.on('console', msg => {
-        this.log(`Browser [${msg.type()}]: ${msg.text()}`);
+        const type = msg.type();
+        if (type === 'error' || type === 'warning') {
+          this.log(`Browser ${type}: ${msg.text()}`);
+        }
       });
 
       this.log(`Navigating to ${JITTERTRAP_URL}...`);
@@ -181,76 +181,17 @@ class ScreenshotController {
 
         this.log('Chart containers ready');
 
-        // Check if sample period is valid - if 0, the server wasn't ready yet
-        // This is a race condition workaround - reload page to get correct state
-        const samplePeriod = await this.page.evaluate(() => {
-          const el = document.querySelector('#jt-measure-sample-period');
-          if (!el) return -1;
-          const text = el.textContent || '';
-          const match = text.match(/([0-9.]+)/);
-          return match ? parseFloat(match[1]) : 0;
-        });
-        this.log(`Initial sample period: ${samplePeriod}ms`);
-
-        if (samplePeriod === 0) {
-          this.log('Sample period is 0 - server was not ready, reloading page...');
-          await new Promise(r => setTimeout(r, 2000)); // Wait for server to fully initialize
-          await this.page.reload({ waitUntil: 'networkidle2' });
-          await this.page.bringToFront();
-
-          // Re-check after reload
-          const newSamplePeriod = await this.page.evaluate(() => {
-            const el = document.querySelector('#jt-measure-sample-period');
-            if (!el) return -1;
-            const text = el.textContent || '';
-            const match = text.match(/([0-9.]+)/);
-            return match ? parseFloat(match[1]) : 0;
-          });
-          this.log(`Sample period after reload: ${newSamplePeriod}ms`);
-        }
-
-        // Log the currently selected interface (use server's default selection)
-        const selectedIface = await this.page.evaluate(() => {
-          const el = document.querySelector('#dev_select');
-          return el ? el.value : null;
-        });
-        this.log(`Default interface: ${selectedIface}`);
-
-        // If no interface is selected or wrong interface, select veth-src
-        if (!selectedIface || selectedIface !== 'veth-src') {
-          this.log('Selecting interface veth-src...');
-          await this.selectInterface('veth-src');
-
-          // Re-check after selection
-          const newIface = await this.page.evaluate(() => {
-            const el = document.querySelector('#dev_select');
-            return el ? el.value : null;
-          });
-          this.log(`Interface after selection: ${newIface}`);
-        }
-
-        // Wait a bit for the interface selection to propagate
-        await new Promise(r => setTimeout(r, 2000));
+        // Select veth-src interface (traffic from source namespace)
+        await this.selectInterface('veth-src');
 
       } catch (e) {
         this.log(`Warning: Timeout waiting for charts, continuing anyway: ${e.message}`);
       }
 
-      // Additional wait for data accumulation and time series to populate
-      // Use a keep-alive loop with mouse movements to prevent browser throttling
-      // (This is what makes demo-automation work)
+      // Wait for time series data to accumulate
       const waitTime = (this.config.data_accumulation_sec || 10) * 1000;
-      this.log(`Waiting ${waitTime / 1000}s for time series data to accumulate (with keep-alive)...`);
-
-      const endTime = Date.now() + waitTime;
-      while (Date.now() < endTime) {
-        // Move mouse randomly to keep page active (prevents animation throttling)
-        await this.page.mouse.move(
-          100 + Math.random() * 200,
-          100 + Math.random() * 200
-        ).catch(() => {});
-        await new Promise(r => setTimeout(r, 1000));
-      }
+      this.log(`Waiting ${waitTime / 1000}s for data to accumulate...`);
+      await new Promise(r => setTimeout(r, waitTime));
 
       this.initialized = true;
       this.log('READY');
