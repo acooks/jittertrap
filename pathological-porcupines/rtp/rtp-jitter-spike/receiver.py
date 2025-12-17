@@ -24,7 +24,7 @@ from common.logging_utils import setup_logging, format_bytes
 
 
 # Default configuration
-DEFAULT_PORT = 9999
+DEFAULT_PORT = 5004  # Standard RTP port for JitterTrap detection
 DEFAULT_DURATION = 20  # slightly longer than sender
 DEFAULT_SPIKE_THRESHOLD = 100  # ms - jitter above this is a spike
 
@@ -36,11 +36,11 @@ def setup_argparse() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Basic receiver
-    python receiver.py --port 9999
+    # Basic receiver (port 5004 for JitterTrap RTP detection)
+    python receiver.py
 
     # Different spike threshold
-    python receiver.py --port 9999 --spike-threshold 80
+    python receiver.py --spike-threshold 80
 
 Expected output:
     - Jitter statistics and histogram

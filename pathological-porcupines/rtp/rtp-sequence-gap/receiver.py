@@ -23,7 +23,7 @@ from common.logging_utils import setup_logging, format_bytes
 
 
 # Default configuration
-DEFAULT_PORT = 9999
+DEFAULT_PORT = 5004  # Standard RTP port for JitterTrap detection
 DEFAULT_DURATION = 20  # slightly longer than sender
 
 
@@ -34,11 +34,11 @@ def setup_argparse() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Basic receiver
-    python receiver.py --port 9999
+    # Basic receiver (uses default port 5004 for JitterTrap RTP detection)
+    python receiver.py
 
     # Longer duration
-    python receiver.py --port 9999 --duration 30
+    python receiver.py --duration 30
 
 Expected output:
     - Gap events detected with count of missing packets

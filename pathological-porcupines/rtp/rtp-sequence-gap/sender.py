@@ -25,7 +25,7 @@ from common.logging_utils import setup_logging, format_bytes
 
 # Default configuration
 DEFAULT_HOST = "10.0.1.2"
-DEFAULT_PORT = 9999
+DEFAULT_PORT = 5004  # Standard RTP port for JitterTrap detection
 DEFAULT_DURATION = 15          # seconds
 DEFAULT_FRAME_RATE = 30        # fps
 DEFAULT_GAP_INTERVAL = 2.0     # seconds between gap events
@@ -41,14 +41,14 @@ def setup_argparse() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Default: skip 1-3 packets every 2s
-    python sender.py --host 10.0.1.2 --port 9999
+    # Default: skip 1-3 packets every 2s (uses port 5004 for JitterTrap RTP detection)
+    python sender.py --host 10.0.1.2
 
     # More frequent gaps
-    python sender.py --gap-interval 1.0
+    python sender.py --host 10.0.1.2 --gap-interval 1.0
 
     # Larger gaps (simulate burst loss)
-    python sender.py --gap-min 5 --gap-max 10
+    python sender.py --host 10.0.1.2 --gap-min 5 --gap-max 10
 
 JitterTrap observation:
     - seq_loss counter increments

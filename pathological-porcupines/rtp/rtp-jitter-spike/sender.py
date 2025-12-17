@@ -24,7 +24,7 @@ from common.logging_utils import setup_logging, format_bytes
 
 # Default configuration
 DEFAULT_HOST = "10.0.1.2"
-DEFAULT_PORT = 9999
+DEFAULT_PORT = 5004  # Standard RTP port for JitterTrap detection
 DEFAULT_DURATION = 15          # seconds
 DEFAULT_FRAME_RATE = 30        # fps (33.33ms interval)
 DEFAULT_SPIKE_INTERVAL = 3.0   # seconds between jitter spikes
@@ -39,14 +39,14 @@ def setup_argparse() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Default: 30fps with 200ms spike every 3s
-    python sender.py --host 10.0.1.2 --port 9999
+    # Default: 30fps with 200ms spike every 3s (port 5004 for JitterTrap RTP detection)
+    python sender.py --host 10.0.1.2
 
     # More frequent spikes
-    python sender.py --spike-interval 2.0 --spike-delay 150
+    python sender.py --host 10.0.1.2 --spike-interval 2.0 --spike-delay 150
 
     # Larger spikes (severe)
-    python sender.py --spike-delay 500 --spike-interval 5.0
+    python sender.py --host 10.0.1.2 --spike-delay 500 --spike-interval 5.0
 
 JitterTrap observation:
     - Jitter histogram shows outliers >100ms
