@@ -45,6 +45,9 @@ static struct timeval usec_to_tv(int64_t usec)
 
 /*
  * Test 1: Basic window tracking
+ *
+ * For flow A→B, tcp_window_get_info returns the RECEIVER's (B's) window.
+ * This is the window B advertises in packets from B→A.
  */
 static int test_basic_window(void)
 {
@@ -53,17 +56,19 @@ static int test_basic_window(void)
 	tcp_window_init();
 
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* Send a data packet with window=65535 */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends ACK with window=65535 (advertising its receive buffer) */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,  /* no TCP header for options */
 	                          1000,        /* seq */
 	                          0,           /* ack */
 	                          TH_ACK,      /* flags */
-	                          65535,       /* window */
-	                          100,         /* payload_len */
+	                          65535,       /* window - server's receive window */
+	                          0,           /* payload_len - pure ACK */
 	                          usec_to_tv(0));
 
+	/* Query client→server flow: should return server's advertised window */
 	struct tcp_window_info info;
 	int ret = tcp_window_get_info(&client_to_server, &info);
 
@@ -85,6 +90,9 @@ static int test_basic_window(void)
 
 /*
  * Test 2: Zero window detection
+ *
+ * Server advertises window=0 in its ACK packets. Query client→server flow
+ * to see the server's zero window condition.
  */
 static int test_zero_window(void)
 {
@@ -93,15 +101,17 @@ static int test_zero_window(void)
 	tcp_window_init();
 
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* Send a packet with zero window */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends ACK with zero window (buffer full) */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1000, 0, TH_ACK,
 	                          0,           /* zero window! */
-	                          100,
+	                          0,           /* pure ACK */
 	                          usec_to_tv(0));
 
+	/* Query client→server: should see server's zero window */
 	struct tcp_window_info info;
 	int ret = tcp_window_get_info(&client_to_server, &info);
 
@@ -128,6 +138,9 @@ static int test_zero_window(void)
 
 /*
  * Test 3: Duplicate ACK detection
+ *
+ * Server sends multiple ACKs with same ACK number (requesting retransmit).
+ * Query client→server to see server's dup ACK count.
  */
 static int test_dup_ack(void)
 {
@@ -136,13 +149,11 @@ static int test_dup_ack(void)
 	tcp_window_init();
 
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* First, need to establish the connection with some data
-	 * so that dup_ack detection can work */
-
-	/* Send 4 pure ACKs with the same ACK number (triple dup ACK) */
+	/* Server sends 4 pure ACKs with the same ACK number (triple dup ACK) */
 	for (int i = 0; i < 4; i++) {
-		tcp_window_process_packet(&client_to_server,
+		tcp_window_process_packet(&server_to_client,
 		                          NULL, NULL,
 		                          1000, 5000, TH_ACK,
 		                          65535,
@@ -150,6 +161,7 @@ static int test_dup_ack(void)
 		                          usec_to_tv(i * 1000));
 	}
 
+	/* Query client→server: should see server's dup ACK count */
 	struct tcp_window_info info;
 	int ret = tcp_window_get_info(&client_to_server, &info);
 
@@ -171,6 +183,9 @@ static int test_dup_ack(void)
 
 /*
  * Test 4: Retransmission detection
+ *
+ * Server retransmits data to client. Query client→server to see server's
+ * retransmit count (note: this is the receiver's retransmits, not sender's).
  */
 static int test_retransmit(void)
 {
@@ -179,31 +194,33 @@ static int test_retransmit(void)
 	tcp_window_init();
 
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* Send first data packet seq=1000, len=100 */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends first data packet seq=1000, len=100 */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1000, 0, TH_ACK,
 	                          65535,
 	                          100,         /* data */
 	                          usec_to_tv(0));
 
-	/* Send second data packet seq=1100, len=100 */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends second data packet seq=1100, len=100 */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1100, 0, TH_ACK,
 	                          65535,
 	                          100,
 	                          usec_to_tv(1000));
 
-	/* Retransmit first packet seq=1000, len=100 */
-	tcp_window_process_packet(&client_to_server,
+	/* Server retransmits first packet seq=1000, len=100 */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1000, 0, TH_ACK,  /* same seq as first */
 	                          65535,
 	                          100,
 	                          usec_to_tv(2000));
 
+	/* Query client→server: returns server's (receiver's) retransmit count */
 	struct tcp_window_info info;
 	int ret = tcp_window_get_info(&client_to_server, &info);
 
@@ -225,6 +242,9 @@ static int test_retransmit(void)
 
 /*
  * Test 5: ECE/CWR flag tracking
+ *
+ * Server sends packets with ECE/CWR flags. Query client→server to see
+ * server's ECN flag counts.
  */
 static int test_ecn_flags(void)
 {
@@ -233,23 +253,25 @@ static int test_ecn_flags(void)
 	tcp_window_init();
 
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* Send packet with ECE flag */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends packet with ECE flag */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1000, 0, TH_ACK | TH_ECE,
 	                          65535,
 	                          100,
 	                          usec_to_tv(0));
 
-	/* Send packet with CWR flag */
-	tcp_window_process_packet(&client_to_server,
+	/* Server sends packet with CWR flag */
+	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          1100, 0, TH_ACK | TH_CWR,
 	                          65535,
 	                          100,
 	                          usec_to_tv(1000));
 
+	/* Query client→server: returns server's ECN flag counts */
 	struct tcp_window_info info;
 	int ret = tcp_window_get_info(&client_to_server, &info);
 
@@ -300,6 +322,10 @@ static int test_non_tcp(void)
 
 /*
  * Test 7: Bidirectional tracking
+ *
+ * With the receiver-direction semantics:
+ * - Query client→server: returns server's advertised window (from server→client packets)
+ * - Query server→client: returns client's advertised window (from client→server packets)
  */
 static int test_bidirectional(void)
 {
@@ -310,7 +336,7 @@ static int test_bidirectional(void)
 	struct flow client_to_server = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
 	struct flow server_to_client = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
 
-	/* Client sends with window=32768 */
+	/* Client sends with window=32768 (client's receive buffer) */
 	tcp_window_process_packet(&client_to_server,
 	                          NULL, NULL,
 	                          1000, 0, TH_ACK,
@@ -318,7 +344,7 @@ static int test_bidirectional(void)
 	                          100,
 	                          usec_to_tv(0));
 
-	/* Server sends with window=65535 */
+	/* Server sends with window=65535 (server's receive buffer) */
 	tcp_window_process_packet(&server_to_client,
 	                          NULL, NULL,
 	                          5000, 1100, TH_ACK,
@@ -337,13 +363,15 @@ static int test_bidirectional(void)
 		return 1;
 	}
 
-	if (c2s_info.rwnd_bytes != 32768) {
-		printf("FAIL (c2s rwnd=%ld, expected 32768)\n", c2s_info.rwnd_bytes);
+	/* c2s query returns server's window (65535 from server→client packets) */
+	if (c2s_info.rwnd_bytes != 65535) {
+		printf("FAIL (c2s rwnd=%ld, expected 65535)\n", c2s_info.rwnd_bytes);
 		return 1;
 	}
 
-	if (s2c_info.rwnd_bytes != 65535) {
-		printf("FAIL (s2c rwnd=%ld, expected 65535)\n", s2c_info.rwnd_bytes);
+	/* s2c query returns client's window (32768 from client→server packets) */
+	if (s2c_info.rwnd_bytes != 32768) {
+		printf("FAIL (s2c rwnd=%ld, expected 32768)\n", s2c_info.rwnd_bytes);
 		return 1;
 	}
 

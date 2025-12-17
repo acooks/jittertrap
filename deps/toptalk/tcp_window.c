@@ -338,8 +338,11 @@ int tcp_window_get_info(const struct flow *flow,
 		return -1;
 	}
 
-	/* Get info for the direction this flow represents (atomic loads for lock-free access) */
-	struct tcp_window_direction *dir = is_forward ? &entry->fwd : &entry->rev;
+	/* Get info for the RECEIVER's direction - the TCP window field in packets
+	 * from the receiver tells us how much we can send to them.
+	 * For flow A→B, we want B's advertised window (from packets B→A).
+	 * This is the REVERSE of the flow direction. */
+	struct tcp_window_direction *dir = is_forward ? &entry->rev : &entry->fwd;
 
 	/* Return scaled window if available */
 	int scale_status = atomic_load_explicit(&dir->scale_status, memory_order_acquire);
