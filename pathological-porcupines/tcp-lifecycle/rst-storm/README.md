@@ -21,19 +21,34 @@ Demonstrates abrupt TCP connection termination using RST (Reset) packets instead
 
 ## Root Cause
 
-RST (Reset) packets are sent in these scenarios:
+### RST Generation (per RFC 9293 Section 3.5.2)
+
+RST packets are generated when:
 
 1. **SO_LINGER with timeout=0**: Application requests immediate close
-2. **No listener**: Connection to port with no process listening
-3. **Resource exhaustion**: Kernel can't maintain connection state
-4. **Firewall/IDS**: Intrusion system terminates suspicious connection
-5. **Application crash**: Process dies with open sockets
-6. **Invalid state**: Packet arrives for unknown connection
+2. **No listener**: Connection attempt to port with no process listening
+3. **Invalid state**: Packet arrives for unknown/closed connection
+4. **Security mismatch**: Connection violates security parameters
+5. **Half-close with data**: Data arrives after CLOSE issued
 
 **Why SO_LINGER(0) causes RST**:
 - Normal close: FIN sent, wait for data drain, wait for FIN response
 - LINGER(0): Skip drain, skip wait, send RST immediately
 - Any unsent data in buffer is discarded
+
+### RST Validation (per RFC 9293 Section 3.5.3)
+
+To prevent blind RST attacks (RFC 5961):
+- RST must have sequence number within receive window
+- Out-of-window RST triggers "challenge ACK" instead of immediate close
+- In SYN-SENT state, RST accepted only if it acknowledges the SYN
+
+| State | RST Validation |
+|-------|---------------|
+| CLOSED | N/A (send RST for any non-RST segment) |
+| SYN-SENT | ACK must acknowledge SYN |
+| SYN-RECEIVED | SEQ in window |
+| ESTABLISHED | SEQ in window (challenge ACK if not) |
 
 **When RST is used intentionally**:
 - Connection pooling cleanup
@@ -242,8 +257,7 @@ RST can be used maliciously:
 
 ## References
 
-- RFC 793 - Transmission Control Protocol
-- RFC 1122 - Requirements for Internet Hosts
-- RFC 5961 - Improving TCP's Robustness to Blind In-Window Attacks
+- [RFC 9293](https://datatracker.ietf.org/doc/html/rfc9293) - Transmission Control Protocol (TCP) - Section 3.5 Reset Generation/Processing
+- [RFC 5961](https://datatracker.ietf.org/doc/html/rfc5961) - Improving TCP's Robustness to Blind In-Window Attacks
+- [RFC 793](https://datatracker.ietf.org/doc/html/rfc793) - Original TCP specification
 - Stevens, W. R. "TCP/IP Illustrated, Volume 1" - Connection Termination
-- "The TCP/IP Guide" - RST Segment

@@ -93,15 +93,31 @@ The syndrome occurs when:
 2. Sender transmits small segments to fill those windows
 3. Result: TCP overhead (40 bytes header) dominates
 
-**Avoidance mechanisms:**
+**RFC 9293 Avoidance Algorithms:**
 
-*Receiver-side (RFC 1122):*
-- Don't advertise window < MSS unless buffer is completely empty
-- Wait until window is at least min(MSS, buffer/2) before advertising
+### Sender-Side SWS Avoidance (Section 3.8.6.2.1)
 
-*Sender-side (Nagle's Algorithm, RFC 896):*
-- Buffer small writes until previous data is acknowledged
-- Send immediately only if segment is MSS-sized or no unacked data
+A sender SHOULD NOT send data until it can send:
+- A full MSS-sized segment, OR
+- At least half of the maximum observed window, OR
+- All queued data (with PSH flag), OR
+- Override timeout expires (0.1-1.0 seconds)
+
+```
+Send when: Len >= MSS OR Len >= 0.5 * Max(SND.WND) OR
+           (Len == queued_data AND PSH) OR override_timeout
+```
+
+### Receiver-Side SWS Avoidance (Section 3.8.6.2.2)
+
+A receiver SHOULD NOT advertise a larger window until the additional space is at least:
+- `min(0.5 × RCV.BUFF, Eff.snd.MSS)`
+
+This results in window advancing in MSS-sized increments rather than byte-by-byte.
+
+```
+Advertise when: RCV.BUFF - RCV.USER - RCV.WND >= min(0.5 × RCV.BUFF, MSS)
+```
 
 ## tcpdump Commands
 
@@ -118,7 +134,8 @@ sudo tshark -i lo -f "port 9999" -T fields -e tcp.len | sort | uniq -c
 
 ## References
 
-- RFC 813: Window and Acknowledgement Strategy in TCP (1982)
-- RFC 896: Nagle's Algorithm - Congestion Control in IP/TCP
-- RFC 1122: Host Requirements - TCP (SWS avoidance)
+- [RFC 9293](https://datatracker.ietf.org/doc/html/rfc9293) - Transmission Control Protocol (TCP) - Section 3.8.6.2 SWS Avoidance
+- [RFC 813](https://datatracker.ietf.org/doc/html/rfc813) - Window and Acknowledgement Strategy in TCP (1982, original SWS description)
+- [RFC 896](https://datatracker.ietf.org/doc/html/rfc896) - Nagle's Algorithm - Congestion Control in IP/TCP (sender-side fix)
+- [RFC 1122](https://datatracker.ietf.org/doc/html/rfc1122) - Host Requirements - TCP (original SWS avoidance)
 - Stevens, TCP/IP Illustrated Vol. 1, Chapter 22

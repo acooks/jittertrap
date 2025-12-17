@@ -25,22 +25,33 @@ small write patterns.
 
 ## Root Cause (Real-World)
 
-**The interaction:**
+**The interaction involves two algorithms:**
 
-1. **Nagle's Algorithm** (sender): Buffer small writes until either:
-   - Previous data is acknowledged, OR
-   - Buffer reaches MSS
+### 1. Nagle's Algorithm (RFC 896, referenced in RFC 9293)
 
-2. **Delayed ACK** (receiver): Wait up to 200ms before sending ACK:
-   - Hoping to piggyback ACK on response data
-   - Or until 2 full segments received
-   - Or timer expires (40ms on Linux, 200ms default)
+Buffer small writes until either:
+- Previous data is acknowledged, OR
+- Buffer reaches MSS (Maximum Segment Size)
 
-**The deadlock:**
+### 2. Delayed ACK (RFC 9293 Section 3.8.6.3)
+
+Per the specification: "A TCP implementation SHOULD send an ACK for at least every second full-sized segment... within 0.5 seconds of the arrival of the first unacknowledged packet."
+
+| Trigger | Action |
+|---------|--------|
+| 2 full segments received | ACK immediately |
+| 0.5 second timer expires | ACK immediately |
+| Out-of-order segment | ACK immediately |
+| Otherwise | Wait for more data to piggyback ACK |
+
+**Note**: Linux defaults to 40ms (HZ/25), not the RFC's 0.5s maximum.
+
+### The Deadlock Scenario
+
 1. Sender writes small chunk (< MSS)
 2. Nagle buffers it, waiting for ACK of previous data
 3. Receiver has data but delays ACK, waiting for more data or response
-4. Both wait... until delayed ACK timer expires (40-200ms)
+4. Both wait... until delayed ACK timer expires (40-200ms depending on OS)
 
 ## Simulation Method
 
@@ -144,7 +155,7 @@ sudo tcpdump -i lo port 9999 -nn -ttt | grep -E 'length [0-9]+|ack'
 
 ## References
 
-- RFC 896: Congestion Control in IP/TCP Internetworks (Nagle)
-- RFC 1122: Requirements for Internet Hosts (Delayed ACK)
-- RFC 2581: TCP Congestion Control (ACK recommendations)
-- "Nagle's Algorithm is Not Friendly" - John Nagle's retrospective
+- [RFC 9293](https://datatracker.ietf.org/doc/html/rfc9293) - Transmission Control Protocol (TCP) - Section 3.8.6.3 Delayed Acknowledgments
+- [RFC 896](https://datatracker.ietf.org/doc/html/rfc896) - Congestion Control in IP/TCP Internetworks (Nagle's Algorithm)
+- [RFC 1122](https://datatracker.ietf.org/doc/html/rfc1122) - Requirements for Internet Hosts (original Delayed ACK spec)
+- "Nagle's Algorithm is Not Friendly" - John Nagle's retrospective on the interaction
