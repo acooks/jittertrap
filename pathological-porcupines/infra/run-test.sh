@@ -32,10 +32,17 @@ AUTO_MODE=false
 IMPAIRMENT=""
 RUN_JITTERTRAP=true
 OPEN_BROWSER=true
-RESET_AFTER=false
+TEARDOWN_AFTER=true
+CAPTURE_SCREENSHOTS=false
 JT_BINARY="${JT_BINARY:-$PP_ROOT/../server/jt-server}"
 JT_RESOURCES="${JT_RESOURCES:-$PP_ROOT/../html5-client/output}"
 JT_URL="http://10.0.0.2:8080"
+
+# Screenshot capture state
+SCREENSHOT_FIFO=""
+SCREENSHOT_PID=""
+SCREENSHOT_OUTPUT_DIR=""
+SCREENSHOT_FD=""
 
 # Parse arguments
 if [[ $# -lt 1 ]]; then
@@ -46,7 +53,8 @@ if [[ $# -lt 1 ]]; then
     echo "  --impairment <prof>  Apply impairment profile (wan, lossy, etc.)"
     echo "  --no-jittertrap      Skip JitterTrap"
     echo "  --no-browser         Don't auto-open browser"
-    echo "  --reset              Reset network after test"
+    echo "  --no-teardown        Keep namespaces after test (for debugging)"
+    echo "  --capture-screenshots  Capture screenshots when test passes"
     echo ""
     echo "Examples:"
     echo "  run-test.sh tcp-timing/persist-timer"
@@ -75,8 +83,12 @@ while [[ $# -gt 0 ]]; do
             OPEN_BROWSER=false
             shift
             ;;
-        --reset)
-            RESET_AFTER=true
+        --no-teardown)
+            TEARDOWN_AFTER=false
+            shift
+            ;;
+        --capture-screenshots)
+            CAPTURE_SCREENSHOTS=true
             shift
             ;;
         *)
@@ -102,15 +114,178 @@ if ! topology_exists; then
     "$SCRIPT_DIR/setup-topology.sh"
 fi
 
+# Screenshot capture functions
+setup_screenshot_capture() {
+    local test_path="$1"
+    local readme="$PP_ROOT/$test_path/README.md"
+
+    # Create output directory with timestamp
+    local timestamp
+    timestamp=$(date +%Y-%m-%d_%H%M%S)
+    SCREENSHOT_OUTPUT_DIR="$PP_ROOT/screenshots/$timestamp"
+    mkdir -p "$SCREENSHOT_OUTPUT_DIR"
+
+    # Fix ownership if running under sudo so the controller can write
+    if [[ -n "${SUDO_USER:-}" ]]; then
+        chown "$SUDO_USER:$SUDO_USER" "$SCREENSHOT_OUTPUT_DIR"
+    fi
+
+    # Create named pipe for IPC
+    SCREENSHOT_FIFO="/tmp/pp-screenshot-$$.fifo"
+    mkfifo "$SCREENSHOT_FIFO"
+    # Make FIFO accessible to non-root user
+    chmod 666 "$SCREENSHOT_FIFO"
+
+    # Get screenshot config from README
+    local config
+    config=$("$SCRIPT_DIR/get-screenshot-config.py" "$readme")
+
+    echo "Starting screenshot controller..."
+    echo "  Output: $SCREENSHOT_OUTPUT_DIR"
+
+    # Start screenshot controller in background
+    # Run as original user if we're running under sudo
+    if [[ -n "${SUDO_USER:-}" ]]; then
+        sudo -u "$SUDO_USER" node "$SCRIPT_DIR/screenshot-controller.js" \
+            "$SCREENSHOT_FIFO" \
+            "$SCREENSHOT_OUTPUT_DIR" \
+            "$test_path" \
+            "$config" &
+    else
+        node "$SCRIPT_DIR/screenshot-controller.js" \
+            "$SCREENSHOT_FIFO" \
+            "$SCREENSHOT_OUTPUT_DIR" \
+            "$test_path" \
+            "$config" &
+    fi
+    SCREENSHOT_PID=$!
+
+    # Give controller time to start listening
+    sleep 1
+
+    # Verify it started
+    if ! kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
+        echo "Warning: Screenshot controller failed to start" >&2
+        CAPTURE_SCREENSHOTS=false
+        rm -f "$SCREENSHOT_FIFO"
+        return 1
+    fi
+
+    # Open a persistent file descriptor to keep FIFO open for writing
+    # This prevents EOF when individual echo commands complete
+    exec 3>"$SCREENSHOT_FIFO"
+    SCREENSHOT_FD=3
+
+    # Send INIT command to start browser and wait for data
+    echo "INIT" >&3
+
+    # Wait for controller to signal READY via ready file
+    local ready_file="$SCREENSHOT_OUTPUT_DIR/.ready"
+    echo "  Waiting for JitterTrap UI to be ready..."
+    local ready_timeout=60  # 60 second timeout
+    while [[ ! -f "$ready_file" ]] && [[ $ready_timeout -gt 0 ]]; do
+        # Check if controller is still running
+        if ! kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
+            echo "Warning: Screenshot controller exited during initialization" >&2
+            CAPTURE_SCREENSHOTS=false
+            return 1
+        fi
+        sleep 1
+        ((ready_timeout--))
+    done
+
+    if [[ -f "$ready_file" ]]; then
+        echo "  JitterTrap UI ready"
+        rm -f "$ready_file"
+    else
+        echo "Warning: Timeout waiting for JitterTrap UI, proceeding anyway" >&2
+    fi
+
+    return 0
+}
+
+trigger_screenshot() {
+    local line="$1"
+
+    # Only trigger if screenshot capture is enabled and FD is open
+    if [[ "$CAPTURE_SCREENSHOTS" != "true" ]] || [[ -z "${SCREENSHOT_FD:-}" ]]; then
+        return
+    fi
+
+    # Trigger on [PASS] patterns
+    if [[ "$line" =~ \[PASS\] ]]; then
+        echo "CAPTURE_ALL" >&${SCREENSHOT_FD} 2>/dev/null || true
+    fi
+}
+
+cleanup_screenshot() {
+    if [[ -n "$SCREENSHOT_PID" ]] && kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
+        echo "Stopping screenshot controller..."
+
+        # Send SHUTDOWN via open file descriptor and close it
+        # Closing the FD causes EOF on the FIFO reader, triggering shutdown
+        if [[ -n "${SCREENSHOT_FD:-}" ]]; then
+            echo "SHUTDOWN" >&${SCREENSHOT_FD} 2>/dev/null || true
+            # Close fd 3 explicitly (the FD we opened)
+            exec 3>&- 2>/dev/null || true
+            SCREENSHOT_FD=""
+        fi
+
+        # Wait for clean shutdown (allow time for captures to complete)
+        local timeout=20
+        while kill -0 "$SCREENSHOT_PID" 2>/dev/null && [[ $timeout -gt 0 ]]; do
+            sleep 0.5
+            ((timeout--))
+        done
+        # Force kill if still running
+        if kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
+            echo "  Screenshot controller still running, killing..."
+            kill -9 "$SCREENSHOT_PID" 2>/dev/null || true
+        fi
+    fi
+
+    # Close FD if still open (fd 3)
+    if [[ -n "${SCREENSHOT_FD:-}" ]]; then
+        exec 3>&- 2>/dev/null || true
+        SCREENSHOT_FD=""
+    fi
+
+    # Clean up FIFO
+    [[ -n "$SCREENSHOT_FIFO" ]] && rm -f "$SCREENSHOT_FIFO"
+
+    # Report output location
+    if [[ -n "$SCREENSHOT_OUTPUT_DIR" ]] && [[ -d "$SCREENSHOT_OUTPUT_DIR" ]]; then
+        local count
+        count=$(find "$SCREENSHOT_OUTPUT_DIR" -name "*.png" 2>/dev/null | wc -l)
+        if [[ $count -gt 0 ]]; then
+            echo ""
+            echo "Screenshots saved: $SCREENSHOT_OUTPUT_DIR ($count files)"
+        fi
+    fi
+}
+
 # Apply impairment if specified
 if [[ -n "$IMPAIRMENT" ]]; then
     echo "Applying impairment profile: $IMPAIRMENT"
     "$SCRIPT_DIR/add-impairment.sh" "$IMPAIRMENT"
 fi
 
+# Screenshot capture uses its own browser, so disable xdg-open browser
+# Do this BEFORE starting JitterTrap to avoid opening two browsers
+if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
+    OPEN_BROWSER=false
+fi
+
 # Start JitterTrap if requested
 JT_PID=""
 if [[ "$RUN_JITTERTRAP" == "true" ]]; then
+    # Kill any stale jt-server processes from previous runs to avoid conflicts
+    if pgrep -x jt-server >/dev/null 2>&1; then
+        echo "Cleaning up stale jt-server processes..."
+        pkill -x jt-server 2>/dev/null || true
+        sleep 1
+    fi
+
     if [[ ! -x "$JT_BINARY" ]]; then
         echo "Warning: JitterTrap binary not found at $JT_BINARY" >&2
         echo "Set JT_BINARY environment variable or use --no-jittertrap" >&2
@@ -122,7 +297,8 @@ if [[ "$RUN_JITTERTRAP" == "true" ]]; then
         # the namespace is fine - it's only accessible via the namespace's IPs.
         ns_exec "$PP_NS_OBSERVER" "$JT_BINARY" --allowed veth-src:veth-dst -r "$JT_RESOURCES" -p 8080 &
         JT_PID=$!
-        sleep 2
+        # Wait for JitterTrap to fully initialize (server + sampling threads)
+        sleep 4
 
         # Verify it started
         if ! kill -0 "$JT_PID" 2>/dev/null; then
@@ -130,7 +306,7 @@ if [[ "$RUN_JITTERTRAP" == "true" ]]; then
             exit 1
         fi
 
-        # Open browser if requested
+        # Open browser if requested (disabled when --capture-screenshots is used)
         if [[ "$OPEN_BROWSER" == "true" ]]; then
             if [[ -n "${SUDO_USER:-}" ]] && command -v xdg-open &>/dev/null; then
                 echo "Opening browser to $JT_URL ..."
@@ -143,6 +319,16 @@ if [[ "$RUN_JITTERTRAP" == "true" ]]; then
                 echo "Open $JT_URL in your browser"
             fi
         fi
+    fi
+fi
+
+# Start screenshot capture if requested (requires JitterTrap to be running)
+if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
+    if [[ "$RUN_JITTERTRAP" == "true" ]]; then
+        setup_screenshot_capture "$TEST_PATH"
+    else
+        echo "Warning: Screenshot capture requires JitterTrap (--no-jittertrap disables it)" >&2
+        CAPTURE_SCREENSHOTS=false
     fi
 fi
 
@@ -222,21 +408,60 @@ if [[ ! -f "$SRC_SCRIPT" ]]; then
 fi
 
 # Start destination (server/receiver)
+# Note: Don't hardcode port - let each test use its default
+# (TCP tests use 9999, RTP tests use 5004 for JitterTrap detection)
 echo "Starting receiver in $PP_NS_DEST namespace..."
-ns_exec "$PP_NS_DEST" python3 "$DEST_SCRIPT" --port 9999 &
+ns_exec "$PP_NS_DEST" python3 "$DEST_SCRIPT" &
 DEST_PID=$!
 
-# Wait for server to start listening
-if ! wait_for_port "$PP_NS_DEST" 9999 5; then
-    echo "Warning: Server may not have started correctly" >&2
-fi
+# Wait for server/receiver to initialize
+# For TCP tests, we could check port; for UDP we just wait
+sleep 1
 
 # Start source (client/sender)
 echo "Starting sender in $PP_NS_SOURCE namespace..."
 echo ""
 echo "--- Test Output ---"
-ns_exec "$PP_NS_SOURCE" python3 "$SRC_SCRIPT" --host "$PP_DST_IP" --port 9999
-SRC_EXIT=$?
+
+# Set up log file if capturing screenshots
+LOG_FILE=""
+if [[ -n "$SCREENSHOT_OUTPUT_DIR" ]]; then
+    LOG_FILE="$SCREENSHOT_OUTPUT_DIR/$(echo "$TEST_PATH" | tr '/' '_').log"
+fi
+
+# Run sender and parse output for screenshot triggers
+if [[ "$CAPTURE_SCREENSHOTS" == "true" ]] && [[ -n "${SCREENSHOT_FD:-}" ]]; then
+    # Capture output, log it, and trigger screenshots on [PASS] patterns
+
+    # Create temp files for IPC (subshell can't set parent variables)
+    EXIT_FILE=$(mktemp)
+    TRIGGER_FLAG=$(mktemp)
+    rm -f "$TRIGGER_FLAG"  # Remove so we can test existence
+
+    # Run command and capture exit status
+    {
+        ns_exec "$PP_NS_SOURCE" python3 "$SRC_SCRIPT" --host "$PP_DST_IP" 2>&1
+        echo $? > "$EXIT_FILE"
+    } | while IFS= read -r line; do
+        echo "$line"
+        [[ -n "$LOG_FILE" ]] && echo "$line" >> "$LOG_FILE"
+        # Trigger on first [PASS] pattern only (avoid duplicate captures)
+        # Write to fd 3 which stays open in the parent shell
+        if [[ "$line" =~ \[PASS\] ]] && [[ ! -f "$TRIGGER_FLAG" ]]; then
+            echo "CAPTURE_ALL" >> "$SCREENSHOT_FIFO" 2>/dev/null || true
+            touch "$TRIGGER_FLAG"
+        fi
+    done
+
+    # Read exit status from temp file
+    SRC_EXIT=$(cat "$EXIT_FILE" 2>/dev/null || echo 1)
+    rm -f "$EXIT_FILE" "$TRIGGER_FLAG"
+else
+    # Simple execution without screenshot capture
+    ns_exec "$PP_NS_SOURCE" python3 "$SRC_SCRIPT" --host "$PP_DST_IP"
+    SRC_EXIT=$?
+fi
+
 echo "--- End Test Output ---"
 echo ""
 
@@ -244,23 +469,37 @@ echo ""
 wait "$DEST_PID" 2>/dev/null || true
 DEST_EXIT=$?
 
+# Clean up screenshot capture (before stopping JitterTrap)
+if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
+    cleanup_screenshot
+fi
+
 # Stop JitterTrap
 if [[ -n "$JT_PID" ]]; then
     kill "$JT_PID" 2>/dev/null || true
     wait "$JT_PID" 2>/dev/null || true
 fi
 
-# Reset network if requested
-if [[ "$RESET_AFTER" == "true" ]]; then
-    echo "Resetting network configuration..."
-    reset_network
-fi
-
-# Report results
+# Report results and cleanup
 if [[ $SRC_EXIT -eq 0 && $DEST_EXIT -eq 0 ]]; then
     print_result "PASS" "$TEST_PATH"
+
+    # Tear down topology after successful test (unless --no-teardown)
+    if [[ "$TEARDOWN_AFTER" == "true" ]]; then
+        echo ""
+        echo "Tearing down test topology..."
+        "$SCRIPT_DIR/teardown-topology.sh"
+    fi
+
     exit 0
 else
     print_result "FAIL" "$TEST_PATH" "Sender exit: $SRC_EXIT, Receiver exit: $DEST_EXIT"
+
+    # On failure, keep topology for debugging unless explicitly requested
+    if [[ "$TEARDOWN_AFTER" == "true" ]]; then
+        echo ""
+        echo "Note: Topology preserved for debugging. Run teardown-topology.sh to clean up."
+    fi
+
     exit 1
 fi

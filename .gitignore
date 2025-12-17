@@ -18,3 +18,7 @@ server/test-mq
 server/test-mq-mt
 server/*.o
 deps/toptalk/*.o
+
+# Pathological porcupines test suite
+pathological-porcupines/infra/node_modules/
+pathological-porcupines/screenshots/
