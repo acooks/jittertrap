@@ -2,57 +2,67 @@
 
 ## Overview
 
-Simulates a TCP receiver application that cannot keep up with incoming data,
-causing the receive buffer to fill and eventually triggering TCP zero-window
-advertisements.
+Simulates a TCP receiver application that cannot quite keep up with incoming data, causing TCP window oscillation as the receive buffer repeatedly fills and partially drains.
 
 ## Network Effect
 
 **What you'll see:**
-- Zero-window events as receiver buffer fills
-- RTT increases as data queues in sender's buffer
-- Throughput drops to near-zero during starvation periods
-- Persist probes from sender (1s, 2s, 4s... intervals)
+- TCP window oscillates (fills up, drains a bit, fills again)
+- Brief or no sustained zero-window events
+- Throughput limited by receiver's processing capacity
+- RTT may increase slightly as buffers fill
+
+**Key distinction from persist-timer:**
+- persist-timer: Complete stop → sustained zero-window → persist probes
+- receiver-starvation: Slow continuous → oscillating window → flow control
 
 ## JitterTrap Indicators
 
 | Metric | Expected Value | Why |
 |--------|---------------|-----|
-| Zero Window Count | Increases | Receiver advertises window=0 |
-| RTT | Increases, then stabilizes | Sender queues data |
-| Throughput | Drops to near-zero | No window to send into |
-| Packet Size | Tiny probe packets | Zero-window probes |
+| TCP Window | Oscillating pattern | Buffer fills/drains repeatedly |
+| Throughput | Limited (~800 KB/s) | Receiver can't keep up |
+| Zero Window | Brief or none | Not sustained like persist-timer |
+| RTT | Slightly elevated | Some queuing in buffers |
 
 ## Root Cause (Real-World)
 
 This occurs when:
-- Receiver application is blocked on slow I/O (disk, database)
-- CPU starvation (competing processes, GC pauses)
-- Application bug causing delayed reads
-- Deliberate backpressure (rate limiting)
+- Receiver application is doing slow processing (disk I/O, computation)
+- CPU contention (competing processes, GC pauses)
+- Rate mismatch between sender and receiver capabilities
+- Deliberate backpressure (rate limiting at application layer)
+
+**Key difference from persist-timer:** The receiver is always reading, just not fast enough. This creates a "struggling" pattern rather than a complete stall.
 
 ## Simulation Method
 
-Server (receiver) sleeps between recv() calls, simulating slow processing.
-This causes the socket receive buffer to fill, triggering TCP flow control.
+**Server (receiver):**
+- Reads data with a small delay between recv() calls
+- Default: 8KB reads every 10ms → ~800 KB/s max capacity
+- Buffer fills when sender exceeds this rate
+- Window advertised reflects available buffer space
+
+**Client (sender):**
+- Sends at target rate (~1 MB/s by default)
+- Rate is ~25% higher than receiver capacity
+- Gets blocked briefly when window shrinks
+- Resumes when receiver drains some buffer
 
 ## Usage
 
-### Terminal 1: Start JitterTrap (optional)
+### With test runner (Recommended)
 ```bash
-sudo jt-server -i lo
-# Open http://localhost:8080 and select loopback interface
+sudo ./infra/run-test.sh tcp-flow-control/receiver-starvation
 ```
 
-### Terminal 2: Start Server (receiver)
+### Manual execution
 ```bash
-cd pathological-porcupines/tcp-flow-control/receiver-starvation
-python server.py --port 9999 --delay 0.1
-```
+# Terminal 1: Start server (in destination namespace)
+sudo ip netns exec pp-dest python3 server.py --port 9999
 
-### Terminal 3: Start Client (sender)
-```bash
-python client.py --host localhost --port 9999 --rate 10
+# Terminal 2: Start client (in source namespace)
+sudo ip netns exec pp-source python3 client.py --host 10.0.1.2 --port 9999
 ```
 
 ## Configuration Options
@@ -61,48 +71,120 @@ python client.py --host localhost --port 9999 --rate 10
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--port` | 9999 | Listen port |
-| `--recv-buf` | 8192 | SO_RCVBUF size (smaller = faster starvation) |
-| `--delay` | 0.1 | Seconds to sleep between recv() calls |
-| `--read-size` | 1024 | Bytes to read per recv() call |
+| `--recv-buf` | 16384 | SO_RCVBUF size (16KB) |
+| `--delay` | 0.01 | Seconds between recv() calls (10ms) |
+| `--read-size` | 8192 | Bytes per recv() (8KB) |
+| `--duration` | 15 | Test duration in seconds |
 
 ### Client Options
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--host` | localhost | Server host |
+| `--host` | 10.0.1.2 | Server host |
 | `--port` | 9999 | Server port |
-| `--rate` | 10 | Target throughput in MB/s |
-| `--duration` | 30 | Test duration in seconds |
+| `--rate` | 1.0 | Target throughput in MB/s |
+| `--duration` | 15 | Test duration in seconds |
+| `--chunk-size` | 16384 | Chunk size for sends (16KB) |
 
 ## Variations
 
-- **Mild**: `--delay 0.05 --recv-buf 65536` (occasional zero-window)
-- **Severe**: `--delay 0.5 --recv-buf 4096` (sustained starvation)
-- **Intermittent**: Use `--pattern burst` to alternate fast/slow reading
+### Mild starvation (barely keeping up)
+```bash
+# Receiver at 90% of sender rate - window fluctuates but rarely hits zero
+python3 server.py --delay 0.008 --read-size 8192   # ~1 MB/s capacity
+python3 client.py --rate 1.1                        # 1.1 MB/s send
+```
 
-## Educational Notes
+### Severe starvation (frequent zero-window)
+```bash
+# Receiver at 50% of sender rate - frequent brief zero-window events
+python3 server.py --delay 0.02 --read-size 4096   # ~200 KB/s capacity
+python3 client.py --rate 0.5                       # 500 KB/s send
+```
 
-TCP flow control prevents sender from overwhelming receiver:
+### Extreme starvation (like persist-timer)
+```bash
+# Receiver overwhelmed - behaves like persist-timer
+python3 server.py --delay 0.1 --read-size 1024    # ~10 KB/s capacity
+python3 client.py --rate 10                        # 10 MB/s send
+```
 
-1. Receiver advertises available buffer space in "window" field
-2. Sender limits unacknowledged data to advertised window
-3. When window reaches 0, sender stops and waits
-4. Sender periodically probes with tiny segments to detect window opening
-5. Window opening allows transmission to resume
+## Self-Check Assertions
 
-This is distinct from congestion control (which limits for network capacity).
+The test verifies:
+1. **Data transferred**: Meaningful data exchange occurred (>100KB)
+2. **Rate limited**: Actual throughput limited by receiver capacity
+3. **Blocking detected**: Sender experienced flow control blocking
+
+## Expected Output
+
+### Server
+```
+Server listening on port 9999
+Receive buffer: 32.0 KB (requested 16.0 KB)
+Starting slow receive loop for 15s
+Receive capacity: ~800.0 KB/s (8.0 KB every 10ms)
+Window will oscillate as buffer fills/drains
+Client connected from 10.0.1.1:45678
+Received: 4.0 MB total, current: 780.5 KB/s, avg: 795.2 KB/s
+...
+
+RECEIVER STARVATION TEST RESULTS
+Duration: 15.0s
+Total received: 11.9 MB
+Average rate: 795.2 KB/s
+Receive capacity: ~800.0 KB/s
+
+Self-check results:
+  [PASS] Data received: 11.9 MB
+  [PASS] Rate limited by receiver: 795.2 KB/s <= 800.0 KB/s
+  [PASS] Duration: 15.0s
+```
+
+### Client
+```
+Connecting to 10.0.1.2:9999...
+Connected. Send buffer: 128.0 KB
+Target rate: 1.0 MB/s
+Starting 15s test
+Sending 16.0 KB chunks to achieve 1.0 MB/s
+Sent: 4.2 MB total, rate: 820.1 KB/s, blocks: 42
+...
+
+RECEIVER STARVATION CLIENT RESULTS
+Duration: 15.0s
+Total sent: 11.9 MB
+Target rate: 1.0 MB/s
+Actual rate: 795.2 KB/s
+Blocked 156 times, total blocked time: 3.21s (21.4% of test)
+
+Self-check results:
+  [PASS] Data sent: 11.9 MB
+  [PASS] Rate limited by receiver: 795.2 KB/s < 1.0 MB/s
+  [PASS] Sender blocked: 156 blocks, 3.21s total
+```
+
+## Comparison with persist-timer
+
+| Aspect | receiver-starvation | persist-timer |
+|--------|---------------------|---------------|
+| Receiver behavior | Slow continuous reading | Complete stop |
+| Window pattern | Oscillating (sawtooth) | Binary (healthy → zero → healthy) |
+| Zero-window | Brief/intermittent | Sustained (seconds) |
+| Persist probes | Rarely triggered | Yes, at exponential backoff |
+| Observable in JitterTrap | Window chart oscillation | Window drops to zero flat line |
 
 ## tcpdump Commands
 
 ```bash
-# Watch for zero-window advertisements
-sudo tcpdump -i lo port 9999 -nn -v 2>&1 | grep -E 'win [0-9]+'
+# Watch window advertisements
+sudo ip netns exec pp-observer tcpdump -i br0 -n 'tcp port 9999' -v 2>&1 | grep -E 'win [0-9]+'
 
-# Count zero-window events
-sudo tcpdump -i lo port 9999 -nn 2>&1 | grep 'win 0'
+# Count packets with small window (<1000 bytes)
+sudo ip netns exec pp-observer tcpdump -i br0 -n 'tcp port 9999 and tcp[14:2] < 1000' -c 100
 ```
 
 ## References
 
 - RFC 793: TCP (window management)
-- RFC 1122: Host Requirements (persist timer)
+- RFC 1122: Host Requirements (flow control)
 - RFC 7323: TCP Extensions (window scaling)

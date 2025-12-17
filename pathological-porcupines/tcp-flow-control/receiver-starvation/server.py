@@ -23,9 +23,10 @@ from common.logging_utils import setup_logging, format_bytes, format_rate
 
 # Default configuration
 DEFAULT_PORT = 9999
-DEFAULT_RECV_BUF = 8192       # Small buffer to trigger zero-window quickly
-DEFAULT_DELAY = 0.1           # 100ms delay between reads
-DEFAULT_READ_SIZE = 1024      # Bytes per recv()
+DEFAULT_RECV_BUF = 16384      # 16KB buffer - moderate size
+DEFAULT_DELAY = 0.01          # 10ms delay between reads
+DEFAULT_READ_SIZE = 8192      # 8KB per recv() → ~800 KB/s max receive rate
+DEFAULT_DURATION = 15         # Test duration in seconds
 
 
 def setup_argparse() -> argparse.Namespace:
@@ -58,6 +59,8 @@ JitterTrap observation:
                         help=f"Delay between recv() calls in seconds (default: {DEFAULT_DELAY})")
     parser.add_argument("--read-size", type=int, default=DEFAULT_READ_SIZE,
                         help=f"Bytes to read per recv() (default: {DEFAULT_READ_SIZE})")
+    parser.add_argument("--duration", type=float, default=DEFAULT_DURATION,
+                        help=f"Test duration in seconds (default: {DEFAULT_DURATION})")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Verbose output")
     parser.add_argument("--quiet", "-q", action="store_true",
@@ -125,35 +128,41 @@ class ReceiverStarvationServer:
         """
         time.sleep(self.args.delay)
 
-    def run(self) -> None:
-        """Main execution loop."""
+    def run(self) -> int:
+        """Main execution loop. Returns exit code."""
         self.setup()
+        exit_code = 0
 
         try:
-            while self.running:
-                if not self.accept_connection():
-                    continue
+            if not self.accept_connection():
+                return 1
 
-                self.handle_client()
+            exit_code = self.handle_client()
 
         except KeyboardInterrupt:
             logging.info("Interrupted by user")
         finally:
             self.cleanup()
 
-    def handle_client(self) -> None:
-        """Handle a single client connection."""
+        return exit_code
+
+    def handle_client(self) -> int:
+        """Handle a single client connection. Returns exit code."""
         self.total_bytes = 0
         self.start_time = time.monotonic()
+        end_time = self.start_time + self.args.duration
         last_report_time = self.start_time
         last_report_bytes = 0
 
-        logging.info("Starting slow receive loop (Ctrl+C to stop)")
-        logging.info(f"Will cause zero-window events due to {self.args.delay*1000:.0f}ms "
-                     f"delay between {format_bytes(self.args.read_size)} reads")
+        # Calculate theoretical receive capacity
+        recv_capacity = self.args.read_size / self.args.delay
+        logging.info(f"Starting slow receive loop for {self.args.duration}s")
+        logging.info(f"Receive capacity: ~{format_rate(recv_capacity)} "
+                     f"({format_bytes(self.args.read_size)} every {self.args.delay*1000:.0f}ms)")
+        logging.info("Window will oscillate as buffer fills/drains")
 
         try:
-            while self.running:
+            while self.running and time.monotonic() < end_time:
                 # This delay is the pathology - it causes buffer to fill
                 self.simulate_slow_processing()
 
@@ -191,21 +200,76 @@ class ReceiverStarvationServer:
                     last_report_bytes = self.total_bytes
 
         finally:
-            self.report_final_stats()
             if self.client_socket:
                 self.client_socket.close()
                 self.client_socket = None
 
-    def report_final_stats(self) -> None:
-        """Report final statistics."""
+        return self.report_final_stats()
+
+    def report_final_stats(self) -> int:
+        """Report final statistics and run self-checks. Returns exit code."""
         if self.start_time is None:
-            return
+            return 1
 
         elapsed = time.monotonic() - self.start_time
-        if elapsed > 0:
-            avg_rate = self.total_bytes / elapsed
-            logging.info(f"Session complete: {format_bytes(self.total_bytes)} "
-                         f"in {elapsed:.1f}s ({format_rate(avg_rate)} avg)")
+        if elapsed <= 0:
+            return 1
+
+        avg_rate = self.total_bytes / elapsed
+        recv_capacity = self.args.read_size / self.args.delay
+
+        logging.info("")
+        logging.info("=" * 50)
+        logging.info("RECEIVER STARVATION TEST RESULTS")
+        logging.info("=" * 50)
+        logging.info(f"Duration: {elapsed:.1f}s")
+        logging.info(f"Total received: {format_bytes(self.total_bytes)}")
+        logging.info(f"Average rate: {format_rate(avg_rate)}")
+        logging.info(f"Receive capacity: ~{format_rate(recv_capacity)}")
+        logging.info("")
+
+        # Self-check assertions
+        passed = True
+        checks = []
+
+        # Check 1: Did we receive meaningful data?
+        if self.total_bytes >= 100000:  # At least 100KB
+            checks.append(("Data received", True, format_bytes(self.total_bytes)))
+        else:
+            checks.append(("Data received", False,
+                          f"Only {format_bytes(self.total_bytes)} (expected >100KB)"))
+            passed = False
+
+        # Check 2: Was receive rate limited by our slow processing?
+        # Average rate should be close to (but not exceed) our receive capacity
+        if avg_rate <= recv_capacity * 1.2:  # Allow 20% margin
+            checks.append(("Rate limited by receiver", True,
+                          f"{format_rate(avg_rate)} <= {format_rate(recv_capacity)}"))
+        else:
+            checks.append(("Rate limited by receiver", False,
+                          f"Rate {format_rate(avg_rate)} exceeds capacity"))
+
+        # Check 3: Test ran for expected duration
+        if elapsed >= self.args.duration * 0.8:
+            checks.append(("Duration", True, f"{elapsed:.1f}s"))
+        else:
+            checks.append(("Duration", False,
+                          f"Only {elapsed:.1f}s (expected {self.args.duration}s)"))
+            passed = False
+
+        logging.info("Self-check results:")
+        for name, result, detail in checks:
+            status = "PASS" if result else "FAIL"
+            logging.info(f"  [{status}] {name}: {detail}")
+
+        logging.info("")
+        logging.info("Expected observations in JitterTrap:")
+        logging.info("  - TCP Window: oscillating pattern (fills/drains)")
+        logging.info("  - Throughput: limited by receiver capacity")
+        logging.info("  - Brief zero-window events possible")
+        logging.info("")
+
+        return 0 if passed else 1
 
     def cleanup(self) -> None:
         """Clean up resources."""
@@ -222,8 +286,7 @@ def main() -> int:
 
     try:
         server = ReceiverStarvationServer(args)
-        server.run()
-        return 0
+        return server.run()
     except Exception as e:
         logging.error(f"Error: {e}")
         return 1

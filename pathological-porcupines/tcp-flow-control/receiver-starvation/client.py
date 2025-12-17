@@ -21,11 +21,11 @@ from common.logging_utils import setup_logging, format_bytes, format_rate
 
 
 # Default configuration
-DEFAULT_HOST = 'localhost'
+DEFAULT_HOST = '10.0.1.2'
 DEFAULT_PORT = 9999
-DEFAULT_RATE = 10.0           # Target MB/s
-DEFAULT_DURATION = 30         # Seconds
-DEFAULT_CHUNK_SIZE = 65536    # 64KB chunks
+DEFAULT_RATE = 1.0            # Target MB/s (~1.25x receiver capacity of ~800KB/s)
+DEFAULT_DURATION = 15         # Seconds (match server duration)
+DEFAULT_CHUNK_SIZE = 16384    # 16KB chunks
 
 
 def setup_argparse() -> argparse.Namespace:
@@ -124,8 +124,8 @@ class ReceiverStarvationClient:
 
         return sent
 
-    def run(self) -> None:
-        """Main execution loop."""
+    def run(self) -> int:
+        """Main execution loop. Returns exit code."""
         self.setup()
 
         target_bytes_per_sec = self.args.rate * 1024 * 1024
@@ -179,20 +179,74 @@ class ReceiverStarvationClient:
 
         except KeyboardInterrupt:
             logging.info("Interrupted by user")
-        finally:
-            self.report_final_stats(start_time)
-            self.cleanup()
 
-    def report_final_stats(self, start_time: float) -> None:
-        """Report final statistics."""
+        exit_code = self.report_final_stats(start_time)
+        self.cleanup()
+        return exit_code
+
+    def report_final_stats(self, start_time: float) -> int:
+        """Report final statistics and run self-checks. Returns exit code."""
         elapsed = time.monotonic() - start_time
-        if elapsed > 0:
-            avg_rate = self.total_bytes / elapsed
-            logging.info(f"Test complete: {format_bytes(self.total_bytes)} "
-                         f"in {elapsed:.1f}s ({format_rate(avg_rate)} avg)")
-            logging.info(f"Blocked {self.block_count} times, "
-                         f"total blocked time: {self.blocked_time:.2f}s "
-                         f"({self.blocked_time/elapsed*100:.1f}% of test)")
+        if elapsed <= 0:
+            return 1
+
+        avg_rate = self.total_bytes / elapsed
+        target_rate = self.args.rate * 1024 * 1024
+
+        logging.info("")
+        logging.info("=" * 50)
+        logging.info("RECEIVER STARVATION CLIENT RESULTS")
+        logging.info("=" * 50)
+        logging.info(f"Duration: {elapsed:.1f}s")
+        logging.info(f"Total sent: {format_bytes(self.total_bytes)}")
+        logging.info(f"Target rate: {format_rate(target_rate)}")
+        logging.info(f"Actual rate: {format_rate(avg_rate)}")
+        logging.info(f"Blocked {self.block_count} times, "
+                     f"total blocked time: {self.blocked_time:.2f}s "
+                     f"({self.blocked_time/elapsed*100:.1f}% of test)")
+        logging.info("")
+
+        # Self-check assertions
+        passed = True
+        checks = []
+
+        # Check 1: Did we send meaningful data?
+        if self.total_bytes >= 100000:  # At least 100KB
+            checks.append(("Data sent", True, format_bytes(self.total_bytes)))
+        else:
+            checks.append(("Data sent", False,
+                          f"Only {format_bytes(self.total_bytes)} (expected >100KB)"))
+            passed = False
+
+        # Check 2: Were we rate-limited by the receiver?
+        # Actual rate should be below target (receiver can't keep up)
+        if avg_rate < target_rate * 0.95:
+            checks.append(("Rate limited by receiver", True,
+                          f"{format_rate(avg_rate)} < {format_rate(target_rate)}"))
+        else:
+            checks.append(("Rate limited by receiver", False,
+                          f"Rate {format_rate(avg_rate)} not limited"))
+
+        # Check 3: Did we experience blocking?
+        if self.block_count > 0 or self.blocked_time > 0.1:
+            checks.append(("Sender blocked", True,
+                          f"{self.block_count} blocks, {self.blocked_time:.2f}s total"))
+        else:
+            checks.append(("Sender blocked", False,
+                          "No blocking detected (receiver keeping up)"))
+
+        logging.info("Self-check results:")
+        for name, result, detail in checks:
+            status = "PASS" if result else "FAIL"
+            logging.info(f"  [{status}] {name}: {detail}")
+
+        logging.info("")
+        logging.info("Expected observations in JitterTrap:")
+        logging.info("  - TCP Window: oscillating (not sustained zero)")
+        logging.info("  - Throughput: limited by slow receiver")
+        logging.info("")
+
+        return 0 if passed else 1
 
     def cleanup(self) -> None:
         """Clean up resources."""
@@ -207,8 +261,7 @@ def main() -> int:
 
     try:
         client = ReceiverStarvationClient(args)
-        client.run()
-        return 0
+        return client.run()
     except ConnectionRefusedError:
         logging.error(f"Connection refused to {args.host}:{args.port}")
         logging.error("Make sure the server is running first")
