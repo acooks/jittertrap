@@ -483,6 +483,25 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 	}
 }
 
+/* Propagate events to all interval tables for this flow.
+ * This mirrors how bytes/packets are accumulated via add_flow_to_interval().
+ * Events are ORed into the flow entry in each interval table.
+ */
+static void propagate_events_to_intervals(const struct flow *flow, uint64_t events)
+{
+	if (events == 0)
+		return;
+
+	for (int i = 0; i < INTERVAL_COUNT; i++) {
+		struct flow_hash *fte;
+		HASH_FIND(ts_hh, incomplete_flow_tables[i],
+		          flow, sizeof(struct flow), fte);
+		if (fte) {
+			fte->f.window.recent_events |= events;
+		}
+	}
+}
+
 static inline unsigned int rate_calc(struct timeval interval, int bytes)
 {
 	double dt = interval.tv_sec + interval.tv_usec * 1E-6;
@@ -490,7 +509,8 @@ static inline unsigned int rate_calc(struct timeval interval, int bytes)
 }
 
 static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
-                                 const struct flow_hash *ref_flow)
+                                 const struct flow_hash *ref_flow,
+                                 struct timeval deadline)
 {
 	struct flow_hash *fti; /* flow table iter (short-interval tables */
 	struct flow_hash *te;  /* flow table entry */
@@ -505,6 +525,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 			/* table doesn't have anything in it yet */
 			st_flows[i].bytes = 0;
 			st_flows[i].packets = 0;
+			st_flows[i].window.recent_events = 0;
 			continue;
 		}
 
@@ -514,6 +535,8 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 
 		st_flows[i].bytes = te ? te->f.bytes : 0;
 		st_flows[i].packets = te ? te->f.packets : 0;
+		/* Get events accumulated during this interval (like bytes/packets) */
+		st_flows[i].window.recent_events = te ? te->f.window.recent_events : 0;
 
 		/* convert to bytes per second */
 		st_flows[i].bytes =
@@ -595,13 +618,20 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	st_flows[0].ipg.ipg_mean_us = ref_flow->ipg.ipg_samples > 0 ?
 	                              ref_flow->ipg.ipg_sum_us / ref_flow->ipg.ipg_samples : 0;
 
-	/* Copy RTT/window/health/ipg/video info to all intervals (same data for all) */
+	/* Copy RTT/window/health/ipg/video info to all intervals.
+	 * Note: recent_events is NOT copied because it's interval-specific
+	 * (accumulated during packet processing into each interval's table).
+	 */
 	for (int i = 1; i < INTERVAL_COUNT; i++) {
+		/* Save interval-specific events (already read from interval table) */
+		uint64_t interval_events = st_flows[i].window.recent_events;
 		st_flows[i].rtt = st_flows[0].rtt;
 		st_flows[i].window = st_flows[0].window;
 		st_flows[i].health = st_flows[0].health;
 		st_flows[i].ipg = st_flows[0].ipg;
 		st_flows[i].video = st_flows[0].video;
+		/* Restore interval-specific events */
+		st_flows[i].window.recent_events = interval_events;
 	}
 }
 
@@ -651,7 +681,7 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 	 * fill the counts from the short-interval flow tables. */
 	rfti = flow_ref_table;
 	for (int i = 0; i < MAX_FLOW_COUNT && rfti; i++) {
-		fill_short_int_flows(t5->flow[i], rfti);
+		fill_short_int_flows(t5->flow[i], rfti, deadline);
 		rfti = rfti->r_hh.next;
 	}
 
@@ -892,7 +922,8 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                       tcp_pkt.flags,
 					                       tcp_pkt.payload_len,
 					                       pkt.timestamp);
-					tcp_window_process_packet(&pkt.flow_rec.flow,
+					uint64_t tcp_events = tcp_window_process_packet(
+					                          &pkt.flow_rec.flow,
 					                          (const uint8_t *)tcp_hdr,
 					                          end_of_packet,
 					                          tcp_pkt.seq,
@@ -901,6 +932,8 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                          tcp_pkt.window,
 					                          tcp_pkt.payload_len,
 					                          pkt.timestamp);
+					/* Propagate events to ALL interval tables */
+					propagate_events_to_intervals(&pkt.flow_rec.flow, tcp_events);
 
 					/* Process RTSP traffic on port 554 */
 					if (tcp_pkt.payload_len > 0 &&

@@ -382,7 +382,9 @@
       lines.exit().remove();
 
       // Build event marker data in place - reuse cache array and pooled objects
-      // Stop adding markers after CLOSED state (consistent with line drawing)
+      // Each data point's recent_events contains events that occurred during
+      // THAT interval only (events are accumulated per-interval in the backend).
+      // Edge detection is no longer needed here since the backend handles it.
       markerDataCache.length = 0;
       markerPoolIndex = 0;  // Reset pool for this frame
 
@@ -393,7 +395,8 @@
 
         for (let i = 0; i < values.length; i++) {
           const v = values[i];
-          if (v.rwnd_bytes <= 0) continue;
+          // Skip invalid values but allow zero (for zero-window events)
+          if (v.rwnd_bytes < 0) continue;
 
           // Stop processing after CLOSED state
           if (v.tcp_state === TCP_STATE.CLOSED) break;
@@ -402,9 +405,10 @@
           if (events === 0) continue;
 
           const ts = v.ts;
-          const y = v.rwnd_bytes;
+          // For zero-window events, place marker at bottom of chart (use 1 for log scale)
+          const y = v.rwnd_bytes > 0 ? v.rwnd_bytes : 1;
 
-          // Only add markers for actual events - use pooled objects
+          // Add markers for events in this interval
           if (events & CONG_EVENT.ZERO_WINDOW) {
             markerDataCache.push(getPooledMarker(fkey, ts, y, 'zero_window'));
           }

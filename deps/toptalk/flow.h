@@ -176,7 +176,7 @@ struct flow_window_info {
 	uint32_t dup_ack_cnt;     /* Duplicate ACK events */
 	uint32_t retransmit_cnt;  /* Retransmission events */
 	uint32_t ece_cnt;         /* ECE flag count */
-	uint8_t recent_events;    /* Bitmask of recent congestion events */
+	uint64_t recent_events;   /* Bitmask of recent congestion events */
 };
 
 /* Inter-packet gap (IPG) histogram bucket count */
