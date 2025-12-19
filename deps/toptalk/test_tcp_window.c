@@ -389,6 +389,67 @@ static int test_bidirectional(void)
 	return 0;
 }
 
+/*
+ * Test 8: Event association with receiver's flow direction
+ *
+ * This test documents the receiver-direction semantics for events:
+ * - Zero-window from server (in server->client packets) should be associated
+ *   with the client->server flow (where server's receive window is displayed)
+ * - Events should NOT appear on the packet's flow direction
+ *
+ * This is the unit test for the receiver-direction semantics that were
+ * implemented to fix duplicate event markers in the UI.
+ */
+static int test_event_receiver_direction(void)
+{
+	printf("Test 8: Event association with receiver's flow... ");
+
+	tcp_window_init();
+
+	struct flow c2s = make_flow("10.0.0.1", 1234, "10.0.0.2", 80);
+	struct flow s2c = make_flow("10.0.0.2", 80, "10.0.0.1", 1234);
+
+	/* Server sends zero-window ACK to client
+	 * Packet direction: server -> client (s2c)
+	 * Event should be on: client -> server (c2s) where server's window is shown
+	 */
+	tcp_window_process_packet(&s2c, NULL, NULL,
+	                          1000, 0, TH_ACK,
+	                          0,     /* zero window! */
+	                          0,     /* pure ACK */
+	                          usec_to_tv(0),
+	                          NULL);
+
+	struct tcp_window_info c2s_info, s2c_info;
+	int ret1 = tcp_window_get_info(&c2s, &c2s_info);
+	int ret2 = tcp_window_get_info(&s2c, &s2c_info);
+
+	tcp_window_cleanup();
+
+	if (ret1 != 0 || ret2 != 0) {
+		printf("FAIL (get_info failed)\n");
+		return 1;
+	}
+
+	/* Zero-window should be on client->server (where server's rwnd shown) */
+	if (c2s_info.zero_window_count != 1) {
+		printf("FAIL (c2s zero_window=%u, expected 1)\n",
+		       c2s_info.zero_window_count);
+		return 1;
+	}
+
+	/* Server->client direction tracks CLIENT's window, not server's.
+	 * Since the client didn't send any packets, s2c should show no events. */
+	if (s2c_info.zero_window_count != 0) {
+		printf("FAIL (s2c zero_window=%u, expected 0)\n",
+		       s2c_info.zero_window_count);
+		return 1;
+	}
+
+	printf("PASS (events on receiver's flow direction)\n");
+	return 0;
+}
+
 int main(void)
 {
 	int failures = 0;
@@ -402,6 +463,7 @@ int main(void)
 	failures += test_ecn_flags();
 	failures += test_non_tcp();
 	failures += test_bidirectional();
+	failures += test_event_receiver_direction();
 
 	printf("\n=== Results: %d test(s) failed ===\n", failures);
 
