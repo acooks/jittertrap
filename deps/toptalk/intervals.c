@@ -141,6 +141,8 @@ static void clear_table(int table_idx)
 	{
 		/* TODO: copy and insert */
 		struct flow_hash *n = malloc(sizeof(struct flow_hash));
+		if (!n)
+			continue;  /* Skip this entry on allocation failure */
 		memcpy(n, iter, sizeof(struct flow_hash));
 		HASH_ADD(ts_hh, complete_flow_tables[table_idx], f.flow,
 		         sizeof(struct flow), n);
@@ -466,6 +468,8 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 
 	/* keep a list of packets, used for sliding window byte counts */
 	ple = malloc(sizeof(struct flow_pkt_list));
+	if (!ple)
+		return;  /* Drop packet on allocation failure */
 	ple->pkt = *pkt;
 	DL_APPEND(pkt_list_ref_head, ple);
 
@@ -475,6 +479,8 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 	          sizeof(struct flow), fte);
 	if (!fte) {
 		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
+		if (!fte)
+			return;  /* Drop packet on allocation failure */
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
 		HASH_ADD(r_hh, flow_ref_table, f.flow, sizeof(struct flow),
@@ -522,6 +528,8 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 	          &(pkt->flow_rec.flow), sizeof(struct flow), fte);
 	if (!fte) {
 		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
+		if (!fte)
+			return;  /* Drop packet on allocation failure */
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
 		/* Initialize window_min to UINT32_MAX so first sample sets it */
