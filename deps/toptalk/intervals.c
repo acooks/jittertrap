@@ -123,23 +123,43 @@ static struct {
 	int64_t packets;
 } totals;
 
-static void clear_table(int table_idx)
+/*
+ * Free all entries in a flow hash table and reset the head pointer to NULL.
+ * The table_head pointer is passed by reference (pointer-to-pointer) so we
+ * can update the caller's head pointer directly, avoiding confusion about
+ * which variable HASH_DELETE modifies.
+ */
+static void free_flow_table(struct flow_hash **table_head)
 {
-	struct flow_hash *table, *iter, *tmp;
+	struct flow_hash *iter, *tmp;
 
-	/* clear the complete table */
-	table = complete_flow_tables[table_idx];
-	HASH_ITER(ts_hh, table, iter, tmp)
+	HASH_ITER(ts_hh, *table_head, iter, tmp)
 	{
-		HASH_DELETE(ts_hh, table, iter);
+		HASH_DELETE(ts_hh, *table_head, iter);
 		free(iter);
 	}
-	complete_flow_tables[table_idx] = NULL;
+	/* table_head is already NULL after all deletions, but be explicit */
+	*table_head = NULL;
+}
 
-	/* copy incomplete to complete */
+/*
+ * Rotate interval table: copy incomplete → complete, then clear incomplete.
+ * This is called at each interval boundary to finalize the current interval's
+ * data and prepare for the next interval.
+ */
+static void clear_table(int table_idx)
+{
+	struct flow_hash *iter, *tmp;
+
+	/* Step 1: Free the old complete table (data from 2 intervals ago) */
+	free_flow_table(&complete_flow_tables[table_idx]);
+
+	/* Step 2: Copy all entries from incomplete to complete.
+	 * We allocate new entries rather than moving pointers because the
+	 * incomplete entries will be freed in step 3.
+	 */
 	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp)
 	{
-		/* TODO: copy and insert */
 		struct flow_hash *n = malloc(sizeof(struct flow_hash));
 		if (!n)
 			continue;  /* Skip this entry on allocation failure */
@@ -150,14 +170,8 @@ static void clear_table(int table_idx)
 	assert(HASH_CNT(ts_hh, complete_flow_tables[table_idx])
 	       == HASH_CNT(ts_hh, incomplete_flow_tables[table_idx]));
 
-	/* clear the incomplete table */
-	table = incomplete_flow_tables[table_idx];
-	HASH_ITER(ts_hh, table, iter, tmp)
-	{
-		HASH_DELETE(ts_hh, table, iter);
-		free(iter);
-	}
-	incomplete_flow_tables[table_idx] = NULL;
+	/* Step 3: Free the incomplete table (now copied to complete) */
+	free_flow_table(&incomplete_flow_tables[table_idx]);
 }
 
 /* initialise interval start and end times */
