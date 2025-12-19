@@ -6,6 +6,7 @@
 #include <netinet/ip.h>
 
 #include "tcp_window.h"
+#include "tcp_flow_key.h"  /* For make_canonical_key() */
 #include "decode.h"
 #include "timeywimey.h"
 
@@ -13,50 +14,6 @@
 #define WINDOW_DEBUG 0
 
 static struct tcp_window_entry *window_table = NULL;
-
-/* Create canonical key (lower IP/port first for consistent lookup)
- * This is the same logic as tcp_rtt.c to ensure bidirectional matching
- */
-static void make_canonical_key(struct tcp_flow_key *key,
-                               const struct flow *flow,
-                               int *is_forward)
-{
-	memset(key, 0, sizeof(*key));
-	key->ethertype = flow->ethertype;
-
-	int cmp;
-	if (flow->ethertype == ETHERTYPE_IP) {
-		cmp = memcmp(&flow->src_ip, &flow->dst_ip, sizeof(struct in_addr));
-		if (cmp < 0 || (cmp == 0 && flow->sport <= flow->dport)) {
-			key->ip_lo = flow->src_ip;
-			key->ip_hi = flow->dst_ip;
-			key->port_lo = flow->sport;
-			key->port_hi = flow->dport;
-			*is_forward = 1;
-		} else {
-			key->ip_lo = flow->dst_ip;
-			key->ip_hi = flow->src_ip;
-			key->port_lo = flow->dport;
-			key->port_hi = flow->sport;
-			*is_forward = 0;
-		}
-	} else { /* IPv6 */
-		cmp = memcmp(&flow->src_ip6, &flow->dst_ip6, sizeof(struct in6_addr));
-		if (cmp < 0 || (cmp == 0 && flow->sport <= flow->dport)) {
-			key->ip6_lo = flow->src_ip6;
-			key->ip6_hi = flow->dst_ip6;
-			key->port_lo = flow->sport;
-			key->port_hi = flow->dport;
-			*is_forward = 1;
-		} else {
-			key->ip6_lo = flow->dst_ip6;
-			key->ip6_hi = flow->src_ip6;
-			key->port_lo = flow->dport;
-			key->port_hi = flow->sport;
-			*is_forward = 0;
-		}
-	}
-}
 
 /* Parse TCP options to extract window scale factor
  * Called only for SYN/SYN-ACK packets
