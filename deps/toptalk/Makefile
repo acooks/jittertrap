@@ -3,6 +3,7 @@ LIB = toptalk.a
 TEST = test-toptalk
 TEST_RTT = test-tcp-rtt
 TEST_WINDOW = test-tcp-window
+TEST_FLOW = test-flow
 TEST_VIDEO = test-video-detect
 TEST_RTSP = test-rtsp-tap
 
@@ -73,7 +74,7 @@ LDFLAGS := -lrt -lpthread \
 CFLAGS := -g $(CFLAGS_OPT) -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(CFLAGS)
 
 .PHONY: all
-all: $(LIB) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) $(PROG)
+all: $(LIB) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_FLOW) $(TEST_VIDEO) $(TEST_RTSP) $(PROG)
 
 %.o: %.c %.h Makefile ../make.config make.config
 	$(COMPILE.c) $(DEFINES) $< -o $@
@@ -101,6 +102,10 @@ $(TEST_WINDOW): $(LIB) test_tcp_window.c
 	@echo Building $(TEST_WINDOW)
 	$(CC) -o $(TEST_WINDOW) test_tcp_window.c timeywimey.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
+$(TEST_FLOW): $(LIB) test_flow.c
+	@echo Building $(TEST_FLOW)
+	$(CC) -o $(TEST_FLOW) test_flow.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
+
 $(TEST_VIDEO): $(LIB) test_video_detect.c
 	@echo Building $(TEST_VIDEO)
 	$(CC) -o $(TEST_VIDEO) test_video_detect.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
@@ -110,11 +115,13 @@ $(TEST_RTSP): $(LIB) test_rtsp_tap.c
 	$(CC) -o $(TEST_RTSP) test_rtsp_tap.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
 .PHONY: test
-test: $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP)
+test: $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_FLOW) $(TEST_VIDEO) $(TEST_RTSP)
 	@echo "Running RTT unit tests (no root required)..."
 	@./$(TEST_RTT) && echo -e "RTT unit tests OK\n"
 	@echo "Running window unit tests (no root required)..."
 	@./$(TEST_WINDOW) && echo -e "Window unit tests OK\n"
+	@echo "Running flow unit tests (no root required)..."
+	@./$(TEST_FLOW) && echo -e "Flow unit tests OK\n"
 	@echo "Running video detection unit tests (no root required)..."
 	@./$(TEST_VIDEO) && echo -e "Video detection unit tests OK\n"
 	@echo "Running RTSP tap unit tests (no root required)..."
@@ -132,5 +139,5 @@ clang-analyze: clean
 
 .PHONY: clean
 clean:
-	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) *.o *.a || true
+	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_FLOW) $(TEST_VIDEO) $(TEST_RTSP) *.o *.a || true
 	rm *.gcno *.gcov *.gcda || true
