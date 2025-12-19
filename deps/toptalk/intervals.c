@@ -1056,25 +1056,11 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					/* Propagate events to the REVERSE flow's interval tables.
 					 * TCP window/congestion events detected in packets FROM host A
 					 * affect the flow TO host A (the sender can't send more).
-					 * E.g., zero-window advertised by server in server→client packets
-					 * should appear on client→server flow (where server's window is shown).
+					 * E.g., zero-window advertised by server in server->client packets
+					 * should appear on client->server flow (where server's window is shown).
 					 */
 					if (tcp_events != 0) {
-						struct flow rev_flow = pkt.flow_rec.flow;
-						/* Swap src/dst addresses */
-						if (rev_flow.ethertype == ETHERTYPE_IP) {
-							struct in_addr tmp = rev_flow.src_ip;
-							rev_flow.src_ip = rev_flow.dst_ip;
-							rev_flow.dst_ip = tmp;
-						} else {
-							struct in6_addr tmp6 = rev_flow.src_ip6;
-							rev_flow.src_ip6 = rev_flow.dst_ip6;
-							rev_flow.dst_ip6 = tmp6;
-						}
-						/* Swap ports */
-						uint16_t tmp_port = rev_flow.sport;
-						rev_flow.sport = rev_flow.dport;
-						rev_flow.dport = tmp_port;
+						struct flow rev_flow = flow_reverse(&pkt.flow_rec.flow);
 						propagate_events_to_intervals(&rev_flow, tcp_events);
 					}
 

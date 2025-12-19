@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <net/ethernet.h>
 
 /* Video stream type detection */
 enum video_stream_type {
@@ -159,6 +160,34 @@ static inline int flow_cmp(const struct flow *a, const struct flow *b)
 	}
 
 	return 0;  /* Equal */
+}
+
+/*
+ * Create a reversed copy of a flow (swap src/dst addresses and ports).
+ * Used for TCP window event propagation: events detected in packets FROM host A
+ * are stored on the flow TO host A (where host A's window is displayed).
+ *
+ * Performance: O(1), inline, no heap allocation. Safe for hot path.
+ */
+static inline struct flow flow_reverse(const struct flow *f)
+{
+	struct flow rev = *f;
+
+	if (f->ethertype == ETHERTYPE_IP) {
+		struct in_addr tmp = rev.src_ip;
+		rev.src_ip = rev.dst_ip;
+		rev.dst_ip = tmp;
+	} else {
+		struct in6_addr tmp6 = rev.src_ip6;
+		rev.src_ip6 = rev.dst_ip6;
+		rev.dst_ip6 = tmp6;
+	}
+
+	uint16_t tmp_port = rev.sport;
+	rev.sport = rev.dport;
+	rev.dport = tmp_port;
+
+	return rev;
 }
 
 /* Cached TCP RTT info - populated by tt_get_top5() for thread-safe access */
