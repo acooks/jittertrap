@@ -578,7 +578,12 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	struct flow_hash *fti; /* flow table iter (short-interval tables */
 	struct flow_hash *te;  /* flow table entry */
 
-	/* for each table in all time intervals.... */
+	/*
+	 * PHASE 1: Populate per-interval data (bytes, packets, events) from interval tables.
+	 * Each interval has its own complete_flow_tables[] entry containing data accumulated
+	 * during that specific measurement period. Events (recent_events) are per-interval
+	 * so that markers appear at their correct historical timestamps.
+	 */
 	for (int i = INTERVAL_COUNT - 1; i >= 0; i--) {
 		fti = complete_flow_tables[i];
 		memcpy(&st_flows[i], &(ref_flow->f),
@@ -632,15 +637,28 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	}
 
 	/*
-	 * Populate cached RTT and window info for this flow.
+	 * PHASE 2: Populate cached RTT and window info for this flow.
 	 * This is done here (in the writer thread context) to avoid
 	 * race conditions with the reader thread accessing the hash tables.
 	 * We only need to do this once and copy to all intervals.
+	 *
+	 * IMPORTANT: st_flows[0] serves two roles:
+	 * 1. "Live" snapshot: Gets current rwnd_bytes, window_scale, counts from tcp_window hash
+	 * 2. Template: Other intervals copy these "live" values but keep their own recent_events
+	 *
+	 * The recent_events field must use per-interval data (from interval tables) for ALL
+	 * intervals including [0], so markers appear at the correct historical timestamps.
 	 */
 	int64_t rtt_us;
 	enum tcp_conn_state tcp_state;
 	int saw_syn;
 	struct tcp_window_info win_info;
+
+	/* Save interval 0's per-interval events before we overwrite with
+	 * tcp_window_get_info() data. We want per-interval events for consistency
+	 * with other intervals, not cumulative events from the tcp_window hash.
+	 */
+	uint64_t interval0_events = st_flows[0].window.recent_events;
 
 	/* Get RTT info */
 	if (tcp_rtt_get_info(&ref_flow->f.flow, &rtt_us, &tcp_state, &saw_syn) == 0) {
@@ -653,7 +671,11 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[0].rtt.saw_syn = 0;
 	}
 
-	/* Get window/congestion info */
+	/* Get window/congestion info - live snapshot values.
+	 * NOTE: win_info.recent_events is CUMULATIVE (never cleared) from the tcp_window
+	 * hash table. We DON'T use this for st_flows[].recent_events because markers
+	 * need to appear at their historical timestamps. Per-interval events were
+	 * already populated from interval tables above. We only use the counts/scale. */
 	if (tcp_window_get_info(&ref_flow->f.flow, &win_info) == 0) {
 		st_flows[0].window.rwnd_bytes = win_info.rwnd_bytes;
 		st_flows[0].window.window_scale = win_info.window_scale;
@@ -661,7 +683,7 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[0].window.dup_ack_cnt = win_info.dup_ack_count;
 		st_flows[0].window.retransmit_cnt = win_info.retransmit_count;
 		st_flows[0].window.ece_cnt = win_info.ece_count;
-		st_flows[0].window.recent_events = win_info.recent_events;
+		/* NOT copying: win_info.recent_events - see comment above */
 	} else {
 		st_flows[0].window.rwnd_bytes = -1;
 		st_flows[0].window.window_scale = -1;
@@ -669,8 +691,10 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[0].window.dup_ack_cnt = 0;
 		st_flows[0].window.retransmit_cnt = 0;
 		st_flows[0].window.ece_cnt = 0;
-		st_flows[0].window.recent_events = 0;
 	}
+
+	/* Restore interval 0's per-interval events */
+	st_flows[0].window.recent_events = interval0_events;
 
 	/* Get TCP health info (RTT histogram and health status) */
 	struct tcp_health_result health_result;
@@ -703,12 +727,17 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 	st_flows[0].ipg.ipg_mean_us = ref_flow->ipg.ipg_samples > 0 ?
 	                              ref_flow->ipg.ipg_sum_us / ref_flow->ipg.ipg_samples : 0;
 
-	/* Copy RTT/window/health/ipg/video info to all intervals.
-	 * Note: recent_events is NOT copied because it's interval-specific
-	 * (accumulated during packet processing into each interval's table).
+	/*
+	 * PHASE 3: Copy live snapshot to all intervals, preserving per-interval events.
+	 * The live values (RTT, window size, counts, health, etc.) from PHASE 2 apply
+	 * to all intervals. However, recent_events must remain per-interval so that
+	 * markers appear at their correct historical timestamps.
+	 *
+	 * Note: Loop starts at i=1 because st_flows[0] already has live values and
+	 * its recent_events was already restored after PHASE 2.
 	 */
 	for (int i = 1; i < INTERVAL_COUNT; i++) {
-		/* Save interval-specific events (already read from interval table) */
+		/* Save interval-specific events (already read from interval table in PHASE 1) */
 		uint64_t interval_events = st_flows[i].window.recent_events;
 		st_flows[i].rtt = st_flows[0].rtt;
 		st_flows[i].window = st_flows[0].window;
@@ -1024,8 +1053,30 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					pkt.tcp_scaled_window = scaled_window;
 					pkt.has_tcp_window = 1;
 
-					/* Propagate events to ALL interval tables */
-					propagate_events_to_intervals(&pkt.flow_rec.flow, tcp_events);
+					/* Propagate events to the REVERSE flow's interval tables.
+					 * TCP window/congestion events detected in packets FROM host A
+					 * affect the flow TO host A (the sender can't send more).
+					 * E.g., zero-window advertised by server in server→client packets
+					 * should appear on client→server flow (where server's window is shown).
+					 */
+					if (tcp_events != 0) {
+						struct flow rev_flow = pkt.flow_rec.flow;
+						/* Swap src/dst addresses */
+						if (rev_flow.ethertype == ETHERTYPE_IP) {
+							struct in_addr tmp = rev_flow.src_ip;
+							rev_flow.src_ip = rev_flow.dst_ip;
+							rev_flow.dst_ip = tmp;
+						} else {
+							struct in6_addr tmp6 = rev_flow.src_ip6;
+							rev_flow.src_ip6 = rev_flow.dst_ip6;
+							rev_flow.dst_ip6 = tmp6;
+						}
+						/* Swap ports */
+						uint16_t tmp_port = rev_flow.sport;
+						rev_flow.sport = rev_flow.dport;
+						rev_flow.dport = tmp_port;
+						propagate_events_to_intervals(&rev_flow, tcp_events);
+					}
 
 					/* Process RTSP traffic on port 554 */
 					if (tcp_pkt.payload_len > 0 &&

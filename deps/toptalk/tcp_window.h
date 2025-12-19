@@ -66,8 +66,11 @@ struct tcp_window_direction {
 	_Atomic uint32_t ece_count;            /* ECE flag count */
 	_Atomic uint32_t cwr_count;            /* CWR flag count */
 
-	/* Events since last query (for UI markers) */
-	_Atomic uint64_t recent_events;        /* Bitmask of all events ever (lock-free) */
+	/* Cumulative event bitmask (lock-free).
+	 * NOTE: This is OR'd in and NEVER cleared - it accumulates ALL events ever seen.
+	 * For per-interval events (used for UI markers), use the interval table entries
+	 * populated by propagate_events_to_intervals() instead. */
+	_Atomic uint64_t recent_events;
 
 	/* Event timestamps for interval-aware queries */
 	struct timeval last_zero_window_time;
@@ -95,7 +98,7 @@ struct tcp_window_info {
 	uint32_t retransmit_count;
 	uint32_t ece_count;
 	uint32_t cwr_count;
-	uint64_t recent_events;        /* Bitmask of events since last query */
+	uint64_t recent_events;        /* Cumulative events (see tcp_window_direction comment) */
 };
 
 /* Initialize window tracking subsystem */
