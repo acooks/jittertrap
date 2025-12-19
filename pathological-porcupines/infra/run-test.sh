@@ -10,12 +10,14 @@
 #   --no-jittertrap      Skip starting JitterTrap (for debugging)
 #   --no-browser         Don't auto-open browser (just print URL)
 #   --reset              Reset impairments/MTU after test
+#   --pcap [file]        Capture packets on bridge (default: screenshots/<timestamp>/<test>.pcap)
 #
 # Examples:
 #   run-test.sh tcp-timing/persist-timer
 #   run-test.sh tcp-timing/persist-timer --auto
 #   run-test.sh udp/bursty-sender --impairment wan
 #   run-test.sh tcp-lifecycle/rst-storm --auto --no-browser
+#   run-test.sh tcp-timing/persist-timer --auto --pcap
 
 set -euo pipefail
 
@@ -34,6 +36,8 @@ RUN_JITTERTRAP=true
 OPEN_BROWSER=true
 TEARDOWN_AFTER=true
 CAPTURE_SCREENSHOTS=false
+CAPTURE_PCAP=false
+PCAP_FILE=""
 JT_BINARY="${JT_BINARY:-$PP_ROOT/../server/jt-server}"
 JT_RESOURCES="${JT_RESOURCES:-$PP_ROOT/../html5-client/output}"
 JT_URL="http://10.0.0.2:8080"
@@ -43,6 +47,71 @@ SCREENSHOT_FIFO=""
 SCREENSHOT_PID=""
 SCREENSHOT_OUTPUT_DIR=""
 SCREENSHOT_FD=""
+
+# PCAP capture state
+TCPDUMP_PID=""
+
+# JitterTrap state
+JT_PID=""
+
+# Destination process state
+DEST_PID=""
+
+# Cleanup function for trap - ensures all background processes are killed
+cleanup_all() {
+    local exit_code=$?
+    local did_cleanup=false
+
+    # Stop tcpdump
+    if [[ -n "$TCPDUMP_PID" ]] && kill -0 "$TCPDUMP_PID" 2>/dev/null; then
+        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
+        did_cleanup=true
+        echo "  Stopping tcpdump (pid $TCPDUMP_PID)..."
+        kill -INT "$TCPDUMP_PID" 2>/dev/null || true
+        sleep 0.5
+        kill -0 "$TCPDUMP_PID" 2>/dev/null && kill -9 "$TCPDUMP_PID" 2>/dev/null || true
+    fi
+
+    # Stop screenshot controller
+    if [[ -n "$SCREENSHOT_PID" ]] && kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
+        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
+        did_cleanup=true
+        echo "  Stopping screenshot controller (pid $SCREENSHOT_PID)..."
+        kill "$SCREENSHOT_PID" 2>/dev/null || true
+        sleep 0.5
+        kill -0 "$SCREENSHOT_PID" 2>/dev/null && kill -9 "$SCREENSHOT_PID" 2>/dev/null || true
+    fi
+
+    # Close screenshot FIFO fd
+    if [[ -n "${SCREENSHOT_FD:-}" ]]; then
+        exec 3>&- 2>/dev/null || true
+    fi
+    [[ -n "$SCREENSHOT_FIFO" ]] && rm -f "$SCREENSHOT_FIFO"
+
+    # Stop JitterTrap
+    if [[ -n "$JT_PID" ]] && kill -0 "$JT_PID" 2>/dev/null; then
+        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
+        did_cleanup=true
+        echo "  Stopping jt-server (pid $JT_PID)..."
+        kill "$JT_PID" 2>/dev/null || true
+        sleep 0.5
+        kill -0 "$JT_PID" 2>/dev/null && kill -9 "$JT_PID" 2>/dev/null || true
+    fi
+
+    # Stop destination (server/receiver)
+    if [[ -n "$DEST_PID" ]] && kill -0 "$DEST_PID" 2>/dev/null; then
+        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
+        did_cleanup=true
+        echo "  Stopping destination process (pid $DEST_PID)..."
+        kill "$DEST_PID" 2>/dev/null || true
+    fi
+
+    [[ "$did_cleanup" == "true" ]] && echo "Cleanup complete."
+    exit $exit_code
+}
+
+# Set trap for cleanup on exit, interrupt, or error
+trap cleanup_all EXIT INT TERM
 
 # Parse arguments
 if [[ $# -lt 1 ]]; then
@@ -55,10 +124,12 @@ if [[ $# -lt 1 ]]; then
     echo "  --no-browser         Don't auto-open browser"
     echo "  --no-teardown        Keep namespaces after test (for debugging)"
     echo "  --capture-screenshots  Capture screenshots when test passes"
+    echo "  --pcap [file]        Capture packets on bridge interface"
     echo ""
     echo "Examples:"
     echo "  run-test.sh tcp-timing/persist-timer"
     echo "  run-test.sh udp/bursty-sender --auto --impairment wan"
+    echo "  run-test.sh tcp-timing/persist-timer --auto --pcap"
     exit 1
 fi
 
@@ -89,6 +160,15 @@ while [[ $# -gt 0 ]]; do
             ;;
         --capture-screenshots)
             CAPTURE_SCREENSHOTS=true
+            shift
+            ;;
+        --pcap)
+            CAPTURE_PCAP=true
+            # Check if next arg is a filename (not another option)
+            if [[ $# -gt 1 ]] && [[ ! "$2" =~ ^-- ]]; then
+                PCAP_FILE="$2"
+                shift
+            fi
             shift
             ;;
         *)
@@ -264,6 +344,91 @@ cleanup_screenshot() {
     fi
 }
 
+# PCAP capture functions
+setup_pcap_capture() {
+    local test_path="$1"
+
+    # Determine output file
+    if [[ -z "$PCAP_FILE" ]]; then
+        # Use screenshot output dir if available, otherwise create one
+        if [[ -z "$SCREENSHOT_OUTPUT_DIR" ]]; then
+            local timestamp
+            timestamp=$(date +%Y-%m-%d_%H%M%S)
+            SCREENSHOT_OUTPUT_DIR="$PP_ROOT/screenshots/$timestamp"
+            mkdir -p "$SCREENSHOT_OUTPUT_DIR"
+            # Fix ownership if running under sudo
+            if [[ -n "${SUDO_USER:-}" ]]; then
+                chown "$SUDO_USER:$SUDO_USER" "$SCREENSHOT_OUTPUT_DIR"
+            fi
+        fi
+        PCAP_FILE="$SCREENSHOT_OUTPUT_DIR/$(echo "$test_path" | tr '/' '_').pcap"
+    fi
+
+    # Ensure parent directory exists
+    mkdir -p "$(dirname "$PCAP_FILE")"
+
+    echo "Starting packet capture on br0..."
+    echo "  Output: $PCAP_FILE"
+
+    # Start tcpdump in observer namespace on bridge interface
+    # -i br0: capture on bridge
+    # -s 0: capture full packets (no truncation)
+    # -w: write to file
+    # -U: packet-buffered output (flush after each packet)
+    ns_exec "$PP_NS_OBSERVER" tcpdump -i br0 -s 0 -U -w "$PCAP_FILE" 2>/dev/null &
+    TCPDUMP_PID=$!
+
+    # Give tcpdump time to start
+    sleep 0.5
+
+    # Verify it started
+    if ! kill -0 "$TCPDUMP_PID" 2>/dev/null; then
+        echo "Warning: tcpdump failed to start" >&2
+        CAPTURE_PCAP=false
+        return 1
+    fi
+
+    return 0
+}
+
+cleanup_pcap_capture() {
+    if [[ -n "$TCPDUMP_PID" ]] && kill -0 "$TCPDUMP_PID" 2>/dev/null; then
+        echo "Stopping packet capture..."
+
+        # Send SIGINT for clean shutdown (tcpdump writes final stats)
+        kill -INT "$TCPDUMP_PID" 2>/dev/null || true
+
+        # Wait for clean shutdown
+        local timeout=10
+        while kill -0 "$TCPDUMP_PID" 2>/dev/null && [[ $timeout -gt 0 ]]; do
+            sleep 0.5
+            ((timeout--))
+        done
+
+        # Force kill if still running
+        if kill -0 "$TCPDUMP_PID" 2>/dev/null; then
+            kill -9 "$TCPDUMP_PID" 2>/dev/null || true
+        fi
+
+        TCPDUMP_PID=""
+    fi
+
+    # Report pcap file location and stats
+    if [[ -n "$PCAP_FILE" ]] && [[ -f "$PCAP_FILE" ]]; then
+        local size
+        size=$(ls -lh "$PCAP_FILE" 2>/dev/null | awk '{print $5}')
+        local packets
+        packets=$(tcpdump -r "$PCAP_FILE" 2>/dev/null | wc -l || echo "unknown")
+        echo ""
+        echo "PCAP saved: $PCAP_FILE ($size, $packets packets)"
+
+        # Fix ownership if running under sudo
+        if [[ -n "${SUDO_USER:-}" ]]; then
+            chown "$SUDO_USER:$SUDO_USER" "$PCAP_FILE"
+        fi
+    fi
+}
+
 # Apply impairment if specified
 if [[ -n "$IMPAIRMENT" ]]; then
     echo "Applying impairment profile: $IMPAIRMENT"
@@ -277,7 +442,6 @@ if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
 fi
 
 # Start JitterTrap if requested
-JT_PID=""
 if [[ "$RUN_JITTERTRAP" == "true" ]]; then
     # Kill any stale jt-server processes from previous runs to avoid conflicts
     if pgrep -x jt-server >/dev/null 2>&1; then
@@ -332,6 +496,11 @@ if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
     fi
 fi
 
+# Start pcap capture if requested
+if [[ "$CAPTURE_PCAP" == "true" ]]; then
+    setup_pcap_capture "$TEST_PATH"
+fi
+
 # Print banner
 echo ""
 echo "========================================"
@@ -344,6 +513,9 @@ echo "  Impairment: $IMPAIRMENT"
 fi
 if [[ "$RUN_JITTERTRAP" == "true" ]]; then
 echo "  JitterTrap: http://10.0.0.2:8080"
+fi
+if [[ "$CAPTURE_PCAP" == "true" ]]; then
+echo "  PCAP:     $PCAP_FILE"
 fi
 echo ""
 echo "========================================"
@@ -472,13 +644,24 @@ DEST_EXIT=$?
 # Clean up screenshot capture (before stopping JitterTrap)
 if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
     cleanup_screenshot
+    SCREENSHOT_PID=""  # Clear so trap doesn't double-kill
+fi
+
+# Clean up pcap capture
+if [[ "$CAPTURE_PCAP" == "true" ]]; then
+    cleanup_pcap_capture
+    TCPDUMP_PID=""  # Clear so trap doesn't double-kill
 fi
 
 # Stop JitterTrap
 if [[ -n "$JT_PID" ]]; then
     kill "$JT_PID" 2>/dev/null || true
     wait "$JT_PID" 2>/dev/null || true
+    JT_PID=""  # Clear so trap doesn't double-kill
 fi
+
+# Clear destination PID so trap doesn't try to kill it
+DEST_PID=""
 
 # Report results and cleanup
 if [[ $SRC_EXIT -eq 0 && $DEST_EXIT -eq 0 ]]; then
