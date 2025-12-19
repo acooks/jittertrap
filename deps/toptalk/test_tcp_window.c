@@ -66,7 +66,8 @@ static int test_basic_window(void)
 	                          TH_ACK,      /* flags */
 	                          65535,       /* window - server's receive window */
 	                          0,           /* payload_len - pure ACK */
-	                          usec_to_tv(0));
+	                          usec_to_tv(0),
+	                          NULL);       /* scaled_window_out */
 
 	/* Query client→server flow: should return server's advertised window */
 	struct tcp_window_info info;
@@ -109,7 +110,8 @@ static int test_zero_window(void)
 	                          1000, 0, TH_ACK,
 	                          0,           /* zero window! */
 	                          0,           /* pure ACK */
-	                          usec_to_tv(0));
+	                          usec_to_tv(0),
+	                          NULL);
 
 	/* Query client→server: should see server's zero window */
 	struct tcp_window_info info;
@@ -158,7 +160,8 @@ static int test_dup_ack(void)
 		                          1000, 5000, TH_ACK,
 		                          65535,
 		                          0,         /* pure ACK, no data */
-		                          usec_to_tv(i * 1000));
+		                          usec_to_tv(i * 1000),
+		                          NULL);
 	}
 
 	/* Query client→server: should see server's dup ACK count */
@@ -202,7 +205,8 @@ static int test_retransmit(void)
 	                          1000, 0, TH_ACK,
 	                          65535,
 	                          100,         /* data */
-	                          usec_to_tv(0));
+	                          usec_to_tv(0),
+	                          NULL);
 
 	/* Server sends second data packet seq=1100, len=100 */
 	tcp_window_process_packet(&server_to_client,
@@ -210,7 +214,8 @@ static int test_retransmit(void)
 	                          1100, 0, TH_ACK,
 	                          65535,
 	                          100,
-	                          usec_to_tv(1000));
+	                          usec_to_tv(1000),
+	                          NULL);
 
 	/* Server retransmits first packet seq=1000, len=100 */
 	tcp_window_process_packet(&server_to_client,
@@ -218,7 +223,8 @@ static int test_retransmit(void)
 	                          1000, 0, TH_ACK,  /* same seq as first */
 	                          65535,
 	                          100,
-	                          usec_to_tv(2000));
+	                          usec_to_tv(2000),
+	                          NULL);
 
 	/* Query client→server: returns server's (receiver's) retransmit count */
 	struct tcp_window_info info;
@@ -261,7 +267,8 @@ static int test_ecn_flags(void)
 	                          1000, 0, TH_ACK | TH_ECE,
 	                          65535,
 	                          100,
-	                          usec_to_tv(0));
+	                          usec_to_tv(0),
+	                          NULL);
 
 	/* Server sends packet with CWR flag */
 	tcp_window_process_packet(&server_to_client,
@@ -269,7 +276,8 @@ static int test_ecn_flags(void)
 	                          1100, 0, TH_ACK | TH_CWR,
 	                          65535,
 	                          100,
-	                          usec_to_tv(1000));
+	                          usec_to_tv(1000),
+	                          NULL);
 
 	/* Query client→server: returns server's ECN flag counts */
 	struct tcp_window_info info;
@@ -342,7 +350,8 @@ static int test_bidirectional(void)
 	                          1000, 0, TH_ACK,
 	                          32768,
 	                          100,
-	                          usec_to_tv(0));
+	                          usec_to_tv(0),
+	                          NULL);
 
 	/* Server sends with window=65535 (server's receive buffer) */
 	tcp_window_process_packet(&server_to_client,
@@ -350,7 +359,8 @@ static int test_bidirectional(void)
 	                          5000, 1100, TH_ACK,
 	                          65535,
 	                          200,
-	                          usec_to_tv(1000));
+	                          usec_to_tv(1000),
+	                          NULL);
 
 	struct tcp_window_info c2s_info, s2c_info;
 	int ret1 = tcp_window_get_info(&client_to_server, &c2s_info);

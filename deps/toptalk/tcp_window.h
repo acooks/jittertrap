@@ -113,6 +113,7 @@ void tcp_window_cleanup(void);
  * window: raw window field from TCP header
  * payload_len: length of TCP payload (excluding headers)
  * timestamp: packet capture timestamp
+ * scaled_window_out: output parameter for scaled window value (can be NULL)
  *
  * Returns: bitmask of CONG_EVENT_* flags detected for this packet
  *          (uint64_t for efficiency and future expansion)
@@ -125,7 +126,8 @@ uint64_t tcp_window_process_packet(const struct flow *flow,
                                    uint8_t flags,
                                    uint16_t window,
                                    uint16_t payload_len,
-                                   struct timeval timestamp);
+                                   struct timeval timestamp,
+                                   uint32_t *scaled_window_out);
 
 /* Get window and congestion info for a flow (single lookup)
  * Returns 0 on success (entry found), -1 if flow not found or not TCP

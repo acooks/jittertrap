@@ -118,11 +118,13 @@ static int parse_window_scale(const uint8_t *tcp_header,
 
 /* Update window statistics for a direction (atomic stores for lock-free reader access)
  * Returns: bitmask of CONG_EVENT_* flags detected for this update
+ * scaled_out: if non-NULL, receives the computed scaled window value
  */
 static uint64_t update_window_stats(struct tcp_window_direction *dir,
                                     uint16_t raw_window,
                                     uint8_t flags,
-                                    struct timeval timestamp)
+                                    struct timeval timestamp,
+                                    uint32_t *scaled_out)
 {
 	uint64_t detected_events = 0;
 	atomic_store_explicit(&dir->raw_window, raw_window, memory_order_relaxed);
@@ -140,6 +142,10 @@ static uint64_t update_window_stats(struct tcp_window_direction *dir,
 		scaled = raw_window;
 	}
 	atomic_store_explicit(&dir->scaled_window, scaled, memory_order_relaxed);
+
+	/* Return scaled window to caller for interval accumulation */
+	if (scaled_out)
+		*scaled_out = scaled;
 
 	/* Update min/max (skip first sample for initialization) */
 	if (dir->min_window == 0 && dir->max_window == 0) {
@@ -302,9 +308,14 @@ uint64_t tcp_window_process_packet(const struct flow *flow,
                                    uint8_t flags,
                                    uint16_t window,
                                    uint16_t payload_len,
-                                   struct timeval timestamp)
+                                   struct timeval timestamp,
+                                   uint32_t *scaled_window_out)
 {
 	uint64_t detected_events = 0;
+
+	/* Initialize output to 0 */
+	if (scaled_window_out)
+		*scaled_window_out = 0;
 
 	if (flow->proto != IPPROTO_TCP)
 		return 0;
@@ -359,7 +370,8 @@ uint64_t tcp_window_process_packet(const struct flow *flow,
 
 	/* Update window stats - the window field advertises the sender's
 	 * receive window, so it applies to the transmit direction */
-	detected_events |= update_window_stats(tx_dir, window, flags, timestamp);
+	detected_events |= update_window_stats(tx_dir, window, flags, timestamp,
+	                                       scaled_window_out);
 
 	/* Check for duplicate ACKs in the transmit direction
 	 * (tracking ACKs sent in this direction) */

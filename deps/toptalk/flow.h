@@ -168,6 +168,12 @@ struct flow_rtt_info {
 	int32_t saw_syn;          /* 1 if SYN was observed, 0 otherwise */
 };
 
+/* Window condition flags (computed at interval boundary) */
+#define WINDOW_COND_LOW        0x01  /* Avg window below threshold this interval */
+#define WINDOW_COND_ZERO_SEEN  0x02  /* Min window was 0 this interval */
+#define WINDOW_COND_STARVING   0x04  /* Low window for 3+ consecutive intervals */
+#define WINDOW_COND_RECOVERED  0x08  /* Recovered from low/zero window */
+
 /* Cached TCP window/congestion info - populated by tt_get_top5() */
 struct flow_window_info {
 	int64_t rwnd_bytes;       /* Receive window in bytes, -1 if unknown */
@@ -177,6 +183,16 @@ struct flow_window_info {
 	uint32_t retransmit_cnt;  /* Retransmission events */
 	uint32_t ece_cnt;         /* ECE flag count */
 	uint64_t recent_events;   /* Bitmask of recent congestion events */
+
+	/* Per-interval window accumulation (for historical window tracking) */
+	uint64_t window_sum;      /* Sum of scaled window values */
+	uint32_t window_samples;  /* Count of samples */
+	uint32_t window_min;      /* Min window this interval */
+	uint32_t window_max;      /* Max window this interval */
+
+	/* Condition flags (computed at interval boundary) */
+	uint8_t window_conditions;  /* Bitmask of WINDOW_COND_* flags */
+	uint8_t low_window_streak;  /* Consecutive intervals with low window */
 };
 
 /* Inter-packet gap (IPG) histogram bucket count */
@@ -313,6 +329,9 @@ struct flow_record {
 struct flow_pkt {
 	struct flow_record flow_rec;
 	struct timeval timestamp;
+	/* TCP window value (set during TCP packet processing) */
+	uint32_t tcp_scaled_window;  /* Scaled window value, 0 if not TCP */
+	uint8_t has_tcp_window;      /* 1 if tcp_scaled_window is valid */
 };
 
 #endif

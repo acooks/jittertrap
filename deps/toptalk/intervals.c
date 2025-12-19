@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sched.h>
 #include <string.h>
+#include <stdint.h>
 #include <pcap.h>
 #include <pcap/sll.h>
 #include <pthread.h>
@@ -169,6 +170,51 @@ static void init_intervals(struct timeval now)
 /* Forward declaration for pps_to_bucket (defined later with other bucket functions) */
 static inline int pps_to_bucket(uint32_t pps);
 
+/* Compute window conditions at interval boundary (before table rotation).
+ * This detects conditions like low window, zero-window, and starvation
+ * based on accumulated window statistics during the interval.
+ */
+static void compute_window_conditions(int table_idx)
+{
+	struct flow_hash *iter, *tmp;
+
+	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp) {
+		struct flow_window_info *w = &iter->f.window;
+
+		if (w->window_samples == 0)
+			continue;
+
+		uint32_t avg_window = w->window_sum / w->window_samples;
+		w->window_conditions = 0;
+
+		/* Zero window seen in this interval */
+		if (w->window_min == 0) {
+			w->window_conditions |= WINDOW_COND_ZERO_SEEN;
+		}
+
+		/* Threshold: low if below 25% of max seen, minimum 1 MSS */
+		uint32_t threshold = w->window_max / 4;
+		if (threshold < 1460)
+			threshold = 1460;
+
+		if (avg_window < threshold) {
+			w->window_conditions |= WINDOW_COND_LOW;
+			w->low_window_streak++;
+
+			/* Hysteresis: starving after 3+ consecutive low intervals */
+			if (w->low_window_streak >= 3) {
+				w->window_conditions |= WINDOW_COND_STARVING;
+			}
+		} else {
+			/* Recovered from low window */
+			if (w->low_window_streak > 0) {
+				w->window_conditions |= WINDOW_COND_RECOVERED;
+			}
+			w->low_window_streak = 0;
+		}
+	}
+}
+
 static void expire_old_interval_tables(struct timeval now)
 {
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
@@ -195,6 +241,9 @@ static void expire_old_interval_tables(struct timeval now)
 					iter->pkt_count_this_interval = 0;
 				}
 			}
+
+			/* Compute window conditions before rotating tables */
+			compute_window_conditions(i);
 
 			/* clear the hash table */
 			clear_table(i);
@@ -475,11 +524,25 @@ static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
 		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
+		/* Initialize window_min to UINT32_MAX so first sample sets it */
+		fte->f.window.window_min = UINT32_MAX;
 		HASH_ADD(ts_hh, incomplete_flow_tables[time_series], f.flow,
 		         sizeof(struct flow), fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
 		fte->f.packets += pkt->flow_rec.packets;
+	}
+
+	/* Accumulate window stats if this is a TCP packet with valid window.
+	 * This piggybacks on the existing hash lookup - no extra cost. */
+	if (pkt->has_tcp_window) {
+		uint32_t w = pkt->tcp_scaled_window;
+		fte->f.window.window_sum += w;
+		fte->f.window.window_samples++;
+		if (w < fte->f.window.window_min)
+			fte->f.window.window_min = w;
+		if (w > fte->f.window.window_max)
+			fte->f.window.window_max = w;
 	}
 }
 
@@ -537,6 +600,28 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		st_flows[i].packets = te ? te->f.packets : 0;
 		/* Get events accumulated during this interval (like bytes/packets) */
 		st_flows[i].window.recent_events = te ? te->f.window.recent_events : 0;
+
+		/* Copy per-interval window stats if available */
+		if (te && te->f.window.window_samples > 0) {
+			/* Average window for this interval */
+			st_flows[i].window.rwnd_bytes =
+			    te->f.window.window_sum / te->f.window.window_samples;
+			/* Copy raw stats for client use */
+			st_flows[i].window.window_sum = te->f.window.window_sum;
+			st_flows[i].window.window_samples = te->f.window.window_samples;
+			st_flows[i].window.window_min = te->f.window.window_min;
+			st_flows[i].window.window_max = te->f.window.window_max;
+			/* Copy computed conditions */
+			st_flows[i].window.window_conditions = te->f.window.window_conditions;
+			st_flows[i].window.low_window_streak = te->f.window.low_window_streak;
+		} else {
+			/* No per-interval window data - will use fallback from tcp_window_get_info */
+			st_flows[i].window.window_sum = 0;
+			st_flows[i].window.window_samples = 0;
+			st_flows[i].window.window_min = 0;
+			st_flows[i].window.window_max = 0;
+			st_flows[i].window.window_conditions = 0;
+		}
 
 		/* convert to bytes per second */
 		st_flows[i].bytes =
@@ -922,6 +1007,7 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                       tcp_pkt.flags,
 					                       tcp_pkt.payload_len,
 					                       pkt.timestamp);
+					uint32_t scaled_window = 0;
 					uint64_t tcp_events = tcp_window_process_packet(
 					                          &pkt.flow_rec.flow,
 					                          (const uint8_t *)tcp_hdr,
@@ -931,7 +1017,13 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 					                          tcp_pkt.flags,
 					                          tcp_pkt.window,
 					                          tcp_pkt.payload_len,
-					                          pkt.timestamp);
+					                          pkt.timestamp,
+					                          &scaled_window);
+
+					/* Store scaled window in pkt for interval accumulation */
+					pkt.tcp_scaled_window = scaled_window;
+					pkt.has_tcp_window = 1;
+
 					/* Propagate events to ALL interval tables */
 					propagate_events_to_intervals(&pkt.flow_rec.flow, tcp_events);
 
