@@ -66,7 +66,7 @@
     this.title = title;
     this.ylabel = ylabel;
     this.rateFormatter = rateFormatter;
-    this.xlabel = "Time (ms)";
+    this.xlabel = "Time (s)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
     this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
     this.pgaps = {};
