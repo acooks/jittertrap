@@ -1043,11 +1043,18 @@ static void handle_packet(uint8_t *user, const struct pcap_pkthdr *pcap_hdr,
 
 		/* Process TCP packets for RTT tracking */
 		if (pkt.flow_rec.flow.proto == IPPROTO_TCP) {
-			const uint8_t *end_of_packet;
-			const struct hdr_tcp *tcp_hdr = find_tcp_header(pcap_hdr,
-			                                                wirebits,
-			                                                cbdata->datalink_type,
-			                                                &end_of_packet);
+			const uint8_t *end_of_packet = wirebits + pcap_hdr->caplen;
+			const struct hdr_tcp *tcp_hdr;
+
+			/* Use stored L4 offset if available (avoids re-parsing headers) */
+			if (pkt.has_l4_offset) {
+				tcp_hdr = (const struct hdr_tcp *)(wirebits + pkt.l4_offset);
+			} else {
+				/* Fallback to find_tcp_header for edge cases */
+				tcp_hdr = find_tcp_header(pcap_hdr, wirebits,
+				                          cbdata->datalink_type,
+				                          &end_of_packet);
+			}
 			if (tcp_hdr) {
 				struct flow_pkt_tcp tcp_pkt = { 0 };
 				if (0 == decode_tcp_extended(tcp_hdr, end_of_packet,

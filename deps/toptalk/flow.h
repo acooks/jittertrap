@@ -361,6 +361,9 @@ struct flow_pkt {
 	/* TCP window value (set during TCP packet processing) */
 	uint32_t tcp_scaled_window;  /* Scaled window value, 0 if not TCP */
 	uint8_t has_tcp_window;      /* 1 if tcp_scaled_window is valid */
+	/* L4 header offset - computed during decode to avoid re-parsing */
+	uint16_t l4_offset;          /* Offset to TCP/UDP header from packet start */
+	uint8_t has_l4_offset;       /* 1 if l4_offset is valid (TCP/UDP packet) */
 };
 
 #endif
