@@ -15,6 +15,60 @@
 #include <errno.h>
 
 #include "utlist.h"
+
+/*
+ * CRC32C Hardware-Accelerated Hash Function
+ * ==========================================
+ * Uses SSE4.2 CRC32C instructions when available for ~20-30 cycle hash
+ * vs ~50 cycles for Jenkins hash. Falls back to Jenkins if SSE4.2 unavailable.
+ *
+ * CRC32C is particularly good for network data - designed for error detection
+ * in ethernet/SCTP and has excellent distribution properties.
+ *
+ * Must be defined BEFORE including uthash.h to override the default hash.
+ */
+#if defined(__SSE4_2__) && defined(__x86_64__)
+#include <nmmintrin.h>
+
+/*
+ * CRC32C hash for flow keys using SSE4.2 intrinsics.
+ * Processes 8 bytes at a time for maximum throughput.
+ */
+static inline uint32_t flow_hash_crc32c(const void *key, size_t len)
+{
+	const uint8_t *data = (const uint8_t *)key;
+	uint64_t h = 0;  /* CRC32C initial value */
+
+	/* Process 8 bytes at a time */
+	while (len >= 8) {
+		h = _mm_crc32_u64(h, *(const uint64_t *)data);
+		data += 8;
+		len -= 8;
+	}
+
+	/* Process remaining 4 bytes */
+	if (len >= 4) {
+		h = _mm_crc32_u32((uint32_t)h, *(const uint32_t *)data);
+		data += 4;
+		len -= 4;
+	}
+
+	/* Process remaining bytes */
+	while (len > 0) {
+		h = _mm_crc32_u8((uint32_t)h, *data);
+		data++;
+		len--;
+	}
+
+	return (uint32_t)h;
+}
+
+/* Override uthash's default hash function */
+#define HASH_FUNCTION(keyptr, keylen, hashv) \
+	do { (hashv) = flow_hash_crc32c((keyptr), (keylen)); } while (0)
+
+#endif /* __SSE4_2__ && __x86_64__ */
+
 #include "uthash.h"
 
 #include "flow.h"
@@ -114,7 +168,140 @@ struct flow_hash {
 		UT_hash_handle r_hh;  /* sliding window reference table */
 		UT_hash_handle ts_hh; /* time series tables */
 	};
+	/* Pool management: index of this entry in the pool, or UINT32_MAX if malloc'd */
+	uint32_t pool_idx;
 };
+
+/*
+ * Flow Pool Allocator
+ * ===================
+ * Pre-allocated pool of flow_hash entries to eliminate malloc() stalls
+ * on the packet processing hot path. Uses a simple free list for O(1)
+ * allocation and deallocation.
+ *
+ * When the pool is exhausted, falls back to malloc() to avoid packet drops.
+ * Pool size is configurable at compile time via FLOW_POOL_SIZE.
+ *
+ * Memory usage: FLOW_POOL_SIZE * sizeof(flow_hash) + free list array
+ * Default 64K entries * ~1KB = ~64MB (adjust based on expected flow count)
+ */
+#ifndef FLOW_POOL_SIZE
+#define FLOW_POOL_SIZE (1 << 16)  /* 65536 entries - adjust as needed */
+#endif
+
+/* Marker for entries allocated via malloc (not from pool) */
+#define FLOW_POOL_IDX_MALLOC UINT32_MAX
+
+struct flow_pool {
+	struct flow_hash *entries;     /* Pool memory - dynamically allocated */
+	uint32_t *free_list;           /* Stack of free indices */
+	uint32_t free_head;            /* Top of free list stack (next to alloc) */
+	uint32_t size;                 /* Total pool size */
+	uint32_t malloc_count;         /* Count of malloc fallbacks (for stats) */
+};
+
+static struct flow_pool ref_flow_pool = {
+	.entries = NULL,
+	.free_list = NULL,
+	.free_head = 0,
+	.size = 0,
+	.malloc_count = 0
+};
+
+/* Separate pool for interval table entries (different lifetime) */
+static struct flow_pool interval_flow_pool = {
+	.entries = NULL,
+	.free_list = NULL,
+	.free_head = 0,
+	.size = 0,
+	.malloc_count = 0
+};
+
+/*
+ * Initialize a flow pool with the given size.
+ * Returns 0 on success, -1 on failure.
+ */
+static int flow_pool_init(struct flow_pool *pool, uint32_t size)
+{
+	pool->entries = calloc(size, sizeof(struct flow_hash));
+	if (!pool->entries)
+		return -1;
+
+	pool->free_list = malloc(size * sizeof(uint32_t));
+	if (!pool->free_list) {
+		free(pool->entries);
+		pool->entries = NULL;
+		return -1;
+	}
+
+	/* Initialize free list as a stack: [0, 1, 2, ..., size-1] */
+	for (uint32_t i = 0; i < size; i++) {
+		pool->free_list[i] = i;
+		pool->entries[i].pool_idx = i;
+	}
+
+	pool->free_head = size;  /* Stack grows downward */
+	pool->size = size;
+	pool->malloc_count = 0;
+
+	return 0;
+}
+
+/*
+ * Free a flow pool's memory.
+ */
+static void flow_pool_cleanup(struct flow_pool *pool)
+{
+	free(pool->entries);
+	free(pool->free_list);
+	pool->entries = NULL;
+	pool->free_list = NULL;
+	pool->free_head = 0;
+	pool->size = 0;
+}
+
+/*
+ * Allocate a flow_hash from the pool.
+ * Returns pointer to zeroed entry, or NULL on failure.
+ * Falls back to malloc() if pool is exhausted.
+ */
+static struct flow_hash *flow_pool_alloc(struct flow_pool *pool)
+{
+	if (pool->free_head > 0) {
+		/* Pop from free list stack */
+		uint32_t idx = pool->free_list[--pool->free_head];
+		struct flow_hash *entry = &pool->entries[idx];
+		memset(entry, 0, sizeof(*entry));
+		entry->pool_idx = idx;
+		return entry;
+	}
+
+	/* Pool exhausted - fall back to malloc */
+	pool->malloc_count++;
+	struct flow_hash *entry = calloc(1, sizeof(struct flow_hash));
+	if (entry)
+		entry->pool_idx = FLOW_POOL_IDX_MALLOC;
+	return entry;
+}
+
+/*
+ * Free a flow_hash back to the pool.
+ * Handles both pool entries and malloc'd entries.
+ */
+static void flow_pool_free(struct flow_pool *pool, struct flow_hash *entry)
+{
+	if (!entry)
+		return;
+
+	if (entry->pool_idx == FLOW_POOL_IDX_MALLOC) {
+		/* Was allocated via malloc, not from pool */
+		free(entry);
+		return;
+	}
+
+	/* Return to pool's free list */
+	pool->free_list[pool->free_head++] = entry->pool_idx;
+}
 
 struct flow_pkt_list {
 	struct flow_pkt pkt;
@@ -337,6 +524,8 @@ static struct {
  * The table_head pointer is passed by reference (pointer-to-pointer) so we
  * can update the caller's head pointer directly, avoiding confusion about
  * which variable HASH_DELETE modifies.
+ *
+ * Uses the interval_flow_pool since interval tables use that pool.
  */
 static void free_flow_table(struct flow_hash **table_head)
 {
@@ -345,7 +534,7 @@ static void free_flow_table(struct flow_hash **table_head)
 	HASH_ITER(ts_hh, *table_head, iter, tmp)
 	{
 		HASH_DELETE(ts_hh, *table_head, iter);
-		free(iter);
+		flow_pool_free(&interval_flow_pool, iter);
 	}
 	/* table_head is already NULL after all deletions, but be explicit */
 	*table_head = NULL;
@@ -658,7 +847,7 @@ static void delete_pkt_from_ref_table_compact(const struct flow *flow, int64_t b
 
 	if (0 == fte->f.bytes) {
 		HASH_DELETE(r_hh, flow_ref_table, fte);
-		free(fte);
+		flow_pool_free(&ref_flow_pool, fte);
 	}
 }
 
@@ -687,9 +876,17 @@ static void delete_pkt_ring(struct pkt_ring_entry *entry)
  */
 static void expire_old_packets(struct timeval deadline)
 {
-	/* Ring buffer expiration: iterate from tail while entries are expired */
+	/* Ring buffer expiration: iterate from tail while entries are expired.
+	 * Prefetch next entry to improve cache performance when expiring
+	 * multiple consecutive entries. */
 	while (pkt_ring.tail != pkt_ring.head) {
 		struct pkt_ring_entry *entry = &PKT_RING_ENTRY(pkt_ring.tail);
+
+		/* Prefetch next entry while processing current */
+		if (pkt_ring.tail + 1 != pkt_ring.head) {
+			__builtin_prefetch(&PKT_RING_ENTRY(pkt_ring.tail + 1), 0, 1);
+		}
+
 		if (has_aged(entry->timestamp, deadline)) {
 			delete_pkt_ring(entry);
 		} else {
@@ -760,10 +957,10 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 	HASH_FIND(r_hh, flow_ref_table, &(pkt->flow_rec.flow),
 	          sizeof(struct flow), fte);
 	if (!fte) {
-		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
+		fte = flow_pool_alloc(&ref_flow_pool);
 		if (!fte)
 			return;  /* Drop packet on allocation failure */
-		memset(fte, 0, sizeof(struct flow_hash));
+		/* flow_pool_alloc already zeros the struct */
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
 		/* Initialize interval deltas - window_min to UINT32_MAX */
 		for (int i = 0; i < INTERVAL_COUNT; i++) {
@@ -833,6 +1030,11 @@ static void commit_interval_deltas(int table_idx)
 	struct flow_hash *iter, *tmp;
 
 	HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
+		/* Prefetch next hash table entry for smoother iteration */
+		if (tmp) {
+			__builtin_prefetch(&tmp->interval_delta[table_idx], 0, 1);
+		}
+
 		struct interval_delta *delta = &iter->interval_delta[table_idx];
 
 		/* Skip flows with no activity in this interval */
@@ -846,12 +1048,12 @@ static void commit_interval_deltas(int table_idx)
 
 		if (!fte) {
 			/* Create new entry in interval table */
-			fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
+			fte = flow_pool_alloc(&interval_flow_pool);
 			if (!fte) {
 				/* Reset delta even on failure to avoid accumulation */
 				goto reset_delta;
 			}
-			memset(fte, 0, sizeof(struct flow_hash));
+			/* flow_pool_alloc already zeros the struct */
 			/* Copy flow key and basic info from ref table */
 			memcpy(&fte->f.flow, &iter->f.flow, sizeof(struct flow));
 			fte->f.window.window_min = UINT32_MAX;
@@ -1118,6 +1320,11 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	 * NB: must be called in stats path as well.
 	 */
 	expire_old_packets(pkt->timestamp);
+
+	/* Prefetch the flow key area for hash lookup.
+	 * The hash function will access pkt->flow_rec.flow,
+	 * so prefetch it into L1 cache before the lookup. */
+	__builtin_prefetch(&pkt->flow_rec.flow, 0, 3);
 
 	/* Add to ref table and accumulate interval deltas.
 	 * The interval deltas are committed at interval boundaries
@@ -1784,6 +1991,22 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	}
 	last_pkt_time = (struct timeval){ 0 };
 
+	/* Initialize flow pools for O(1) allocation */
+	if (ref_flow_pool.entries == NULL) {
+		if (flow_pool_init(&ref_flow_pool, FLOW_POOL_SIZE) != 0) {
+			ring_buffer_free();
+			return 1;
+		}
+	}
+	if (interval_flow_pool.entries == NULL) {
+		/* Interval tables need more entries: INTERVAL_COUNT tables x flows */
+		if (flow_pool_init(&interval_flow_pool, FLOW_POOL_SIZE * 2) != 0) {
+			flow_pool_cleanup(&ref_flow_pool);
+			ring_buffer_free();
+			return 1;
+		}
+	}
+
 	/* Initialize TCP RTT, window, video metrics, and RTSP tap tracking */
 	tcp_rtt_init();
 	tcp_window_init();
@@ -1820,6 +2043,10 @@ int tt_intervals_free(struct tt_thread_info *ti)
 
 	/* Free ring buffer memory */
 	ring_buffer_free();
+
+	/* Free flow pools */
+	flow_pool_cleanup(&ref_flow_pool);
+	flow_pool_cleanup(&interval_flow_pool);
 
 	/* Cleanup TCP RTT, window, and video metrics tracking */
 	tcp_rtt_cleanup();

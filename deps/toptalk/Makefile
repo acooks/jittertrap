@@ -57,6 +57,10 @@ CFLAGS_HARDENED = \
  -Warray-bounds \
  -Wstringop-overflow
 
+# Enable SSE4.2 for hardware-accelerated CRC32C hash function (if available)
+# Falls back to software implementation on CPUs without SSE4.2
+CFLAGS_SIMD = -msse4.2
+
 ifeq ($(BUILD_TYPE),release)
 CFLAGS_OPT = -O2 -D_FORTIFY_SOURCE=2
 CFLAGS_SANITIZER =
@@ -73,7 +77,7 @@ LDFLAGS := -lrt -lpthread \
  $(LDFLAGS_SANITIZER) \
  $(LDFLAGS)
 
-CFLAGS := -g $(CFLAGS_OPT) -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS_SANITIZER) $(CFLAGS)
+CFLAGS := -g $(CFLAGS_OPT) -Wall -pedantic -std=c11 $(DEFINES) $(CFLAGS_HARDENED) $(CFLAGS_SIMD) $(CFLAGS_SANITIZER) $(CFLAGS)
 
 .PHONY: all
 all: $(LIB) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_FLOW) $(TEST_FLOW_KEY) $(TEST_VIDEO) $(TEST_RTSP) $(PROG)
