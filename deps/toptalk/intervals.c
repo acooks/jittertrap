@@ -27,6 +27,27 @@
 
 #include "intervals.h"
 
+/*
+ * TIME DOMAIN ARCHITECTURE
+ * ========================
+ * Two distinct time domains are used in this module:
+ *
+ * 1. PACKET TIME (struct timeval from pcap_pkthdr->ts)
+ *    - Unix epoch time (seconds since 1970)
+ *    - Used for: sliding window expiration, flow activity tracking
+ *    - All expire_old_*() functions use this domain
+ *    - Stored in: pkt_ring[].timestamp, last_pkt_time, tcp/window/video last_activity
+ *
+ * 2. MONOTONIC TIME (struct timespec from CLOCK_MONOTONIC)
+ *    - Uptime since boot (immune to NTP adjustments)
+ *    - Used for: 1ms tick scheduling, interval table rotation
+ *    - Stored in: interval_start[], interval_end[]
+ *
+ * CRITICAL: Do not mix these domains in comparisons. The expire_old_packets()
+ * function must receive PACKET TIME, while expire_old_interval_tables() uses
+ * MONOTONIC TIME (which is self-consistent within the interval table domain).
+ */
+
 /* Global RTSP tap state - shared across all packet processing */
 static struct rtsp_tap_state g_rtsp_tap;
 
@@ -95,6 +116,7 @@ _Static_assert((PKT_RING_SIZE & (PKT_RING_SIZE - 1)) == 0,
 static struct pkt_ring_entry pkt_ring[PKT_RING_SIZE];
 static uint32_t pkt_ring_head = 0;  /* Next write position */
 static uint32_t pkt_ring_tail = 0;  /* Oldest valid entry */
+static struct timeval last_pkt_time = { 0 };  /* Most recent packet timestamp */
 #define PKT_RING_MASK (PKT_RING_SIZE - 1)
 #define PKT_RING_COUNT() ((pkt_ring_head - pkt_ring_tail) & UINT32_MAX)
 
@@ -870,6 +892,9 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
 		add_flow_to_interval(pkt, i);
 	}
+
+	/* Track latest packet time for stats path expiration */
+	last_pkt_time = pkt->timestamp;
 }
 
 #define DEBUG 1
@@ -895,12 +920,16 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 	find_top_n_flows(top_flows, MAX_FLOW_COUNT, &top_count);
 
 	/*
-	 * Expire old packets in the output path.
-	 * NB: must be called in packet receive path as well.
+	 * Expire old packets using PACKET TIME domain (not monotonic deadline).
+	 * This ensures correct comparison against packet timestamps in the ring buffer.
+	 * Only expire if we've seen at least one packet.
 	 */
-	expire_old_packets(deadline);
+	if (last_pkt_time.tv_sec != 0 || last_pkt_time.tv_usec != 0) {
+		expire_old_packets(last_pkt_time);
+	}
 
-	/* Check if the interval is complete and then rotate tables */
+	/* Check if the interval is complete and then rotate tables.
+	 * Interval tables use MONOTONIC TIME domain (self-consistent). */
 	expire_old_interval_tables(deadline);
 
 	/* For each of the top N flows in the reference table,
@@ -1510,9 +1539,10 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
 
-	/* Reset ring buffer indices */
+	/* Reset ring buffer indices and packet time tracking */
 	pkt_ring_head = 0;
 	pkt_ring_tail = 0;
+	last_pkt_time = (struct timeval){ 0 };
 
 	/* Initialize TCP RTT, window, video metrics, and RTSP tap tracking */
 	tcp_rtt_init();
