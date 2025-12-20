@@ -77,6 +77,27 @@ struct flow_pkt_list {
 	struct flow_pkt_list *next, *prev;
 };
 
+/*
+ * Ring buffer for packet list - eliminates per-packet malloc/free.
+ *
+ * Size is configurable at compile time via PKT_RING_SIZE.
+ * Must be a power of 2 for efficient modulo via bitmask.
+ * Default 262144 entries supports ~87K pps with 3-second window.
+ */
+#ifndef PKT_RING_SIZE
+#define PKT_RING_SIZE (1 << 18)  /* 262144 entries */
+#endif
+
+/* Verify PKT_RING_SIZE is a power of 2 at compile time */
+_Static_assert((PKT_RING_SIZE & (PKT_RING_SIZE - 1)) == 0,
+               "PKT_RING_SIZE must be a power of 2");
+
+static struct flow_pkt pkt_ring[PKT_RING_SIZE];
+static uint32_t pkt_ring_head = 0;  /* Next write position */
+static uint32_t pkt_ring_tail = 0;  /* Oldest valid entry */
+#define PKT_RING_MASK (PKT_RING_SIZE - 1)
+#define PKT_RING_COUNT() ((pkt_ring_head - pkt_ring_tail) & UINT32_MAX)
+
 
 typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
                             const uint8_t *wirebits,
@@ -106,8 +127,8 @@ struct tt_thread_private {
 /* long, continuous sliding window tracking top flows */
 static struct flow_hash *flow_ref_table = NULL;
 
-/* packet list enables removing expired packets from flow table */
-static struct flow_pkt_list *pkt_list_ref_head = NULL;
+/* Legacy: packet list linked list head - no longer used with ring buffer */
+/* static struct flow_pkt_list *pkt_list_ref_head = NULL; */
 
 /* flows recorded as period-on-period intervals */
 static struct flow_hash *incomplete_flow_tables[INTERVAL_COUNT] = { NULL };
@@ -400,18 +421,18 @@ static void delete_pkt_from_ref_table(struct flow_record *fr)
 }
 
 /* remove pkt from the sliding window packet list as well as reference table */
-static void delete_pkt(struct flow_pkt_list *le)
+static void delete_pkt_ring(struct flow_pkt *pkt)
 {
-	delete_pkt_from_ref_table(&le->pkt.flow_rec);
+	delete_pkt_from_ref_table(&pkt->flow_rec);
 
-	totals.bytes -= le->pkt.flow_rec.bytes;
-	totals.packets -= le->pkt.flow_rec.packets;
+	totals.bytes -= pkt->flow_rec.bytes;
+	totals.packets -= pkt->flow_rec.packets;
 
 	assert(totals.bytes >= 0);
 	assert(totals.packets >= 0);
 
-	DL_DELETE(pkt_list_ref_head, le);
-	free(le);
+	/* Ring buffer: increment tail to mark entry as freed */
+	pkt_ring_tail++;
 }
 
 /*
@@ -424,14 +445,13 @@ static void delete_pkt(struct flow_pkt_list *le)
  */
 static void expire_old_packets(struct timeval deadline)
 {
-	struct flow_pkt_list *tmp, *iter;
-
-	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
-	{
-		if (has_aged(iter->pkt.timestamp, deadline)) {
-			delete_pkt(iter);
+	/* Ring buffer expiration: iterate from tail while entries are expired */
+	while (pkt_ring_tail != pkt_ring_head) {
+		struct flow_pkt *pkt = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+		if (has_aged(pkt->timestamp, deadline)) {
+			delete_pkt_ring(pkt);
 		} else {
-			break;
+			break;  /* Rest are newer, stop */
 		}
 	}
 
@@ -444,11 +464,10 @@ static void expire_old_packets(struct timeval deadline)
 
 static void clear_ref_table(void)
 {
-	struct flow_pkt_list *tmp, *iter;
-
-	DL_FOREACH_SAFE(pkt_list_ref_head, iter, tmp)
-	{
-		delete_pkt(iter);
+	/* Ring buffer: delete all entries from tail to head */
+	while (pkt_ring_tail != pkt_ring_head) {
+		struct flow_pkt *pkt = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+		delete_pkt_ring(pkt);
 	}
 
 	assert(totals.packets == 0);
@@ -478,14 +497,11 @@ void clear_all_tables(void)
 static void add_flow_to_ref_table(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
-	struct flow_pkt_list *ple;
 
-	/* keep a list of packets, used for sliding window byte counts */
-	ple = malloc(sizeof(struct flow_pkt_list));
-	if (!ple)
-		return;  /* Drop packet on allocation failure */
-	ple->pkt = *pkt;
-	DL_APPEND(pkt_list_ref_head, ple);
+	/* Store packet in ring buffer for sliding window byte counts.
+	 * No malloc needed - just copy to next slot and advance head. */
+	pkt_ring[pkt_ring_head & PKT_RING_MASK] = *pkt;
+	pkt_ring_head++;
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
@@ -1417,7 +1433,10 @@ int tt_intervals_init(struct tt_thread_info *ti)
 
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
-	pkt_list_ref_head = NULL;
+
+	/* Reset ring buffer indices */
+	pkt_ring_head = 0;
+	pkt_ring_tail = 0;
 
 	/* Initialize TCP RTT, window, video metrics, and RTSP tap tracking */
 	tcp_rtt_init();
