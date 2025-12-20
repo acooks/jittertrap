@@ -527,6 +527,12 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 {
 	struct flow_hash *fte;
 
+	/* Check if ring is full - must expire oldest entry before overwriting.
+	 * This ensures every packet added is eventually subtracted exactly once. */
+	if ((pkt_ring_head - pkt_ring_tail) >= PKT_RING_SIZE) {
+		delete_pkt_ring(&pkt_ring[pkt_ring_tail & PKT_RING_MASK]);
+	}
+
 	/* Store packet in ring buffer for sliding window byte counts.
 	 * No malloc needed - just copy to next slot and advance head. */
 	pkt_ring[pkt_ring_head & PKT_RING_MASK] = *pkt;
