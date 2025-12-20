@@ -60,6 +60,120 @@
     1000: 200   // 5 provisional points
   };
 
+  /* TypedRingBuffer - a circular buffer using Float64Arrays for GC-free numeric storage.
+   * Stores pairs of (timestamp, value) without creating JS objects.
+   * API is compatible with CBuffer where possible. */
+  const TypedRingBuffer2 = function(capacity) {
+    this.timestamps = new Float64Array(capacity);
+    this.values = new Float64Array(capacity);
+    this.capacity = capacity;
+    this.size = 0;
+    this.head = 0;  // Next write position
+  };
+
+  TypedRingBuffer2.prototype = {
+    push: function(timestamp, value) {
+      this.timestamps[this.head] = timestamp;
+      this.values[this.head] = value;
+      this.head = (this.head + 1) % this.capacity;
+      if (this.size < this.capacity) {
+        this.size++;
+      }
+    },
+
+    // Get item at logical index (0 = oldest)
+    get: function(i) {
+      if (i < 0 || i >= this.size) return null;
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      const idx = (start + i) % this.capacity;
+      return { timestamp: this.timestamps[idx], value: this.values[idx] };
+    },
+
+    // Get the last (most recent) item
+    last: function() {
+      if (this.size === 0) return null;
+      const idx = (this.head - 1 + this.capacity) % this.capacity;
+      return { timestamp: this.timestamps[idx], value: this.values[idx] };
+    },
+
+    // Return array of value properties (for stats calculation)
+    slice: function() {
+      const result = [];
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      for (let i = 0; i < this.size; i++) {
+        const idx = (start + i) % this.capacity;
+        result.push({ timestamp: this.timestamps[idx], value: this.values[idx] });
+      }
+      return result;
+    },
+
+    empty: function() {
+      this.size = 0;
+      this.head = 0;
+    },
+
+    // For iteration without allocation - call with callback(timestamp, value, index)
+    forEach: function(callback) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      for (let i = 0; i < this.size; i++) {
+        const idx = (start + i) % this.capacity;
+        callback(this.timestamps[idx], this.values[idx], i);
+      }
+    }
+  };
+
+  /* TypedRingBuffer4 - for pgap data with 4 values per entry (timestamp, min, max, mean) */
+  const TypedRingBuffer4 = function(capacity) {
+    this.timestamps = new Float64Array(capacity);
+    this.mins = new Float64Array(capacity);
+    this.maxs = new Float64Array(capacity);
+    this.means = new Float64Array(capacity);
+    this.capacity = capacity;
+    this.size = 0;
+    this.head = 0;
+  };
+
+  TypedRingBuffer4.prototype = {
+    push: function(timestamp, min, max, mean) {
+      this.timestamps[this.head] = timestamp;
+      this.mins[this.head] = min;
+      this.maxs[this.head] = max;
+      this.means[this.head] = mean;
+      this.head = (this.head + 1) % this.capacity;
+      if (this.size < this.capacity) {
+        this.size++;
+      }
+    },
+
+    get: function(i) {
+      if (i < 0 || i >= this.size) return null;
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      const idx = (start + i) % this.capacity;
+      return {
+        timestamp: this.timestamps[idx],
+        min: this.mins[idx],
+        max: this.maxs[idx],
+        mean: this.means[idx]
+      };
+    },
+
+    last: function() {
+      if (this.size === 0) return null;
+      const idx = (this.head - 1 + this.capacity) % this.capacity;
+      return {
+        timestamp: this.timestamps[idx],
+        min: this.mins[idx],
+        max: this.maxs[idx],
+        mean: this.means[idx]
+      };
+    },
+
+    empty: function() {
+      this.size = 0;
+      this.head = 0;
+    }
+  };
+
   /* a prototype object to encapsulate timeseries data. */
   const Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
@@ -68,10 +182,11 @@
     this.rateFormatter = rateFormatter;
     this.xlabel = "Time (s)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
-    this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
+    this.samples = {};
     this.pgaps = {};
     for (const ts in timeScaleTable) {
-      this.pgaps[ts] = new CBuffer(sampleWindowSize);
+      this.samples[ts] = new TypedRingBuffer2(sampleWindowSize);
+      this.pgaps[ts] = new TypedRingBuffer4(sampleWindowSize);
     }
  };
 
@@ -113,14 +228,11 @@
       return;
     }
 
+    // For typed ring buffers, we just create new ones (data will be lost on resize)
+    // This is consistent with the original behavior for pgaps
     for (const key in timeScaleTable) {
-      const b = new CBuffer(len);
-      let l = (len < series.samples[key].size) ? len : series.samples[key].size;
-      while (l--) {
-        b.push(series.samples[key].shift());
-      }
-      series.samples[key] = b;
-      series.pgaps[key] = new CBuffer(len);
+      series.samples[key] = new TypedRingBuffer2(len);
+      series.pgaps[key] = new TypedRingBuffer4(len);
     }
   };
 
@@ -137,7 +249,7 @@
   const clearSeries = function (s) {
 
     for (const key in timeScaleTable) {
-      s.samples[key] = new CBuffer(sampleWindowSize);
+      s.samples[key].empty();
       s.pgaps[key].empty();
     }
 
@@ -609,7 +721,8 @@
   const updateSeries = function (series, yVal, selectedSeries, timeScale, timestamp) {
     const periodMs = timeScaleTable[timeScale];
     // Store timestamp (in seconds) with each sample for absolute time positioning
-    series.samples[timeScale].push({timestamp: timestamp, value: series.rateFormatter(yVal)});
+    // TypedRingBuffer2.push takes (timestamp, value) directly - no object allocation
+    series.samples[timeScale].push(timestamp, series.rateFormatter(yVal));
 
     // Only process when interval matches the selected chart period
     if (my.charts.getChartPeriod() == periodMs) {
@@ -629,41 +742,11 @@
   };
 
   const updateData = function (d, sSeries, timeScale, timestamp) {
-    sBin.rxRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_rx_pgap,
-        "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap / 1000.0
-      }
-    );
-
-    sBin.txRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_tx_pgap,
-        "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap / 1000.0
-      }
-    );
-
-    sBin.rxPacketRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_rx_pgap,
-        "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap / 1000.0
-      }
-    );
-
-    sBin.txPacketRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_tx_pgap,
-        "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap / 1000.0
-      }
-    );
+    // TypedRingBuffer4.push takes (timestamp, min, max, mean) directly - no object allocation
+    sBin.rxRate.pgaps[timeScale].push(timestamp, d.min_rx_pgap, d.max_rx_pgap, d.mean_rx_pgap / 1000.0);
+    sBin.txRate.pgaps[timeScale].push(timestamp, d.min_tx_pgap, d.max_tx_pgap, d.mean_tx_pgap / 1000.0);
+    sBin.rxPacketRate.pgaps[timeScale].push(timestamp, d.min_rx_pgap, d.max_rx_pgap, d.mean_rx_pgap / 1000.0);
+    sBin.txPacketRate.pgaps[timeScale].push(timestamp, d.min_tx_pgap, d.max_tx_pgap, d.mean_tx_pgap / 1000.0);
 
     updateSeries(sBin.txRate, d.tx, sSeries, timeScale, timestamp);
     updateSeries(sBin.rxRate, d.rx, sSeries, timeScale, timestamp);
