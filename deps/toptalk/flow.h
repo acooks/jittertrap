@@ -367,16 +367,20 @@ struct flow_pkt {
 };
 
 /* Compact ring buffer entry - stores only what's needed for expiration.
- * Used instead of full flow_pkt to reduce memory ~10x (736 -> 68 bytes).
+ * Used instead of full flow_pkt to reduce memory ~10x (736 -> 64 bytes).
  * The ring buffer only needs to track:
  * - flow key for hash table lookup during expiration
  * - bytes to subtract from flow totals
  * - timestamp to determine when entry expires
+ *
+ * Layout optimized for 64-byte cache line:
+ * - bytes (uint32_t) fits in padding gap after flow (44 bytes + 4 = 48)
+ * - timestamp (struct timeval) is 8-byte aligned at offset 48
  */
 struct pkt_ring_entry {
 	struct flow flow;           /* 44 bytes - hash key for lookup */
-	int64_t bytes;              /* 8 bytes - to subtract on expiration */
+	uint32_t bytes;             /* 4 bytes - fits in padding, max 4GB/pkt */
 	struct timeval timestamp;   /* 16 bytes - for age check */
-};  /* Total: 68 bytes */
+};  /* Total: 64 bytes (1 cache line) */
 
 #endif
