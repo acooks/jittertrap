@@ -92,7 +92,7 @@ struct flow_pkt_list {
 _Static_assert((PKT_RING_SIZE & (PKT_RING_SIZE - 1)) == 0,
                "PKT_RING_SIZE must be a power of 2");
 
-static struct flow_pkt pkt_ring[PKT_RING_SIZE];
+static struct pkt_ring_entry pkt_ring[PKT_RING_SIZE];
 static uint32_t pkt_ring_head = 0;  /* Next write position */
 static uint32_t pkt_ring_tail = 0;  /* Oldest valid entry */
 #define PKT_RING_MASK (PKT_RING_SIZE - 1)
@@ -377,38 +377,54 @@ static void update_ipg(struct ipg_state *ipg, const struct timeval *pkt_time)
 }
 
 /*
+ * Entry for top-N flow selection.
+ * Stores a copy of the flow key and byte count so we can safely look up
+ * the flow after expiration (which may free flow_hash entries).
+ */
+struct top_flow_entry {
+	struct flow flow;	/* Copy of flow key for hash lookup */
+	int64_t bytes;		/* Byte count at selection time (for sorting) */
+};
+
+/*
  * Top-N selection: Find the N flows with highest byte count.
  * O(n) complexity instead of O(n log n) for full sort.
+ *
+ * Copies flow keys (not pointers) so the result is safe to use after
+ * expire_old_packets() which may free flow_hash entries.
  *
  * Uses a simple insertion-sort approach for the top[] array since N is small
  * (MAX_FLOW_COUNT is typically 5-20).
  */
-static void find_top_n_flows(struct flow_hash **top, int n, int *out_count)
+static void find_top_n_flows(struct top_flow_entry *top, int n, int *out_count)
 {
 	struct flow_hash *iter, *tmp;
 	int count = 0;
 
 	HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
 		if (count < n) {
-			/* Fill the top array first */
-			top[count++] = iter;
+			/* Fill the top array first - copy key and bytes */
+			top[count].flow = iter->f.flow;
+			top[count].bytes = iter->f.bytes;
+			count++;
 			/* Keep sorted with insertion sort (small array, O(n²) but n is small) */
 			for (int i = count - 1; i > 0; i--) {
-				if (top[i]->f.bytes > top[i-1]->f.bytes) {
-					struct flow_hash *t = top[i];
+				if (top[i].bytes > top[i-1].bytes) {
+					struct top_flow_entry t = top[i];
 					top[i] = top[i-1];
 					top[i-1] = t;
 				} else {
 					break;  /* Already sorted */
 				}
 			}
-		} else if (iter->f.bytes > top[n-1]->f.bytes) {
+		} else if (iter->f.bytes > top[n-1].bytes) {
 			/* This flow has more bytes than the smallest in top - replace it */
-			top[n-1] = iter;
+			top[n-1].flow = iter->f.flow;
+			top[n-1].bytes = iter->f.bytes;
 			/* Re-sort to maintain order */
 			for (int i = n - 1; i > 0; i--) {
-				if (top[i]->f.bytes > top[i-1]->f.bytes) {
-					struct flow_hash *t = top[i];
+				if (top[i].bytes > top[i-1].bytes) {
+					struct top_flow_entry t = top[i];
 					top[i] = top[i-1];
 					top[i-1] = t;
 				} else {
@@ -428,17 +444,18 @@ static int has_aged(struct timeval t1, struct timeval deadline)
 	return (tv_cmp(expiretime, deadline) < 0);
 }
 
-static void delete_pkt_from_ref_table(struct flow_record *fr)
+/* Delete packet from reference table using compact ring entry.
+ * Subtracts bytes and 1 packet from the flow's totals.
+ */
+static void delete_pkt_from_ref_table_compact(const struct flow *flow, int64_t bytes)
 {
 	struct flow_hash *fte;
 
-	HASH_FIND(r_hh, flow_ref_table,
-	          &(fr->flow),
-	          sizeof(struct flow), fte);
+	HASH_FIND(r_hh, flow_ref_table, flow, sizeof(struct flow), fte);
 	assert(fte);
 
-	fte->f.bytes -= fr->bytes;
-	fte->f.packets -= fr->packets;
+	fte->f.bytes -= bytes;
+	fte->f.packets -= 1;  /* Ring entries always represent 1 packet */
 
 	assert(fte->f.bytes >= 0);
 	assert(fte->f.packets >= 0);
@@ -450,12 +467,12 @@ static void delete_pkt_from_ref_table(struct flow_record *fr)
 }
 
 /* remove pkt from the sliding window packet list as well as reference table */
-static void delete_pkt_ring(struct flow_pkt *pkt)
+static void delete_pkt_ring(struct pkt_ring_entry *entry)
 {
-	delete_pkt_from_ref_table(&pkt->flow_rec);
+	delete_pkt_from_ref_table_compact(&entry->flow, entry->bytes);
 
-	totals.bytes -= pkt->flow_rec.bytes;
-	totals.packets -= pkt->flow_rec.packets;
+	totals.bytes -= entry->bytes;
+	totals.packets -= 1;  /* Ring entries always represent 1 packet */
 
 	assert(totals.bytes >= 0);
 	assert(totals.packets >= 0);
@@ -476,9 +493,9 @@ static void expire_old_packets(struct timeval deadline)
 {
 	/* Ring buffer expiration: iterate from tail while entries are expired */
 	while (pkt_ring_tail != pkt_ring_head) {
-		struct flow_pkt *pkt = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
-		if (has_aged(pkt->timestamp, deadline)) {
-			delete_pkt_ring(pkt);
+		struct pkt_ring_entry *entry = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+		if (has_aged(entry->timestamp, deadline)) {
+			delete_pkt_ring(entry);
 		} else {
 			break;  /* Rest are newer, stop */
 		}
@@ -495,8 +512,8 @@ static void clear_ref_table(void)
 {
 	/* Ring buffer: delete all entries from tail to head */
 	while (pkt_ring_tail != pkt_ring_head) {
-		struct flow_pkt *pkt = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
-		delete_pkt_ring(pkt);
+		struct pkt_ring_entry *entry = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+		delete_pkt_ring(entry);
 	}
 
 	assert(totals.packets == 0);
@@ -533,9 +550,13 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 		delete_pkt_ring(&pkt_ring[pkt_ring_tail & PKT_RING_MASK]);
 	}
 
-	/* Store packet in ring buffer for sliding window byte counts.
-	 * No malloc needed - just copy to next slot and advance head. */
-	pkt_ring[pkt_ring_head & PKT_RING_MASK] = *pkt;
+	/* Store compact entry in ring buffer for sliding window byte counts.
+	 * Only stores flow key, bytes, and timestamp - not the full flow_pkt. */
+	pkt_ring[pkt_ring_head & PKT_RING_MASK] = (struct pkt_ring_entry){
+		.flow = pkt->flow_rec.flow,
+		.bytes = pkt->flow_rec.bytes,
+		.timestamp = pkt->timestamp
+	};
 	pkt_ring_head++;
 
 	/* Update the flow accounting table */
@@ -644,12 +665,24 @@ static inline unsigned int rate_calc(struct timeval interval, int bytes)
 	return (unsigned int)((float)bytes / dt);
 }
 
-static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
-                                 const struct flow_hash *ref_flow,
-                                 struct timeval deadline)
+/*
+ * Fill per-interval flow data for display.
+ * Takes a flow key and looks up the flow in the reference table.
+ * Returns 0 on success, -1 if flow not found.
+ */
+static int fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
+                                const struct flow *flow_key,
+                                struct timeval deadline)
 {
+	struct flow_hash *ref_flow;
 	struct flow_hash *fti; /* flow table iter (short-interval tables */
 	struct flow_hash *te;  /* flow table entry */
+
+	/* Look up the flow by key */
+	HASH_FIND(r_hh, flow_ref_table, flow_key, sizeof(struct flow), ref_flow);
+	if (!ref_flow) {
+		return -1;  /* Flow not found */
+	}
 
 	/*
 	 * PHASE 1: Populate per-interval data (bytes, packets, events) from interval tables.
@@ -820,6 +853,8 @@ static void fill_short_int_flows(struct flow_record st_flows[INTERVAL_COUNT],
 		/* Restore interval-specific events */
 		st_flows[i].window.recent_events = interval_events;
 	}
+
+	return 0;
 }
 
 static void update_stats_tables(struct flow_pkt *pkt)
@@ -850,7 +885,7 @@ static void dbg_per_second(struct tt_top_flows *t5)
 
 static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 {
-	struct flow_hash *top_flows[MAX_FLOW_COUNT];
+	struct top_flow_entry top_flows[MAX_FLOW_COUNT];
 	int top_count = 0;
 
 	/*
@@ -869,9 +904,13 @@ static void tt_get_top5(struct tt_top_flows *t5, struct timeval deadline)
 	expire_old_interval_tables(deadline);
 
 	/* For each of the top N flows in the reference table,
-	 * fill the counts from the short-interval flow tables. */
+	 * fill the counts from the short-interval flow tables.
+	 * Note: fill_short_int_flows returns -1 if flow was expired, skip those. */
 	for (int i = 0; i < top_count; i++) {
-		fill_short_int_flows(t5->flow[i], top_flows[i], deadline);
+		if (fill_short_int_flows(t5->flow[i], &top_flows[i].flow, deadline) < 0) {
+			/* Flow was expired between selection and fill - skip */
+			continue;
+		}
 	}
 
 	t5->flow_count = HASH_CNT(r_hh, flow_ref_table);

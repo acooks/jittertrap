@@ -366,4 +366,17 @@ struct flow_pkt {
 	uint8_t has_l4_offset;       /* 1 if l4_offset is valid (TCP/UDP packet) */
 };
 
+/* Compact ring buffer entry - stores only what's needed for expiration.
+ * Used instead of full flow_pkt to reduce memory ~10x (736 -> 68 bytes).
+ * The ring buffer only needs to track:
+ * - flow key for hash table lookup during expiration
+ * - bytes to subtract from flow totals
+ * - timestamp to determine when entry expires
+ */
+struct pkt_ring_entry {
+	struct flow flow;           /* 44 bytes - hash key for lookup */
+	int64_t bytes;              /* 8 bytes - to subtract on expiration */
+	struct timeval timestamp;   /* 16 bytes - for age check */
+};  /* Total: 68 bytes */
+
 #endif
