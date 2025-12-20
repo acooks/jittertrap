@@ -6,6 +6,12 @@ TEST_WINDOW = test-tcp-window
 TEST_VIDEO = test-video-detect
 TEST_RTSP = test-rtsp-tap
 
+# Benchmark targets
+BENCH_DECODE = bench-decode
+BENCH_MALLOC = bench-malloc
+BENCH_ROTATION = bench-rotation
+BENCH_SORT = bench-sort
+
 SRC = \
  decode.c \
  intervals.c \
@@ -25,7 +31,8 @@ HEADERS = \
  tcp_rtt.h \
  tcp_window.h \
  video_detect.h \
- video_metrics.h
+ video_metrics.h \
+ bench_common.h
 
 ifndef INTERVAL_COUNT
 INTERVAL_COUNT = 8
@@ -109,6 +116,47 @@ $(TEST_RTSP): $(LIB) test_rtsp_tap.c
 	@echo Building $(TEST_RTSP)
 	$(CC) -o $(TEST_RTSP) test_rtsp_tap.c $(LIB) $(LDLIBS) $(LDFLAGS) $(CFLAGS)
 
+# Benchmark targets - built without sanitizers for accurate timing
+# These need a clean library build without ASAN
+BENCH_CFLAGS := -g -O2 -Wall -pedantic -std=c11 $(DEFINES) -fPIC -fno-omit-frame-pointer
+BENCH_LDFLAGS := -lrt -lpthread $(PKGCONFIG_PCAP) $(PKGCONFIG_CURSES)
+
+# Library built without sanitizers for benchmarks
+BENCH_LIB = toptalk-bench.a
+
+$(BENCH_LIB): $(SRC) $(HEADERS) Makefile
+	@echo Building $(BENCH_LIB) without sanitizers
+	$(CC) -c $(SRC) $(BENCH_CFLAGS)
+	gcc-ar cr $(BENCH_LIB) *.o
+	@echo -e "$(BENCH_LIB) OK\n"
+
+$(BENCH_DECODE): $(BENCH_LIB) bench_decode.c bench_common.c bench_common.h
+	@echo Building $(BENCH_DECODE)
+	$(CC) -o $(BENCH_DECODE) bench_decode.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+
+$(BENCH_MALLOC): $(BENCH_LIB) bench_malloc.c bench_common.c bench_common.h
+	@echo Building $(BENCH_MALLOC)
+	$(CC) -o $(BENCH_MALLOC) bench_malloc.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+
+$(BENCH_ROTATION): $(BENCH_LIB) bench_rotation.c bench_common.c bench_common.h
+	@echo Building $(BENCH_ROTATION)
+	$(CC) -o $(BENCH_ROTATION) bench_rotation.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+
+$(BENCH_SORT): $(BENCH_LIB) bench_sort.c bench_common.c bench_common.h
+	@echo Building $(BENCH_SORT)
+	$(CC) -o $(BENCH_SORT) bench_sort.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+
+.PHONY: bench
+bench: $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT)
+	@echo "Running decode benchmark..."
+	@./$(BENCH_DECODE)
+	@echo "Running malloc benchmark..."
+	@./$(BENCH_MALLOC)
+	@echo "Running rotation benchmark..."
+	@./$(BENCH_ROTATION)
+	@echo "Running sort benchmark..."
+	@./$(BENCH_SORT)
+
 .PHONY: test
 test: $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP)
 	@echo "Running RTT unit tests (no root required)..."
@@ -133,4 +181,5 @@ clang-analyze: clean
 .PHONY: clean
 clean:
 	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) *.o *.a || true
+	rm $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT) || true
 	rm *.gcno *.gcov *.gcda || true
