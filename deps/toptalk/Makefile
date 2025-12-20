@@ -146,6 +146,12 @@ $(BENCH_SORT): $(BENCH_LIB) bench_sort.c bench_common.c bench_common.h
 	@echo Building $(BENCH_SORT)
 	$(CC) -o $(BENCH_SORT) bench_sort.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
 
+BENCH_REGRESSION = bench-regression
+
+$(BENCH_REGRESSION): $(BENCH_LIB) bench_regression.c bench_common.c bench_common.h
+	@echo Building $(BENCH_REGRESSION)
+	$(CC) -o $(BENCH_REGRESSION) bench_regression.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+
 .PHONY: bench
 bench: $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT)
 	@echo "Running decode benchmark..."
@@ -156,6 +162,11 @@ bench: $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT)
 	@./$(BENCH_ROTATION)
 	@echo "Running sort benchmark..."
 	@./$(BENCH_SORT)
+
+.PHONY: bench-test
+bench-test: $(BENCH_REGRESSION)
+	@echo "Running performance regression tests..."
+	@./$(BENCH_REGRESSION)
 
 .PHONY: test
 test: $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP)
@@ -181,5 +192,5 @@ clang-analyze: clean
 .PHONY: clean
 clean:
 	rm $(LIB) $(PROG) $(TEST) $(TEST_RTT) $(TEST_WINDOW) $(TEST_VIDEO) $(TEST_RTSP) *.o *.a || true
-	rm $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT) || true
+	rm $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT) $(BENCH_REGRESSION) || true
 	rm *.gcno *.gcov *.gcda || true
