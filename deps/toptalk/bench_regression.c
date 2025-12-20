@@ -17,6 +17,7 @@
 #include "bench_common.h"
 #include "flow.h"
 #include "decode.h"
+#include "intervals.h"
 #include "uthash.h"
 
 /* Test thresholds (cycles per operation) - set conservatively high */
@@ -24,11 +25,13 @@
 #define MALLOC_THRESHOLD_CYCLES      200    /* Allocation overhead */
 #define RINGBUF_THRESHOLD_CYCLES     100    /* Ring buffer ops including memset */
 #define TOPN_THRESHOLD_CYCLES       5000    /* Top-N selection for 100 flows */
+#define UPDATE_STATS_THRESHOLD      1000    /* Per-packet stats update (target: 200) */
 
 /* Test iteration counts - enough for stable measurements */
 #define DECODE_ITERATIONS     10000
 #define MALLOC_ITERATIONS    100000
 #define TOPN_ITERATIONS        1000
+#define UPDATE_STATS_ITERATIONS 100000
 
 static int tests_failed = 0;
 
@@ -241,6 +244,105 @@ static int test_topn_performance(void)
 	return 0;
 }
 
+/*
+ * Test 4: Per-packet stats update (the real hot path)
+ *
+ * This measures the actual per-packet processing path:
+ * - Ring buffer insertion
+ * - Hash table lookup/insert
+ * - Interval delta accumulation
+ * - Expiration check
+ *
+ * Tests two scenarios:
+ * - Single flow (best case: hash hit)
+ * - Many flows (stress test: hash table growth)
+ */
+static struct flow_pkt bench_pkt;
+static uint32_t bench_pkt_counter = 0;
+
+static void bench_update_stats_single_flow_fn(void *arg)
+{
+	(void)arg;
+	/* Same flow every time - hash hit case */
+	bench_pkt.timestamp.tv_usec++;
+	if (bench_pkt.timestamp.tv_usec >= 1000000) {
+		bench_pkt.timestamp.tv_usec = 0;
+		bench_pkt.timestamp.tv_sec++;
+	}
+	tt_bench_update_stats(&bench_pkt);
+	BENCH_DONT_OPTIMIZE(bench_pkt.flow_rec.bytes);
+}
+
+static void bench_update_stats_many_flows_fn(void *arg)
+{
+	(void)arg;
+	/* Different flow each time up to 10K flows, then wrap */
+	bench_pkt_counter++;
+	bench_pkt.flow_rec.flow.sport = 1024 + (bench_pkt_counter % 10000);
+	bench_pkt.timestamp.tv_usec++;
+	if (bench_pkt.timestamp.tv_usec >= 1000000) {
+		bench_pkt.timestamp.tv_usec = 0;
+		bench_pkt.timestamp.tv_sec++;
+	}
+	tt_bench_update_stats(&bench_pkt);
+	BENCH_DONT_OPTIMIZE(bench_pkt.flow_rec.bytes);
+}
+
+static int test_update_stats_performance(void)
+{
+	struct bench_result r_single, r_many;
+
+	/* Initialize intervals subsystem */
+	if (tt_bench_init() != 0) {
+		printf("  FAIL: could not initialize benchmark\n");
+		return 1;
+	}
+
+	/* Setup test packet */
+	memset(&bench_pkt, 0, sizeof(bench_pkt));
+	bench_pkt.flow_rec.flow.ethertype = 0x0800;
+	bench_pkt.flow_rec.flow.src_ip.s_addr = htonl(0x0a000001);
+	bench_pkt.flow_rec.flow.dst_ip.s_addr = htonl(0x0a000002);
+	bench_pkt.flow_rec.flow.sport = 12345;
+	bench_pkt.flow_rec.flow.dport = 80;
+	bench_pkt.flow_rec.flow.proto = 6;  /* TCP */
+	bench_pkt.flow_rec.bytes = 1000;
+	bench_pkt.flow_rec.packets = 1;
+	bench_pkt.timestamp.tv_sec = 1000000;
+	bench_pkt.timestamp.tv_usec = 0;
+
+	/* Test single flow (hash hit case) */
+	bench_run("update_stats (1 flow)", bench_update_stats_single_flow_fn,
+	          NULL, UPDATE_STATS_ITERATIONS, &r_single);
+
+	/* Cleanup and reinit for many-flow test */
+	tt_bench_cleanup();
+	tt_bench_init();
+	bench_pkt_counter = 0;
+	bench_pkt.timestamp.tv_sec = 1000000;
+	bench_pkt.timestamp.tv_usec = 0;
+
+	/* Test many flows (hash table stress) */
+	bench_run("update_stats (10K flows)", bench_update_stats_many_flows_fn,
+	          NULL, UPDATE_STATS_ITERATIONS, &r_many);
+
+	tt_bench_cleanup();
+
+	printf("  single flow: %.1f cycles/op\n", r_single.cycles_per_op);
+	printf("  10K flows:   %.1f cycles/op\n", r_many.cycles_per_op);
+	printf("  threshold:   %d cycles/op\n", UPDATE_STATS_THRESHOLD);
+
+	if (r_single.cycles_per_op > UPDATE_STATS_THRESHOLD) {
+		printf("  FAIL: single flow update too slow\n");
+		return 1;
+	}
+	if (r_many.cycles_per_op > UPDATE_STATS_THRESHOLD * 2) {
+		printf("  FAIL: many flow update too slow\n");
+		return 1;
+	}
+	return 0;
+}
+
 int main(void)
 {
 	printf("\n=== Performance Regression Tests ===\n\n");
@@ -253,6 +355,9 @@ int main(void)
 
 	printf("\nTest 3: Top-N flow selection\n");
 	tests_failed += test_topn_performance();
+
+	printf("\nTest 4: Per-packet stats update\n");
+	tests_failed += test_update_stats_performance();
 
 	printf("\n=== Results: %d test(s) failed ===\n",
 	       tests_failed);

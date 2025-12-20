@@ -68,4 +68,19 @@ void tt_set_rtp_forward_callback(tt_rtp_forward_cb cb);
                 exit(EXIT_FAILURE);                                            \
         } while (0)
 
+/*
+ * Benchmark hooks for performance testing.
+ * These expose internal functions without pcap/thread overhead.
+ */
+
+/* Initialize data structures for benchmarking (no pcap needed) */
+int tt_bench_init(void);
+
+/* Cleanup after benchmarking */
+void tt_bench_cleanup(void);
+
+/* Process a decoded packet through the stats update path.
+ * This is the hot path that runs for every captured packet. */
+void tt_bench_update_stats(struct flow_pkt *pkt);
+
 #endif

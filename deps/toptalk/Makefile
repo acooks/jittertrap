@@ -150,7 +150,7 @@ BENCH_REGRESSION = bench-regression
 
 $(BENCH_REGRESSION): $(BENCH_LIB) bench_regression.c bench_common.c bench_common.h
 	@echo Building $(BENCH_REGRESSION)
-	$(CC) -o $(BENCH_REGRESSION) bench_regression.c bench_common.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
+	$(CC) -o $(BENCH_REGRESSION) bench_regression.c bench_common.c timeywimey.c $(BENCH_LIB) $(LDLIBS) $(BENCH_LDFLAGS) $(BENCH_CFLAGS)
 
 .PHONY: bench
 bench: $(BENCH_DECODE) $(BENCH_MALLOC) $(BENCH_ROTATION) $(BENCH_SORT)

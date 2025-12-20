@@ -620,6 +620,70 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	}
 }
 
+/*
+ * Benchmark hooks: expose internals for performance testing.
+ */
+
+/* Initialize just the data structures needed for benchmarking (no pcap) */
+int tt_bench_init(void)
+{
+	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
+	flow_ref_table = NULL;
+
+	/* Allocate ring buffer */
+	if (pkt_ring.entries == NULL) {
+		if (ring_buffer_alloc(TT_DEFAULT_RING_SIZE) != 0) {
+			return 1;
+		}
+	} else {
+		pkt_ring.head = 0;
+		pkt_ring.tail = 0;
+	}
+	last_pkt_time = (struct timeval){ 0 };
+
+	/* Initialize flow pools */
+	if (ref_flow_pool.entries == NULL) {
+		if (flow_pool_init(&ref_flow_pool, FLOW_POOL_SIZE) != 0) {
+			ring_buffer_free();
+			return 1;
+		}
+	}
+	if (interval_flow_pool.entries == NULL) {
+		if (flow_pool_init(&interval_flow_pool, FLOW_POOL_SIZE * 2) != 0) {
+			flow_pool_cleanup(&ref_flow_pool);
+			ring_buffer_free();
+			return 1;
+		}
+	}
+
+	totals.bytes = 0;
+	totals.packets = 0;
+
+	return 0;
+}
+
+/* Cleanup benchmark resources */
+void tt_bench_cleanup(void)
+{
+	/* Clear flow tables */
+	struct flow_hash *iter, *tmp;
+	HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
+		HASH_DELETE(r_hh, flow_ref_table, iter);
+		flow_pool_free(&ref_flow_pool, iter);
+	}
+	flow_ref_table = NULL;
+
+	ring_buffer_free();
+	flow_pool_cleanup(&ref_flow_pool);
+	flow_pool_cleanup(&interval_flow_pool);
+}
+
+/* Process a packet through the stats update path */
+void tt_bench_update_stats(struct flow_pkt *pkt)
+{
+	update_stats_tables(pkt);
+}
+
 #define DEBUG 1
 #if DEBUG
 static void dbg_per_second(struct tt_top_flows *t5)
