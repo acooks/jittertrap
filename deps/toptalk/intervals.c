@@ -2,6 +2,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <sys/mman.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 #include <sched.h>
@@ -83,10 +84,32 @@ struct ipg_state {
 	uint8_t initialized;           /* 1 if we've seen at least one packet */
 };
 
+/*
+ * Per-interval delta tracking for deferred interval table updates.
+ * Instead of doing INTERVAL_COUNT hash lookups per packet, we accumulate
+ * deltas in the ref table entry and commit to interval tables at boundaries.
+ */
+struct interval_delta {
+	int64_t bytes;                 /* Bytes accumulated since last commit */
+	int64_t packets;               /* Packets accumulated since last commit */
+	/* Window stats accumulated since last commit */
+	uint64_t window_sum;           /* Sum of window values */
+	uint32_t window_samples;       /* Number of window samples */
+	uint32_t window_min;           /* Min window value (init to UINT32_MAX) */
+	uint32_t window_max;           /* Max window value */
+	uint64_t events;               /* TCP events (ORed) accumulated this interval */
+};
+
 struct flow_hash {
 	struct flow_record f;
 	struct ipg_state ipg;          /* IPG tracking state */
 	uint32_t pkt_count_this_interval;  /* Packet count for PPS calculation */
+	/*
+	 * Per-interval deltas for deferred commit.
+	 * This trades memory (sizeof(interval_delta) * INTERVAL_COUNT per flow)
+	 * for CPU cycles (eliminates INTERVAL_COUNT hash lookups per packet).
+	 */
+	struct interval_delta interval_delta[INTERVAL_COUNT];
 	union {
 		UT_hash_handle r_hh;  /* sliding window reference table */
 		UT_hash_handle ts_hh; /* time series tables */
@@ -101,24 +124,167 @@ struct flow_pkt_list {
 /*
  * Ring buffer for packet list - eliminates per-packet malloc/free.
  *
- * Size is configurable at compile time via PKT_RING_SIZE.
+ * Size is configurable at runtime via tt_set_ring_size().
  * Must be a power of 2 for efficient modulo via bitmask.
  * Default 262144 entries supports ~87K pps with 3-second window.
+ *
+ * For high-rate capture (10M pps with 3s window), use 32M entries (~2GB).
+ * Allocations >= 2MB use hugepages when available for TLB efficiency.
  */
-#ifndef PKT_RING_SIZE
-#define PKT_RING_SIZE (1 << 18)  /* 262144 entries */
-#endif
+struct ring_buffer {
+	struct pkt_ring_entry *entries;  /* Dynamically allocated */
+	size_t size;                     /* Must be power of 2 */
+	size_t mask;                     /* size - 1, for fast modulo */
+	uint32_t head;                   /* Next write position */
+	uint32_t tail;                   /* Oldest valid entry */
+	int using_hugepages;             /* 1 if allocated with mmap/hugepages */
+};
 
-/* Verify PKT_RING_SIZE is a power of 2 at compile time */
-_Static_assert((PKT_RING_SIZE & (PKT_RING_SIZE - 1)) == 0,
-               "PKT_RING_SIZE must be a power of 2");
+static struct ring_buffer pkt_ring = {
+	.entries = NULL,
+	.size = 0,
+	.mask = 0,
+	.head = 0,
+	.tail = 0,
+	.using_hugepages = 0
+};
 
-static struct pkt_ring_entry pkt_ring[PKT_RING_SIZE];
-static uint32_t pkt_ring_head = 0;  /* Next write position */
-static uint32_t pkt_ring_tail = 0;  /* Oldest valid entry */
 static struct timeval last_pkt_time = { 0 };  /* Most recent packet timestamp */
-#define PKT_RING_MASK (PKT_RING_SIZE - 1)
-#define PKT_RING_COUNT() ((pkt_ring_head - pkt_ring_tail) & UINT32_MAX)
+
+/* Helper macros for ring buffer access */
+#define PKT_RING_ENTRY(idx) (pkt_ring.entries[(idx) & pkt_ring.mask])
+#define PKT_RING_COUNT() ((pkt_ring.head - pkt_ring.tail) & UINT32_MAX)
+
+/* Threshold for hugepage allocation (2MB) */
+#define HUGEPAGE_THRESHOLD (2 * 1024 * 1024)
+
+/*
+ * Helper to check if a value is a power of 2.
+ * Returns 1 if n is a power of 2, 0 otherwise.
+ */
+static inline int is_power_of_2(size_t n)
+{
+	return n > 0 && (n & (n - 1)) == 0;
+}
+
+/*
+ * Round up to the next power of 2.
+ * If n is already a power of 2, returns n.
+ */
+static inline size_t next_power_of_2(size_t n)
+{
+	if (n == 0) return 1;
+	if (is_power_of_2(n)) return n;
+	n--;
+	n |= n >> 1;
+	n |= n >> 2;
+	n |= n >> 4;
+	n |= n >> 8;
+	n |= n >> 16;
+#if SIZE_MAX > UINT32_MAX
+	n |= n >> 32;
+#endif
+	return n + 1;
+}
+
+/*
+ * Free the ring buffer memory.
+ * Handles both hugepage (mmap) and regular (aligned_alloc) allocations.
+ */
+static void ring_buffer_free(void)
+{
+	if (pkt_ring.entries == NULL)
+		return;
+
+	size_t size_bytes = pkt_ring.size * sizeof(struct pkt_ring_entry);
+
+	if (pkt_ring.using_hugepages) {
+		munmap(pkt_ring.entries, size_bytes);
+	} else {
+		free(pkt_ring.entries);
+	}
+
+	pkt_ring.entries = NULL;
+	pkt_ring.size = 0;
+	pkt_ring.mask = 0;
+	pkt_ring.head = 0;
+	pkt_ring.tail = 0;
+	pkt_ring.using_hugepages = 0;
+}
+
+/*
+ * Allocate the ring buffer with the specified number of entries.
+ * Uses hugepages for allocations >= 2MB when available.
+ *
+ * entries: Must be a power of 2, or will be rounded up to next power of 2.
+ * Returns 0 on success, -1 on failure.
+ */
+static int ring_buffer_alloc(size_t entries)
+{
+	/* Free existing buffer if any */
+	ring_buffer_free();
+
+	/* Ensure power of 2 */
+	size_t size = next_power_of_2(entries);
+	size_t size_bytes = size * sizeof(struct pkt_ring_entry);
+
+	struct pkt_ring_entry *ptr = NULL;
+	int using_hugepages = 0;
+
+	/* Try hugepages for large allocations */
+	if (size_bytes >= HUGEPAGE_THRESHOLD) {
+		ptr = mmap(NULL, size_bytes,
+		           PROT_READ | PROT_WRITE,
+		           MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB,
+		           -1, 0);
+		if (ptr != MAP_FAILED) {
+			using_hugepages = 1;
+		} else {
+			ptr = NULL;  /* Fall through to aligned_alloc */
+		}
+	}
+
+	/* Fallback to aligned_alloc (cache-line aligned) */
+	if (ptr == NULL) {
+		ptr = aligned_alloc(64, size_bytes);
+		if (ptr == NULL)
+			return -1;
+		/* Zero the buffer */
+		memset(ptr, 0, size_bytes);
+	}
+
+	pkt_ring.entries = ptr;
+	pkt_ring.size = size;
+	pkt_ring.mask = size - 1;
+	pkt_ring.head = 0;
+	pkt_ring.tail = 0;
+	pkt_ring.using_hugepages = using_hugepages;
+
+	return 0;
+}
+
+/*
+ * Set ring buffer size at runtime.
+ * Must be called before tt_intervals_init() for the setting to take effect.
+ * entries: Target size (will be rounded up to next power of 2).
+ * Returns 0 on success, -1 on error.
+ */
+int tt_set_ring_size(size_t entries)
+{
+	if (entries == 0)
+		return -1;
+
+	return ring_buffer_alloc(entries);
+}
+
+/*
+ * Get current ring buffer size (number of entries).
+ * Returns 0 if ring buffer not yet allocated.
+ */
+size_t tt_get_ring_size(void)
+{
+	return pkt_ring.size;
+}
 
 
 typedef int (*pcap_decoder)(const struct pcap_pkthdr *h,
@@ -264,6 +430,9 @@ static void compute_window_conditions(int table_idx)
 	}
 }
 
+/* Forward declaration for commit_interval_deltas (defined later) */
+static void commit_interval_deltas(int table_idx);
+
 static void expire_old_interval_tables(struct timeval now)
 {
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
@@ -290,6 +459,11 @@ static void expire_old_interval_tables(struct timeval now)
 					iter->pkt_count_this_interval = 0;
 				}
 			}
+
+			/* Commit accumulated deltas from ref table to interval table.
+			 * This is where the deferred work happens - once per interval
+			 * boundary instead of once per packet. */
+			commit_interval_deltas(i);
 
 			/* Compute window conditions before rotating tables */
 			compute_window_conditions(i);
@@ -500,7 +674,7 @@ static void delete_pkt_ring(struct pkt_ring_entry *entry)
 	assert(totals.packets >= 0);
 
 	/* Ring buffer: increment tail to mark entry as freed */
-	pkt_ring_tail++;
+	pkt_ring.tail++;
 }
 
 /*
@@ -514,8 +688,8 @@ static void delete_pkt_ring(struct pkt_ring_entry *entry)
 static void expire_old_packets(struct timeval deadline)
 {
 	/* Ring buffer expiration: iterate from tail while entries are expired */
-	while (pkt_ring_tail != pkt_ring_head) {
-		struct pkt_ring_entry *entry = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+	while (pkt_ring.tail != pkt_ring.head) {
+		struct pkt_ring_entry *entry = &PKT_RING_ENTRY(pkt_ring.tail);
 		if (has_aged(entry->timestamp, deadline)) {
 			delete_pkt_ring(entry);
 		} else {
@@ -533,8 +707,8 @@ static void expire_old_packets(struct timeval deadline)
 static void clear_ref_table(void)
 {
 	/* Ring buffer: delete all entries from tail to head */
-	while (pkt_ring_tail != pkt_ring_head) {
-		struct pkt_ring_entry *entry = &pkt_ring[pkt_ring_tail & PKT_RING_MASK];
+	while (pkt_ring.tail != pkt_ring.head) {
+		struct pkt_ring_entry *entry = &PKT_RING_ENTRY(pkt_ring.tail);
 		delete_pkt_ring(entry);
 	}
 
@@ -568,18 +742,18 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 
 	/* Check if ring is full - must expire oldest entry before overwriting.
 	 * This ensures every packet added is eventually subtracted exactly once. */
-	if ((pkt_ring_head - pkt_ring_tail) >= PKT_RING_SIZE) {
-		delete_pkt_ring(&pkt_ring[pkt_ring_tail & PKT_RING_MASK]);
+	if ((pkt_ring.head - pkt_ring.tail) >= pkt_ring.size) {
+		delete_pkt_ring(&PKT_RING_ENTRY(pkt_ring.tail));
 	}
 
 	/* Store compact entry in ring buffer for sliding window byte counts.
 	 * Only stores flow key, bytes, and timestamp - not the full flow_pkt. */
-	pkt_ring[pkt_ring_head & PKT_RING_MASK] = (struct pkt_ring_entry){
+	PKT_RING_ENTRY(pkt_ring.head) = (struct pkt_ring_entry){
 		.flow = pkt->flow_rec.flow,
 		.bytes = pkt->flow_rec.bytes,
 		.timestamp = pkt->timestamp
 	};
-	pkt_ring_head++;
+	pkt_ring.head++;
 
 	/* Update the flow accounting table */
 	/* id already in the hash? */
@@ -591,11 +765,35 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 			return;  /* Drop packet on allocation failure */
 		memset(fte, 0, sizeof(struct flow_hash));
 		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
+		/* Initialize interval deltas - window_min to UINT32_MAX */
+		for (int i = 0; i < INTERVAL_COUNT; i++) {
+			fte->interval_delta[i].window_min = UINT32_MAX;
+		}
 		HASH_ADD(r_hh, flow_ref_table, f.flow, sizeof(struct flow),
 		         fte);
 	} else {
 		fte->f.bytes += pkt->flow_rec.bytes;
 		fte->f.packets += pkt->flow_rec.packets;
+	}
+
+	/* Accumulate interval deltas for deferred commit.
+	 * This replaces INTERVAL_COUNT hash lookups with simple array updates. */
+	for (int i = 0; i < INTERVAL_COUNT; i++) {
+		fte->interval_delta[i].bytes += pkt->flow_rec.bytes;
+		fte->interval_delta[i].packets += pkt->flow_rec.packets;
+	}
+
+	/* Accumulate window stats for each interval if TCP packet with window */
+	if (pkt->has_tcp_window) {
+		uint32_t w = pkt->tcp_scaled_window;
+		for (int i = 0; i < INTERVAL_COUNT; i++) {
+			fte->interval_delta[i].window_sum += w;
+			fte->interval_delta[i].window_samples++;
+			if (w < fte->interval_delta[i].window_min)
+				fte->interval_delta[i].window_min = w;
+			if (w > fte->interval_delta[i].window_max)
+				fte->interval_delta[i].window_max = w;
+		}
 	}
 
 	/* Update IPG tracking for this flow */
@@ -623,61 +821,95 @@ static void add_flow_to_ref_table(struct flow_pkt *pkt)
 }
 
 /*
- * add the packet to the period-on-period interval table for the selected
- * time series / interval.
+ * Commit accumulated interval deltas from ref table to interval table.
+ * Called at interval boundary before table rotation.
+ *
+ * This function iterates all flows in the ref table and commits their
+ * accumulated deltas for the specified interval to the interval table.
+ * After commit, the deltas are reset for the next interval.
  */
-static void add_flow_to_interval(struct flow_pkt *pkt, int time_series)
+static void commit_interval_deltas(int table_idx)
 {
-	struct flow_hash *fte;
+	struct flow_hash *iter, *tmp;
 
-	/* Update the flow accounting table */
-	/* id already in the hash? */
-	HASH_FIND(ts_hh, incomplete_flow_tables[time_series],
-	          &(pkt->flow_rec.flow), sizeof(struct flow), fte);
-	if (!fte) {
-		fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
-		if (!fte)
-			return;  /* Drop packet on allocation failure */
-		memset(fte, 0, sizeof(struct flow_hash));
-		memcpy(&(fte->f), &(pkt->flow_rec), sizeof(struct flow_record));
-		/* Initialize window_min to UINT32_MAX so first sample sets it */
-		fte->f.window.window_min = UINT32_MAX;
-		HASH_ADD(ts_hh, incomplete_flow_tables[time_series], f.flow,
-		         sizeof(struct flow), fte);
-	} else {
-		fte->f.bytes += pkt->flow_rec.bytes;
-		fte->f.packets += pkt->flow_rec.packets;
-	}
+	HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
+		struct interval_delta *delta = &iter->interval_delta[table_idx];
 
-	/* Accumulate window stats if this is a TCP packet with valid window.
-	 * This piggybacks on the existing hash lookup - no extra cost. */
-	if (pkt->has_tcp_window) {
-		uint32_t w = pkt->tcp_scaled_window;
-		fte->f.window.window_sum += w;
-		fte->f.window.window_samples++;
-		if (w < fte->f.window.window_min)
-			fte->f.window.window_min = w;
-		if (w > fte->f.window.window_max)
-			fte->f.window.window_max = w;
+		/* Skip flows with no activity in this interval */
+		if (delta->bytes == 0 && delta->packets == 0)
+			continue;
+
+		/* Find or create entry in interval table */
+		struct flow_hash *fte;
+		HASH_FIND(ts_hh, incomplete_flow_tables[table_idx],
+		          &iter->f.flow, sizeof(struct flow), fte);
+
+		if (!fte) {
+			/* Create new entry in interval table */
+			fte = (struct flow_hash *)malloc(sizeof(struct flow_hash));
+			if (!fte) {
+				/* Reset delta even on failure to avoid accumulation */
+				goto reset_delta;
+			}
+			memset(fte, 0, sizeof(struct flow_hash));
+			/* Copy flow key and basic info from ref table */
+			memcpy(&fte->f.flow, &iter->f.flow, sizeof(struct flow));
+			fte->f.window.window_min = UINT32_MAX;
+			HASH_ADD(ts_hh, incomplete_flow_tables[table_idx],
+			         f.flow, sizeof(struct flow), fte);
+		}
+
+		/* Accumulate delta into interval table entry */
+		fte->f.bytes += delta->bytes;
+		fte->f.packets += delta->packets;
+
+		/* Accumulate window stats */
+		if (delta->window_samples > 0) {
+			fte->f.window.window_sum += delta->window_sum;
+			fte->f.window.window_samples += delta->window_samples;
+			if (delta->window_min < fte->f.window.window_min)
+				fte->f.window.window_min = delta->window_min;
+			if (delta->window_max > fte->f.window.window_max)
+				fte->f.window.window_max = delta->window_max;
+		}
+
+		/* Propagate TCP events */
+		if (delta->events != 0) {
+			fte->f.window.recent_events |= delta->events;
+		}
+
+reset_delta:
+		/* Reset delta for next interval */
+		delta->bytes = 0;
+		delta->packets = 0;
+		delta->window_sum = 0;
+		delta->window_samples = 0;
+		delta->window_min = UINT32_MAX;
+		delta->window_max = 0;
+		delta->events = 0;
 	}
 }
 
-/* Propagate events to all interval tables for this flow.
- * This mirrors how bytes/packets are accumulated via add_flow_to_interval().
- * Events are ORed into the flow entry in each interval table.
+/* Propagate events to all interval deltas for this flow.
+ * Events are accumulated in the ref table's interval_delta structures
+ * and committed to interval tables at interval boundaries.
+ *
+ * This replaces INTERVAL_COUNT hash lookups with a single ref table lookup.
  */
 static void propagate_events_to_intervals(const struct flow *flow, uint64_t events)
 {
 	if (events == 0)
 		return;
 
+	/* Look up the flow in the ref table (single hash lookup) */
+	struct flow_hash *fte;
+	HASH_FIND(r_hh, flow_ref_table, flow, sizeof(struct flow), fte);
+	if (!fte)
+		return;
+
+	/* Accumulate events in all interval deltas */
 	for (int i = 0; i < INTERVAL_COUNT; i++) {
-		struct flow_hash *fte;
-		HASH_FIND(ts_hh, incomplete_flow_tables[i],
-		          flow, sizeof(struct flow), fte);
-		if (fte) {
-			fte->f.window.recent_events |= events;
-		}
+		fte->interval_delta[i].events |= events;
 	}
 }
 
@@ -887,11 +1119,11 @@ static void update_stats_tables(struct flow_pkt *pkt)
 	 */
 	expire_old_packets(pkt->timestamp);
 
+	/* Add to ref table and accumulate interval deltas.
+	 * The interval deltas are committed at interval boundaries
+	 * (in expire_old_interval_tables -> commit_interval_deltas),
+	 * eliminating INTERVAL_COUNT hash lookups per packet. */
 	add_flow_to_ref_table(pkt);
-
-	for (int i = 0; i < INTERVAL_COUNT; i++) {
-		add_flow_to_interval(pkt, i);
-	}
 
 	/* Track latest packet time for stats path expiration */
 	last_pkt_time = pkt->timestamp;
@@ -1539,9 +1771,17 @@ int tt_intervals_init(struct tt_thread_info *ti)
 	ref_window_size = (struct timeval){.tv_sec = 3, .tv_usec = 0 };
 	flow_ref_table = NULL;
 
-	/* Reset ring buffer indices and packet time tracking */
-	pkt_ring_head = 0;
-	pkt_ring_tail = 0;
+	/* Allocate ring buffer if not already done via tt_set_ring_size().
+	 * Uses default size from TT_DEFAULT_RING_SIZE. */
+	if (pkt_ring.entries == NULL) {
+		if (ring_buffer_alloc(TT_DEFAULT_RING_SIZE) != 0) {
+			return 1;  /* Allocation failed */
+		}
+	} else {
+		/* Ring already allocated - just reset indices */
+		pkt_ring.head = 0;
+		pkt_ring.tail = 0;
+	}
 	last_pkt_time = (struct timeval){ 0 };
 
 	/* Initialize TCP RTT, window, video metrics, and RTSP tap tracking */
@@ -1577,6 +1817,9 @@ int tt_intervals_free(struct tt_thread_info *ti)
 	assert(ti->priv);
 
 	clear_all_tables();
+
+	/* Free ring buffer memory */
+	ring_buffer_free();
 
 	/* Cleanup TCP RTT, window, and video metrics tracking */
 	tcp_rtt_cleanup();

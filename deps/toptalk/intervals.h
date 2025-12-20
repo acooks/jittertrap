@@ -53,6 +53,32 @@ void *tt_intervals_run(void *p);
 int tt_intervals_init(struct tt_thread_info *ti);
 int tt_intervals_free(struct tt_thread_info *ti);
 
+/*
+ * Runtime-configurable ring buffer for high-rate packet capture.
+ *
+ * The ring buffer stores compact packet entries (64 bytes each, cache-line
+ * aligned) for sliding window byte/packet counting. Size determines max
+ * sustained packet rate:
+ *
+ *   max_pps = ring_size / window_seconds
+ *
+ * Examples with 3-second window:
+ *   262K entries (default): ~87K pps
+ *   4M entries:             ~1.3M pps
+ *   32M entries:            ~10M pps (requires ~2GB, uses hugepages)
+ *
+ * Must be called before tt_intervals_init(). Size must be a power of 2.
+ * Returns 0 on success, -1 on error (invalid size or allocation failure).
+ * Uses hugepages for allocations >= 2MB when available.
+ */
+int tt_set_ring_size(size_t entries);
+size_t tt_get_ring_size(void);
+
+/* Default ring size if tt_set_ring_size() not called */
+#ifndef TT_DEFAULT_RING_SIZE
+#define TT_DEFAULT_RING_SIZE (1 << 18)  /* 262144 entries */
+#endif
+
 /* Optional callbacks for packet capture integration */
 void tt_set_pcap_callback(void (*store_cb)(const struct pcap_pkthdr *, const uint8_t *),
                           void (*iface_cb)(int dlt));
