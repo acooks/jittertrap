@@ -234,6 +234,8 @@
     let yScale = d3.scaleLinear();
     // Use Spectral interpolator for better distinctness with 20+ flows
     const colorScale = d3.scaleOrdinal(d3.quantize(d3.interpolateSpectral, 21).reverse());
+    // Cache domain as Set for O(1) lookup in getFlowColor (updated when domain changes)
+    let colorDomainSet = new Set();
 
     const formatBitrate = function(d) {
         // d is in bps. d3.format('.2s') auto-scales and adds SI prefix.
@@ -517,6 +519,13 @@
     const getFlowColor = (key) => {
       if (key === 'other') {
         return '#cccccc'; // a neutral grey
+      }
+      /* Check if key is in the domain to prevent D3's auto-extension behavior.
+       * D3 ordinal scales auto-add unknown keys to the domain when scale(key) is called,
+       * which corrupts the color assignments for existing keys.
+       * Use cached Set for O(1) lookup instead of O(n) array search. */
+      if (!colorDomainSet.has(key)) {
+        return '#888888'; // Grey for unknown/expired flows
       }
       return colorScale(key);
     };
@@ -1426,11 +1435,14 @@
         if (fkey) existingFkeys.push(fkey);
       });
 
-      /* Check if fkeys are the same set (order doesn't matter - flows reorder by bitrate) */
-      const fkeysMatch = arraysEqualUnordered(fkeys, existingFkeys);
+      /* Check if fkeys are identical (same elements AND same order).
+       * Order matters because colorScale.domain(fkeys) assigns colors by position.
+       * If flows reorder, we must rebuild the legend to update color boxes. */
+      const fkeysMatch = fkeys.length === existingFkeys.length &&
+                         fkeys.every((k, i) => k === existingFkeys[i]);
 
       if (fkeysMatch) {
-        /* Just update values in place - don't rebuild DOM (throttled) */
+        /* Same flows in same order - just update values in place (throttled) */
         const now = performance.now();
         if (now - lastLegendUpdateTime >= LEGEND_UPDATE_INTERVAL_MS) {
           lastLegendUpdateTime = now;
@@ -1723,6 +1735,16 @@
         }
       });
 
+      // UPDATE: Merge enter + existing to update color boxes on ALL rows
+      // This ensures colors stay correct when flow order changes
+      const allRows = rowsEnter.merge(rows);
+      allRows.select(".legend-color-box")
+        .style("background-color", d => getFlowColor(d));
+
+      // Reorder DOM elements to match data order
+      // D3's data join preserves object constancy but not DOM order
+      allRows.order();
+
       // Apply selection styling after legend rebuild
       updateLegendSelection();
     };
@@ -1815,6 +1837,11 @@
       }
       const fkeys = reusableFkeys;  // Local alias for compatibility with rest of function
       colorScale.domain(fkeys); // Set the domain for the ordinal scale
+      // Update cached domain Set for O(1) lookup in getFlowColor
+      colorDomainSet.clear();
+      for (let i = 0; i < fkeys.length; i++) {
+        colorDomainSet.add(fkeys[i]);
+      }
 
       // Use custom stack that reuses arrays instead of d3.stack (which allocates)
       const stackedChartData = customStack(formattedData, fkeys);
@@ -1982,8 +2009,10 @@
       const flowDataMap = reusableFlowDataMap;  // Local alias for compatibility
       currentFlowDataMap = flowDataMap; // Store for legend use
 
-      // Only update legend when flow set changes (same flows, different order = no rebuild)
-      if (!arraysEqualUnordered(fkeys, cachedFkeys)) {
+      // Update legend when flow set OR order changes (order affects color assignment)
+      const fkeysChanged = fkeys.length !== cachedFkeys.length ||
+                           !fkeys.every((k, i) => k === cachedFkeys[i]);
+      if (fkeysChanged) {
         updateLegend(fkeys, flowDataMap);
         // Copy fkeys to cachedFkeys in place (avoids slice() allocation)
         cachedFkeys.length = fkeys.length;
