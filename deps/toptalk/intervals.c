@@ -772,6 +772,28 @@ struct top_flow_entry {
 };
 
 /*
+ * Compare two top_flow_entry structs for sorting.
+ * Returns negative if a should come before b (higher priority),
+ * positive if b should come before a, zero if equal.
+ *
+ * Sort order:
+ * 1. Higher bytes first (descending)
+ * 2. If bytes equal, use flow key as stable tie-breaker (memcmp)
+ *
+ * The tie-breaker ensures deterministic ordering when flows have
+ * equal byte counts, preventing color/position jitter in the UI.
+ */
+static inline int top_flow_cmp(const struct top_flow_entry *a,
+                               const struct top_flow_entry *b)
+{
+	if (a->bytes != b->bytes) {
+		return (a->bytes > b->bytes) ? -1 : 1;  /* Descending by bytes */
+	}
+	/* Tie-breaker: compare flow keys for deterministic ordering */
+	return memcmp(&a->flow, &b->flow, sizeof(struct flow));
+}
+
+/*
  * Top-N selection: Find the N flows with highest byte count.
  * O(n) complexity instead of O(n log n) for full sort.
  *
@@ -780,6 +802,10 @@ struct top_flow_entry {
  *
  * Uses a simple insertion-sort approach for the top[] array since N is small
  * (MAX_FLOW_COUNT is typically 5-20).
+ *
+ * Sorting is stable: flows with equal byte counts are ordered deterministically
+ * by their flow key (memcmp), preventing UI jitter from non-deterministic
+ * hash table iteration order.
  */
 static void find_top_n_flows(struct top_flow_entry *top, int n, int *out_count)
 {
@@ -787,14 +813,18 @@ static void find_top_n_flows(struct top_flow_entry *top, int n, int *out_count)
 	int count = 0;
 
 	HASH_ITER(r_hh, flow_ref_table, iter, tmp) {
+		struct top_flow_entry candidate = {
+			.flow = iter->f.flow,
+			.bytes = iter->f.bytes
+		};
+
 		if (count < n) {
-			/* Fill the top array first - copy key and bytes */
-			top[count].flow = iter->f.flow;
-			top[count].bytes = iter->f.bytes;
+			/* Fill the top array first */
+			top[count] = candidate;
 			count++;
-			/* Keep sorted with insertion sort (small array, O(n²) but n is small) */
+			/* Keep sorted with insertion sort (stable tie-breaker) */
 			for (int i = count - 1; i > 0; i--) {
-				if (top[i].bytes > top[i-1].bytes) {
+				if (top_flow_cmp(&top[i], &top[i-1]) < 0) {
 					struct top_flow_entry t = top[i];
 					top[i] = top[i-1];
 					top[i-1] = t;
@@ -802,13 +832,12 @@ static void find_top_n_flows(struct top_flow_entry *top, int n, int *out_count)
 					break;  /* Already sorted */
 				}
 			}
-		} else if (iter->f.bytes > top[n-1].bytes) {
-			/* This flow has more bytes than the smallest in top - replace it */
-			top[n-1].flow = iter->f.flow;
-			top[n-1].bytes = iter->f.bytes;
+		} else if (top_flow_cmp(&candidate, &top[n-1]) < 0) {
+			/* This flow ranks higher than the smallest in top - replace it */
+			top[n-1] = candidate;
 			/* Re-sort to maintain order */
 			for (int i = n - 1; i > 0; i--) {
-				if (top[i].bytes > top[i-1].bytes) {
+				if (top_flow_cmp(&top[i], &top[i-1]) < 0) {
 					struct top_flow_entry t = top[i];
 					top[i] = top[i-1];
 					top[i-1] = t;
