@@ -164,35 +164,25 @@ static void free_flow_table(struct flow_hash **table_head)
 }
 
 /*
- * Rotate interval table: copy incomplete → complete, then clear incomplete.
+ * Rotate interval table: swap incomplete → complete (O(1) pointer swap).
  * This is called at each interval boundary to finalize the current interval's
  * data and prepare for the next interval.
+ *
+ * Previous approach: copy all entries (O(n) allocations)
+ * Optimized approach: swap pointers (O(1))
+ *
+ * The only O(n) work is freeing the old complete table, which is unavoidable.
  */
 static void clear_table(int table_idx)
 {
-	struct flow_hash *iter, *tmp;
-
 	/* Step 1: Free the old complete table (data from 2 intervals ago) */
 	free_flow_table(&complete_flow_tables[table_idx]);
 
-	/* Step 2: Copy all entries from incomplete to complete.
-	 * We allocate new entries rather than moving pointers because the
-	 * incomplete entries will be freed in step 3.
-	 */
-	HASH_ITER(ts_hh, incomplete_flow_tables[table_idx], iter, tmp)
-	{
-		struct flow_hash *n = malloc(sizeof(struct flow_hash));
-		if (!n)
-			continue;  /* Skip this entry on allocation failure */
-		memcpy(n, iter, sizeof(struct flow_hash));
-		HASH_ADD(ts_hh, complete_flow_tables[table_idx], f.flow,
-		         sizeof(struct flow), n);
-	}
-	assert(HASH_CNT(ts_hh, complete_flow_tables[table_idx])
-	       == HASH_CNT(ts_hh, incomplete_flow_tables[table_idx]));
+	/* Step 2: Swap - incomplete becomes complete (O(1) pointer assignment) */
+	complete_flow_tables[table_idx] = incomplete_flow_tables[table_idx];
 
-	/* Step 3: Free the incomplete table (now copied to complete) */
-	free_flow_table(&incomplete_flow_tables[table_idx]);
+	/* Step 3: Reset incomplete to empty table for next interval */
+	incomplete_flow_tables[table_idx] = NULL;
 }
 
 /* initialise interval start and end times */
