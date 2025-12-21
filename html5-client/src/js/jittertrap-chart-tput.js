@@ -46,6 +46,17 @@
 
     let svg = {};
 
+    // Cached D3 selections to avoid repeated select() calls which create
+    // new selection objects that form cycles with DOM nodes, increasing
+    // Cycle Collector (CC) pressure in Firefox
+    let cachedSelections = {
+      line: null,
+      xAxis: null,
+      yAxis: null,
+      xGrid: null,
+      yGrid: null
+    };
+
     // Cached max timestamp for tick formatter (avoids closure allocation)
     let cachedMaxTimestamp = 0;
     const xTickFormatter = function(seconds) {
@@ -54,6 +65,12 @@
     };
 
     m.reset = function(selectedSeries) {
+      // Clear cached selections before removing DOM (breaks cycles)
+      cachedSelections.line = null;
+      cachedSelections.xAxis = null;
+      cachedSelections.yAxis = null;
+      cachedSelections.xGrid = null;
+      cachedSelections.yGrid = null;
 
       d3.select("#chartThroughput").selectAll("svg").remove();
 
@@ -107,7 +124,8 @@
          .attr("dominant-baseline", "middle")
          .text(selectedSeries.title);
 
-      graph.append("g")
+      // Cache selections as they're created to avoid repeated select() calls in redraw
+      cachedSelections.xAxis = graph.append("g")
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
@@ -119,7 +137,7 @@
            .attr("y", height + margin.bottom - 10)
            .text(selectedSeries.xlabel);
 
-      graph.append("g")
+      cachedSelections.yAxis = graph.append("g")
          .attr("class", "y axis")
          .call(yAxis);
 
@@ -132,12 +150,12 @@
          .style("text-anchor", "middle")
          .text(selectedSeries.ylabel);
 
-      graph.append("g")
+      cachedSelections.xGrid = graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
         .call(xGrid);
 
-      graph.append("g")
+      cachedSelections.yGrid = graph.append("g")
         .attr("class", "yGrid")
         .call(yGrid);
 
@@ -148,7 +166,7 @@
         .attr("width", width)
         .attr("height", height);
 
-      graph.append("path")
+      cachedSelections.line = graph.append("path")
          .datum(chartData)
          .attr("class", "line")
          .attr("clip-path", "url(#clip-tput)")
@@ -207,12 +225,12 @@
       xGrid.tickSize(-height);
       yGrid.tickSize(-width);
 
-      // Redraw the line and axes.
-      svg.select(".line").attr("d", line(chartData));
-      svg.select(".x.axis").call(xAxis);
-      svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid);
-      svg.select(".yGrid").call(yGrid);
+      // Redraw the line and axes using cached selections (avoids cycle collector pressure)
+      cachedSelections.line.attr("d", line(chartData));
+      cachedSelections.xAxis.call(xAxis);
+      cachedSelections.yAxis.call(yAxis);
+      cachedSelections.xGrid.call(xGrid);
+      cachedSelections.yGrid.call(yGrid);
     };
 
     let resizeTimer;

@@ -40,6 +40,18 @@
 
     let svg = {};
 
+    // Cached D3 selections to avoid repeated select() calls which create
+    // new selection objects that form cycles with DOM nodes, increasing
+    // Cycle Collector (CC) pressure in Firefox
+    let cachedSelections = {
+      line: null,
+      minMaxArea: null,
+      xAxis: null,
+      yAxis: null,
+      xGrid: null,
+      yGrid: null
+    };
+
     // Cached max timestamp for tick formatter (avoids closure allocation)
     let cachedMaxTimestamp = 0;
     const xTickFormatter = function(seconds) {
@@ -48,6 +60,13 @@
     };
 
     m.reset = function() {
+      // Clear cached selections before removing DOM (breaks cycles)
+      cachedSelections.line = null;
+      cachedSelections.minMaxArea = null;
+      cachedSelections.xAxis = null;
+      cachedSelections.yAxis = null;
+      cachedSelections.xGrid = null;
+      cachedSelections.yGrid = null;
 
       d3.select("#packetGapContainer").selectAll("svg").remove();
 
@@ -106,7 +125,8 @@
          .attr("dominant-baseline", "middle")
          .text("Inter Packet Gap");
 
-      graph.append("g")
+      // Cache selections as they're created to avoid repeated select() calls in redraw
+      cachedSelections.xAxis = graph.append("g")
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
@@ -118,7 +138,7 @@
            .attr("y", height + margin.bottom - 10)
            .text("Time (s)");
 
-      graph.append("g")
+      cachedSelections.yAxis = graph.append("g")
          .attr("class", "y axis")
          .call(yAxis);
 
@@ -131,13 +151,13 @@
          .style("text-anchor", "middle")
          .text("Packet Gap (ms)");
 
-      graph.append("g")
+      cachedSelections.xGrid = graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
         .call(xGrid);
 
 
-      graph.append("g")
+      cachedSelections.yGrid = graph.append("g")
         .attr("class", "yGrid")
         .call(yGrid);
 
@@ -148,7 +168,7 @@
         .attr("width", width)
         .attr("height", height);
 
-      graph.append('path')
+      cachedSelections.minMaxArea = graph.append('path')
         .datum(chartData.packetGapMinMax)
         .attr('class', 'minMaxArea')
         .attr('d', minMaxArea)
@@ -156,7 +176,7 @@
         .style('fill', 'pink')
         .style("opacity", 0.8);
 
-      graph.append("path")
+      cachedSelections.line = graph.append("path")
          .datum(chartData.packetGapMean)
          .attr("class", "line")
          .attr("clip-path", "url(#clip-pgaps)")
@@ -214,13 +234,13 @@
       xGrid.tickSize(-height);
       yGrid.tickSize(-width);
 
-      // Redraw the paths and axes.
-      svg.select(".line").attr("d", line(chartData.packetGapMean));
-      svg.select(".x.axis").call(xAxis);
-      svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid);
-      svg.select(".yGrid").call(yGrid);
-      svg.select(".minMaxArea").attr("d", minMaxArea(chartData.packetGapMinMax));
+      // Redraw the paths and axes using cached selections (avoids cycle collector pressure)
+      cachedSelections.line.attr("d", line(chartData.packetGapMean));
+      cachedSelections.xAxis.call(xAxis);
+      cachedSelections.yAxis.call(yAxis);
+      cachedSelections.xGrid.call(xGrid);
+      cachedSelections.yGrid.call(yGrid);
+      cachedSelections.minMaxArea.attr("d", minMaxArea(chartData.packetGapMinMax));
     };
 
     let resizeTimer;

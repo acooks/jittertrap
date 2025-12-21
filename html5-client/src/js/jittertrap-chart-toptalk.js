@@ -260,6 +260,17 @@
     let context = {};
     let canvas = {};
     let currentStackedData = []; // Store for hit-testing
+
+    // Cached D3 selections to avoid repeated select() calls which create
+    // new selection objects that form cycles with DOM nodes, increasing
+    // Cycle Collector (CC) pressure in Firefox
+    let cachedSelections = {
+      xAxis: null,
+      yAxis: null,
+      xGrid: null,
+      yGrid: null,
+      barsbox: null
+    };
     let currentFlowDataMap = new Map(); // Store flow data for legend
     let resizeTimer; // Timer for debounced resize handling
     let cachedFkeys = []; // Cache for legend optimization
@@ -278,6 +289,12 @@
 
     /* Reset and redraw the things that don't change for every redraw() */
     m.reset = function() {
+      // Clear cached selections before removing DOM (breaks cycles)
+      cachedSelections.xAxis = null;
+      cachedSelections.yAxis = null;
+      cachedSelections.xGrid = null;
+      cachedSelections.yGrid = null;
+      cachedSelections.barsbox = null;
 
       d3.select("#chartToptalk").selectAll("svg").remove();
       d3.select("#chartToptalk").selectAll("canvas").remove();
@@ -339,7 +356,8 @@
          .attr("dominant-baseline", "middle")
          .text("Top flows");
 
-      graph.append("g")
+      // Cache selections as they're created to avoid repeated select() calls in redraw
+      cachedSelections.xAxis = graph.append("g")
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
@@ -351,7 +369,7 @@
            .attr("y", height + 35)
            .text("Time (s)");
 
-      graph.append("g")
+      cachedSelections.yAxis = graph.append("g")
          .attr("class", "y axis")
          .call(yAxis);
 
@@ -364,12 +382,12 @@
          .style("text-anchor", "middle")
          .text("Bitrate");
 
-      graph.append("g")
+      cachedSelections.xGrid = graph.append("g")
         .attr("class", "xGrid")
         .attr("transform", "translate(0," + height + ")")
         .call(xGrid);
 
-      graph.append("g")
+      cachedSelections.yGrid = graph.append("g")
         .attr("class", "yGrid")
         .call(yGrid);
 
@@ -383,11 +401,11 @@
                .y0(d => yScale(d[0] || 0))
                .y1(d => yScale(d[1] || 0));
 
-      const barsboxGroup = svg.append("g")
+      cachedSelections.barsbox = svg.append("g")
          .attr("class", "barsbox")
          .attr("id", "barsbox");
 
-      barsboxGroup.append("text")
+      cachedSelections.barsbox.append("text")
            .attr("x", 0)
            .attr("y", 35)
            .style("font-size", "12px")
@@ -396,7 +414,7 @@
       // Mousedown handler for flow selection (mousedown fires immediately,
       // unlike click which requires mouseup on the same element - problematic
       // when elements are recreated at 60 FPS)
-      barsboxGroup.on("mousedown", function(event) {
+      cachedSelections.barsbox.on("mousedown", function(event) {
         // Only handle left mouse button
         if (event.button !== 0) return;
 
@@ -1844,10 +1862,11 @@
 
       svg = d3.select("#chartToptalk");
 
-      svg.select(".x.axis").call(xAxis);
-      svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid);
-      svg.select(".yGrid").call(yGrid);
+      // Use cached selections (avoids cycle collector pressure)
+      cachedSelections.xAxis.call(xAxis);
+      cachedSelections.yAxis.call(yAxis);
+      cachedSelections.xGrid.call(xGrid);
+      cachedSelections.yGrid.call(yGrid);
 
       // Reuse fkeys array instead of creating new one with map()
       reusableFkeys.length = 0;
@@ -1926,7 +1945,7 @@
       // Note: y scaleBand is created each frame but has minimal overhead
       // since it's only used for the distribution bar height (constant 10px)
 
-      const barsbox = svg.select("#barsbox");
+      const barsbox = cachedSelections.barsbox;
 
       /* Use D3 data join pattern - only add/remove bars when data changes */
       const bars = barsbox.selectAll(".subbar")
