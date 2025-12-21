@@ -124,7 +124,15 @@ fi
 ip netns exec $NS_DEST ip link set veth-dst up
 ip netns exec $NS_DEST ip link set lo up
 
-# Step 6: Verify connectivity
+# Step 6: Disable TSO/GSO for accurate packet capture
+# Without this, packets are coalesced and pcap shows jumbo frames
+echo "Disabling TSO/GSO on test interfaces..."
+ip netns exec $NS_SOURCE ethtool -K veth-src tso off gso off 2>/dev/null || true
+ip netns exec $NS_OBSERVER ethtool -K veth-src tso off gso off 2>/dev/null || true
+ip netns exec $NS_OBSERVER ethtool -K veth-dst tso off gso off 2>/dev/null || true
+ip netns exec $NS_DEST ethtool -K veth-dst tso off gso off 2>/dev/null || true
+
+# Step 7: Verify connectivity
 echo ""
 echo "Verifying topology..."
 sleep 0.5  # Allow ARP to settle
