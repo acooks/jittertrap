@@ -26,11 +26,31 @@ ifeq ($(DISABLE_PCAP), 1)
 DEFINES += -DDISABLE_PCAP
 endif
 
-# WebRTC video playback support (requires libdatachannel)
+# WebRTC video playback support (requires libdatachannel >= 0.23.0)
+#
+# We bundle libdatachannel rather than using system packages because:
+# 1. Ubuntu 22.04 LTS doesn't have libdatachannel in its repos
+# 2. Fedora's libdatachannel 0.21.x has a bug where rtcSetH265Packetizer()
+#    doesn't call emplaceRtpConfig(), breaking H.265 RTP timestamps
+#    (fixed in v0.23.0 via PR #1370)
+#
+# To build the bundled library (one-time setup):
+#   cd deps/libdatachannel
+#   git submodule update --init --recursive
+#   mkdir build && cd build
+#   cmake .. -DCMAKE_BUILD_TYPE=Release \
+#            -DCMAKE_INSTALL_PREFIX=../install \
+#            -DNO_WEBSOCKET=ON -DNO_EXAMPLES=ON -DNO_TESTS=ON
+#   make -j && make install
+#
+# To use system libdatachannel instead (if >= 0.23.0):
+#   make LIBDATACHANNEL_DIR=/usr
+#
 ifeq ($(ENABLE_WEBRTC_PLAYBACK), 1)
 DEFINES += -DENABLE_WEBRTC_PLAYBACK
-LIBDATACHANNEL_CFLAGS = -I/usr/include/rtc
-LIBDATACHANNEL_LDFLAGS = -ldatachannel
+LIBDATACHANNEL_DIR ?= $(shell pwd)/../deps/libdatachannel/install
+LIBDATACHANNEL_CFLAGS = -I$(LIBDATACHANNEL_DIR)/include
+LIBDATACHANNEL_LDFLAGS = -L$(LIBDATACHANNEL_DIR)/lib64 -Wl,-rpath,$(LIBDATACHANNEL_DIR)/lib64 -ldatachannel
 else
 LIBDATACHANNEL_CFLAGS =
 LIBDATACHANNEL_LDFLAGS =

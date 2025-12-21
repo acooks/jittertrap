@@ -262,6 +262,12 @@
     }
   };
 
+  const handleMsgVideoError = function(params) {
+    if (JT.webrtc) {
+      JT.webrtc.handleError(params);
+    }
+  };
+
   const handleMsgError = function(params) {
     console.error("Server error:", params.code, "-", params.text);
 
@@ -384,6 +390,7 @@
     webrtc_answer: handleMsgWebrtcAnswer,
     webrtc_ice: handleMsgWebrtcIce,
     webrtc_status: handleMsgWebrtcStatus,
+    video_error: handleMsgVideoError,
     error: handleMsgError,
     resolution: handleMsgResolution,
   };

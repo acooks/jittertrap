@@ -644,10 +644,15 @@ For segment with sequence S:
 
                       <p><strong>How it works:</strong> JitterTrap captures RTP packets from the network and forwards them to your browser via WebRTC. The browser decodes and displays the video. This is a <em>passive tap</em> &mdash; JitterTrap observes traffic without modifying it.</p>
 
+                      <p><strong>Supported codecs for playback:</strong></p>
+                      <ul>
+                        <li><strong>H.264</strong> &mdash; all modern browsers</li>
+                        <li><strong>H.265/HEVC</strong> &mdash; Chrome 136+, Safari, Edge 136+</li>
+                      </ul>
+                      <p><em>Note: VP8, VP9, and AV1 streams are detected but playback is not yet supported.</em></p>
                       <p><strong>Requirements:</strong></p>
                       <ul>
-                        <li>Modern browser with WebRTC support (Chrome, Firefox, Edge, Safari)</li>
-                        <li>H.264 video codec (most common for IP cameras and streaming)</li>
+                        <li>Modern browser with WebRTC support</li>
                         <li>The stream must have keyframes (IDR frames) &mdash; playback starts when one is received</li>
                       </ul>
 
@@ -808,7 +813,7 @@ For segment with sequence S:
                         <tr>
                           <td class="align-top"><strong>"Codec not supported"</strong></td>
                           <td>
-                            Your browser cannot decode this codec. H.264 is widely supported; H.265 requires Safari or Edge. Try a different browser.
+                            Your browser cannot decode this codec via WebRTC. H.264 is widely supported. H.265/HEVC requires Chrome 136+, Safari, or Edge 136+. Try updating your browser or use a different one.
                           </td>
                         </tr>
                         <tr>

@@ -19,18 +19,19 @@ help:
 	@echo "======================="
 	@echo ""
 	@echo "Targets:"
-	@echo "  all              Build everything (default)"
-	@echo "  clean            Remove build artifacts"
-	@echo "  install          Install to DESTDIR (default: /)"
-	@echo "  test             Run all tests"
-	@echo "  config           Show current build configuration"
-	@echo "  help             Show this help message"
+	@echo "  all                Build everything (default)"
+	@echo "  clean              Remove build artifacts"
+	@echo "  install            Install to DESTDIR (default: /)"
+	@echo "  test               Run all tests"
+	@echo "  config             Show current build configuration"
+	@echo "  help               Show this help message"
+	@echo "  deps-libdatachannel  Build bundled libdatachannel (for WebRTC)"
 	@echo ""
 	@echo "Analysis targets:"
-	@echo "  cppcheck         Run cppcheck static analysis"
-	@echo "  clang-analyze    Run clang static analyzer"
-	@echo "  coverity-build   Create Coverity analysis archive"
-	@echo "  coverage         Generate code coverage report"
+	@echo "  cppcheck           Run cppcheck static analysis"
+	@echo "  clang-analyze      Run clang static analyzer"
+	@echo "  coverity-build     Create Coverity analysis archive"
+	@echo "  coverage           Generate code coverage report"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  Override settings on command line or edit make.config"
@@ -68,7 +69,30 @@ $(SUBDIRS):
 	@echo "Making $@"
 	@$(MAKE) --silent -C $@
 
+# Build bundled libdatachannel for WebRTC support
+# This is needed because Ubuntu 22.04 doesn't have libdatachannel,
+# and Fedora's version has bugs affecting H.265 playback.
+.PHONY: deps-libdatachannel
+deps-libdatachannel:
+	@if [ ! -f deps/libdatachannel/install/lib64/libdatachannel.so ]; then \
+		echo "Building bundled libdatachannel..."; \
+		cd deps/libdatachannel && \
+		git submodule update --init --recursive --depth 1 && \
+		mkdir -p build && cd build && \
+		cmake .. -DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_INSTALL_PREFIX=../install \
+			-DNO_WEBSOCKET=ON -DNO_EXAMPLES=ON -DNO_TESTS=ON && \
+		$(MAKE) -j$$(nproc) && $(MAKE) install; \
+	else \
+		echo "libdatachannel already built"; \
+	fi
+
+# Server depends on libdatachannel when WebRTC is enabled
+ifeq ($(ENABLE_WEBRTC_PLAYBACK), 1)
+server: | messages deps/toptalk deps-libdatachannel
+else
 server: | messages deps/toptalk
+endif
 cli-client: | messages
 
 update-cbuffer:

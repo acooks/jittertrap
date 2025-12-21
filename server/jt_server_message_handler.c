@@ -533,6 +533,12 @@ static int handle_webrtc_offer(void *data)
 			message = "Invalid WebRTC offer parameters";
 			syslog(LOG_ERR, "WebRTC offer failed: bad parameters\n");
 			break;
+		case WEBRTC_ERR_CODEC_UNSUP:
+			code = "codec_unsupported";
+			message = "H.265/HEVC is not supported by your browser for WebRTC playback. "
+			          "Try Chrome 136+ or Safari, or use a different stream.";
+			syslog(LOG_WARNING, "WebRTC offer rejected: H.265 not supported by browser\n");
+			break;
 		case WEBRTC_ERR_SDP_FAILED:
 		default:
 			code = "webrtc_failed";
