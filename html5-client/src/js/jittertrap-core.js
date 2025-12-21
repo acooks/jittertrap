@@ -81,30 +81,44 @@
       }
     },
 
-    // Get item at logical index (0 = oldest)
+    // Convert logical index to physical array index
+    _idx: function(i) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      return (start + i) % this.capacity;
+    },
+
+    // Get item at logical index (0 = oldest) - allocates object
     get: function(i) {
       if (i < 0 || i >= this.size) return null;
-      const start = (this.head - this.size + this.capacity) % this.capacity;
-      const idx = (start + i) % this.capacity;
+      const idx = this._idx(i);
       return { timestamp: this.timestamps[idx], value: this.values[idx] };
     },
 
-    // Get the last (most recent) item
+    // Zero-allocation accessors for individual fields
+    timestampAt: function(i) {
+      return this.timestamps[this._idx(i)];
+    },
+
+    valueAt: function(i) {
+      return this.values[this._idx(i)];
+    },
+
+    // Get the last (most recent) item - allocates object
     last: function() {
       if (this.size === 0) return null;
       const idx = (this.head - 1 + this.capacity) % this.capacity;
       return { timestamp: this.timestamps[idx], value: this.values[idx] };
     },
 
-    // Return array of value properties (for stats calculation)
-    slice: function() {
-      const result = [];
-      const start = (this.head - this.size + this.capacity) % this.capacity;
-      for (let i = 0; i < this.size; i++) {
-        const idx = (start + i) % this.capacity;
-        result.push({ timestamp: this.timestamps[idx], value: this.values[idx] });
-      }
-      return result;
+    // Zero-allocation accessors for last item
+    lastTimestamp: function() {
+      if (this.size === 0) return 0;
+      return this.timestamps[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastValue: function() {
+      if (this.size === 0) return 0;
+      return this.values[(this.head - 1 + this.capacity) % this.capacity];
     },
 
     empty: function() {
@@ -119,6 +133,29 @@
         const idx = (start + i) % this.capacity;
         callback(this.timestamps[idx], this.values[idx], i);
       }
+    },
+
+    // Self-test: verify zero-allocation accessors match allocating ones
+    _selfTest: function() {
+      for (let i = 0; i < this.size; i++) {
+        const obj = this.get(i);
+        if (obj.timestamp !== this.timestampAt(i)) {
+          throw new Error('TypedRingBuffer2: timestampAt mismatch at ' + i);
+        }
+        if (obj.value !== this.valueAt(i)) {
+          throw new Error('TypedRingBuffer2: valueAt mismatch at ' + i);
+        }
+      }
+      if (this.size > 0) {
+        const last = this.last();
+        if (last.timestamp !== this.lastTimestamp()) {
+          throw new Error('TypedRingBuffer2: lastTimestamp mismatch');
+        }
+        if (last.value !== this.lastValue()) {
+          throw new Error('TypedRingBuffer2: lastValue mismatch');
+        }
+      }
+      return true;
     }
   };
 
@@ -145,10 +182,16 @@
       }
     },
 
+    // Convert logical index to physical array index
+    _idx: function(i) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      return (start + i) % this.capacity;
+    },
+
+    // Get item at logical index (0 = oldest) - allocates object
     get: function(i) {
       if (i < 0 || i >= this.size) return null;
-      const start = (this.head - this.size + this.capacity) % this.capacity;
-      const idx = (start + i) % this.capacity;
+      const idx = this._idx(i);
       return {
         timestamp: this.timestamps[idx],
         min: this.mins[idx],
@@ -157,6 +200,24 @@
       };
     },
 
+    // Zero-allocation accessors for individual fields
+    timestampAt: function(i) {
+      return this.timestamps[this._idx(i)];
+    },
+
+    minAt: function(i) {
+      return this.mins[this._idx(i)];
+    },
+
+    maxAt: function(i) {
+      return this.maxs[this._idx(i)];
+    },
+
+    meanAt: function(i) {
+      return this.means[this._idx(i)];
+    },
+
+    // Get the last (most recent) item - allocates object
     last: function() {
       if (this.size === 0) return null;
       const idx = (this.head - 1 + this.capacity) % this.capacity;
@@ -168,11 +229,138 @@
       };
     },
 
+    // Zero-allocation accessors for last item
+    lastTimestamp: function() {
+      if (this.size === 0) return 0;
+      return this.timestamps[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMin: function() {
+      if (this.size === 0) return 0;
+      return this.mins[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMax: function() {
+      if (this.size === 0) return 0;
+      return this.maxs[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMean: function() {
+      if (this.size === 0) return 0;
+      return this.means[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
     empty: function() {
       this.size = 0;
       this.head = 0;
+    },
+
+    // For iteration without allocation - call with callback(timestamp, min, max, mean, index)
+    forEach: function(callback) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      for (let i = 0; i < this.size; i++) {
+        const idx = (start + i) % this.capacity;
+        callback(this.timestamps[idx], this.mins[idx], this.maxs[idx], this.means[idx], i);
+      }
+    },
+
+    // Self-test: verify zero-allocation accessors match allocating ones
+    _selfTest: function() {
+      for (let i = 0; i < this.size; i++) {
+        const obj = this.get(i);
+        if (obj.timestamp !== this.timestampAt(i)) {
+          throw new Error('TypedRingBuffer4: timestampAt mismatch at ' + i);
+        }
+        if (obj.min !== this.minAt(i)) {
+          throw new Error('TypedRingBuffer4: minAt mismatch at ' + i);
+        }
+        if (obj.max !== this.maxAt(i)) {
+          throw new Error('TypedRingBuffer4: maxAt mismatch at ' + i);
+        }
+        if (obj.mean !== this.meanAt(i)) {
+          throw new Error('TypedRingBuffer4: meanAt mismatch at ' + i);
+        }
+      }
+      if (this.size > 0) {
+        const last = this.last();
+        if (last.timestamp !== this.lastTimestamp()) {
+          throw new Error('TypedRingBuffer4: lastTimestamp mismatch');
+        }
+        if (last.min !== this.lastMin()) {
+          throw new Error('TypedRingBuffer4: lastMin mismatch');
+        }
+        if (last.max !== this.lastMax()) {
+          throw new Error('TypedRingBuffer4: lastMax mismatch');
+        }
+        if (last.mean !== this.lastMean()) {
+          throw new Error('TypedRingBuffer4: lastMean mismatch');
+        }
+      }
+      return true;
     }
   };
+
+  // Run self-tests on TypedRingBuffer implementations
+  // Tests empty, partial, full, and wrapped buffer states
+  const runRingBufferSelfTests = function() {
+    const cap = 5;
+
+    // Test TypedRingBuffer2
+    const rb2 = new TypedRingBuffer2(cap);
+
+    // Empty state
+    if (rb2.lastTimestamp() !== 0 || rb2.lastValue() !== 0) {
+      throw new Error('TypedRingBuffer2: empty state failed');
+    }
+
+    // Partial fill (3 items in capacity 5)
+    rb2.push(1.0, 100);
+    rb2.push(2.0, 200);
+    rb2.push(3.0, 300);
+    rb2._selfTest();
+
+    // Full (5 items)
+    rb2.push(4.0, 400);
+    rb2.push(5.0, 500);
+    rb2._selfTest();
+
+    // Wrapped (7 items pushed into capacity 5)
+    rb2.push(6.0, 600);
+    rb2.push(7.0, 700);
+    rb2._selfTest();
+
+    // Test TypedRingBuffer4
+    const rb4 = new TypedRingBuffer4(cap);
+
+    // Empty state
+    if (rb4.lastTimestamp() !== 0 || rb4.lastMin() !== 0 ||
+        rb4.lastMax() !== 0 || rb4.lastMean() !== 0) {
+      throw new Error('TypedRingBuffer4: empty state failed');
+    }
+
+    // Partial fill
+    rb4.push(1.0, 10, 100, 50);
+    rb4.push(2.0, 20, 200, 100);
+    rb4.push(3.0, 30, 300, 150);
+    rb4._selfTest();
+
+    // Full
+    rb4.push(4.0, 40, 400, 200);
+    rb4.push(5.0, 50, 500, 250);
+    rb4._selfTest();
+
+    // Wrapped
+    rb4.push(6.0, 60, 600, 300);
+    rb4.push(7.0, 70, 700, 350);
+    rb4._selfTest();
+
+    console.log('TypedRingBuffer self-tests passed');
+    return true;
+  };
+
+  // Expose for manual testing: JT.core.runRingBufferSelfTests()
+  // Not run automatically to avoid creating garbage at startup
+  my.core.runRingBufferSelfTests = runRingBufferSelfTests;
 
   /* a prototype object to encapsulate timeseries data. */
   const Series = function(name, title, ylabel, rateFormatter) {
@@ -288,37 +476,50 @@
     mean.length = 0;
     minMax.length = 0;
 
+    // Use zero-allocation accessors instead of get() which allocates objects
     for (let i = 0; i < len; i++) {
-      const pg = data.get(i);
-      // pgaps data now contains timestamp in seconds
-      const x = pg.timestamp;
-      mean.push({x: x, y: pg.mean});
-      minMax.push({x: x, y: [pg.min, pg.max]});
+      const x = data.timestampAt(i);
+      mean.push({x: x, y: data.meanAt(i)});
+      minMax.push({x: x, y: [data.minAt(i), data.maxAt(i)]});
     }
   };
 
+  // Pre-allocated buffer for stats calculation to avoid slice()/map() allocations
+  const statsSortBuffer = new Float64Array(sampleWindowSize);
+
   const updateStats = function (series, timeScale) {
-    // Extract just the values from {timestamp, value} objects for stats calculation
-    const rawData = series.samples[timeScale].slice(0);
-    const sortedData = rawData.map(d => d.value);
-    series.stats.cur = sortedData[sortedData.length-1];
-    sortedData.sort(numSort);
+    const samples = series.samples[timeScale];
+    const len = samples.size;
 
-    series.stats.max = sortedData[sortedData.length-1];
-    series.stats.min = sortedData[0];
-    series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
-    let sum = 0;
-    let i = 0;
+    if (len === 0) return;
 
-    for (i = sortedData.length-1; i >=0; i--) {
-      sum += sortedData[i];
+    // Copy values using zero-allocation accessor
+    for (let i = 0; i < len; i++) {
+      statsSortBuffer[i] = samples.valueAt(i);
     }
-    series.stats.mean = sum / sortedData.length;
 
-    const pg = series.pgaps[timeScale].last();
-    series.stats.maxPG = 1.0 * pg.max;
-    series.stats.meanPG = 1.0 * pg.mean;
+    series.stats.cur = statsSortBuffer[len - 1];
 
+    // Sort just the portion we're using (Float64Array.sort is in-place)
+    const slice = statsSortBuffer.subarray(0, len);
+    slice.sort();
+
+    series.stats.max = slice[len - 1];
+    series.stats.min = slice[0];
+    series.stats.median = slice[Math.floor(len / 2)];
+
+    let sum = 0;
+    for (let i = 0; i < len; i++) {
+      sum += slice[i];
+    }
+    series.stats.mean = sum / len;
+
+    // Use zero-allocation accessors for pgaps
+    const pgaps = series.pgaps[timeScale];
+    if (pgaps.size > 0) {
+      series.stats.maxPG = pgaps.lastMax();
+      series.stats.meanPG = pgaps.lastMean();
+    }
   };
 
   const updateMainChartData = function(samples, chartSeries) {
@@ -326,11 +527,12 @@
 
     chartSeries.length = 0;
 
+    // Use zero-allocation accessors instead of get() which allocates objects
     for (let i = 0; i < len; i++) {
-      const sample = samples.get(i);
-      // Sample now contains {timestamp: seconds, value: rate}
-      // Chart expects timestamp in seconds (same as flow charts)
-      chartSeries.push({timestamp: sample.timestamp, value: sample.value});
+      chartSeries.push({
+        timestamp: samples.timestampAt(i),
+        value: samples.valueAt(i)
+      });
     }
   };
 
