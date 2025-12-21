@@ -39,7 +39,7 @@ wait_for_port() {
 
 # Check if topology exists
 topology_exists() {
-    ip netns list 2>/dev/null | grep -q "^${PP_NS_OBSERVER}$"
+    ip netns list 2>/dev/null | grep -q "^${PP_NS_OBSERVER}\b"
 }
 
 # Ensure topology exists, create if not

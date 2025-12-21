@@ -349,7 +349,8 @@ class ScreenshotController {
     }
 
     this.log(`Shutdown complete. ${this.captures.length} screenshots captured.`);
-    process.exit(0);
+    // Use setTimeout to allow stdout to flush before exiting
+    setTimeout(() => process.exit(0), 100);
   }
 
   async processCommand(line) {

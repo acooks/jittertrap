@@ -94,6 +94,7 @@ pathological-porcupines/
 | `infra/run-test.sh <path>` | Run a test with JitterTrap orchestration |
 | `infra/add-impairment.sh <profile>` | Apply network impairment (wan, lossy, etc.) |
 | `infra/set-mtu.sh <mtu>` | Set MTU on test interfaces |
+| `infra/cleanup-processes.sh` | Kill orphaned test processes (tcpdump, jt-server, python) |
 
 ### Impairment Profiles
 
@@ -187,6 +188,48 @@ Self-check results:
 ```
 
 Exit codes: 0 = pass, 1 = fail
+
+## Troubleshooting
+
+### Cleaning Up Orphaned Processes
+
+If tests are interrupted or crash, processes may be left running. Use the cleanup script:
+
+```bash
+# List orphaned processes (dry run)
+sudo ./infra/cleanup-processes.sh --list
+
+# Kill orphaned processes
+sudo ./infra/cleanup-processes.sh
+```
+
+The cleanup script finds and kills:
+- `tcpdump` processes in the observer namespace
+- `jt-server` processes in the observer namespace
+- Python test processes in source/dest namespaces
+- Any `jt-server` running outside namespaces
+
+### Port Conflicts
+
+If you see "Address already in use" errors:
+```bash
+# Check what's using the port
+sudo ss -tlnp | grep :9999
+
+# Clean up stale processes
+sudo ./infra/cleanup-processes.sh
+```
+
+### Namespace Issues
+
+If namespace operations fail:
+```bash
+# Remove all test infrastructure
+sudo ./infra/teardown-topology.sh
+
+# Recreate fresh
+sudo ./infra/setup-topology.sh
+```
 
 ## Documentation
 

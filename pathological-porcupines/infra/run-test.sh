@@ -57,53 +57,167 @@ JT_PID=""
 # Destination process state
 DEST_PID=""
 
+# Kill a process reliably, waiting for it to exit
+# Args: $1=pid, $2=description, $3=signal (default TERM)
+kill_process() {
+    local pid="$1"
+    local desc="$2"
+    local sig="${3:-TERM}"
+
+    if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+
+    echo "  Stopping $desc (pid $pid)..."
+    kill -"$sig" "$pid" 2>/dev/null || true
+
+    # Wait up to 2 seconds for graceful shutdown
+    local timeout=4
+    while kill -0 "$pid" 2>/dev/null && [[ $timeout -gt 0 ]]; do
+        sleep 0.5
+        timeout=$((timeout - 1))
+    done
+
+    # Force kill if still running
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "  Force killing $desc..."
+        kill -9 "$pid" 2>/dev/null || true
+        sleep 0.2
+    fi
+}
+
+# Kill any stale tcpdump processes in the observer namespace
+cleanup_stale_tcpdump() {
+    # Find tcpdump processes running in the pp-observer namespace
+    local pids
+    pids=$(ip netns pids "$PP_NS_OBSERVER" 2>/dev/null | while read pid; do
+        if [[ -f "/proc/$pid/comm" ]] && grep -q "^tcpdump$" "/proc/$pid/comm" 2>/dev/null; then
+            echo "$pid"
+        fi
+    done)
+
+    if [[ -n "$pids" ]]; then
+        echo "  Cleaning stale tcpdump processes in $PP_NS_OBSERVER..."
+        for pid in $pids; do
+            kill -INT "$pid" 2>/dev/null || true
+        done
+        sleep 0.5
+        for pid in $pids; do
+            kill -9 "$pid" 2>/dev/null || true
+        done
+    fi
+}
+
+# Kill any stale jt-server processes in the observer namespace
+cleanup_stale_jt_server() {
+    # Find jt-server processes running in the pp-observer namespace
+    local pids
+    pids=$(ip netns pids "$PP_NS_OBSERVER" 2>/dev/null | while read pid; do
+        if [[ -f "/proc/$pid/comm" ]] && grep -q "^jt-server$" "/proc/$pid/comm" 2>/dev/null; then
+            echo "$pid"
+        fi
+    done)
+
+    if [[ -n "$pids" ]]; then
+        echo "  Cleaning stale jt-server processes in $PP_NS_OBSERVER..."
+        for pid in $pids; do
+            kill "$pid" 2>/dev/null || true
+        done
+        sleep 0.5
+        for pid in $pids; do
+            kill -9 "$pid" 2>/dev/null || true
+        done
+    fi
+}
+
+# Kill any stale python test processes in source and dest namespaces
+cleanup_stale_python() {
+    for ns in "$PP_NS_SOURCE" "$PP_NS_DEST"; do
+        local pids
+        pids=$(ip netns pids "$ns" 2>/dev/null | while read pid; do
+            if [[ -f "/proc/$pid/comm" ]] && grep -q "^python" "/proc/$pid/comm" 2>/dev/null; then
+                # Check if it's a pathological-porcupines test
+                if grep -q "pathological" "/proc/$pid/cmdline" 2>/dev/null; then
+                    echo "$pid"
+                fi
+            fi
+        done)
+
+        if [[ -n "$pids" ]]; then
+            echo "  Cleaning stale python processes in $ns..."
+            for pid in $pids; do
+                kill "$pid" 2>/dev/null || true
+            done
+            sleep 0.3
+            for pid in $pids; do
+                kill -9 "$pid" 2>/dev/null || true
+            done
+        fi
+    done
+}
+
 # Cleanup function for trap - ensures all background processes are killed
 cleanup_all() {
     local exit_code=$?
     local did_cleanup=false
 
-    # Stop tcpdump
-    if [[ -n "$TCPDUMP_PID" ]] && kill -0 "$TCPDUMP_PID" 2>/dev/null; then
-        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
-        did_cleanup=true
-        echo "  Stopping tcpdump (pid $TCPDUMP_PID)..."
-        kill -INT "$TCPDUMP_PID" 2>/dev/null || true
-        sleep 0.5
-        kill -0 "$TCPDUMP_PID" 2>/dev/null && kill -9 "$TCPDUMP_PID" 2>/dev/null || true
+    # Check if any cleanup is needed before printing header
+    if [[ -n "$TCPDUMP_PID" ]] || [[ -n "$SCREENSHOT_PID" ]] || \
+       [[ -n "$JT_PID" ]] || [[ -n "$DEST_PID" ]]; then
+        if kill -0 "$TCPDUMP_PID" 2>/dev/null || \
+           kill -0 "$SCREENSHOT_PID" 2>/dev/null || \
+           kill -0 "$JT_PID" 2>/dev/null || \
+           kill -0 "$DEST_PID" 2>/dev/null; then
+            echo ""
+            echo "Cleaning up..."
+            did_cleanup=true
+        fi
+    fi
+
+    # Stop tcpdump (use INT for clean pcap file closure)
+    if [[ -n "$TCPDUMP_PID" ]]; then
+        kill_process "$TCPDUMP_PID" "tcpdump" "INT"
+        TCPDUMP_PID=""
+    fi
+
+    # Also clean up any orphaned tcpdump in namespace
+    if topology_exists; then
+        cleanup_stale_tcpdump
     fi
 
     # Stop screenshot controller
-    if [[ -n "$SCREENSHOT_PID" ]] && kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
-        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
-        did_cleanup=true
-        echo "  Stopping screenshot controller (pid $SCREENSHOT_PID)..."
-        kill "$SCREENSHOT_PID" 2>/dev/null || true
-        sleep 0.5
-        kill -0 "$SCREENSHOT_PID" 2>/dev/null && kill -9 "$SCREENSHOT_PID" 2>/dev/null || true
+    if [[ -n "$SCREENSHOT_PID" ]]; then
+        kill_process "$SCREENSHOT_PID" "screenshot controller"
+        SCREENSHOT_PID=""
     fi
 
     # Close screenshot FIFO fd
     if [[ -n "${SCREENSHOT_FD:-}" ]]; then
         exec 3>&- 2>/dev/null || true
+        SCREENSHOT_FD=""
     fi
     [[ -n "$SCREENSHOT_FIFO" ]] && rm -f "$SCREENSHOT_FIFO"
 
     # Stop JitterTrap
-    if [[ -n "$JT_PID" ]] && kill -0 "$JT_PID" 2>/dev/null; then
-        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
-        did_cleanup=true
-        echo "  Stopping jt-server (pid $JT_PID)..."
-        kill "$JT_PID" 2>/dev/null || true
-        sleep 0.5
-        kill -0 "$JT_PID" 2>/dev/null && kill -9 "$JT_PID" 2>/dev/null || true
+    if [[ -n "$JT_PID" ]]; then
+        kill_process "$JT_PID" "jt-server"
+        JT_PID=""
+    fi
+
+    # Also clean up any orphaned jt-server in namespace
+    if topology_exists; then
+        cleanup_stale_jt_server
     fi
 
     # Stop destination (server/receiver)
-    if [[ -n "$DEST_PID" ]] && kill -0 "$DEST_PID" 2>/dev/null; then
-        [[ "$did_cleanup" == "false" ]] && echo "" && echo "Cleaning up..."
-        did_cleanup=true
-        echo "  Stopping destination process (pid $DEST_PID)..."
-        kill "$DEST_PID" 2>/dev/null || true
+    if [[ -n "$DEST_PID" ]]; then
+        kill_process "$DEST_PID" "destination process"
+        DEST_PID=""
+    fi
+
+    # Also clean up any orphaned python test processes in namespaces
+    if topology_exists; then
+        cleanup_stale_python
     fi
 
     [[ "$did_cleanup" == "true" ]] && echo "Cleanup complete."
@@ -271,7 +385,7 @@ setup_screenshot_capture() {
             return 1
         fi
         sleep 1
-        ((ready_timeout--))
+        ready_timeout=$((ready_timeout - 1))
     done
 
     if [[ -f "$ready_file" ]]; then
@@ -312,15 +426,24 @@ cleanup_screenshot() {
         fi
 
         # Wait for clean shutdown (allow time for captures to complete)
-        local timeout=20
-        while kill -0 "$SCREENSHOT_PID" 2>/dev/null && [[ $timeout -gt 0 ]]; do
-            sleep 0.5
-            ((timeout--))
+        # Check quickly at first (process usually exits fast), then slow down
+        local waited=0
+        # Fast checks for first 2 seconds (20 x 0.1s)
+        while kill -0 "$SCREENSHOT_PID" 2>/dev/null && [[ $waited -lt 20 ]]; do
+            sleep 0.1
+            waited=$((waited + 1))
         done
-        # Force kill if still running
+        # If still running, slower checks for up to 10 more seconds
+        while kill -0 "$SCREENSHOT_PID" 2>/dev/null && [[ $waited -lt 40 ]]; do
+            sleep 0.5
+            waited=$((waited + 1))
+        done
+        # Check if it exited cleanly
         if kill -0 "$SCREENSHOT_PID" 2>/dev/null; then
-            echo "  Screenshot controller still running, killing..."
+            # Still running after timeout - force kill
+            echo "  Screenshot controller did not exit cleanly, killing..."
             kill -9 "$SCREENSHOT_PID" 2>/dev/null || true
+            sleep 0.5
         fi
     fi
 
@@ -402,7 +525,7 @@ cleanup_pcap_capture() {
         local timeout=10
         while kill -0 "$TCPDUMP_PID" 2>/dev/null && [[ $timeout -gt 0 ]]; do
             sleep 0.5
-            ((timeout--))
+            timeout=$((timeout - 1))
         done
 
         # Force kill if still running
@@ -441,9 +564,19 @@ if [[ "$CAPTURE_SCREENSHOTS" == "true" ]]; then
     OPEN_BROWSER=false
 fi
 
+# Clean up any stale processes from previous runs
+if topology_exists; then
+    cleanup_stale_python
+    cleanup_stale_tcpdump
+fi
+
 # Start JitterTrap if requested
 if [[ "$RUN_JITTERTRAP" == "true" ]]; then
-    # Kill any stale jt-server processes from previous runs to avoid conflicts
+    # Also clean up jt-server
+    if topology_exists; then
+        cleanup_stale_jt_server
+    fi
+    # Also check for any jt-server running outside namespaces
     if pgrep -x jt-server >/dev/null 2>&1; then
         echo "Cleaning up stale jt-server processes..."
         pkill -x jt-server 2>/dev/null || true
@@ -653,11 +786,16 @@ if [[ "$CAPTURE_PCAP" == "true" ]]; then
     TCPDUMP_PID=""  # Clear so trap doesn't double-kill
 fi
 
-# Stop JitterTrap
+# Stop JitterTrap - use kill_process for reliable termination
 if [[ -n "$JT_PID" ]]; then
-    kill "$JT_PID" 2>/dev/null || true
-    wait "$JT_PID" 2>/dev/null || true
+    echo "Stopping JitterTrap..."
+    kill_process "$JT_PID" "jt-server"
     JT_PID=""  # Clear so trap doesn't double-kill
+fi
+
+# Also clean up any orphaned jt-server in namespace (belt and suspenders)
+if topology_exists; then
+    cleanup_stale_jt_server
 fi
 
 # Clear destination PID so trap doesn't try to kill it
