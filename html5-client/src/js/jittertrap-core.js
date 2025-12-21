@@ -473,15 +473,26 @@
   const updatePacketGapChartData = function (data, mean, minMax) {
     const len = data.size;
 
-    mean.length = 0;
-    minMax.length = 0;
-
-    // Use zero-allocation accessors instead of get() which allocates objects
+    // Reuse existing objects if array already has them, otherwise create new ones
+    // This avoids allocating ~400 objects per update (200 mean + 200 minMax)
     for (let i = 0; i < len; i++) {
       const x = data.timestampAt(i);
-      mean.push({x: x, y: data.meanAt(i)});
-      minMax.push({x: x, y: [data.minAt(i), data.maxAt(i)]});
+      if (i < mean.length) {
+        // Reuse existing object
+        mean[i].x = x;
+        mean[i].y = data.meanAt(i);
+        minMax[i].x = x;
+        minMax[i].y[0] = data.minAt(i);
+        minMax[i].y[1] = data.maxAt(i);
+      } else {
+        // Create new object (only happens during initial fill)
+        mean.push({x: x, y: data.meanAt(i)});
+        minMax.push({x: x, y: [data.minAt(i), data.maxAt(i)]});
+      }
     }
+    // Trim arrays if data shrunk (unlikely but safe)
+    mean.length = len;
+    minMax.length = len;
   };
 
   // Pre-allocated buffer for stats calculation to avoid slice()/map() allocations
@@ -525,15 +536,23 @@
   const updateMainChartData = function(samples, chartSeries) {
     const len = samples.size;
 
-    chartSeries.length = 0;
-
-    // Use zero-allocation accessors instead of get() which allocates objects
+    // Reuse existing objects if array already has them, otherwise create new ones
+    // This avoids allocating ~200 objects per update
     for (let i = 0; i < len; i++) {
-      chartSeries.push({
-        timestamp: samples.timestampAt(i),
-        value: samples.valueAt(i)
-      });
+      if (i < chartSeries.length) {
+        // Reuse existing object
+        chartSeries[i].timestamp = samples.timestampAt(i);
+        chartSeries[i].value = samples.valueAt(i);
+      } else {
+        // Create new object (only happens during initial fill)
+        chartSeries.push({
+          timestamp: samples.timestampAt(i),
+          value: samples.valueAt(i)
+        });
+      }
     }
+    // Trim array if data shrunk (unlikely but safe)
+    chartSeries.length = len;
   };
 
   const chartSamples = {};
