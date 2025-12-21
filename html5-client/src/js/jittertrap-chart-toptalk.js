@@ -125,6 +125,7 @@
 
   /* Track current flow keys to avoid for...in iteration */
   const currentFlowKeys = new Set();
+  const currentFlowKeysArray = [];  // Array form for indexed iteration (avoids iterator)
 
   /* Get or create a bin object from the pool.
    * Note: We don't delete old properties (expensive) - we just set new ones.
@@ -447,7 +448,15 @@
     };
 
     /* Reformat chartData to work with the new d3 v7 API
-     * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack */
+     * Ref: https://github.com/d3/d3-shape/blob/master/README.md#stack
+     *
+     * OPTIMIZED: Profile showed this function at 7.6% self time.
+     * Key optimizations:
+     * 1. Collect flow keys into array for indexed iteration (avoids iterator allocation)
+     * 2. Track bin sums incrementally to calculate maxSlice during bin building
+     * 3. Build formattedData array during bin creation (avoids Map.values() iterator)
+     * 4. Only sort if data is actually out of order (server sends sorted data)
+     */
     const formatDataAndGetMaxSlice = function(chartData) {
       // Reuse Map and array to reduce GC pressure (instead of new Map() every frame)
       reusableBinsMap.clear();
@@ -455,59 +464,69 @@
       binObjectPoolIndex = 0;  // Reset bin object pool
       let maxSlice = 0;
 
-      // First pass: collect current flow keys
+      // First pass: collect current flow keys into both Set and array
+      // Array allows indexed iteration without iterator allocation
+      currentFlowKeysArray.length = 0;
       for (let i = 0; i < chartData.length; i++) {
-        currentFlowKeys.add(chartData[i].fkey);
+        const fkey = chartData[i].fkey;
+        if (!currentFlowKeys.has(fkey)) {
+          currentFlowKeys.add(fkey);
+          currentFlowKeysArray.push(fkey);
+        }
       }
 
-      // Second pass: build bins
+      // Build formattedData array directly during bin creation (avoids Map.values() iterator)
+      reusableFormattedData.length = 0;
+
+      // Second pass: build bins and track sums
+      // Track last timestamp to detect if sorting is needed
+      let lastTs = -Infinity;
+      let needsSort = false;
+
       for (let i = 0; i < chartData.length; i++) {
         const row = chartData[i];
         const fkey = row.fkey;
+        const values = row.values;
 
-        for (let j = 0; j < row.values.length; j++) {
-          const o = row.values[j];
+        for (let j = 0; j < values.length; j++) {
+          const o = values[j];
           const ts = o.data ? o.data.ts : o.ts; // Handle potential pre-wrapped data
           const bytes = o.bytes; // bytes is Bytes/sec (rate) from the server
           // Calculate bps: bytes * 8 bits/byte
           const bps = bytes * 8;
 
           // Check if we have seen this timestamp before.
-          if (!reusableBinsMap.has(ts)) {
+          let bin = reusableBinsMap.get(ts);
+          if (bin === undefined) {
             // If not, get a pooled bin object for this timestamp
-            const bin = getPooledBinObject(ts);
-            // Initialize all current flow keys to 0 (clears stale values from pool)
-            for (const k of currentFlowKeys) {
-              bin[k] = 0;
+            bin = getPooledBinObject(ts);
+            // Initialize all current flow keys to 0 using indexed loop
+            for (let k = 0; k < currentFlowKeysArray.length; k++) {
+              bin[currentFlowKeysArray[k]] = 0;
             }
+            bin._sum = 0;  // Track sum directly on bin object
             reusableBinsMap.set(ts, bin);
+            reusableFormattedData.push(bin);  // Add to array immediately
+
+            // Check if out of order
+            if (ts < lastTs) {
+              needsSort = true;
+            }
+            lastTs = ts;
           }
 
-          // Get the bin for the current timestamp.
-          const bin = reusableBinsMap.get(ts);
+          // Add to bin and update running sum
           bin[fkey] += bps;
+          bin._sum += bps;
+          if (bin._sum > maxSlice) {
+            maxSlice = bin._sum;
+          }
         }
       }
 
-      // Reuse formattedData array instead of Array.from()
-      reusableFormattedData.length = 0;
-      for (const bin of reusableBinsMap.values()) {
-        reusableFormattedData.push(bin);
-      }
-
-      // Ensure data is sorted by timestamp for d3.stack and bisect to work correctly
-      reusableFormattedData.sort(timestampComparator);
-
-      // Calculate maxSlice using only current flow keys (avoids for...in allocation)
-      for (let i = 0; i < reusableFormattedData.length; i++) {
-        const slice = reusableFormattedData[i];
-        let currentSliceSum = 0;
-        for (const key of currentFlowKeys) {
-          currentSliceSum += slice[key] || 0;
-        }
-        if (currentSliceSum > maxSlice) {
-          maxSlice = currentSliceSum;
-        }
+      // Only sort if data was out of order
+      if (needsSort) {
+        reusableFormattedData.sort(timestampComparator);
       }
 
       // Return reusable result object - caller must not store reference across frames
