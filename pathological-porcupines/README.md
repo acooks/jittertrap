@@ -44,38 +44,41 @@ sudo ./infra/teardown-topology.sh
 
 | Category | Pathology | Description | JitterTrap Observable |
 |----------|-----------|-------------|----------------------|
-| TCP Flow Control | [receiver-starvation](tcp-flow-control/receiver-starvation/) | Slow receiver causes zero-window | Zero-window events |
-| TCP Flow Control | [silly-window-syndrome](tcp-flow-control/silly-window-syndrome/) | Tiny segments from small windows | Small packet sizes |
-| TCP Timing | [nagle-delayed-ack](tcp-timing/nagle-delayed-ack/) | 40-200ms latency from Nagle/delayed ACK | RTT histogram spikes |
-| TCP Timing | [persist-timer](tcp-timing/persist-timer/) | Zero-window probes at exponential backoff | IPG gaps at 5s, 10s intervals |
-| TCP Lifecycle | [rst-storm](tcp-lifecycle/rst-storm/) | Abrupt connection termination with RST | RST flags in flow details |
-| UDP | [bursty-sender](udp/bursty-sender/) | Bimodal inter-packet gap distribution | IPG histogram with two peaks |
-| RTP/Media | [rtp-jitter-spike](rtp/rtp-jitter-spike/) | Periodic large jitter in media stream | Jitter outliers >100ms |
-| RTP/Media | [rtp-sequence-gap](rtp/rtp-sequence-gap/) | Packet loss via sequence discontinuities | seq_loss counter |
+| TCP Flow Control | [receiver-starvation](tests/tcp-flow-control/receiver-starvation/) | Slow receiver causes zero-window | Zero-window events |
+| TCP Flow Control | [silly-window-syndrome](tests/tcp-flow-control/silly-window-syndrome/) | Tiny segments from small windows | Small packet sizes |
+| TCP Timing | [nagle-delayed-ack](tests/tcp-timing/nagle-delayed-ack/) | 40-200ms latency from Nagle/delayed ACK | RTT histogram spikes |
+| TCP Timing | [persist-timer](tests/tcp-timing/persist-timer/) | Zero-window probes at exponential backoff | IPG gaps at 5s, 10s intervals |
+| TCP Timing | [sender-stall](tests/tcp-timing/sender-stall/) | Application pauses sending, varying gaps | IPG gaps with healthy window |
+| TCP Lifecycle | [rst-storm](tests/tcp-lifecycle/rst-storm/) | Abrupt connection termination with RST | RST flags in flow details |
+| UDP | [bursty-sender](tests/udp/bursty-sender/) | Bimodal inter-packet gap distribution | IPG histogram with two peaks |
+| RTP/Media | [rtp-jitter-spike](tests/rtp/rtp-jitter-spike/) | Periodic large jitter in media stream | Jitter outliers >100ms |
+| RTP/Media | [rtp-sequence-gap](tests/rtp/rtp-sequence-gap/) | Packet loss via sequence discontinuities | seq_loss counter |
 
 ## Project Structure
 
 ```
 pathological-porcupines/
-    infra/                      # Test infrastructure
-        setup-topology.sh       # Create 3-namespace topology
-        teardown-topology.sh    # Remove topology
-        run-test.sh             # Orchestrate test with JitterTrap
-        add-impairment.sh       # Apply tc/netem impairments
-        set-mtu.sh              # Configure MTU
-        common.sh               # Shared functions
-    common/                     # Shared Python utilities
-        network.py              # Socket creation helpers
-        timing.py               # Rate limiting, burst timers
-        protocol.py             # RTP packet building/parsing
-        logging_utils.py        # Logging setup
-    tcp-flow-control/           # Window/buffer pathologies
-    tcp-timing/                 # Timer-related issues
-    tcp-lifecycle/              # Connection state issues
-    tcp-congestion/             # Congestion control behaviors
-    udp/                        # UDP pathologies
-    rtp/                        # RTP/media stream issues
-    ...
+├── infra/                      # Test infrastructure
+│   ├── setup-topology.sh       # Create 3-namespace topology
+│   ├── teardown-topology.sh    # Remove topology
+│   ├── run-test.sh             # Orchestrate test with JitterTrap
+│   ├── add-impairment.sh       # Apply tc/netem impairments
+│   ├── set-mtu.sh              # Configure MTU
+│   └── screenshot-controller.js # Automated screenshot capture
+├── common/                     # Shared Python utilities
+│   ├── network.py              # Socket creation helpers
+│   ├── timing.py               # Rate limiting, burst timers
+│   ├── protocol.py             # RTP packet building/parsing
+│   └── logging_utils.py        # Logging setup
+├── tests/                      # Verification test scenarios
+│   ├── tcp-flow-control/       # Window/buffer pathologies
+│   ├── tcp-timing/             # Timer-related issues
+│   ├── tcp-lifecycle/          # Connection state issues
+│   ├── udp/                    # UDP pathologies
+│   └── rtp/                    # RTP/media stream issues
+└── research/                   # Parameter sweep experiments (untracked)
+    └── topics/
+        └── tcp-flow-control/   # TCP diagnostic research (2,587 experiments)
 ```
 
 ## Requirements
@@ -148,10 +151,10 @@ sudo ip netns exec pp-observer jt-server --allowed veth-src:veth-dst -p 8080
 # Open http://10.0.0.2:8080 in browser
 
 # Terminal 2: Start server/receiver in destination namespace
-sudo ip netns exec pp-dest python3 tcp-timing/persist-timer/server.py --port 9999
+sudo ip netns exec pp-dest python3 tests/tcp-timing/persist-timer/server.py --port 9999
 
 # Terminal 3: Start client/sender in source namespace
-sudo ip netns exec pp-source python3 tcp-timing/persist-timer/client.py --host 10.0.1.2 --port 9999
+sudo ip netns exec pp-source python3 tests/tcp-timing/persist-timer/client.py --host 10.0.1.2 --port 9999
 ```
 
 Each pathology directory contains:
