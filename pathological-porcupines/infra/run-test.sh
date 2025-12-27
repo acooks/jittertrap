@@ -292,13 +292,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate test exists
-TEST_DIR="$PP_ROOT/$TEST_PATH"
+# Validate test exists (tests are under tests/ directory)
+TEST_DIR="$PP_ROOT/tests/$TEST_PATH"
 if [[ ! -d "$TEST_DIR" ]]; then
     echo "Error: Test directory not found: $TEST_DIR" >&2
     echo "Available tests:" >&2
-    find "$PP_ROOT" -name "server.py" -o -name "sender.py" 2>/dev/null | \
-        sed "s|$PP_ROOT/||" | sed 's|/[^/]*\.py$||' | sort -u | head -20 >&2
+    find "$PP_ROOT/tests" -name "server.py" -o -name "sender.py" 2>/dev/null | \
+        sed "s|$PP_ROOT/tests/||" | sed 's|/[^/]*\.py$||' | sort -u | head -20 >&2
     exit 1
 fi
 
@@ -311,7 +311,7 @@ fi
 # Screenshot capture functions
 setup_screenshot_capture() {
     local test_path="$1"
-    local readme="$PP_ROOT/$test_path/README.md"
+    local readme="$PP_ROOT/tests/$test_path/README.md"
 
     # Create output directory with timestamp
     local timestamp
