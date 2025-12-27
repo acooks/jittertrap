@@ -53,9 +53,16 @@ const VIEWS = {
   },
   pgaps: {
     tab: '#showTputPanel',
-    selector: '#chartPgaps',
-    name: 'Packet Gaps Chart',
+    selector: '#packetGapContainer',
+    name: 'Inter-Packet Gap Chart',
     fullPage: false
+  },
+  flowdetails: {
+    tab: '#showTopTalkPanel',
+    selector: '#toptalkLegendContainer',  // Capture the whole legend container which includes expanded details
+    name: 'Flow Details (with IPG Histogram)',
+    fullPage: false,
+    expandFlow: true  // Special flag to expand flow before capture
   },
   fullpage: {
     tab: null,
@@ -237,6 +244,71 @@ class ScreenshotController {
     }
   }
 
+  async expandFirstFlow() {
+    // Expand the first flow's health details
+    // The D3 click handler calls stopPropagation, but we need to invoke it
+    // without the event bubbling to the parent row's click handler
+    try {
+      // Wait for legend rows to be present
+      await this.page.waitForSelector('.toptalk-legend-row', { timeout: 5000 });
+
+      // Get D3's internal event handlers and call the health icon's click handler directly
+      const result = await this.page.evaluate(() => {
+        const rows = document.querySelectorAll('.toptalk-legend-row');
+        for (const row of rows) {
+          const healthIcon = row.querySelector('.health-icon');
+          if (healthIcon && window.getComputedStyle(healthIcon).cursor === 'pointer') {
+            // Access D3's internal __on property to get the click handler
+            const d3Handlers = healthIcon.__on;
+            if (d3Handlers) {
+              const clickHandler = d3Handlers.find(h => h.type === 'click');
+              if (clickHandler && clickHandler.value) {
+                const detailsBefore = document.querySelectorAll('.health-details-row-container').length;
+
+                // Create a fake event that won't bubble
+                const fakeEvent = {
+                  stopPropagation: () => {},
+                  preventDefault: () => {},
+                  target: healthIcon,
+                  currentTarget: healthIcon
+                };
+                // Call the handler directly with the fake event
+                clickHandler.value.call(healthIcon, fakeEvent);
+
+                const detailsAfter = document.querySelectorAll('.health-details-row-container').length;
+
+                return {
+                  triggered: true,
+                  fkey: row.getAttribute('data-fkey'),
+                  method: 'd3-direct',
+                  detailsBefore,
+                  detailsAfter,
+                  iconTextAfter: healthIcon.textContent
+                };
+              }
+            }
+            return { triggered: false, reason: 'no D3 click handler found' };
+          }
+        }
+        return { triggered: false, reason: 'no clickable health icon' };
+      });
+
+      this.log(`Expand result: ${JSON.stringify(result)}`);
+
+      if (!result.triggered) {
+        this.log(`Could not trigger expansion: ${result.reason}`);
+        return false;
+      }
+
+      // Return true if the handler created the details row (detailsAfter > detailsBefore)
+      // Don't wait - the animation loop may remove it
+      return result.detailsAfter > result.detailsBefore;
+    } catch (e) {
+      this.log(`Could not expand flow: ${e.message}`);
+      return false;
+    }
+  }
+
   async captureView(viewId) {
     if (!this.initialized) {
       this.log('Error: Not initialized, cannot capture');
@@ -257,6 +329,8 @@ class ScreenshotController {
         await this.clickTab(view.tab);
       }
 
+      // Note: flow expansion is now done upfront in captureAll() before any captures
+
       // Generate filename
       this.viewCounters[viewId] = (this.viewCounters[viewId] || 0) + 1;
       const testSlug = this.testPath.replace(/\//g, '_');
@@ -267,10 +341,11 @@ class ScreenshotController {
         // Full page screenshot
         await this.page.screenshot({ path: filepath, fullPage: false });
       } else {
-        // Wait for element
+        // Wait for element - use longer timeout for expanded views
+        const waitTimeout = view.expandFlow ? 10000 : 5000;
         await this.page.waitForSelector(view.selector, {
           visible: true,
-          timeout: 5000
+          timeout: waitTimeout
         });
 
         // Small delay for chart rendering
@@ -310,9 +385,53 @@ class ScreenshotController {
     this.log('Waiting 2s for charts to update...');
     await new Promise(r => setTimeout(r, 2000));
 
-    this.log(`Capturing all configured views: ${views.join(', ')}`);
+    // Check if any view needs flow expansion - if so, do it FIRST before any captures
+    const needsExpansion = views.some(v => {
+      const viewId = typeof v === 'string' ? v : v.id;
+      return VIEWS[viewId]?.expandFlow;
+    });
 
-    for (const viewConfig of views) {
+    // Reorder views: capture flowdetails FIRST if it needs expansion, to avoid tab switches destroying it
+    let reorderedViews = [...views];
+    if (needsExpansion) {
+      const flowdetailsIdx = reorderedViews.findIndex(v => {
+        const viewId = typeof v === 'string' ? v : v.id;
+        return VIEWS[viewId]?.expandFlow;
+      });
+      if (flowdetailsIdx > 0) {
+        const [flowdetailsView] = reorderedViews.splice(flowdetailsIdx, 1);
+        reorderedViews.unshift(flowdetailsView);
+      }
+
+      this.log('Expanding flow before capturing (required for flowdetails view)');
+      // Navigate to Top Talkers panel first
+      await this.clickTab('#showTopTalkPanel');
+
+      // Stop updates FIRST, then expand
+      // Do both in a single evaluate to avoid race conditions
+      await this.page.evaluate(() => {
+        // Disable WebSocket messages immediately
+        if (window.JT && window.JT.ws && window.JT.ws.ws) {
+          window.JT.ws.ws.onmessage = () => {};
+        }
+        // Click pause button to stop animation loop
+        const pauseBtn = document.querySelector('#pauseChartsBtn');
+        if (pauseBtn && !pauseBtn.textContent.includes('Run')) {
+          pauseBtn.click();
+        }
+      });
+      this.log('Paused updates');
+
+      // Small delay to let the animation loop stop
+      await new Promise(r => setTimeout(r, 100));
+
+      // Now expand
+      await this.expandFirstFlow();
+    }
+
+    this.log(`Capturing all configured views: ${reorderedViews.join(', ')}`);
+
+    for (const viewConfig of reorderedViews) {
       const viewId = typeof viewConfig === 'string' ? viewConfig : viewConfig.id;
       await this.captureView(viewId);
     }
