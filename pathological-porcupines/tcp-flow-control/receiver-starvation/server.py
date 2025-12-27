@@ -23,9 +23,9 @@ from common.logging_utils import setup_logging, format_bytes, format_rate
 
 # Default configuration
 DEFAULT_PORT = 9999
-DEFAULT_RECV_BUF = 16384      # 16KB buffer - moderate size
-DEFAULT_DELAY = 0.01          # 10ms delay between reads
-DEFAULT_READ_SIZE = 8192      # 8KB per recv() → ~800 KB/s max receive rate
+DEFAULT_RECV_BUF = 8192       # 8KB buffer - small to force zero-window faster
+DEFAULT_DELAY = 0.05          # 50ms delay between reads - slower processing
+DEFAULT_READ_SIZE = 4096      # 4KB per recv() → ~80 KB/s max receive rate
 DEFAULT_DURATION = 15         # Test duration in seconds
 
 
@@ -264,9 +264,9 @@ class ReceiverStarvationServer:
 
         logging.info("")
         logging.info("Expected observations in JitterTrap:")
-        logging.info("  - TCP Window: oscillating pattern (fills/drains)")
-        logging.info("  - Throughput: limited by receiver capacity")
-        logging.info("  - Brief zero-window events possible")
+        logging.info("  - TCP Window: oscillating pattern with zero-window events")
+        logging.info("  - Throughput: limited by receiver capacity (~80 KB/s)")
+        logging.info("  - Zero-window warning markers on TCP Window chart")
         logging.info("")
 
         return 0 if passed else 1

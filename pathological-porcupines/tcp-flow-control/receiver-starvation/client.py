@@ -23,9 +23,9 @@ from common.logging_utils import setup_logging, format_bytes, format_rate
 # Default configuration
 DEFAULT_HOST = '10.0.1.2'
 DEFAULT_PORT = 9999
-DEFAULT_RATE = 1.0            # Target MB/s (~1.25x receiver capacity of ~800KB/s)
+DEFAULT_RATE = 0.5            # Target MB/s (~6x receiver capacity of ~80KB/s)
 DEFAULT_DURATION = 15         # Seconds (match server duration)
-DEFAULT_CHUNK_SIZE = 16384    # 16KB chunks
+DEFAULT_CHUNK_SIZE = 8192     # 8KB chunks - smaller for more frequent sends
 
 
 def setup_argparse() -> argparse.Namespace:
