@@ -339,8 +339,17 @@ setup_screenshot_capture() {
 
     # Start screenshot controller in background
     # Run as original user if we're running under sudo
+    # Must preserve DISPLAY and XDG_RUNTIME_DIR for X11/Wayland access
     if [[ -n "${SUDO_USER:-}" ]]; then
-        sudo -u "$SUDO_USER" node "$SCRIPT_DIR/screenshot-controller.js" \
+        # Get the original user's UID for XDG_RUNTIME_DIR
+        local orig_uid
+        orig_uid=$(id -u "$SUDO_USER")
+        # Preserve X11/Wayland environment variables for browser access
+        sudo -u "$SUDO_USER" \
+            DISPLAY="${DISPLAY:-:0}" \
+            XDG_RUNTIME_DIR="/run/user/$orig_uid" \
+            XAUTHORITY="${XAUTHORITY:-/home/$SUDO_USER/.Xauthority}" \
+            node "$SCRIPT_DIR/screenshot-controller.js" \
             "$SCREENSHOT_FIFO" \
             "$SCREENSHOT_OUTPUT_DIR" \
             "$test_path" \
