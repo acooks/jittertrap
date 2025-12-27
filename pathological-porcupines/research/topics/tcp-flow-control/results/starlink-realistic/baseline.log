@@ -1,0 +1,318 @@
+================================================
+TCP Flow Control Parameter Sweep
+================================================
+Preset:    starlink-realistic-baseline
+Cluster:   starlink-realistic
+Output:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/starlink-realistic/starlink-realistic-baseline.csv
+Topology:  pp-source (10.0.1.1) -> pp-dest (10.0.1.2)
+
+Starting packet capture...
+dropped privs to tcpdump
+tcpdump: listening on br0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+Running namespace-aware sweep...
+
+10:35:34 INFO     Using preset: starlink-realistic-baseline
+10:35:34 INFO     Running 144 experiments (3 iteration(s) per condition)
+10:35:34 INFO     [1/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%
+10:35:56 INFO       -> zero_window=0, throughput=2862KB/s, rtt_mean=14.2ms
+10:35:57 INFO     [2/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+10:36:21 INFO       -> zero_window=0, throughput=4211KB/s, rtt_mean=14.5ms
+10:36:21 INFO     [3/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%
+10:36:41 INFO       -> zero_window=0, throughput=1671KB/s, rtt_mean=13.7ms
+10:36:42 INFO     [4/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+10:37:06 INFO       -> zero_window=0, throughput=4044KB/s, rtt_mean=16.5ms
+10:37:06 INFO     [5/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%
+10:37:24 INFO       -> zero_window=0, throughput=236KB/s, rtt_mean=13.8ms
+10:37:24 INFO     [6/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+10:37:44 INFO       -> zero_window=0, throughput=930KB/s, rtt_mean=17.9ms
+10:37:45 INFO     [7/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%
+10:38:02 INFO       -> zero_window=0, throughput=259KB/s, rtt_mean=13.9ms
+10:38:03 INFO     [8/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+10:38:23 INFO       -> zero_window=0, throughput=945KB/s, rtt_mean=17.6ms
+10:38:23 INFO     [9/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%
+10:38:44 INFO       -> zero_window=0, throughput=2005KB/s, rtt_mean=16.9ms
+10:38:44 INFO     [10/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+10:39:11 INFO       -> zero_window=0, throughput=6222KB/s, rtt_mean=18.6ms
+10:39:12 INFO     [11/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%
+10:39:31 INFO       -> zero_window=0, throughput=1360KB/s, rtt_mean=16.7ms
+10:39:32 INFO     [12/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+10:39:58 INFO       -> zero_window=0, throughput=5493KB/s, rtt_mean=18.7ms
+10:39:58 INFO     [13/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%
+10:40:16 INFO       -> zero_window=0, throughput=288KB/s, rtt_mean=16.7ms
+10:40:17 INFO     [14/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+10:40:36 INFO       -> zero_window=0, throughput=886KB/s, rtt_mean=19.6ms
+10:40:37 INFO     [15/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%
+10:40:55 INFO       -> zero_window=0, throughput=378KB/s, rtt_mean=17.2ms
+10:40:56 INFO     [16/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+10:41:15 INFO       -> zero_window=0, throughput=982KB/s, rtt_mean=19.8ms
+10:41:16 INFO     [17/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%
+10:41:39 INFO       -> zero_window=0, throughput=3648KB/s, rtt_mean=14.3ms
+10:41:39 INFO     [18/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+10:42:06 INFO       -> zero_window=0, throughput=6002KB/s, rtt_mean=15.8ms
+10:42:06 INFO     [19/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%
+10:42:27 INFO       -> zero_window=0, throughput=1725KB/s, rtt_mean=13.8ms
+10:42:27 INFO     [20/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+10:42:49 INFO       -> zero_window=0, throughput=2919KB/s, rtt_mean=14.7ms
+10:42:50 INFO     [21/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%
+10:43:08 INFO       -> zero_window=0, throughput=282KB/s, rtt_mean=13.9ms
+10:43:08 INFO     [22/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+10:43:28 INFO       -> zero_window=0, throughput=906KB/s, rtt_mean=17.6ms
+10:43:28 INFO     [23/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%
+10:43:46 INFO       -> zero_window=0, throughput=241KB/s, rtt_mean=13.6ms
+10:43:47 INFO     [24/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+10:44:06 INFO       -> zero_window=0, throughput=936KB/s, rtt_mean=17.9ms
+10:44:07 INFO     [25/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%
+10:44:27 INFO       -> zero_window=0, throughput=1804KB/s, rtt_mean=16.6ms
+10:44:28 INFO     [26/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+10:44:55 INFO       -> zero_window=0, throughput=6302KB/s, rtt_mean=18.5ms
+10:44:55 INFO     [27/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%
+10:45:15 INFO       -> zero_window=0, throughput=1456KB/s, rtt_mean=16.6ms
+10:45:16 INFO     [28/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+10:45:41 INFO       -> zero_window=0, throughput=5361KB/s, rtt_mean=18.8ms
+10:45:42 INFO     [29/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%
+10:46:00 INFO       -> zero_window=0, throughput=478KB/s, rtt_mean=17.9ms
+10:46:01 INFO     [30/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+10:46:20 INFO       -> zero_window=0, throughput=894KB/s, rtt_mean=19.4ms
+10:46:21 INFO     [31/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%
+10:46:39 INFO       -> zero_window=0, throughput=450KB/s, rtt_mean=17.6ms
+10:46:40 INFO     [32/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+10:46:59 INFO       -> zero_window=0, throughput=1061KB/s, rtt_mean=19.7ms
+10:46:59 INFO     [33/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%
+10:47:21 INFO       -> zero_window=0, throughput=2648KB/s, rtt_mean=14.1ms
+10:47:21 INFO     [34/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+10:47:46 INFO       -> zero_window=0, throughput=4612KB/s, rtt_mean=15.3ms
+10:47:46 INFO     [35/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%
+10:48:06 INFO       -> zero_window=0, throughput=1644KB/s, rtt_mean=13.9ms
+10:48:07 INFO     [36/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+10:48:33 INFO       -> zero_window=0, throughput=5369KB/s, rtt_mean=17.3ms
+10:48:33 INFO     [37/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%
+10:48:51 INFO       -> zero_window=0, throughput=279KB/s, rtt_mean=14.2ms
+10:48:51 INFO     [38/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+10:49:11 INFO       -> zero_window=0, throughput=911KB/s, rtt_mean=17.6ms
+10:49:12 INFO     [39/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%
+10:49:30 INFO       -> zero_window=0, throughput=245KB/s, rtt_mean=13.5ms
+10:49:30 INFO     [40/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+10:49:50 INFO       -> zero_window=0, throughput=963KB/s, rtt_mean=17.7ms
+10:49:50 INFO     [41/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%
+10:50:11 INFO       -> zero_window=0, throughput=1841KB/s, rtt_mean=16.7ms
+10:50:11 INFO     [42/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+10:50:38 INFO       -> zero_window=0, throughput=6355KB/s, rtt_mean=18.3ms
+10:50:39 INFO     [43/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%
+10:50:58 INFO       -> zero_window=0, throughput=1250KB/s, rtt_mean=16.6ms
+10:50:59 INFO     [44/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+10:51:24 INFO       -> zero_window=0, throughput=5320KB/s, rtt_mean=19.0ms
+10:51:25 INFO     [45/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%
+10:51:43 INFO       -> zero_window=0, throughput=303KB/s, rtt_mean=16.7ms
+10:51:43 INFO     [46/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+10:52:03 INFO       -> zero_window=0, throughput=789KB/s, rtt_mean=19.3ms
+10:52:03 INFO     [47/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%
+10:52:21 INFO       -> zero_window=0, throughput=256KB/s, rtt_mean=17.2ms
+10:52:21 INFO     [48/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+10:52:41 INFO       -> zero_window=0, throughput=882KB/s, rtt_mean=19.4ms
+10:52:41 INFO     [49/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%
+10:53:03 INFO       -> zero_window=0, throughput=2431KB/s, rtt_mean=13.9ms
+10:53:03 INFO     [50/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+10:53:29 INFO       -> zero_window=0, throughput=5342KB/s, rtt_mean=16.1ms
+10:53:30 INFO     [51/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%
+10:53:50 INFO       -> zero_window=0, throughput=1797KB/s, rtt_mean=13.7ms
+10:53:51 INFO     [52/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+10:54:15 INFO       -> zero_window=0, throughput=4196KB/s, rtt_mean=16.7ms
+10:54:16 INFO     [53/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%
+10:54:34 INFO       -> zero_window=0, throughput=274KB/s, rtt_mean=13.6ms
+10:54:34 INFO     [54/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+10:54:54 INFO       -> zero_window=0, throughput=968KB/s, rtt_mean=17.5ms
+10:54:54 INFO     [55/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%
+10:55:12 INFO       -> zero_window=0, throughput=240KB/s, rtt_mean=13.4ms
+10:55:13 INFO     [56/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+10:55:33 INFO       -> zero_window=0, throughput=966KB/s, rtt_mean=17.6ms
+10:55:33 INFO     [57/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%
+10:55:54 INFO       -> zero_window=0, throughput=1910KB/s, rtt_mean=16.7ms
+10:55:54 INFO     [58/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+10:56:21 INFO       -> zero_window=0, throughput=6158KB/s, rtt_mean=18.6ms
+10:56:22 INFO     [59/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%
+10:56:41 INFO       -> zero_window=0, throughput=1528KB/s, rtt_mean=16.7ms
+10:56:42 INFO     [60/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+10:57:08 INFO       -> zero_window=0, throughput=5268KB/s, rtt_mean=19.0ms
+10:57:08 INFO     [61/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%
+10:57:26 INFO       -> zero_window=0, throughput=328KB/s, rtt_mean=16.9ms
+10:57:27 INFO     [62/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+10:57:46 INFO       -> zero_window=0, throughput=913KB/s, rtt_mean=19.9ms
+10:57:47 INFO     [63/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%
+10:58:05 INFO       -> zero_window=0, throughput=675KB/s, rtt_mean=18.7ms
+10:58:06 INFO     [64/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+10:58:25 INFO       -> zero_window=0, throughput=1020KB/s, rtt_mean=19.6ms
+10:58:26 INFO     [65/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%
+10:58:48 INFO       -> zero_window=0, throughput=2745KB/s, rtt_mean=14.1ms
+10:58:48 INFO     [66/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+10:59:17 INFO       -> zero_window=0, throughput=7260KB/s, rtt_mean=15.7ms
+10:59:17 INFO     [67/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%
+10:59:37 INFO       -> zero_window=0, throughput=1412KB/s, rtt_mean=13.6ms
+10:59:37 INFO     [68/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+11:00:00 INFO       -> zero_window=0, throughput=3599KB/s, rtt_mean=16.3ms
+11:00:01 INFO     [69/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%
+11:00:19 INFO       -> zero_window=0, throughput=262KB/s, rtt_mean=13.6ms
+11:00:19 INFO     [70/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+11:00:39 INFO       -> zero_window=0, throughput=947KB/s, rtt_mean=17.7ms
+11:00:40 INFO     [71/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%
+11:00:58 INFO       -> zero_window=0, throughput=240KB/s, rtt_mean=13.9ms
+11:00:58 INFO     [72/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+11:01:18 INFO       -> zero_window=0, throughput=927KB/s, rtt_mean=17.6ms
+11:01:18 INFO     [73/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%
+11:01:39 INFO       -> zero_window=0, throughput=2177KB/s, rtt_mean=16.9ms
+11:01:40 INFO     [74/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+11:02:07 INFO       -> zero_window=0, throughput=6234KB/s, rtt_mean=18.4ms
+11:02:07 INFO     [75/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%
+11:02:27 INFO       -> zero_window=0, throughput=1277KB/s, rtt_mean=16.6ms
+11:02:27 INFO     [76/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+11:02:52 INFO       -> zero_window=0, throughput=5016KB/s, rtt_mean=18.9ms
+11:02:53 INFO     [77/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%
+11:03:11 INFO       -> zero_window=0, throughput=374KB/s, rtt_mean=17.6ms
+11:03:11 INFO     [78/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+11:03:31 INFO       -> zero_window=0, throughput=1052KB/s, rtt_mean=19.7ms
+11:03:31 INFO     [79/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%
+11:03:49 INFO       -> zero_window=0, throughput=297KB/s, rtt_mean=16.8ms
+11:03:50 INFO     [80/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+11:04:09 INFO       -> zero_window=0, throughput=784KB/s, rtt_mean=19.2ms
+11:04:10 INFO     [81/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%
+11:04:31 INFO       -> zero_window=0, throughput=2404KB/s, rtt_mean=13.9ms
+11:04:31 INFO     [82/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+11:04:57 INFO       -> zero_window=0, throughput=5290KB/s, rtt_mean=15.6ms
+11:04:57 INFO     [83/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%
+11:05:18 INFO       -> zero_window=0, throughput=1699KB/s, rtt_mean=13.7ms
+11:05:18 INFO     [84/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+11:05:44 INFO       -> zero_window=0, throughput=5406KB/s, rtt_mean=16.9ms
+11:05:44 INFO     [85/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%
+11:06:02 INFO       -> zero_window=0, throughput=260KB/s, rtt_mean=13.4ms
+11:06:03 INFO     [86/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+11:06:22 INFO       -> zero_window=0, throughput=935KB/s, rtt_mean=17.5ms
+11:06:23 INFO     [87/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%
+11:06:41 INFO       -> zero_window=0, throughput=235KB/s, rtt_mean=13.4ms
+11:06:41 INFO     [88/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+11:07:01 INFO       -> zero_window=0, throughput=900KB/s, rtt_mean=17.2ms
+11:07:01 INFO     [89/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%
+11:07:22 INFO       -> zero_window=0, throughput=1938KB/s, rtt_mean=16.8ms
+11:07:22 INFO     [90/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+11:07:49 INFO       -> zero_window=0, throughput=5993KB/s, rtt_mean=18.5ms
+11:07:49 INFO     [91/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%
+11:08:09 INFO       -> zero_window=0, throughput=1344KB/s, rtt_mean=16.5ms
+11:08:09 INFO     [92/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+11:08:35 INFO       -> zero_window=0, throughput=5166KB/s, rtt_mean=19.0ms
+11:08:35 INFO     [93/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%
+11:08:53 INFO       -> zero_window=0, throughput=347KB/s, rtt_mean=17.2ms
+11:08:54 INFO     [94/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+11:09:13 INFO       -> zero_window=0, throughput=936KB/s, rtt_mean=19.4ms
+11:09:14 INFO     [95/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%
+11:09:32 INFO       -> zero_window=0, throughput=509KB/s, rtt_mean=18.0ms
+11:09:32 INFO     [96/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+11:09:52 INFO       -> zero_window=0, throughput=880KB/s, rtt_mean=19.2ms
+11:09:52 INFO     [97/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%
+11:10:14 INFO       -> zero_window=0, throughput=2743KB/s, rtt_mean=14.0ms
+11:10:14 INFO     [98/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+11:10:39 INFO       -> zero_window=0, throughput=4925KB/s, rtt_mean=15.6ms
+11:10:40 INFO     [99/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%
+11:11:00 INFO       -> zero_window=0, throughput=1721KB/s, rtt_mean=13.7ms
+11:11:01 INFO     [100/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+11:11:24 INFO       -> zero_window=0, throughput=3887KB/s, rtt_mean=16.5ms
+11:11:24 INFO     [101/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%
+11:11:42 INFO       -> zero_window=0, throughput=246KB/s, rtt_mean=13.3ms
+11:11:43 INFO     [102/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+11:12:03 INFO       -> zero_window=0, throughput=1025KB/s, rtt_mean=17.8ms
+11:12:03 INFO     [103/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%
+11:12:21 INFO       -> zero_window=0, throughput=266KB/s, rtt_mean=13.7ms
+11:12:22 INFO     [104/144] buf=262144, delay=1ms, rate=10.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+11:12:41 INFO       -> zero_window=0, throughput=973KB/s, rtt_mean=18.0ms
+11:12:42 INFO     [105/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%
+11:13:03 INFO       -> zero_window=0, throughput=2192KB/s, rtt_mean=16.9ms
+11:13:03 INFO     [106/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+11:13:30 INFO       -> zero_window=0, throughput=6318KB/s, rtt_mean=18.4ms
+11:13:31 INFO     [107/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%
+11:13:50 INFO       -> zero_window=0, throughput=1151KB/s, rtt_mean=16.5ms
+11:13:50 INFO     [108/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+11:14:16 INFO       -> zero_window=0, throughput=5379KB/s, rtt_mean=18.8ms
+11:14:17 INFO     [109/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%
+11:14:35 INFO       -> zero_window=0, throughput=574KB/s, rtt_mean=18.0ms
+11:14:36 INFO     [110/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+11:14:55 INFO       -> zero_window=0, throughput=913KB/s, rtt_mean=20.1ms
+11:14:55 INFO     [111/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%
+11:15:14 INFO       -> zero_window=0, throughput=821KB/s, rtt_mean=19.2ms
+11:15:15 INFO     [112/144] buf=262144, delay=1ms, rate=10.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+11:15:34 INFO       -> zero_window=0, throughput=822KB/s, rtt_mean=19.5ms
+11:15:35 INFO     [113/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%
+11:15:56 INFO       -> zero_window=0, throughput=2395KB/s, rtt_mean=14.0ms
+11:15:56 INFO     [114/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+11:16:21 INFO       -> zero_window=0, throughput=4928KB/s, rtt_mean=15.6ms
+11:16:22 INFO     [115/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%
+11:16:41 INFO       -> zero_window=0, throughput=1401KB/s, rtt_mean=13.6ms
+11:16:42 INFO     [116/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+11:17:06 INFO       -> zero_window=0, throughput=4185KB/s, rtt_mean=17.0ms
+11:17:06 INFO     [117/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%
+11:17:24 INFO       -> zero_window=0, throughput=256KB/s, rtt_mean=13.9ms
+11:17:24 INFO     [118/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+11:17:44 INFO       -> zero_window=0, throughput=930KB/s, rtt_mean=17.8ms
+11:17:45 INFO     [119/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%
+11:18:03 INFO       -> zero_window=0, throughput=244KB/s, rtt_mean=13.3ms
+11:18:03 INFO     [120/144] buf=262144, delay=1ms, rate=50.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+11:18:23 INFO       -> zero_window=0, throughput=941KB/s, rtt_mean=17.6ms
+11:18:23 INFO     [121/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%
+11:18:45 INFO       -> zero_window=0, throughput=2891KB/s, rtt_mean=17.2ms
+11:18:46 INFO     [122/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+11:19:13 INFO       -> zero_window=0, throughput=6040KB/s, rtt_mean=18.6ms
+11:19:13 INFO     [123/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%
+11:19:33 INFO       -> zero_window=0, throughput=1307KB/s, rtt_mean=16.5ms
+11:19:34 INFO     [124/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+11:20:00 INFO       -> zero_window=0, throughput=5554KB/s, rtt_mean=18.6ms
+11:20:01 INFO     [125/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%
+11:20:19 INFO       -> zero_window=0, throughput=313KB/s, rtt_mean=17.3ms
+11:20:19 INFO     [126/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+11:20:39 INFO       -> zero_window=0, throughput=843KB/s, rtt_mean=19.9ms
+11:20:39 INFO     [127/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%
+11:20:57 INFO       -> zero_window=0, throughput=289KB/s, rtt_mean=17.0ms
+11:20:58 INFO     [128/144] buf=262144, delay=1ms, rate=50.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+11:21:17 INFO       -> zero_window=0, throughput=839KB/s, rtt_mean=19.3ms
+11:21:18 INFO     [129/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%
+11:21:39 INFO       -> zero_window=0, throughput=2708KB/s, rtt_mean=14.1ms
+11:21:40 INFO     [130/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.1%, cc=bbr
+11:22:06 INFO       -> zero_window=0, throughput=5565KB/s, rtt_mean=14.9ms
+11:22:06 INFO     [131/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%
+11:22:26 INFO       -> zero_window=0, throughput=1576KB/s, rtt_mean=13.8ms
+11:22:27 INFO     [132/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±3ms loss=0.2%, cc=bbr
+11:22:53 INFO       -> zero_window=0, throughput=5601KB/s, rtt_mean=16.9ms
+11:22:53 INFO     [133/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%
+11:23:11 INFO       -> zero_window=0, throughput=250KB/s, rtt_mean=13.9ms
+11:23:12 INFO     [134/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.1%, cc=bbr
+11:23:31 INFO       -> zero_window=0, throughput=881KB/s, rtt_mean=18.4ms
+11:23:32 INFO     [135/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%
+11:23:50 INFO       -> zero_window=0, throughput=233KB/s, rtt_mean=13.8ms
+11:23:50 INFO     [136/144] buf=262144, delay=1ms, rate=100.0MB/s, net=12ms±7ms loss=0.2%, cc=bbr
+11:24:10 INFO       -> zero_window=0, throughput=894KB/s, rtt_mean=17.7ms
+11:24:10 INFO     [137/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%
+11:24:30 INFO       -> zero_window=0, throughput=1538KB/s, rtt_mean=16.8ms
+11:24:31 INFO     [138/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.1%, cc=bbr
+11:24:58 INFO       -> zero_window=0, throughput=6185KB/s, rtt_mean=18.4ms
+11:24:58 INFO     [139/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%
+11:25:18 INFO       -> zero_window=0, throughput=1434KB/s, rtt_mean=16.6ms
+11:25:18 INFO     [140/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±3ms loss=0.2%, cc=bbr
+11:25:44 INFO       -> zero_window=0, throughput=5252KB/s, rtt_mean=18.9ms
+11:25:45 INFO     [141/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%
+11:26:03 INFO       -> zero_window=0, throughput=603KB/s, rtt_mean=18.2ms
+11:26:04 INFO     [142/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.1%, cc=bbr
+11:26:23 INFO       -> zero_window=0, throughput=968KB/s, rtt_mean=19.6ms
+11:26:24 INFO     [143/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%
+11:26:42 INFO       -> zero_window=0, throughput=420KB/s, rtt_mean=17.9ms
+11:26:42 INFO     [144/144] buf=262144, delay=1ms, rate=100.0MB/s, net=15ms±7ms loss=0.2%, cc=bbr
+11:27:02 INFO       -> zero_window=0, throughput=926KB/s, rtt_mean=19.2ms
+11:27:02 INFO     Complete: 144/144 successful, 0 with zero-window
+6060047 packets captured
+6060047 packets received by filter
+0 packets dropped by kernel
+
+================================================
+Sweep complete!
+================================================
+Results: /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/starlink-realistic/starlink-realistic-baseline.csv
+PCAP:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/starlink-realistic/starlink-realistic-baseline.pcap
+
+To analyze:
+  python3 /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/scripts/analyze.py /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/starlink-realistic/starlink-realistic-baseline.csv -o /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/
+
+Cleaning up...

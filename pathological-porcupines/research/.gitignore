@@ -1,0 +1,11 @@
+# Large packet captures - regenerate with experiment scripts
+*.pcap
+*.pcapng
+
+# Large binary files
+*.png
+
+# Temporary/working files
+.sweep_work.*
+__pycache__/
+*.pyc

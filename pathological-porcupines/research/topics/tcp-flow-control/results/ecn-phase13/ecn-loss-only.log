@@ -1,0 +1,102 @@
+================================================
+TCP Flow Control Parameter Sweep
+================================================
+Preset:    ecn-loss-only
+Cluster:   ecn-phase13
+Output:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-loss-only.csv
+Topology:  pp-source (10.0.1.1) -> pp-dest (10.0.1.2)
+
+Starting packet capture...
+dropped privs to tcpdump
+tcpdump: listening on br0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+Running namespace-aware sweep...
+
+07:48:35 INFO     Using preset: ecn-loss-only
+07:48:35 INFO     Running 36 experiments (3 iteration(s) per condition)
+07:48:35 INFO     [1/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%
+07:48:48 INFO       -> zero_window=0, throughput=466KB/s, rtt_mean=26.0ms
+07:48:48 INFO     [2/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%, cc=bbr
+07:49:04 INFO       -> zero_window=0, throughput=3594KB/s, rtt_mean=26.4ms
+07:49:04 INFO     [3/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%
+07:49:17 INFO       -> zero_window=0, throughput=340KB/s, rtt_mean=26.3ms
+07:49:18 INFO     [4/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%, cc=bbr
+07:49:33 INFO       -> zero_window=0, throughput=3084KB/s, rtt_mean=27.9ms
+07:49:33 INFO     [5/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%
+07:49:46 INFO       -> zero_window=0, throughput=202KB/s, rtt_mean=28.0ms
+07:49:46 INFO     [6/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%, cc=bbr
+07:50:01 INFO       -> zero_window=0, throughput=2550KB/s, rtt_mean=35.6ms
+07:50:02 INFO     [7/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%
+07:50:15 INFO       -> zero_window=0, throughput=629KB/s, rtt_mean=51.2ms
+07:50:15 INFO     [8/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%, cc=bbr
+07:50:29 INFO       -> zero_window=0, throughput=1718KB/s, rtt_mean=51.4ms
+07:50:30 INFO     [9/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%
+07:50:43 INFO       -> zero_window=0, throughput=251KB/s, rtt_mean=54.3ms
+07:50:43 INFO     [10/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%, cc=bbr
+07:50:57 INFO       -> zero_window=0, throughput=1438KB/s, rtt_mean=53.6ms
+07:50:58 INFO     [11/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%
+07:51:10 INFO       -> zero_window=0, throughput=112KB/s, rtt_mean=53.0ms
+07:51:11 INFO     [12/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%, cc=bbr
+07:51:24 INFO       -> zero_window=0, throughput=1293KB/s, rtt_mean=64.7ms
+07:51:25 INFO     [13/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%
+07:51:38 INFO       -> zero_window=0, throughput=631KB/s, rtt_mean=25.6ms
+07:51:38 INFO     [14/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%, cc=bbr
+07:51:54 INFO       -> zero_window=0, throughput=3591KB/s, rtt_mean=26.4ms
+07:51:54 INFO     [15/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%
+07:52:07 INFO       -> zero_window=0, throughput=430KB/s, rtt_mean=25.6ms
+07:52:08 INFO     [16/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%, cc=bbr
+07:52:23 INFO       -> zero_window=0, throughput=2993KB/s, rtt_mean=29.0ms
+07:52:23 INFO     [17/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%
+07:52:36 INFO       -> zero_window=0, throughput=290KB/s, rtt_mean=27.2ms
+07:52:37 INFO     [18/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%, cc=bbr
+07:52:52 INFO       -> zero_window=0, throughput=2586KB/s, rtt_mean=35.3ms
+07:52:52 INFO     [19/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%
+07:53:05 INFO       -> zero_window=0, throughput=578KB/s, rtt_mean=51.4ms
+07:53:06 INFO     [20/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%, cc=bbr
+07:53:20 INFO       -> zero_window=0, throughput=1899KB/s, rtt_mean=51.0ms
+07:53:20 INFO     [21/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%
+07:53:33 INFO       -> zero_window=0, throughput=266KB/s, rtt_mean=52.5ms
+07:53:34 INFO     [22/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%, cc=bbr
+07:53:48 INFO       -> zero_window=0, throughput=1454KB/s, rtt_mean=55.3ms
+07:53:48 INFO     [23/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%
+07:54:01 INFO       -> zero_window=0, throughput=221KB/s, rtt_mean=54.7ms
+07:54:01 INFO     [24/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%, cc=bbr
+07:54:15 INFO       -> zero_window=0, throughput=1296KB/s, rtt_mean=63.0ms
+07:54:15 INFO     [25/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%
+07:54:28 INFO       -> zero_window=0, throughput=536KB/s, rtt_mean=26.1ms
+07:54:29 INFO     [26/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=0.5%, cc=bbr
+07:54:44 INFO       -> zero_window=0, throughput=3522KB/s, rtt_mean=26.5ms
+07:54:45 INFO     [27/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%
+07:54:58 INFO       -> zero_window=0, throughput=539KB/s, rtt_mean=26.3ms
+07:54:58 INFO     [28/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=1.0%, cc=bbr
+07:55:14 INFO       -> zero_window=0, throughput=3006KB/s, rtt_mean=28.6ms
+07:55:15 INFO     [29/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%
+07:55:27 INFO       -> zero_window=0, throughput=247KB/s, rtt_mean=27.9ms
+07:55:28 INFO     [30/36] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms loss=2.0%, cc=bbr
+07:55:43 INFO       -> zero_window=0, throughput=2627KB/s, rtt_mean=37.5ms
+07:55:43 INFO     [31/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%
+07:55:56 INFO       -> zero_window=0, throughput=333KB/s, rtt_mean=52.4ms
+07:55:57 INFO     [32/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=0.5%, cc=bbr
+07:56:11 INFO       -> zero_window=0, throughput=1780KB/s, rtt_mean=51.6ms
+07:56:11 INFO     [33/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%
+07:56:24 INFO       -> zero_window=0, throughput=221KB/s, rtt_mean=52.0ms
+07:56:24 INFO     [34/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=1.0%, cc=bbr
+07:56:38 INFO       -> zero_window=0, throughput=1468KB/s, rtt_mean=54.6ms
+07:56:39 INFO     [35/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%
+07:56:51 INFO       -> zero_window=0, throughput=104KB/s, rtt_mean=54.9ms
+07:56:52 INFO     [36/36] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms loss=2.0%, cc=bbr
+07:57:06 INFO       -> zero_window=0, throughput=1279KB/s, rtt_mean=67.7ms
+07:57:06 INFO     Complete: 36/36 successful, 0 with zero-window
+432300 packets captured
+432300 packets received by filter
+0 packets dropped by kernel
+
+================================================
+Sweep complete!
+================================================
+Results: /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-loss-only.csv
+PCAP:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-loss-only.pcap
+
+To analyze:
+  python3 /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/scripts/analyze.py /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-loss-only.csv -o /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/
+
+Cleaning up...

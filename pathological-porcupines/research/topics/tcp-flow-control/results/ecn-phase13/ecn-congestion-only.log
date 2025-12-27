@@ -1,0 +1,79 @@
+================================================
+TCP Flow Control Parameter Sweep
+================================================
+Preset:    ecn-congestion-only
+Cluster:   ecn-phase13
+Output:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-congestion-only.csv
+Topology:  pp-source (10.0.1.1) -> pp-dest (10.0.1.2)
+
+Starting packet capture...
+dropped privs to tcpdump
+tcpdump: listening on br0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+Running namespace-aware sweep...
+
+07:41:07 INFO     Using preset: ecn-congestion-only
+07:41:07 INFO     ECN enabled: RED queue limit=100KB, min=20KB, max=60KB
+07:41:07 INFO     Running 24 experiments (3 iteration(s) per condition)
+07:41:07 INFO     [1/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms
+07:41:24 INFO       -> zero_window=0, throughput=5664KB/s, rtt_mean=25.3ms, ECE=12, CWR=2
+07:41:25 INFO     [2/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms, cc=bbr
+07:41:42 INFO       -> zero_window=0, throughput=5901KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:41:43 INFO     [3/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms
+07:41:57 INFO       -> zero_window=0, throughput=2748KB/s, rtt_mean=50.3ms, ECE=2, CWR=1
+07:41:58 INFO     [4/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms, cc=bbr
+07:42:13 INFO       -> zero_window=0, throughput=2911KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+07:42:14 INFO     [5/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms
+07:42:31 INFO       -> zero_window=0, throughput=5721KB/s, rtt_mean=25.4ms, ECE=19, CWR=3
+07:42:31 INFO     [6/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms, cc=bbr
+07:42:49 INFO       -> zero_window=0, throughput=5904KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:42:49 INFO     [7/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms
+07:43:04 INFO       -> zero_window=0, throughput=2684KB/s, rtt_mean=50.4ms, ECE=27, CWR=3
+07:43:05 INFO     [8/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms, cc=bbr
+07:43:20 INFO       -> zero_window=0, throughput=2906KB/s, rtt_mean=50.5ms, ECE=2, CWR=1
+07:43:20 INFO     [9/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms
+07:43:36 INFO       -> zero_window=0, throughput=4280KB/s, rtt_mean=25.4ms, ECE=50, CWR=5
+07:43:37 INFO     [10/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms, cc=bbr
+07:43:54 INFO       -> zero_window=0, throughput=5914KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:43:55 INFO     [11/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms
+07:44:10 INFO       -> zero_window=0, throughput=2481KB/s, rtt_mean=50.3ms, ECE=30, CWR=4
+07:44:10 INFO     [12/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms, cc=bbr
+07:44:25 INFO       -> zero_window=0, throughput=2909KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+07:44:26 INFO     [13/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms
+07:44:43 INFO       -> zero_window=0, throughput=5547KB/s, rtt_mean=25.4ms, ECE=35, CWR=4
+07:44:44 INFO     [14/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms, cc=bbr
+07:45:01 INFO       -> zero_window=0, throughput=5908KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:45:02 INFO     [15/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms
+07:45:16 INFO       -> zero_window=0, throughput=2325KB/s, rtt_mean=50.3ms, ECE=24, CWR=4
+07:45:17 INFO     [16/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms, cc=bbr
+07:45:32 INFO       -> zero_window=0, throughput=2906KB/s, rtt_mean=50.5ms, ECE=2, CWR=1
+07:45:32 INFO     [17/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms
+07:45:50 INFO       -> zero_window=0, throughput=5712KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:45:50 INFO     [18/24] buf=262144, delay=1ms, rate=10.0MB/s, net=25ms, cc=bbr
+07:46:08 INFO       -> zero_window=0, throughput=5894KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:46:08 INFO     [19/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms
+07:46:23 INFO       -> zero_window=0, throughput=2448KB/s, rtt_mean=50.3ms, ECE=21, CWR=4
+07:46:23 INFO     [20/24] buf=262144, delay=1ms, rate=10.0MB/s, net=50ms, cc=bbr
+07:46:39 INFO       -> zero_window=0, throughput=2906KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+07:46:39 INFO     [21/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms
+07:46:56 INFO       -> zero_window=0, throughput=5159KB/s, rtt_mean=25.4ms, ECE=10, CWR=2
+07:46:56 INFO     [22/24] buf=262144, delay=1ms, rate=20.0MB/s, net=25ms, cc=bbr
+07:47:14 INFO       -> zero_window=0, throughput=5913KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+07:47:14 INFO     [23/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms
+07:47:28 INFO       -> zero_window=0, throughput=1312KB/s, rtt_mean=50.4ms, ECE=7, CWR=2
+07:47:28 INFO     [24/24] buf=262144, delay=1ms, rate=20.0MB/s, net=50ms, cc=bbr
+07:47:44 INFO       -> zero_window=0, throughput=2904KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+07:47:44 INFO     Complete: 24/24 successful, 0 with zero-window
+873782 packets captured
+873782 packets received by filter
+0 packets dropped by kernel
+
+================================================
+Sweep complete!
+================================================
+Results: /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-congestion-only.csv
+PCAP:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-congestion-only.pcap
+
+To analyze:
+  python3 /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/scripts/analyze.py /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-congestion-only.csv -o /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/
+
+Cleaning up...

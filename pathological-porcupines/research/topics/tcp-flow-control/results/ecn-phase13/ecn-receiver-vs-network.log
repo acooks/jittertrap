@@ -1,0 +1,103 @@
+================================================
+TCP Flow Control Parameter Sweep
+================================================
+Preset:    ecn-receiver-vs-network
+Cluster:   ecn-phase13
+Output:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-receiver-vs-network.csv
+Topology:  pp-source (10.0.1.1) -> pp-dest (10.0.1.2)
+
+Starting packet capture...
+dropped privs to tcpdump
+tcpdump: listening on br0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+Running namespace-aware sweep...
+
+08:17:13 INFO     Using preset: ecn-receiver-vs-network
+08:17:13 INFO     ECN enabled: RED queue limit=100KB, min=20KB, max=60KB
+08:17:13 INFO     Running 36 experiments (3 iteration(s) per condition)
+08:17:13 INFO     [1/36] buf=65536, delay=1ms, rate=10.0MB/s, net=25ms
+08:17:27 INFO       -> zero_window=0, throughput=1439KB/s, rtt_mean=25.2ms, ECE=2, CWR=1
+08:17:27 INFO     [2/36] buf=65536, delay=1ms, rate=10.0MB/s, net=50ms
+08:17:40 INFO       -> zero_window=0, throughput=657KB/s, rtt_mean=50.2ms, ECE=2, CWR=1
+08:17:41 INFO     [3/36] buf=65536, delay=10ms, rate=10.0MB/s, net=25ms
+08:17:54 INFO       -> zero_window=0, throughput=789KB/s, rtt_mean=25.3ms, ECE=2, CWR=1
+08:17:54 INFO     [4/36] buf=65536, delay=10ms, rate=10.0MB/s, net=50ms
+08:18:08 INFO       -> zero_window=0, throughput=651KB/s, rtt_mean=52.2ms, ECE=2, CWR=1
+08:18:08 INFO     [5/36] buf=65536, delay=20ms, rate=10.0MB/s, net=25ms
+08:18:21 INFO       -> zero_window=0, throughput=397KB/s, rtt_mean=32.3ms, ECE=2, CWR=1
+08:18:21 INFO     [6/36] buf=65536, delay=20ms, rate=10.0MB/s, net=50ms
+08:18:34 INFO       -> zero_window=0, throughput=395KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+08:18:35 INFO     [7/36] buf=131072, delay=1ms, rate=10.0MB/s, net=25ms
+08:18:50 INFO       -> zero_window=0, throughput=2858KB/s, rtt_mean=25.3ms, ECE=2, CWR=1
+08:18:50 INFO     [8/36] buf=131072, delay=1ms, rate=10.0MB/s, net=50ms
+08:19:04 INFO       -> zero_window=0, throughput=1297KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+08:19:04 INFO     [9/36] buf=131072, delay=10ms, rate=10.0MB/s, net=25ms
+08:19:18 INFO       -> zero_window=0, throughput=790KB/s, rtt_mean=25.3ms, ECE=2, CWR=1
+08:19:18 INFO     [10/36] buf=131072, delay=10ms, rate=10.0MB/s, net=50ms
+08:19:31 INFO       -> zero_window=0, throughput=779KB/s, rtt_mean=50.7ms, ECE=2, CWR=1
+08:19:32 INFO     [11/36] buf=131072, delay=20ms, rate=10.0MB/s, net=25ms
+08:19:45 INFO       -> zero_window=0, throughput=398KB/s, rtt_mean=32.1ms, ECE=2, CWR=1
+08:19:45 INFO     [12/36] buf=131072, delay=20ms, rate=10.0MB/s, net=50ms
+08:19:58 INFO       -> zero_window=0, throughput=395KB/s, rtt_mean=50.3ms, ECE=2, CWR=1
+08:19:58 INFO     [13/36] buf=65536, delay=1ms, rate=10.0MB/s, net=25ms
+08:20:12 INFO       -> zero_window=0, throughput=1460KB/s, rtt_mean=25.1ms, ECE=2, CWR=1
+08:20:13 INFO     [14/36] buf=65536, delay=1ms, rate=10.0MB/s, net=50ms
+08:20:26 INFO       -> zero_window=0, throughput=622KB/s, rtt_mean=50.2ms, ECE=2, CWR=1
+08:20:26 INFO     [15/36] buf=65536, delay=10ms, rate=10.0MB/s, net=25ms
+08:20:39 INFO       -> zero_window=0, throughput=787KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+08:20:40 INFO     [16/36] buf=65536, delay=10ms, rate=10.0MB/s, net=50ms
+08:20:53 INFO       -> zero_window=0, throughput=639KB/s, rtt_mean=52.3ms, ECE=2, CWR=1
+08:20:53 INFO     [17/36] buf=65536, delay=20ms, rate=10.0MB/s, net=25ms
+08:21:06 INFO       -> zero_window=0, throughput=398KB/s, rtt_mean=31.8ms, ECE=2, CWR=1
+08:21:07 INFO     [18/36] buf=65536, delay=20ms, rate=10.0MB/s, net=50ms
+08:21:20 INFO       -> zero_window=0, throughput=395KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+08:21:20 INFO     [19/36] buf=131072, delay=1ms, rate=10.0MB/s, net=25ms
+08:21:35 INFO       -> zero_window=0, throughput=2805KB/s, rtt_mean=25.2ms, ECE=2, CWR=1
+08:21:36 INFO     [20/36] buf=131072, delay=1ms, rate=10.0MB/s, net=50ms
+08:21:49 INFO       -> zero_window=0, throughput=1339KB/s, rtt_mean=50.3ms, ECE=8, CWR=2
+08:21:50 INFO     [21/36] buf=131072, delay=10ms, rate=10.0MB/s, net=25ms
+08:22:03 INFO       -> zero_window=0, throughput=787KB/s, rtt_mean=25.4ms, ECE=2, CWR=1
+08:22:03 INFO     [22/36] buf=131072, delay=10ms, rate=10.0MB/s, net=50ms
+08:22:16 INFO       -> zero_window=0, throughput=779KB/s, rtt_mean=50.6ms, ECE=2, CWR=1
+08:22:17 INFO     [23/36] buf=131072, delay=20ms, rate=10.0MB/s, net=25ms
+08:22:30 INFO       -> zero_window=0, throughput=398KB/s, rtt_mean=32.1ms, ECE=2, CWR=1
+08:22:30 INFO     [24/36] buf=131072, delay=20ms, rate=10.0MB/s, net=50ms
+08:22:43 INFO       -> zero_window=0, throughput=394KB/s, rtt_mean=50.5ms, ECE=2, CWR=1
+08:22:44 INFO     [25/36] buf=65536, delay=1ms, rate=10.0MB/s, net=25ms
+08:22:57 INFO       -> zero_window=0, throughput=1445KB/s, rtt_mean=25.2ms, ECE=2, CWR=1
+08:22:58 INFO     [26/36] buf=65536, delay=1ms, rate=10.0MB/s, net=50ms
+08:23:11 INFO       -> zero_window=0, throughput=677KB/s, rtt_mean=50.3ms, ECE=2, CWR=1
+08:23:11 INFO     [27/36] buf=65536, delay=10ms, rate=10.0MB/s, net=25ms
+08:23:25 INFO       -> zero_window=0, throughput=790KB/s, rtt_mean=25.3ms, ECE=2, CWR=1
+08:23:25 INFO     [28/36] buf=65536, delay=10ms, rate=10.0MB/s, net=50ms
+08:23:38 INFO       -> zero_window=0, throughput=637KB/s, rtt_mean=52.2ms, ECE=2, CWR=1
+08:23:39 INFO     [29/36] buf=65536, delay=20ms, rate=10.0MB/s, net=25ms
+08:23:51 INFO       -> zero_window=0, throughput=397KB/s, rtt_mean=32.3ms, ECE=2, CWR=1
+08:23:52 INFO     [30/36] buf=65536, delay=20ms, rate=10.0MB/s, net=50ms
+08:24:05 INFO       -> zero_window=0, throughput=395KB/s, rtt_mean=50.4ms, ECE=2, CWR=1
+08:24:05 INFO     [31/36] buf=131072, delay=1ms, rate=10.0MB/s, net=25ms
+08:24:20 INFO       -> zero_window=0, throughput=2791KB/s, rtt_mean=25.3ms, ECE=15, CWR=4
+08:24:21 INFO     [32/36] buf=131072, delay=1ms, rate=10.0MB/s, net=50ms
+08:24:34 INFO       -> zero_window=0, throughput=1261KB/s, rtt_mean=50.3ms, ECE=19, CWR=3
+08:24:35 INFO     [33/36] buf=131072, delay=10ms, rate=10.0MB/s, net=25ms
+08:24:48 INFO       -> zero_window=0, throughput=789KB/s, rtt_mean=25.3ms, ECE=2, CWR=1
+08:24:48 INFO     [34/36] buf=131072, delay=10ms, rate=10.0MB/s, net=50ms
+08:25:02 INFO       -> zero_window=0, throughput=778KB/s, rtt_mean=50.7ms, ECE=2, CWR=1
+08:25:02 INFO     [35/36] buf=131072, delay=20ms, rate=10.0MB/s, net=25ms
+08:25:15 INFO       -> zero_window=0, throughput=398KB/s, rtt_mean=32.1ms, ECE=2, CWR=1
+08:25:15 INFO     [36/36] buf=131072, delay=20ms, rate=10.0MB/s, net=50ms
+08:25:28 INFO       -> zero_window=0, throughput=395KB/s, rtt_mean=50.3ms, ECE=2, CWR=1
+08:25:29 INFO     Complete: 36/36 successful, 0 with zero-window
+290256 packets captured
+290256 packets received by filter
+0 packets dropped by kernel
+
+================================================
+Sweep complete!
+================================================
+Results: /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-receiver-vs-network.csv
+PCAP:    /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-receiver-vs-network.pcap
+
+To analyze:
+  python3 /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/scripts/analyze.py /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/ecn-phase13/ecn-receiver-vs-network.csv -o /home/acooks/jittertrap/pathological-porcupines/experiments/tcp-flow-control/results/
+
+Cleaning up...
