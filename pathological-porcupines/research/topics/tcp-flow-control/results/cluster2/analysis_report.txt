@@ -1,0 +1,56 @@
+======================================================================
+TCP FLOW CONTROL PARAMETER SWEEP ANALYSIS
+======================================================================
+
+SUMMARY STATISTICS
+----------------------------------------
+Total experiments:        2304
+Successful:               2304
+Failed:                   0
+With zero-window events:  14 (0.6%)
+
+THROUGHPUT
+----------------------------------------
+Mean:  913 KB/s
+Min:   9 KB/s
+Max:   14902 KB/s
+
+STARVATION THRESHOLDS
+----------------------------------------
+The oversubscription ratio at which zero-window events begin:
+
+    Buffer     Delay      Capacity   Threshold   Oversub
+   (bytes)      (ms)        (KB/s)      (MB/s)     Ratio
+------------------------------------------------------------
+     16384         2          4000        5.00      1.3x
+     16384         5          1600         N/A       N/A
+     32768         2          4000         N/A       N/A
+     32768         5          1600         N/A       N/A
+     65536         2          4000         N/A       N/A
+     65536         5          1600         N/A       N/A
+     65536        10           800         N/A       N/A
+    131072         1         16000         N/A       N/A
+    131072         2          8000         N/A       N/A
+    131072         5          3200        5.00      1.6x
+    131072        10           800         N/A       N/A
+    262144         1         16000         N/A       N/A
+    262144         2          8000         N/A       N/A
+    262144         5          3200        5.00      1.6x
+    262144        10           800         N/A       N/A
+    524288         2          4000        5.00      1.3x
+    524288         5          1600        5.00      3.2x
+    524288        10           800         N/A       N/A
+   1048576         2          4000         N/A       N/A
+   1048576         5          1600         N/A       N/A
+   1048576        10           800         N/A       N/A
+
+KEY FINDINGS
+----------------------------------------
+- Average oversubscription threshold: 1.8x receiver capacity
+- Buffer size effect on threshold:
+    16,384 bytes: 1.3x average threshold
+    131,072 bytes: 1.6x average threshold
+    262,144 bytes: 1.6x average threshold
+    524,288 bytes: 2.2x average threshold
+
+======================================================================

@@ -1,0 +1,20 @@
+{
+  "name": "pp-screenshot-controller",
+  "version": "1.0.0",
+  "description": "Automated screenshot capture for pathological-porcupines test suite",
+  "main": "screenshot-controller.js",
+  "scripts": {
+    "test": "node screenshot-controller.js --help"
+  },
+  "keywords": [
+    "jittertrap",
+    "screenshot",
+    "puppeteer",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}
