@@ -1089,12 +1089,16 @@ static void set_affinity(struct tt_thread_info *ti)
 	pthread_t thread;
 	thread = pthread_self();
 
-	/* Set affinity mask to include CPUs 1 only */
+	/* Set affinity mask for toptalk thread */
 	CPU_ZERO(&cpuset);
-#ifndef RT_CPU
-#define RT_CPU 0
+#ifndef RT_CPU_TOPTALK
+#ifdef RT_CPU
+#define RT_CPU_TOPTALK RT_CPU
+#else
+#define RT_CPU_TOPTALK 0
 #endif
-	CPU_SET(RT_CPU, &cpuset);
+#endif
+	CPU_SET(RT_CPU_TOPTALK, &cpuset);
 	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 	if (s != 0) {
 		handle_error_en(s, "pthread_setaffinity_np");
