@@ -32,7 +32,7 @@ struct {
 } thread_info = {
 	0,
 	.thread_name = "jt-sample",
-	.thread_prio = 2
+	.thread_prio = 4  /* Highest priority - 1ms tick must not be delayed */
 };
 
 struct sigaction sa;
