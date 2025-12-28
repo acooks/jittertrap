@@ -44,7 +44,7 @@ struct nal_reassembly {
 	uint8_t nal_header;
 };
 
-/* SPS/PPS storage - needed for mid-stream joins */
+/* SPS/PPS storage - needed for mid-stream joins (H.264) */
 #define MAX_SPS_SIZE 256
 #define MAX_PPS_SIZE 256
 struct h264_params {
@@ -56,18 +56,48 @@ struct h264_params {
 	int have_pps;
 };
 
+/* VPS/SPS/PPS storage for H.265 - needed for mid-stream joins */
+#define MAX_VPS_SIZE 256
+struct h265_params {
+	uint8_t vps[MAX_VPS_SIZE];
+	size_t vps_len;
+	uint8_t sps[MAX_SPS_SIZE];
+	size_t sps_len;
+	uint8_t pps[MAX_PPS_SIZE];
+	size_t pps_len;
+	int have_vps;
+	int have_sps;
+	int have_pps;
+};
+
 /*
  * Send NAL unit with 4-byte big-endian length prefix.
  * libdatachannel's H264 packetizer expects this format by default.
  */
 static int send_nal_with_length(int track, const uint8_t *nal, size_t nal_len,
-                                 uint32_t timestamp)
+                                 uint32_t timestamp, int codec)
 {
 	if (nal_len == 0 || nal_len > MAX_NAL_SIZE - 4)
 		return -1;
 
-	/* Set the RTP timestamp before sending */
-	rtcSetTrackRtpTimestamp(track, timestamp);
+	/*
+	 * Set the RTP timestamp before sending.
+	 * This is critical for proper access unit delineation.
+	 *
+	 * Note: libdatachannel 0.21.x may have issues with H.265 timestamp
+	 * setting, but we try anyway since proper timestamps are needed
+	 * for the decoder to properly order frames.
+	 */
+	int ts_ret = rtcSetTrackRtpTimestamp(track, timestamp);
+	if (ts_ret < 0) {
+		static int ts_err_logged = 0;
+		if (ts_err_logged < 10) {
+			syslog(LOG_WARNING, "webrtc_bridge: rtcSetTrackRtpTimestamp failed "
+			       "(ret=%d) for track %d, codec=%d, ts=%u",
+			       ts_ret, track, codec, timestamp);
+			ts_err_logged++;
+		}
+	}
 
 	uint8_t buf[MAX_NAL_SIZE + 4];
 	/* 4-byte big-endian length prefix */
@@ -137,6 +167,100 @@ static int send_idr_with_params(int track, struct h264_params *h264,
 	buf[pos++] = h264->pps_len & 0xFF;
 	memcpy(buf + pos, h264->pps, h264->pps_len);
 	pos += h264->pps_len;
+
+	/* IDR with length prefix */
+	buf[pos++] = (idr_len >> 24) & 0xFF;
+	buf[pos++] = (idr_len >> 16) & 0xFF;
+	buf[pos++] = (idr_len >> 8) & 0xFF;
+	buf[pos++] = idr_len & 0xFF;
+	memcpy(buf + pos, idr, idr_len);
+	pos += idr_len;
+
+	int ret = rtcSendMessage(track, (const char *)buf, (int)total);
+	free(buf);
+	return ret;
+}
+
+/*
+ * Store VPS, SPS, or PPS for H.265.
+ */
+static void store_h265_parameter_set(struct h265_params *h265, const uint8_t *nal, size_t len)
+{
+	if (len < 2) return;
+	uint8_t nal_type = (nal[0] >> 1) & 0x3F;
+
+	if (nal_type == 32 && len <= MAX_VPS_SIZE) {
+		/* VPS */
+		memcpy(h265->vps, nal, len);
+		h265->vps_len = len;
+		h265->have_vps = 1;
+	} else if (nal_type == 33 && len <= MAX_SPS_SIZE) {
+		/* SPS */
+		memcpy(h265->sps, nal, len);
+		h265->sps_len = len;
+		h265->have_sps = 1;
+	} else if (nal_type == 34 && len <= MAX_PPS_SIZE) {
+		/* PPS */
+		memcpy(h265->pps, nal, len);
+		h265->pps_len = len;
+		h265->have_pps = 1;
+	}
+}
+
+/*
+ * Send VPS+SPS+PPS+IDR as a single access unit for H.265.
+ * For mid-stream joins, the decoder needs all parameter sets before it can decode.
+ */
+static int send_h265_idr_with_params(int track, struct h265_params *h265,
+                                     const uint8_t *idr, size_t idr_len,
+                                     uint32_t timestamp)
+{
+	if (!h265->have_vps || !h265->have_sps || !h265->have_pps) {
+		return -1;
+	}
+
+	/* Set the RTP timestamp for proper access unit timing */
+	int ts_ret = rtcSetTrackRtpTimestamp(track, timestamp);
+	if (ts_ret < 0) {
+		static int h265_ts_err_logged = 0;
+		if (h265_ts_err_logged < 5) {
+			syslog(LOG_WARNING, "webrtc_bridge: H.265 IDR rtcSetTrackRtpTimestamp failed "
+			       "(ret=%d) for track %d, ts=%u", ts_ret, track, timestamp);
+			h265_ts_err_logged++;
+		}
+	}
+
+	/* Build access unit: length+VPS + length+SPS + length+PPS + length+IDR */
+	size_t total = 4 + h265->vps_len + 4 + h265->sps_len +
+	               4 + h265->pps_len + 4 + idr_len;
+	uint8_t *buf = malloc(total);
+	if (!buf) return -1;
+
+	size_t pos = 0;
+
+	/* VPS with length prefix */
+	buf[pos++] = (h265->vps_len >> 24) & 0xFF;
+	buf[pos++] = (h265->vps_len >> 16) & 0xFF;
+	buf[pos++] = (h265->vps_len >> 8) & 0xFF;
+	buf[pos++] = h265->vps_len & 0xFF;
+	memcpy(buf + pos, h265->vps, h265->vps_len);
+	pos += h265->vps_len;
+
+	/* SPS with length prefix */
+	buf[pos++] = (h265->sps_len >> 24) & 0xFF;
+	buf[pos++] = (h265->sps_len >> 16) & 0xFF;
+	buf[pos++] = (h265->sps_len >> 8) & 0xFF;
+	buf[pos++] = h265->sps_len & 0xFF;
+	memcpy(buf + pos, h265->sps, h265->sps_len);
+	pos += h265->sps_len;
+
+	/* PPS with length prefix */
+	buf[pos++] = (h265->pps_len >> 24) & 0xFF;
+	buf[pos++] = (h265->pps_len >> 16) & 0xFF;
+	buf[pos++] = (h265->pps_len >> 8) & 0xFF;
+	buf[pos++] = h265->pps_len & 0xFF;
+	memcpy(buf + pos, h265->pps, h265->pps_len);
+	pos += h265->pps_len;
 
 	/* IDR with length prefix */
 	buf[pos++] = (idr_len >> 24) & 0xFF;
@@ -248,6 +372,43 @@ static int parse_sdp_h264_profiles(const char *sdp,
 }
 
 /*
+ * Check if the browser's SDP offer contains a specific codec.
+ * Returns the payload type if found, -1 if not.
+ */
+static int sdp_find_codec_pt(const char *sdp, const char *codec_name)
+{
+	const char *line = sdp;
+
+	while (line) {
+		const char *next = strchr(line, '\n');
+
+		/* Look for "a=rtpmap:NNN CODEC/clock" */
+		if (strncmp(line, "a=rtpmap:", 9) == 0) {
+			char codec[32] = {0};
+			int pt;
+			if (sscanf(line + 9, "%d %31[^/]/", &pt, codec) == 2) {
+				if (strcasecmp(codec, codec_name) == 0) {
+					return pt;
+				}
+			}
+		}
+
+		line = next ? next + 1 : NULL;
+	}
+
+	return -1;
+}
+
+/*
+ * Check if the browser's SDP offer contains a specific codec.
+ * Returns 1 if found, 0 if not.
+ */
+static int sdp_has_codec(const char *sdp, const char *codec_name)
+{
+	return sdp_find_codec_pt(sdp, codec_name) >= 0;
+}
+
+/*
  * Select best H.264 profile from parsed SDP.
  * Prefers Constrained Baseline (42e01f) with packetization-mode=1.
  * Returns payload type, or -1 if no compatible profile found.
@@ -332,6 +493,7 @@ struct webrtc_viewer {
 	int sdp_ready;               /* Flag for SDP availability */
 	struct nal_reassembly nal;   /* NAL reassembly buffer */
 	struct h264_params h264;     /* SPS/PPS for mid-stream joins */
+	struct h265_params h265;     /* VPS/SPS/PPS for H.265 mid-stream joins */
 	int waiting_for_keyframe;    /* 1 = skip non-IDR until we see IDR */
 	uint32_t current_timestamp;  /* RTP timestamp for current frame */
 	uint32_t nal_timestamp;      /* Timestamp when NAL reassembly started */
@@ -570,27 +732,86 @@ int webrtc_bridge_handle_offer(const char *sdp_offer,
 	rtcSetGatheringStateChangeCallback(pc, on_gathering_state_change);
 	rtcSetLocalDescriptionCallback(pc, on_local_description);
 
-	/* Parse SDP to find best H.264 payload type */
-	struct h264_sdp_info h264_profiles[MAX_H264_PROFILES];
-	int num_profiles = parse_sdp_h264_profiles(sdp_offer, h264_profiles,
-	                                           MAX_H264_PROFILES);
+	char profile_str[64] = "";
+	int selected_pt = 96;  /* Default dynamic payload type */
+	const char *codec_name = "unknown";
 
-	char profile_str[64] = "packetization-mode=1";
-	int selected_pt = -1;
-
-	if (codec == RTC_CODEC_H264 && num_profiles > 0) {
-		selected_pt = select_h264_profile(h264_profiles, num_profiles,
-		                                  profile_str, sizeof(profile_str));
+	/*
+	 * Handle codec-specific SDP parsing and validation.
+	 * We need to check if the browser supports the requested codec.
+	 */
+	switch (codec) {
+	case RTC_CODEC_H265: {
+		codec_name = "H265";
+		int h265_pt = sdp_find_codec_pt(sdp_offer, "H265");
+		if (h265_pt < 0) {
+			syslog(LOG_WARNING, "webrtc_bridge: H.265 requested but browser "
+			       "does not support H.265 in WebRTC");
+			goto error_codec_unsupported;
+		}
+		selected_pt = h265_pt;
+		syslog(LOG_INFO, "webrtc_bridge: H.265 support detected in browser (PT %d)",
+		       selected_pt);
+		break;
 	}
 
-	if (selected_pt < 0) {
-		/* Fallback to PT 96 with default profile if parsing failed */
-		syslog(LOG_WARNING, "webrtc_bridge: no compatible H.264 profile found, "
-		       "using fallback PT 96");
-		selected_pt = 96;
-		snprintf(profile_str, sizeof(profile_str),
-		         "profile-level-id=42e01f;packetization-mode=1");
+	case RTC_CODEC_H264: {
+		codec_name = "H264";
+		struct h264_sdp_info h264_profiles[MAX_H264_PROFILES];
+		int num_profiles = parse_sdp_h264_profiles(sdp_offer, h264_profiles,
+		                                           MAX_H264_PROFILES);
+
+		if (num_profiles > 0) {
+			selected_pt = select_h264_profile(h264_profiles, num_profiles,
+			                                  profile_str, sizeof(profile_str));
+		}
+
+		if (selected_pt < 0) {
+			/* Fallback to PT 96 with default profile if parsing failed */
+			syslog(LOG_WARNING, "webrtc_bridge: no compatible H.264 profile found, "
+			       "using fallback PT 96");
+			selected_pt = 96;
+			snprintf(profile_str, sizeof(profile_str),
+			         "profile-level-id=42e01f;packetization-mode=1");
+		}
+		break;
 	}
+
+	case RTC_CODEC_VP8:
+		codec_name = "VP8";
+		if (!sdp_has_codec(sdp_offer, "VP8")) {
+			syslog(LOG_WARNING, "webrtc_bridge: VP8 requested but browser "
+			       "does not support VP8");
+			goto error_codec_unsupported;
+		}
+		/* VP8 doesn't need profile string */
+		break;
+
+	case RTC_CODEC_VP9:
+		codec_name = "VP9";
+		if (!sdp_has_codec(sdp_offer, "VP9")) {
+			syslog(LOG_WARNING, "webrtc_bridge: VP9 requested but browser "
+			       "does not support VP9");
+			goto error_codec_unsupported;
+		}
+		/* VP9 doesn't need profile string */
+		break;
+
+	case RTC_CODEC_AV1:
+		codec_name = "AV1";
+		if (!sdp_has_codec(sdp_offer, "AV1")) {
+			syslog(LOG_WARNING, "webrtc_bridge: AV1 requested but browser "
+			       "does not support AV1");
+			goto error_codec_unsupported;
+		}
+		break;
+
+	default:
+		syslog(LOG_ERR, "webrtc_bridge: unknown codec %d requested", codec);
+		goto error_codec_unsupported;
+	}
+
+	syslog(LOG_INFO, "webrtc_bridge: using codec %s (PT %d)", codec_name, selected_pt);
 
 	/* Set remote description (browser's offer) */
 	if (rtcSetRemoteDescription(pc, sdp_offer, "offer") < 0) {
@@ -625,11 +846,11 @@ int webrtc_bridge_handle_offer(const char *sdp_offer,
 	rtcSetErrorCallback(track, on_track_error);
 
 	/*
-	 * Set up H.264 packetizer. We will depacketize incoming RTP to extract
+	 * Set up video packetizer. We will depacketize incoming RTP to extract
 	 * NAL units, then let libdatachannel re-packetize them into SRTP.
 	 * This is necessary because WebRTC requires SRTP encryption.
 	 */
-	if (codec == RTC_CODEC_H264) {
+	{
 		rtcPacketizerInit pkt_init = {0};
 		pkt_init.ssrc = ssrc;
 		pkt_init.cname = "jittertrap";
@@ -638,9 +859,29 @@ int webrtc_bridge_handle_offer(const char *sdp_offer,
 		pkt_init.sequenceNumber = 0;
 		pkt_init.timestamp = 0;
 
-		if (rtcSetH264Packetizer(track, &pkt_init) < 0) {
-			syslog(LOG_ERR, "webrtc_bridge: failed to set H264 packetizer");
+		int pkt_ret = -1;
+		if (codec == RTC_CODEC_H264) {
+			pkt_ret = rtcSetH264Packetizer(track, &pkt_init);
+			syslog(LOG_INFO, "webrtc_bridge: rtcSetH264Packetizer returned %d", pkt_ret);
+		} else if (codec == RTC_CODEC_H265) {
+			pkt_ret = rtcSetH265Packetizer(track, &pkt_init);
+			syslog(LOG_INFO, "webrtc_bridge: rtcSetH265Packetizer returned %d for track %d",
+			       pkt_ret, track);
+		}
+		/* VP8/VP9/AV1 would need their own packetizers if supported */
+
+		if (pkt_ret < 0 && (codec == RTC_CODEC_H264 || codec == RTC_CODEC_H265)) {
+			syslog(LOG_ERR, "webrtc_bridge: failed to set %s packetizer (ret=%d)",
+			       codec == RTC_CODEC_H264 ? "H264" : "H265", pkt_ret);
 			goto error;
+		}
+
+		/* Enable NACK responder to handle retransmission requests from browser */
+		int nack_ret = rtcChainRtcpNackResponder(track, 512);
+		if (nack_ret < 0) {
+			syslog(LOG_WARNING, "webrtc_bridge: failed to chain NACK responder (ret=%d)", nack_ret);
+		} else {
+			syslog(LOG_INFO, "webrtc_bridge: NACK responder enabled for track %d", track);
 		}
 	}
 
@@ -710,6 +951,24 @@ error_locked:
 		rtcDeletePeerConnection(err_pc);
 
 	return WEBRTC_ERR_SDP_FAILED;
+
+error_codec_unsupported:
+	/* Clean up viewer slot - PC may or may not exist at this point */
+	pthread_mutex_lock(&viewers_lock);
+	v->in_use = 0;
+	v->ready = 0;
+	{
+		int unsup_pc = v->pc;
+		v->pc = -1;
+		v->track = -1;
+		pthread_cond_destroy(&v->sdp_cond);
+		pthread_mutex_unlock(&viewers_lock);
+
+		if (unsup_pc >= 0)
+			rtcDeletePeerConnection(unsup_pc);
+	}
+
+	return WEBRTC_ERR_CODEC_UNSUP;
 }
 
 int webrtc_bridge_add_ice_candidate(int viewer_id,
@@ -782,8 +1041,6 @@ void webrtc_bridge_forward_rtp(const uint8_t *rtp_packet,
 
 	if (payload_len < 1) return;
 
-	uint8_t nal_type = payload[0] & 0x1F;
-
 	/*
 	 * Process each matching viewer.
 	 * We don't hold the lock while calling rtcSendMessage to avoid deadlock
@@ -802,110 +1059,314 @@ void webrtc_bridge_forward_rtp(const uint8_t *rtp_packet,
 
 		int ret = -1;
 
-		if (nal_type >= 1 && nal_type <= 23) {
-			/* Single NAL unit */
-			uint8_t inner_type = payload[0] & 0x1F;
+		if (v->codec == RTC_CODEC_H265) {
+			/*
+			 * H.265/HEVC RTP depacketization (RFC 7798)
+			 *
+			 * H.265 NAL unit header is 2 bytes:
+			 * - Byte 0: F(1) | Type(6) | LayerId_high(1)
+			 * - Byte 1: LayerId_low(5) | TID(3)
+			 *
+			 * NAL type is (byte0 >> 1) & 0x3F
+			 *
+			 * Types 0-47: Single NAL unit (0-31 VCL, 32-47 non-VCL)
+			 *   VPS=32, SPS=33, PPS=34 (parameter sets)
+			 *   IRAP frames: 16-21 (BLA, IDR, CRA)
+			 * Type 48 (AP): Aggregation Packet
+			 * Type 49 (FU): Fragmentation Unit
+			 */
+			if (payload_len < 2) continue;
 
-			if (inner_type == 7 || inner_type == 8) {
-				store_parameter_set(&v->h264, payload, payload_len);
-				continue;
-			}
+			uint8_t nal_type_h265 = (payload[0] >> 1) & 0x3F;
 
-			if (v->waiting_for_keyframe) {
-				if (inner_type == 5) {
-					ret = send_idr_with_params(track, &v->h264, payload, payload_len, rtp_timestamp);
-					if (ret >= 0) {
+			if (nal_type_h265 <= 47 && nal_type_h265 != 48 && nal_type_h265 != 49) {
+				/* Single NAL unit - forward directly */
+				int is_param_set = (nal_type_h265 >= 32 && nal_type_h265 <= 34);
+				int is_irap = (nal_type_h265 >= 16 && nal_type_h265 <= 21);
+
+				/* Always store VPS/SPS/PPS - never send them individually */
+				if (is_param_set) {
+					store_h265_parameter_set(&v->h265, payload, payload_len);
+					continue;
+				}
+
+				if (v->waiting_for_keyframe) {
+					if (is_irap) {
+						/* Got IRAP - send with bundled VPS+SPS+PPS */
 						v->waiting_for_keyframe = 0;
+						ret = send_h265_idr_with_params(track, &v->h265,
+						                                payload, payload_len,
+						                                rtp_timestamp);
+						if (ret >= 0) {
+							v->nals_sent += 4; /* VPS+SPS+PPS+IDR */
+						}
+					}
+					/* Skip non-IRAP VCL frames while waiting */
+					continue;
+				}
+
+				/* After first keyframe, bundle IRAP with params, send others directly */
+				if (is_irap) {
+					ret = send_h265_idr_with_params(track, &v->h265,
+					                                payload, payload_len,
+					                                rtp_timestamp);
+					if (ret >= 0) {
+						v->nals_sent += 4;
+					}
+				} else {
+					ret = send_nal_with_length(track, payload, payload_len,
+					                           rtp_timestamp, v->codec);
+					if (ret >= 0) {
 						v->nals_sent++;
 					}
 				}
-			} else {
-				ret = send_nal_with_length(track, payload, payload_len, rtp_timestamp);
-				if (ret >= 0) {
-					v->nals_sent++;
-				}
-			}
-		} else if (nal_type == 28) {
-			/* FU-A fragmentation unit */
-			if (payload_len < 2) continue;
+			} else if (nal_type_h265 == 48) {
+				/* Aggregation Packet (AP) */
+				const uint8_t *p = payload + 2; /* Skip 2-byte NAL header */
+				size_t remaining = payload_len - 2;
 
-			uint8_t fu_header = payload[1];
-			int start_bit = (fu_header >> 7) & 1;
-			int end_bit = (fu_header >> 6) & 1;
-			uint8_t nal_unit_type = fu_header & 0x1F;
+				while (remaining >= 2) {
+					uint16_t nal_size = (p[0] << 8) | p[1];
+					p += 2;
+					remaining -= 2;
 
-			if (start_bit) {
-				v->nal.nal_header = (payload[0] & 0xE0) | nal_unit_type;
-				v->nal.buffer[0] = v->nal.nal_header;
-				v->nal.len = 1;
-				v->nal.in_progress = 1;
-				v->nal_timestamp = rtp_timestamp;
-			}
+					if (nal_size > remaining || nal_size < 2) break;
 
-			if (v->nal.in_progress) {
-				size_t frag_len = payload_len - 2;
-				if (v->nal.len + frag_len <= MAX_NAL_SIZE) {
-					memcpy(v->nal.buffer + v->nal.len, payload + 2, frag_len);
-					v->nal.len += frag_len;
-				}
+					uint8_t inner_type = (p[0] >> 1) & 0x3F;
+					int is_param_set = (inner_type >= 32 && inner_type <= 34);
+					int is_irap = (inner_type >= 16 && inner_type <= 21);
 
-				if (end_bit) {
-					if (nal_unit_type == 7 || nal_unit_type == 8) {
-						store_parameter_set(&v->h264, v->nal.buffer, v->nal.len);
-					} else if (v->waiting_for_keyframe) {
-						if (nal_unit_type == 5) {
-							ret = send_idr_with_params(track, &v->h264,
-							                           v->nal.buffer, v->nal.len,
-							                           v->nal_timestamp);
+					/* Always store VPS/SPS/PPS - never send them individually */
+					if (is_param_set) {
+						store_h265_parameter_set(&v->h265, p, nal_size);
+						p += nal_size;
+						remaining -= nal_size;
+						continue;
+					}
+
+					if (v->waiting_for_keyframe) {
+						if (is_irap) {
+							/* Got IRAP - send with bundled VPS+SPS+PPS */
+							v->waiting_for_keyframe = 0;
+							ret = send_h265_idr_with_params(track, &v->h265,
+							                                p, nal_size,
+							                                rtp_timestamp);
 							if (ret >= 0) {
-								v->waiting_for_keyframe = 0;
-								v->nals_sent++;
+								v->nals_sent += 4;
 							}
 						}
+						/* Skip non-IRAP while waiting */
+						p += nal_size;
+						remaining -= nal_size;
+						continue;
+					}
+
+					/* After first keyframe, bundle IRAP with params */
+					if (is_irap) {
+						ret = send_h265_idr_with_params(track, &v->h265,
+						                                p, nal_size,
+						                                rtp_timestamp);
+						if (ret >= 0) {
+							v->nals_sent += 4;
+						}
 					} else {
-						ret = send_nal_with_length(track, v->nal.buffer, v->nal.len,
-						                           v->nal_timestamp);
+						ret = send_nal_with_length(track, p, nal_size,
+						                           rtp_timestamp, v->codec);
 						if (ret >= 0) {
 							v->nals_sent++;
 						}
 					}
-					v->nal.in_progress = 0;
-					v->nal.len = 0;
+
+					p += nal_size;
+					remaining -= nal_size;
+				}
+			} else if (nal_type_h265 == 49) {
+				/* Fragmentation Unit (FU) */
+				if (payload_len < 3) continue;
+
+				uint8_t fu_header = payload[2];
+				int start_bit = (fu_header >> 7) & 1;
+				int end_bit = (fu_header >> 6) & 1;
+				uint8_t fu_type = fu_header & 0x3F;
+				int is_param_set = (fu_type >= 32 && fu_type <= 34);
+				int is_irap = (fu_type >= 16 && fu_type <= 21);
+
+				if (start_bit) {
+					/* Reconstruct NAL header from PayloadHdr and FU header */
+					/* PayloadHdr byte 0: keep F bit and LayerId_high, insert fu_type */
+					v->nal.buffer[0] = (payload[0] & 0x81) | (fu_type << 1);
+					v->nal.buffer[1] = payload[1]; /* LayerId_low and TID */
+					v->nal.len = 2;
+					v->nal.in_progress = 1;
+					v->nal_timestamp = rtp_timestamp;
+				}
+
+				if (v->nal.in_progress) {
+					size_t frag_len = payload_len - 3;
+					if (v->nal.len + frag_len <= MAX_NAL_SIZE) {
+						memcpy(v->nal.buffer + v->nal.len, payload + 3, frag_len);
+						v->nal.len += frag_len;
+					}
+
+					if (end_bit) {
+						/* Always store VPS/SPS/PPS - never send individually */
+						if (is_param_set) {
+							store_h265_parameter_set(&v->h265, v->nal.buffer, v->nal.len);
+							v->nal.in_progress = 0;
+							v->nal.len = 0;
+							continue;
+						}
+
+						if (v->waiting_for_keyframe) {
+							if (is_irap) {
+								/* Got IRAP - send with bundled VPS+SPS+PPS */
+								v->waiting_for_keyframe = 0;
+								ret = send_h265_idr_with_params(track, &v->h265,
+								                                v->nal.buffer, v->nal.len,
+								                                v->nal_timestamp);
+								if (ret >= 0) {
+									v->nals_sent += 4; /* VPS+SPS+PPS+IDR */
+								}
+							}
+							/* Skip non-IRAP while waiting */
+							v->nal.in_progress = 0;
+							v->nal.len = 0;
+							continue;
+						}
+
+						/* After first keyframe, bundle IRAP with params */
+						if (is_irap) {
+							ret = send_h265_idr_with_params(track, &v->h265,
+							                                v->nal.buffer, v->nal.len,
+							                                v->nal_timestamp);
+							if (ret >= 0) {
+								v->nals_sent += 4;
+							}
+						} else {
+							ret = send_nal_with_length(track, v->nal.buffer, v->nal.len,
+							                           v->nal_timestamp, v->codec);
+							if (ret >= 0) {
+								v->nals_sent++;
+							}
+						}
+						v->nal.in_progress = 0;
+						v->nal.len = 0;
+					}
 				}
 			}
-		} else if (nal_type == 24) {
-			/* STAP-A aggregation */
-			const uint8_t *p = payload + 1;
-			size_t remaining = payload_len - 1;
+		} else {
+			/*
+			 * H.264/AVC RTP depacketization (RFC 6184)
+			 */
+			uint8_t nal_type = payload[0] & 0x1F;
 
-			while (remaining >= 2) {
-				uint16_t nal_size = (p[0] << 8) | p[1];
-				p += 2;
-				remaining -= 2;
-
-				if (nal_size > remaining || nal_size == 0) break;
-
-				uint8_t inner_type = p[0] & 0x1F;
+			if (nal_type >= 1 && nal_type <= 23) {
+				/* Single NAL unit */
+				uint8_t inner_type = payload[0] & 0x1F;
 
 				if (inner_type == 7 || inner_type == 8) {
-					store_parameter_set(&v->h264, p, nal_size);
-				} else if (v->waiting_for_keyframe) {
+					store_parameter_set(&v->h264, payload, payload_len);
+					continue;
+				}
+
+				if (v->waiting_for_keyframe) {
 					if (inner_type == 5) {
-						ret = send_idr_with_params(track, &v->h264, p, nal_size, rtp_timestamp);
+						ret = send_idr_with_params(track, &v->h264, payload, payload_len, rtp_timestamp);
 						if (ret >= 0) {
 							v->waiting_for_keyframe = 0;
 							v->nals_sent++;
 						}
 					}
 				} else {
-					ret = send_nal_with_length(track, p, nal_size, rtp_timestamp);
+					ret = send_nal_with_length(track, payload, payload_len,
+					                           rtp_timestamp, v->codec);
 					if (ret >= 0) {
 						v->nals_sent++;
 					}
 				}
+			} else if (nal_type == 28) {
+				/* FU-A fragmentation unit */
+				if (payload_len < 2) continue;
 
-				p += nal_size;
-				remaining -= nal_size;
+				uint8_t fu_header = payload[1];
+				int start_bit = (fu_header >> 7) & 1;
+				int end_bit = (fu_header >> 6) & 1;
+				uint8_t nal_unit_type = fu_header & 0x1F;
+
+				if (start_bit) {
+					v->nal.nal_header = (payload[0] & 0xE0) | nal_unit_type;
+					v->nal.buffer[0] = v->nal.nal_header;
+					v->nal.len = 1;
+					v->nal.in_progress = 1;
+					v->nal_timestamp = rtp_timestamp;
+				}
+
+				if (v->nal.in_progress) {
+					size_t frag_len = payload_len - 2;
+					if (v->nal.len + frag_len <= MAX_NAL_SIZE) {
+						memcpy(v->nal.buffer + v->nal.len, payload + 2, frag_len);
+						v->nal.len += frag_len;
+					}
+
+					if (end_bit) {
+						if (nal_unit_type == 7 || nal_unit_type == 8) {
+							store_parameter_set(&v->h264, v->nal.buffer, v->nal.len);
+						} else if (v->waiting_for_keyframe) {
+							if (nal_unit_type == 5) {
+								ret = send_idr_with_params(track, &v->h264,
+								                           v->nal.buffer, v->nal.len,
+								                           v->nal_timestamp);
+								if (ret >= 0) {
+									v->waiting_for_keyframe = 0;
+									v->nals_sent++;
+								}
+							}
+						} else {
+							ret = send_nal_with_length(track, v->nal.buffer, v->nal.len,
+							                           v->nal_timestamp, v->codec);
+							if (ret >= 0) {
+								v->nals_sent++;
+							}
+						}
+						v->nal.in_progress = 0;
+						v->nal.len = 0;
+					}
+				}
+			} else if (nal_type == 24) {
+				/* STAP-A aggregation */
+				const uint8_t *p = payload + 1;
+				size_t remaining = payload_len - 1;
+
+				while (remaining >= 2) {
+					uint16_t nal_size = (p[0] << 8) | p[1];
+					p += 2;
+					remaining -= 2;
+
+					if (nal_size > remaining || nal_size == 0) break;
+
+					uint8_t inner_type = p[0] & 0x1F;
+
+					if (inner_type == 7 || inner_type == 8) {
+						store_parameter_set(&v->h264, p, nal_size);
+					} else if (v->waiting_for_keyframe) {
+						if (inner_type == 5) {
+							ret = send_idr_with_params(track, &v->h264, p, nal_size, rtp_timestamp);
+							if (ret >= 0) {
+								v->waiting_for_keyframe = 0;
+								v->nals_sent++;
+							}
+						}
+					} else {
+						ret = send_nal_with_length(track, p, nal_size,
+						                           rtp_timestamp, v->codec);
+						if (ret >= 0) {
+							v->nals_sent++;
+						}
+					}
+
+					p += nal_size;
+					remaining -= nal_size;
+				}
 			}
 		}
 

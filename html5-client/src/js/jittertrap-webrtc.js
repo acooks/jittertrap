@@ -25,13 +25,13 @@
 
   /* ========== CONSTANTS ========== */
 
-  /* WebRTC codec enum values (must match server) */
+  /* WebRTC codec enum values (must match libdatachannel rtcCodec enum) */
   const RTC_CODEC = {
-    H264: 0,
-    H265: 1,
-    VP8: 2,
-    VP9: 3,
-    AV1: 4
+    H264: 0,  /* RTC_CODEC_H264 */
+    VP8: 1,   /* RTC_CODEC_VP8 */
+    VP9: 2,   /* RTC_CODEC_VP9 */
+    H265: 3,  /* RTC_CODEC_H265 */
+    AV1: 4    /* RTC_CODEC_AV1 */
   };
 
   /* Map video_codec from toptalk to RTC codec */
@@ -348,6 +348,14 @@
         break;
       case 'no_slots':
         alert('Maximum concurrent viewers reached.\n\nPlease close another video stream and try again.');
+        break;
+      case 'codec_unsupported':
+        alert('H.265/HEVC WebRTC Playback Not Supported\n\n' +
+              'Your browser does not support H.265 (HEVC) video in WebRTC.\n\n' +
+              'Options:\n' +
+              '- Use Chrome 136+ (has native H.265 WebRTC support)\n' +
+              '- Use Safari (supports H.265 WebRTC)\n' +
+              '- View an H.264 stream instead');
         break;
       case 'webrtc_failed':
       case 'not_initialized':

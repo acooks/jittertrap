@@ -15,11 +15,12 @@
 struct flow;
 
 /* Error codes for webrtc_bridge_handle_offer */
-#define WEBRTC_ERR_NO_SLOTS    -2  /* All viewer slots are in use */
-#define WEBRTC_ERR_NOT_INIT    -3  /* Bridge not initialized */
-#define WEBRTC_ERR_BAD_PARAMS  -4  /* Invalid parameters */
-#define WEBRTC_ERR_PC_FAILED   -5  /* PeerConnection creation failed */
-#define WEBRTC_ERR_SDP_FAILED  -6  /* SDP negotiation failed */
+#define WEBRTC_ERR_NO_SLOTS       -2  /* All viewer slots are in use */
+#define WEBRTC_ERR_NOT_INIT       -3  /* Bridge not initialized */
+#define WEBRTC_ERR_BAD_PARAMS     -4  /* Invalid parameters */
+#define WEBRTC_ERR_PC_FAILED      -5  /* PeerConnection creation failed */
+#define WEBRTC_ERR_SDP_FAILED     -6  /* SDP negotiation failed */
+#define WEBRTC_ERR_CODEC_UNSUP    -7  /* Requested codec not supported by browser */
 
 /*
  * Initialize the WebRTC bridge subsystem.

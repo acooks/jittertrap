@@ -22,7 +22,7 @@ JitterTrap is a real-time network performance analysis tool for engineers workin
 - Automatic detection of RTP video streams (H.264, H.265, VP8/VP9) and MPEG-TS
 - Codec identification, resolution, framerate, and bitrate extraction
 - Jitter measurement and packet loss tracking per stream
-- Optional in-browser video playback via WebRTC (requires `ENABLE_WEBRTC_PLAYBACK=1`)
+- In-browser video playback via WebRTC (click the play button on any detected stream)
 
 **Network Impairment Emulation**
 - Inject delay, jitter, and packet loss on egress traffic
@@ -77,9 +77,13 @@ Run-time dependencies:
 
 ### Compiling JitterTrap
 
-Fetch:
+Fetch (with submodules for WebRTC support):
 
-    git clone https://github.com/acooks/jittertrap.git
+    git clone --recurse-submodules https://github.com/acooks/jittertrap.git
+
+Or if you've already cloned:
+
+    git submodule update --init --recursive
 
 Build:
 
@@ -88,13 +92,19 @@ Build:
 
 Run `make help` to see build configuration options, or `make config` to see current settings.
 
-### Optional Features
+### WebRTC Video Playback
 
-**WebRTC Video Playback** — watch detected video streams in your browser:
+WebRTC video playback is enabled by default. JitterTrap bundles [libdatachannel](https://github.com/paullouisageneau/libdatachannel) 0.23+ which is built automatically on first compile.
 
-    make ENABLE_WEBRTC_PLAYBACK=1
+**Supported codecs:** H.264 (all browsers), H.265/HEVC (Chrome 136+, Safari)
 
-Requires [libdatachannel](https://github.com/paullouisageneau/libdatachannel) to be installed. This library is not yet packaged for most distributions and must be built from source.
+**Browser requirements:**
+- Chrome, Firefox, Edge, Safari for H.264
+- Chrome 136+, Safari, or Edge for H.265/HEVC
+
+To disable WebRTC playback (reduces binary size and build dependencies):
+
+    make ENABLE_WEBRTC_PLAYBACK=0
 
 ## Running JitterTrap
 
