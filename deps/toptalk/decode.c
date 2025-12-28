@@ -11,32 +11,51 @@
 #include "flow.h"
 #include "decode.h"
 
+/* Internal versions that track packet start for L4 offset calculation */
+static int decode_ip4_internal(const uint8_t *packet,
+                               const uint8_t *end_of_packet,
+                               const uint8_t *packet_start,
+                               struct flow_pkt *pkt, char *errstr);
+static int decode_ip6_internal(const uint8_t *packet,
+                               const uint8_t *end_of_packet,
+                               const uint8_t *packet_start,
+                               struct flow_pkt *pkt, char *errstr);
+
 int decode_ethernet(const struct pcap_pkthdr *h, const uint8_t *wirebits,
                     struct flow_pkt *pkt, char *errstr)
 {
 	const struct hdr_ethernet *ethernet;
 	const uint8_t *end_of_packet = wirebits + h->caplen;
+	const uint8_t *packet_start = wirebits;
 	int ret;
 
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
 	pkt->timestamp.tv_usec = h->ts.tv_usec;
 	pkt->flow_rec.bytes = h->len;
 	pkt->flow_rec.packets = 1;
+	pkt->has_l4_offset = 0;  /* Default: no L4 offset */
 
 	ethernet = (struct hdr_ethernet *)wirebits;
 
 	switch (ntohs(ethernet->type)) {
 	case ETHERTYPE_IP:
-		ret = decode_ip4(wirebits + HDR_LEN_ETHER, end_of_packet, pkt,
-		                 errstr);
+		ret = decode_ip4_internal(wirebits + HDR_LEN_ETHER, end_of_packet,
+		                          packet_start, pkt, errstr);
 		break;
 	case ETHERTYPE_VLAN:
+		/* For VLAN, recurse with position shifted past VLAN tag.
+		 * The inner call computes l4_offset from its packet_start,
+		 * so we adjust to get offset from original packet start. */
 		ret = decode_ethernet(h, wirebits + HDR_LEN_ETHER_VLAN, pkt,
 		                      errstr);
+		if (ret == 0 && pkt->has_l4_offset) {
+			/* Add 4 bytes to account for VLAN tag the inner call skipped */
+			pkt->l4_offset += (HDR_LEN_ETHER_VLAN - HDR_LEN_ETHER);
+		}
 		break;
 	case ETHERTYPE_IPV6:
-		ret = decode_ip6(wirebits + HDR_LEN_ETHER, end_of_packet, pkt,
-		                 errstr);
+		ret = decode_ip6_internal(wirebits + HDR_LEN_ETHER, end_of_packet,
+		                          packet_start, pkt, errstr);
 		break;
 	case ETHERTYPE_ARP:
 		snprintf(errstr, DECODE_ERRBUF_SIZE, "%s", "ARP ignored");
@@ -61,22 +80,24 @@ int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 {
 	const struct sll_header *sll;
 	const uint8_t *end_of_packet = wirebits + h->caplen;
+	const uint8_t *packet_start = wirebits;
 	int ret;
 
 	pkt->timestamp.tv_sec = h->ts.tv_sec;
 	pkt->timestamp.tv_usec = h->ts.tv_usec;
 	pkt->flow_rec.bytes = h->len;
 	pkt->flow_rec.packets = 1;
+	pkt->has_l4_offset = 0;  /* Default: no L4 offset */
 
 	sll = (struct sll_header *)wirebits;
 	switch (ntohs(sll->sll_protocol)) {
 	case ETHERTYPE_IP:
-		ret = decode_ip4(wirebits + SLL_HDR_LEN, end_of_packet, pkt,
-		                 errstr);
+		ret = decode_ip4_internal(wirebits + SLL_HDR_LEN, end_of_packet,
+		                          packet_start, pkt, errstr);
 		break;
 	case ETHERTYPE_IPV6:
-		ret = decode_ip6(wirebits + SLL_HDR_LEN, end_of_packet, pkt,
-		                 errstr);
+		ret = decode_ip6_internal(wirebits + SLL_HDR_LEN, end_of_packet,
+		                          packet_start, pkt, errstr);
 		break;
 	default:
 		snprintf(errstr, DECODE_ERRBUF_SIZE,
@@ -87,8 +108,11 @@ int decode_linux_sll(const struct pcap_pkthdr *h, const uint8_t *wirebits,
 	return ret;
 }
 
-int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
-               struct flow_pkt *pkt, char *errstr)
+/* Internal version with packet_start for L4 offset calculation */
+static int decode_ip6_internal(const uint8_t *packet,
+                               const uint8_t *end_of_packet,
+                               const uint8_t *packet_start,
+                               struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next = (uint8_t *)packet + sizeof(struct hdr_ipv6);
@@ -141,9 +165,19 @@ int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
 	switch (next_hdr) {
 	case IPPROTO_TCP:
 		ret = decode_tcp(next, pkt, errstr);
+		/* Store L4 offset for TCP packets */
+		if (ret == 0 && packet_start) {
+			pkt->l4_offset = (uint16_t)((const uint8_t *)next - packet_start);
+			pkt->has_l4_offset = 1;
+		}
 		break;
 	case IPPROTO_UDP:
 		ret = decode_udp(next, pkt, errstr);
+		/* Store L4 offset for UDP packets */
+		if (ret == 0 && packet_start) {
+			pkt->l4_offset = (uint16_t)((const uint8_t *)next - packet_start);
+			pkt->has_l4_offset = 1;
+		}
 		break;
 	case IPPROTO_ICMP:
 		ret = decode_icmp(next, pkt, errstr);
@@ -166,8 +200,18 @@ int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
 	return ret;
 }
 
-int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
+/* Public wrapper for backwards compatibility */
+int decode_ip6(const uint8_t *packet, const uint8_t *end_of_packet,
                struct flow_pkt *pkt, char *errstr)
+{
+	return decode_ip6_internal(packet, end_of_packet, NULL, pkt, errstr);
+}
+
+/* Internal version with packet_start for L4 offset calculation */
+static int decode_ip4_internal(const uint8_t *packet,
+                               const uint8_t *end_of_packet,
+                               const uint8_t *packet_start,
+                               struct flow_pkt *pkt, char *errstr)
 {
 	int ret;
 	const void *next;
@@ -189,9 +233,19 @@ int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
 	switch (ip4_packet->ip_p) {
 	case IPPROTO_TCP:
 		ret = decode_tcp(next, pkt, errstr);
+		/* Store L4 offset for TCP packets */
+		if (ret == 0 && packet_start) {
+			pkt->l4_offset = (uint16_t)((const uint8_t *)next - packet_start);
+			pkt->has_l4_offset = 1;
+		}
 		break;
 	case IPPROTO_UDP:
 		ret = decode_udp(next, pkt, errstr);
+		/* Store L4 offset for UDP packets */
+		if (ret == 0 && packet_start) {
+			pkt->l4_offset = (uint16_t)((const uint8_t *)next - packet_start);
+			pkt->has_l4_offset = 1;
+		}
 		break;
 	case IPPROTO_ICMP:
 		ret = decode_icmp(next, pkt, errstr);
@@ -209,6 +263,13 @@ int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
 		break;
 	}
 	return ret;
+}
+
+/* Public wrapper for backwards compatibility */
+int decode_ip4(const uint8_t *packet, const uint8_t *end_of_packet,
+               struct flow_pkt *pkt, char *errstr)
+{
+	return decode_ip4_internal(packet, end_of_packet, NULL, pkt, errstr);
 }
 
 int decode_tcp(const struct hdr_tcp *packet, struct flow_pkt *pkt, char *errstr)

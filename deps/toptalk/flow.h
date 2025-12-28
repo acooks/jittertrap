@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <net/ethernet.h>
 
 /* Video stream type detection */
 enum video_stream_type {
@@ -161,12 +162,46 @@ static inline int flow_cmp(const struct flow *a, const struct flow *b)
 	return 0;  /* Equal */
 }
 
+/*
+ * Create a reversed copy of a flow (swap src/dst addresses and ports).
+ * Used for TCP window event propagation: events detected in packets FROM host A
+ * are stored on the flow TO host A (where host A's window is displayed).
+ *
+ * Performance: O(1), inline, no heap allocation. Safe for hot path.
+ */
+static inline struct flow flow_reverse(const struct flow *f)
+{
+	struct flow rev = *f;
+
+	if (f->ethertype == ETHERTYPE_IP) {
+		struct in_addr tmp = rev.src_ip;
+		rev.src_ip = rev.dst_ip;
+		rev.dst_ip = tmp;
+	} else {
+		struct in6_addr tmp6 = rev.src_ip6;
+		rev.src_ip6 = rev.dst_ip6;
+		rev.dst_ip6 = tmp6;
+	}
+
+	uint16_t tmp_port = rev.sport;
+	rev.sport = rev.dport;
+	rev.dport = tmp_port;
+
+	return rev;
+}
+
 /* Cached TCP RTT info - populated by tt_get_top5() for thread-safe access */
 struct flow_rtt_info {
 	int64_t rtt_us;           /* RTT in microseconds, -1 if unknown */
 	int32_t tcp_state;        /* TCP connection state, -1 if unknown */
 	int32_t saw_syn;          /* 1 if SYN was observed, 0 otherwise */
 };
+
+/* Window condition flags (computed at interval boundary) */
+#define WINDOW_COND_LOW        0x01  /* Avg window below threshold this interval */
+#define WINDOW_COND_ZERO_SEEN  0x02  /* Min window was 0 this interval */
+#define WINDOW_COND_STARVING   0x04  /* Low window for 3+ consecutive intervals */
+#define WINDOW_COND_RECOVERED  0x08  /* Recovered from low/zero window */
 
 /* Cached TCP window/congestion info - populated by tt_get_top5() */
 struct flow_window_info {
@@ -176,7 +211,17 @@ struct flow_window_info {
 	uint32_t dup_ack_cnt;     /* Duplicate ACK events */
 	uint32_t retransmit_cnt;  /* Retransmission events */
 	uint32_t ece_cnt;         /* ECE flag count */
-	uint8_t recent_events;    /* Bitmask of recent congestion events */
+	uint64_t recent_events;   /* Bitmask of recent congestion events */
+
+	/* Per-interval window accumulation (for historical window tracking) */
+	uint64_t window_sum;      /* Sum of scaled window values */
+	uint32_t window_samples;  /* Count of samples */
+	uint32_t window_min;      /* Min window this interval */
+	uint32_t window_max;      /* Max window this interval */
+
+	/* Condition flags (computed at interval boundary) */
+	uint8_t window_conditions;  /* Bitmask of WINDOW_COND_* flags */
+	uint8_t low_window_streak;  /* Consecutive intervals with low window */
 };
 
 /* Inter-packet gap (IPG) histogram bucket count */
@@ -313,6 +358,29 @@ struct flow_record {
 struct flow_pkt {
 	struct flow_record flow_rec;
 	struct timeval timestamp;
+	/* TCP window value (set during TCP packet processing) */
+	uint32_t tcp_scaled_window;  /* Scaled window value, 0 if not TCP */
+	uint8_t has_tcp_window;      /* 1 if tcp_scaled_window is valid */
+	/* L4 header offset - computed during decode to avoid re-parsing */
+	uint16_t l4_offset;          /* Offset to TCP/UDP header from packet start */
+	uint8_t has_l4_offset;       /* 1 if l4_offset is valid (TCP/UDP packet) */
 };
+
+/* Compact ring buffer entry - stores only what's needed for expiration.
+ * Used instead of full flow_pkt to reduce memory ~10x (736 -> 64 bytes).
+ * The ring buffer only needs to track:
+ * - flow key for hash table lookup during expiration
+ * - bytes to subtract from flow totals
+ * - timestamp to determine when entry expires
+ *
+ * Layout optimized for 64-byte cache line:
+ * - bytes (uint32_t) fits in padding gap after flow (44 bytes + 4 = 48)
+ * - timestamp (struct timeval) is 8-byte aligned at offset 48
+ */
+struct pkt_ring_entry {
+	struct flow flow;           /* 44 bytes - hash key for lookup */
+	uint32_t bytes;             /* 4 bytes - fits in padding, max 4GB/pkt */
+	struct timeval timestamp;   /* 16 bytes - for age check */
+};  /* Total: 64 bytes (1 cache line) */
 
 #endif

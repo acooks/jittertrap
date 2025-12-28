@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <net/ethernet.h>
 #include "uthash.h"
-#include "flow.h"
+#include "tcp_flow_key.h"
 
 /* Maximum outstanding sequence numbers to track per direction */
 #define MAX_SEQ_ENTRIES 16
@@ -52,24 +52,6 @@ struct tcp_rtt_direction {
 	_Atomic uint32_t sample_count; /* Number of RTT samples collected (lock-free) */
 	/* RTT histogram for percentile calculation (atomic for lock-free access) */
 	_Atomic uint32_t rtt_hist[RTT_HIST_BUCKETS];
-};
-
-/* Bidirectional flow key for RTT lookup (canonical ordering) */
-struct tcp_flow_key {
-	uint16_t ethertype;
-	uint16_t _pad;              /* Alignment padding */
-	union {
-		struct {
-			struct in_addr ip_lo;
-			struct in_addr ip_hi;
-		};
-		struct {
-			struct in6_addr ip6_lo;
-			struct in6_addr ip6_hi;
-		};
-	};
-	uint16_t port_lo;
-	uint16_t port_hi;
 };
 
 /* RTT tracking entry - one per TCP connection (bidirectional) */

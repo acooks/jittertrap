@@ -932,9 +932,16 @@
     }
 
     /* Update flow ranks table ONCE after all flows processed (was inside loop - very inefficient!)
-     * Sort descending by total bytes. Use closure to capture current totals. */
+     * Sort descending by total bytes. Use flow key as tie-breaker for stable ordering.
+     * The tie-breaker ensures deterministic ordering when flows have equal byte counts,
+     * preventing color/position jitter in the UI. */
     const totals = flowsTotals[interval];
-    flowRank[interval].sort((a, b) => totals[b].tbytes - totals[a].tbytes);
+    flowRank[interval].sort((a, b) => {
+      const byteDiff = totals[b].tbytes - totals[a].tbytes;
+      if (byteDiff !== 0) return byteDiff;
+      /* Tie-breaker: compare flow keys lexicographically for stable ordering */
+      return a.localeCompare(b);
+    });
   };
 
 

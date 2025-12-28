@@ -49,6 +49,8 @@ struct tcp_window_direction {
 
 	/* Zero-window tracking (atomic for lock-free reader access) */
 	_Atomic uint32_t zero_window_count;    /* Number of zero-window advertisements */
+	int in_zero_window;                    /* State for edge-triggered detection (writer only) */
+	int recovered_from_zero;               /* Window recovered above threshold (writer only) */
 
 	/* Duplicate ACK detection */
 	uint32_t last_ack;             /* Last ACK number seen (writer only) */
@@ -64,8 +66,18 @@ struct tcp_window_direction {
 	_Atomic uint32_t ece_count;            /* ECE flag count */
 	_Atomic uint32_t cwr_count;            /* CWR flag count */
 
-	/* Events since last query (for UI markers) */
-	_Atomic uint8_t recent_events;         /* Bitmask cleared on read (lock-free) */
+	/* Cumulative event bitmask (lock-free).
+	 * NOTE: This is OR'd in and NEVER cleared - it accumulates ALL events ever seen.
+	 * For per-interval events (used for UI markers), use the interval table entries
+	 * populated by propagate_events_to_intervals() instead. */
+	_Atomic uint64_t recent_events;
+
+	/* Event timestamps for interval-aware queries */
+	struct timeval last_zero_window_time;
+	struct timeval last_dup_ack_time;
+	struct timeval last_retransmit_time;
+	struct timeval last_ece_time;
+	struct timeval last_cwr_time;
 };
 
 /* Bidirectional TCP window entry - one per TCP connection */
@@ -86,7 +98,7 @@ struct tcp_window_info {
 	uint32_t retransmit_count;
 	uint32_t ece_count;
 	uint32_t cwr_count;
-	uint8_t recent_events;         /* Bitmask of events since last query */
+	uint64_t recent_events;        /* Cumulative events (see tcp_window_direction comment) */
 };
 
 /* Initialize window tracking subsystem */
@@ -104,23 +116,36 @@ void tcp_window_cleanup(void);
  * window: raw window field from TCP header
  * payload_len: length of TCP payload (excluding headers)
  * timestamp: packet capture timestamp
+ * scaled_window_out: output parameter for scaled window value (can be NULL)
+ *
+ * Returns: bitmask of CONG_EVENT_* flags detected for this packet
+ *          (uint64_t for efficiency and future expansion)
  */
-void tcp_window_process_packet(const struct flow *flow,
-                               const uint8_t *tcp_header,
-                               const uint8_t *end_of_packet,
-                               uint32_t seq,
-                               uint32_t ack,
-                               uint8_t flags,
-                               uint16_t window,
-                               uint16_t payload_len,
-                               struct timeval timestamp);
+uint64_t tcp_window_process_packet(const struct flow *flow,
+                                   const uint8_t *tcp_header,
+                                   const uint8_t *end_of_packet,
+                                   uint32_t seq,
+                                   uint32_t ack,
+                                   uint8_t flags,
+                                   uint16_t window,
+                                   uint16_t payload_len,
+                                   struct timeval timestamp,
+                                   uint32_t *scaled_window_out);
 
 /* Get window and congestion info for a flow (single lookup)
  * Returns 0 on success (entry found), -1 if flow not found or not TCP
- * Note: recent_events is cleared after this call
  */
 int tcp_window_get_info(const struct flow *flow,
                         struct tcp_window_info *info);
+
+/* Get events that occurred within a lookback period (for interval-specific queries)
+ * Returns bitmask of CONG_EVENT_* flags for events where:
+ *   (current_time - event_time) < lookback_period
+ * This allows each interval to see only events within its time window.
+ */
+uint64_t tcp_window_get_events_for_period(const struct flow *flow,
+                                          struct timeval current_time,
+                                          struct timeval lookback_period);
 
 /* Expire old window entries that haven't been active within window */
 void tcp_window_expire_old(struct timeval deadline, struct timeval window);

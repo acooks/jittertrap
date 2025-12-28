@@ -83,7 +83,7 @@ struct jt_msg_toptalk
 		uint32_t dup_ack_cnt;    /* Duplicate ACK bursts (3+) */
 		uint32_t retransmit_cnt; /* Detected retransmissions */
 		uint32_t ece_cnt;        /* ECE flag count */
-		uint8_t recent_events;   /* Bitmask of recent congestion events */
+		uint64_t recent_events;  /* Bitmask of recent congestion events */
 		/* TCP health indicator fields */
 		uint32_t health_rtt_hist[14]; /* RTT histogram buckets (log scale) */
 		uint32_t health_rtt_samples;  /* Total number of RTT samples */
