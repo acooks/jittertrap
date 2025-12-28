@@ -461,7 +461,7 @@ static void set_affinity(void)
 	pthread_t thread;
 	thread = pthread_self();
 	CPU_ZERO(&cpuset);
-	CPU_SET(RT_CPU, &cpuset);
+	CPU_SET(RT_CPU_TOPTALK, &cpuset);
 	s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 	if (s != 0) {
 		handle_error_en(s, "pthread_setaffinity_np");
