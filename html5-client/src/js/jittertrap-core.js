@@ -60,18 +60,321 @@
     1000: 200   // 5 provisional points
   };
 
+  /* TypedRingBuffer - a circular buffer using Float64Arrays for GC-free numeric storage.
+   * Stores pairs of (timestamp, value) without creating JS objects.
+   * API is compatible with CBuffer where possible. */
+  const TypedRingBuffer2 = function(capacity) {
+    this.timestamps = new Float64Array(capacity);
+    this.values = new Float64Array(capacity);
+    this.capacity = capacity;
+    this.size = 0;
+    this.head = 0;  // Next write position
+  };
+
+  TypedRingBuffer2.prototype = {
+    push: function(timestamp, value) {
+      this.timestamps[this.head] = timestamp;
+      this.values[this.head] = value;
+      this.head = (this.head + 1) % this.capacity;
+      if (this.size < this.capacity) {
+        this.size++;
+      }
+    },
+
+    // Convert logical index to physical array index
+    _idx: function(i) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      return (start + i) % this.capacity;
+    },
+
+    // Get item at logical index (0 = oldest) - allocates object
+    get: function(i) {
+      if (i < 0 || i >= this.size) return null;
+      const idx = this._idx(i);
+      return { timestamp: this.timestamps[idx], value: this.values[idx] };
+    },
+
+    // Zero-allocation accessors for individual fields
+    timestampAt: function(i) {
+      return this.timestamps[this._idx(i)];
+    },
+
+    valueAt: function(i) {
+      return this.values[this._idx(i)];
+    },
+
+    // Get the last (most recent) item - allocates object
+    last: function() {
+      if (this.size === 0) return null;
+      const idx = (this.head - 1 + this.capacity) % this.capacity;
+      return { timestamp: this.timestamps[idx], value: this.values[idx] };
+    },
+
+    // Zero-allocation accessors for last item
+    lastTimestamp: function() {
+      if (this.size === 0) return 0;
+      return this.timestamps[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastValue: function() {
+      if (this.size === 0) return 0;
+      return this.values[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    empty: function() {
+      this.size = 0;
+      this.head = 0;
+    },
+
+    // For iteration without allocation - call with callback(timestamp, value, index)
+    forEach: function(callback) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      for (let i = 0; i < this.size; i++) {
+        const idx = (start + i) % this.capacity;
+        callback(this.timestamps[idx], this.values[idx], i);
+      }
+    },
+
+    // Self-test: verify zero-allocation accessors match allocating ones
+    _selfTest: function() {
+      for (let i = 0; i < this.size; i++) {
+        const obj = this.get(i);
+        if (obj.timestamp !== this.timestampAt(i)) {
+          throw new Error('TypedRingBuffer2: timestampAt mismatch at ' + i);
+        }
+        if (obj.value !== this.valueAt(i)) {
+          throw new Error('TypedRingBuffer2: valueAt mismatch at ' + i);
+        }
+      }
+      if (this.size > 0) {
+        const last = this.last();
+        if (last.timestamp !== this.lastTimestamp()) {
+          throw new Error('TypedRingBuffer2: lastTimestamp mismatch');
+        }
+        if (last.value !== this.lastValue()) {
+          throw new Error('TypedRingBuffer2: lastValue mismatch');
+        }
+      }
+      return true;
+    }
+  };
+
+  /* TypedRingBuffer4 - for pgap data with 4 values per entry (timestamp, min, max, mean) */
+  const TypedRingBuffer4 = function(capacity) {
+    this.timestamps = new Float64Array(capacity);
+    this.mins = new Float64Array(capacity);
+    this.maxs = new Float64Array(capacity);
+    this.means = new Float64Array(capacity);
+    this.capacity = capacity;
+    this.size = 0;
+    this.head = 0;
+  };
+
+  TypedRingBuffer4.prototype = {
+    push: function(timestamp, min, max, mean) {
+      this.timestamps[this.head] = timestamp;
+      this.mins[this.head] = min;
+      this.maxs[this.head] = max;
+      this.means[this.head] = mean;
+      this.head = (this.head + 1) % this.capacity;
+      if (this.size < this.capacity) {
+        this.size++;
+      }
+    },
+
+    // Convert logical index to physical array index
+    _idx: function(i) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      return (start + i) % this.capacity;
+    },
+
+    // Get item at logical index (0 = oldest) - allocates object
+    get: function(i) {
+      if (i < 0 || i >= this.size) return null;
+      const idx = this._idx(i);
+      return {
+        timestamp: this.timestamps[idx],
+        min: this.mins[idx],
+        max: this.maxs[idx],
+        mean: this.means[idx]
+      };
+    },
+
+    // Zero-allocation accessors for individual fields
+    timestampAt: function(i) {
+      return this.timestamps[this._idx(i)];
+    },
+
+    minAt: function(i) {
+      return this.mins[this._idx(i)];
+    },
+
+    maxAt: function(i) {
+      return this.maxs[this._idx(i)];
+    },
+
+    meanAt: function(i) {
+      return this.means[this._idx(i)];
+    },
+
+    // Get the last (most recent) item - allocates object
+    last: function() {
+      if (this.size === 0) return null;
+      const idx = (this.head - 1 + this.capacity) % this.capacity;
+      return {
+        timestamp: this.timestamps[idx],
+        min: this.mins[idx],
+        max: this.maxs[idx],
+        mean: this.means[idx]
+      };
+    },
+
+    // Zero-allocation accessors for last item
+    lastTimestamp: function() {
+      if (this.size === 0) return 0;
+      return this.timestamps[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMin: function() {
+      if (this.size === 0) return 0;
+      return this.mins[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMax: function() {
+      if (this.size === 0) return 0;
+      return this.maxs[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    lastMean: function() {
+      if (this.size === 0) return 0;
+      return this.means[(this.head - 1 + this.capacity) % this.capacity];
+    },
+
+    empty: function() {
+      this.size = 0;
+      this.head = 0;
+    },
+
+    // For iteration without allocation - call with callback(timestamp, min, max, mean, index)
+    forEach: function(callback) {
+      const start = (this.head - this.size + this.capacity) % this.capacity;
+      for (let i = 0; i < this.size; i++) {
+        const idx = (start + i) % this.capacity;
+        callback(this.timestamps[idx], this.mins[idx], this.maxs[idx], this.means[idx], i);
+      }
+    },
+
+    // Self-test: verify zero-allocation accessors match allocating ones
+    _selfTest: function() {
+      for (let i = 0; i < this.size; i++) {
+        const obj = this.get(i);
+        if (obj.timestamp !== this.timestampAt(i)) {
+          throw new Error('TypedRingBuffer4: timestampAt mismatch at ' + i);
+        }
+        if (obj.min !== this.minAt(i)) {
+          throw new Error('TypedRingBuffer4: minAt mismatch at ' + i);
+        }
+        if (obj.max !== this.maxAt(i)) {
+          throw new Error('TypedRingBuffer4: maxAt mismatch at ' + i);
+        }
+        if (obj.mean !== this.meanAt(i)) {
+          throw new Error('TypedRingBuffer4: meanAt mismatch at ' + i);
+        }
+      }
+      if (this.size > 0) {
+        const last = this.last();
+        if (last.timestamp !== this.lastTimestamp()) {
+          throw new Error('TypedRingBuffer4: lastTimestamp mismatch');
+        }
+        if (last.min !== this.lastMin()) {
+          throw new Error('TypedRingBuffer4: lastMin mismatch');
+        }
+        if (last.max !== this.lastMax()) {
+          throw new Error('TypedRingBuffer4: lastMax mismatch');
+        }
+        if (last.mean !== this.lastMean()) {
+          throw new Error('TypedRingBuffer4: lastMean mismatch');
+        }
+      }
+      return true;
+    }
+  };
+
+  // Run self-tests on TypedRingBuffer implementations
+  // Tests empty, partial, full, and wrapped buffer states
+  const runRingBufferSelfTests = function() {
+    const cap = 5;
+
+    // Test TypedRingBuffer2
+    const rb2 = new TypedRingBuffer2(cap);
+
+    // Empty state
+    if (rb2.lastTimestamp() !== 0 || rb2.lastValue() !== 0) {
+      throw new Error('TypedRingBuffer2: empty state failed');
+    }
+
+    // Partial fill (3 items in capacity 5)
+    rb2.push(1.0, 100);
+    rb2.push(2.0, 200);
+    rb2.push(3.0, 300);
+    rb2._selfTest();
+
+    // Full (5 items)
+    rb2.push(4.0, 400);
+    rb2.push(5.0, 500);
+    rb2._selfTest();
+
+    // Wrapped (7 items pushed into capacity 5)
+    rb2.push(6.0, 600);
+    rb2.push(7.0, 700);
+    rb2._selfTest();
+
+    // Test TypedRingBuffer4
+    const rb4 = new TypedRingBuffer4(cap);
+
+    // Empty state
+    if (rb4.lastTimestamp() !== 0 || rb4.lastMin() !== 0 ||
+        rb4.lastMax() !== 0 || rb4.lastMean() !== 0) {
+      throw new Error('TypedRingBuffer4: empty state failed');
+    }
+
+    // Partial fill
+    rb4.push(1.0, 10, 100, 50);
+    rb4.push(2.0, 20, 200, 100);
+    rb4.push(3.0, 30, 300, 150);
+    rb4._selfTest();
+
+    // Full
+    rb4.push(4.0, 40, 400, 200);
+    rb4.push(5.0, 50, 500, 250);
+    rb4._selfTest();
+
+    // Wrapped
+    rb4.push(6.0, 60, 600, 300);
+    rb4.push(7.0, 70, 700, 350);
+    rb4._selfTest();
+
+    console.log('TypedRingBuffer self-tests passed');
+    return true;
+  };
+
+  // Expose for manual testing: JT.core.runRingBufferSelfTests()
+  // Not run automatically to avoid creating garbage at startup
+  my.core.runRingBufferSelfTests = runRingBufferSelfTests;
+
   /* a prototype object to encapsulate timeseries data. */
   const Series = function(name, title, ylabel, rateFormatter) {
     this.name = name;
     this.title = title;
     this.ylabel = ylabel;
     this.rateFormatter = rateFormatter;
-    this.xlabel = "Time (ms)";
+    this.xlabel = "Time (s)";
     this.stats = {min: 99999, max:0, median:0, mean:0, maxPG:0, meanPG:0 };
-    this.samples = { '5ms': [], '10ms': [], '20ms': [], '50ms': [], '100ms':[], '200ms':[], '500ms': [], '1000ms': []};
+    this.samples = {};
     this.pgaps = {};
     for (const ts in timeScaleTable) {
-      this.pgaps[ts] = new CBuffer(sampleWindowSize);
+      this.samples[ts] = new TypedRingBuffer2(sampleWindowSize);
+      this.pgaps[ts] = new TypedRingBuffer4(sampleWindowSize);
     }
  };
 
@@ -113,14 +416,11 @@
       return;
     }
 
+    // For typed ring buffers, we just create new ones (data will be lost on resize)
+    // This is consistent with the original behavior for pgaps
     for (const key in timeScaleTable) {
-      const b = new CBuffer(len);
-      let l = (len < series.samples[key].size) ? len : series.samples[key].size;
-      while (l--) {
-        b.push(series.samples[key].shift());
-      }
-      series.samples[key] = b;
-      series.pgaps[key] = new CBuffer(len);
+      series.samples[key] = new TypedRingBuffer2(len);
+      series.pgaps[key] = new TypedRingBuffer4(len);
     }
   };
 
@@ -137,7 +437,7 @@
   const clearSeries = function (s) {
 
     for (const key in timeScaleTable) {
-      s.samples[key] = new CBuffer(sampleWindowSize);
+      s.samples[key].empty();
       s.pgaps[key].empty();
     }
 
@@ -173,53 +473,86 @@
   const updatePacketGapChartData = function (data, mean, minMax) {
     const len = data.size;
 
-    mean.length = 0;
-    minMax.length = 0;
-
+    // Reuse existing objects if array already has them, otherwise create new ones
+    // This avoids allocating ~400 objects per update (200 mean + 200 minMax)
     for (let i = 0; i < len; i++) {
-      const pg = data.get(i);
-      // pgaps data now contains timestamp in seconds
-      const x = pg.timestamp;
-      mean.push({x: x, y: pg.mean});
-      minMax.push({x: x, y: [pg.min, pg.max]});
+      const x = data.timestampAt(i);
+      if (i < mean.length) {
+        // Reuse existing object
+        mean[i].x = x;
+        mean[i].y = data.meanAt(i);
+        minMax[i].x = x;
+        minMax[i].y[0] = data.minAt(i);
+        minMax[i].y[1] = data.maxAt(i);
+      } else {
+        // Create new object (only happens during initial fill)
+        mean.push({x: x, y: data.meanAt(i)});
+        minMax.push({x: x, y: [data.minAt(i), data.maxAt(i)]});
+      }
     }
+    // Trim arrays if data shrunk (unlikely but safe)
+    mean.length = len;
+    minMax.length = len;
   };
 
+  // Pre-allocated buffer for stats calculation to avoid slice()/map() allocations
+  const statsSortBuffer = new Float64Array(sampleWindowSize);
+
   const updateStats = function (series, timeScale) {
-    // Extract just the values from {timestamp, value} objects for stats calculation
-    const rawData = series.samples[timeScale].slice(0);
-    const sortedData = rawData.map(d => d.value);
-    series.stats.cur = sortedData[sortedData.length-1];
-    sortedData.sort(numSort);
+    const samples = series.samples[timeScale];
+    const len = samples.size;
 
-    series.stats.max = sortedData[sortedData.length-1];
-    series.stats.min = sortedData[0];
-    series.stats.median = sortedData[Math.floor(sortedData.length / 2.0)];
-    let sum = 0;
-    let i = 0;
+    if (len === 0) return;
 
-    for (i = sortedData.length-1; i >=0; i--) {
-      sum += sortedData[i];
+    // Copy values using zero-allocation accessor
+    for (let i = 0; i < len; i++) {
+      statsSortBuffer[i] = samples.valueAt(i);
     }
-    series.stats.mean = sum / sortedData.length;
 
-    const pg = series.pgaps[timeScale].last();
-    series.stats.maxPG = 1.0 * pg.max;
-    series.stats.meanPG = 1.0 * pg.mean;
+    series.stats.cur = statsSortBuffer[len - 1];
 
+    // Sort just the portion we're using (Float64Array.sort is in-place)
+    const slice = statsSortBuffer.subarray(0, len);
+    slice.sort();
+
+    series.stats.max = slice[len - 1];
+    series.stats.min = slice[0];
+    series.stats.median = slice[Math.floor(len / 2)];
+
+    let sum = 0;
+    for (let i = 0; i < len; i++) {
+      sum += slice[i];
+    }
+    series.stats.mean = sum / len;
+
+    // Use zero-allocation accessors for pgaps
+    const pgaps = series.pgaps[timeScale];
+    if (pgaps.size > 0) {
+      series.stats.maxPG = pgaps.lastMax();
+      series.stats.meanPG = pgaps.lastMean();
+    }
   };
 
   const updateMainChartData = function(samples, chartSeries) {
     const len = samples.size;
 
-    chartSeries.length = 0;
-
+    // Reuse existing objects if array already has them, otherwise create new ones
+    // This avoids allocating ~200 objects per update
     for (let i = 0; i < len; i++) {
-      const sample = samples.get(i);
-      // Sample now contains {timestamp: seconds, value: rate}
-      // Chart expects timestamp in seconds (same as flow charts)
-      chartSeries.push({timestamp: sample.timestamp, value: sample.value});
+      if (i < chartSeries.length) {
+        // Reuse existing object
+        chartSeries[i].timestamp = samples.timestampAt(i);
+        chartSeries[i].value = samples.valueAt(i);
+      } else {
+        // Create new object (only happens during initial fill)
+        chartSeries.push({
+          timestamp: samples.timestampAt(i),
+          value: samples.valueAt(i)
+        });
+      }
     }
+    // Trim array if data shrunk (unlikely but safe)
+    chartSeries.length = len;
   };
 
   const chartSamples = {};
@@ -609,7 +942,8 @@
   const updateSeries = function (series, yVal, selectedSeries, timeScale, timestamp) {
     const periodMs = timeScaleTable[timeScale];
     // Store timestamp (in seconds) with each sample for absolute time positioning
-    series.samples[timeScale].push({timestamp: timestamp, value: series.rateFormatter(yVal)});
+    // TypedRingBuffer2.push takes (timestamp, value) directly - no object allocation
+    series.samples[timeScale].push(timestamp, series.rateFormatter(yVal));
 
     // Only process when interval matches the selected chart period
     if (my.charts.getChartPeriod() == periodMs) {
@@ -629,41 +963,11 @@
   };
 
   const updateData = function (d, sSeries, timeScale, timestamp) {
-    sBin.rxRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_rx_pgap,
-        "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap / 1000.0
-      }
-    );
-
-    sBin.txRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_tx_pgap,
-        "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap / 1000.0
-      }
-    );
-
-    sBin.rxPacketRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_rx_pgap,
-        "max"  : d.max_rx_pgap,
-        "mean" : d.mean_rx_pgap / 1000.0
-      }
-    );
-
-    sBin.txPacketRate.pgaps[timeScale].push(
-      {
-        "timestamp": timestamp,  // Server timestamp in seconds
-        "min"  : d.min_tx_pgap,
-        "max"  : d.max_tx_pgap,
-        "mean" : d.mean_tx_pgap / 1000.0
-      }
-    );
+    // TypedRingBuffer4.push takes (timestamp, min, max, mean) directly - no object allocation
+    sBin.rxRate.pgaps[timeScale].push(timestamp, d.min_rx_pgap, d.max_rx_pgap, d.mean_rx_pgap / 1000.0);
+    sBin.txRate.pgaps[timeScale].push(timestamp, d.min_tx_pgap, d.max_tx_pgap, d.mean_tx_pgap / 1000.0);
+    sBin.rxPacketRate.pgaps[timeScale].push(timestamp, d.min_rx_pgap, d.max_rx_pgap, d.mean_rx_pgap / 1000.0);
+    sBin.txPacketRate.pgaps[timeScale].push(timestamp, d.min_tx_pgap, d.max_tx_pgap, d.mean_tx_pgap / 1000.0);
 
     updateSeries(sBin.txRate, d.tx, sSeries, timeScale, timestamp);
     updateSeries(sBin.rxRate, d.rx, sSeries, timeScale, timestamp);

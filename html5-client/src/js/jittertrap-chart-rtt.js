@@ -52,6 +52,16 @@
     let resizeTimer;
     let linesGroup = null;
 
+    // Cached D3 selections to avoid repeated select() calls which create
+    // new selection objects that form cycles with DOM nodes, increasing
+    // Cycle Collector (CC) pressure in Firefox
+    let cachedSelections = {
+      xAxis: null,
+      yAxis: null,
+      xGrid: null,
+      yGrid: null
+    };
+
     // Reusable arrays to avoid allocations in redraw
     let rttFlowsCache = [];
     let markerDataCache = [];
@@ -91,6 +101,12 @@
     const lineYAccessor = function(d) { return yScale(d.rtt_us); };
 
     m.reset = function() {
+      // Clear cached selections before removing DOM (breaks cycles explicitly)
+      cachedSelections.xAxis = null;
+      cachedSelections.yAxis = null;
+      cachedSelections.xGrid = null;
+      cachedSelections.yGrid = null;
+
       d3.select("#chartRtt").selectAll("svg").remove();
 
       my.charts.resizeChart("#chartRtt", size)();
@@ -135,16 +151,17 @@
          .attr("width", width)
          .attr("height", height);
 
-      graph.append("g")
+      // Cache selections as they're created to avoid repeated select() calls in redraw
+      cachedSelections.xGrid = graph.append("g")
          .attr("class", "xGrid")
          .attr("transform", "translate(0," + height + ")")
          .call(xGrid);
 
-      graph.append("g")
+      cachedSelections.yGrid = graph.append("g")
          .attr("class", "yGrid")
          .call(yGrid);
 
-      graph.append("g")
+      cachedSelections.xAxis = graph.append("g")
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
@@ -156,7 +173,7 @@
            .attr("y", height + 35)
            .text("Time (s)");
 
-      graph.append("g")
+      cachedSelections.yAxis = graph.append("g")
          .attr("class", "y axis")
          .call(yAxis);
 
@@ -252,7 +269,7 @@
           xAxis.tickValues(tickValuesCache);
           xAxis.tickFormat(xTickFormatter);
         }
-        svg.select(".x.axis").call(xAxis);
+        cachedSelections.xAxis.call(xAxis);
         return;
       }
 
@@ -314,10 +331,11 @@
       xGrid.scale(xScale).tickSize(-height);
       yGrid.scale(yScale).tickSize(-width);
 
-      svg.select(".x.axis").call(xAxis);
-      svg.select(".y.axis").call(yAxis);
-      svg.select(".xGrid").call(xGrid);
-      svg.select(".yGrid").call(yGrid);
+      // Use cached selections to avoid cycle collector pressure
+      cachedSelections.xAxis.call(xAxis);
+      cachedSelections.yAxis.call(yAxis);
+      cachedSelections.xGrid.call(xGrid);
+      cachedSelections.yGrid.call(yGrid);
 
       // Update lines - stop drawing after CLOSED state
       const lines = linesGroup.selectAll(".rtt-line")
