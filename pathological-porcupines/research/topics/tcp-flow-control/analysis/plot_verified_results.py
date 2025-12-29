@@ -52,12 +52,15 @@ def plot_baseline_by_rtt(df, output_path):
         grouped = cc_data.groupby('net_delay_ms')['actual_throughput_kbps'].agg(['mean', 'std'])
         rtts = grouped.index * 2  # Convert one-way delay to RTT
 
-        ax.errorbar(rtts, grouped['mean'], yerr=grouped['std'],
+        # Convert KB/s to Mbps
+        mean_mbps = grouped['mean'] * 8 / 1000
+        std_mbps = grouped['std'] * 8 / 1000
+        ax.errorbar(rtts, mean_mbps, yerr=std_mbps,
                    label=cc.upper(), color=COLORS[cc],
                    marker='o', capsize=5, linewidth=2, markersize=8)
 
     ax.set_xlabel('RTT (ms)', fontsize=12)
-    ax.set_ylabel('Throughput (KB/s)', fontsize=12)
+    ax.set_ylabel('Throughput (Mbps)', fontsize=12)
     ax.set_title('Baseline Throughput by RTT\n(0% jitter, 0% loss)', fontsize=14)
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
@@ -79,13 +82,16 @@ def plot_loss_tolerance(df, output_path):
         cc_data = data_50ms[data_50ms['congestion_algo'] == cc]
         grouped = cc_data.groupby('net_loss_pct')['actual_throughput_kbps'].agg(['mean', 'std'])
 
-        ax.errorbar(grouped.index, grouped['mean'], yerr=grouped['std'],
+        # Convert KB/s to Mbps
+        mean_mbps = grouped['mean'] * 8 / 1000
+        std_mbps = grouped['std'] * 8 / 1000
+        ax.errorbar(grouped.index, mean_mbps, yerr=std_mbps,
                    label=cc.upper(), color=COLORS[cc],
                    marker='o', capsize=5, linewidth=2, markersize=8)
 
     ax.set_xlabel('Packet Loss (%)', fontsize=12)
     ax.set_xlim(-0.2, None)
-    ax.set_ylabel('Throughput (KB/s)', fontsize=12)
+    ax.set_ylabel('Throughput (Mbps)', fontsize=12)
     ax.set_title('Loss Tolerance: CUBIC vs BBR\n(50ms RTT, 0% jitter)', fontsize=14)
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
@@ -110,7 +116,10 @@ def plot_jitter_cliff(df, output_path):
             cc_data = data[data['congestion_algo'] == cc]
             grouped = cc_data.groupby('net_jitter_ms')['actual_throughput_kbps'].agg(['mean', 'std'])
 
-            ax.errorbar(grouped.index, grouped['mean'], yerr=grouped['std'],
+            # Convert KB/s to Mbps
+            mean_mbps = grouped['mean'] * 8 / 1000
+            std_mbps = grouped['std'] * 8 / 1000
+            ax.errorbar(grouped.index, mean_mbps, yerr=std_mbps,
                        label=cc.upper(), color=COLORS[cc],
                        marker='o', capsize=3, linewidth=2, markersize=6)
 
@@ -127,7 +136,7 @@ def plot_jitter_cliff(df, output_path):
                 ax.axvline(x=jitter, color='red', linestyle='--', alpha=0.5, label=f'Cliff @ {jitter}ms')
                 break
 
-    axes[0].set_ylabel('Throughput (KB/s)', fontsize=11)
+    axes[0].set_ylabel('Throughput (Mbps)', fontsize=11)
     fig.suptitle('Jitter Cliff: Throughput Collapse by RTT\n(0% loss)', fontsize=14)
 
     plt.tight_layout()
@@ -193,14 +202,19 @@ def plot_chaos_zone(df, output_path):
         cc_data = data[data['congestion_algo'] == cc]
         grouped = cc_data.groupby('net_jitter_ms')['actual_throughput_kbps'].agg(['mean', 'std', 'min', 'max'])
 
-        ax.fill_between(grouped.index, grouped['min'], grouped['max'],
+        # Convert KB/s to Mbps
+        min_mbps = grouped['min'] * 8 / 1000
+        max_mbps = grouped['max'] * 8 / 1000
+        mean_mbps = grouped['mean'] * 8 / 1000
+
+        ax.fill_between(grouped.index, min_mbps, max_mbps,
                        color=COLORS[cc], alpha=0.2)
-        ax.plot(grouped.index, grouped['mean'],
+        ax.plot(grouped.index, mean_mbps,
                label=cc.upper(), color=COLORS[cc],
                marker='o', linewidth=2, markersize=6)
 
     ax.set_xlabel('Jitter (±ms)', fontsize=11)
-    ax.set_ylabel('Throughput (KB/s)', fontsize=11)
+    ax.set_ylabel('Throughput (Mbps)', fontsize=11)
     ax.set_title('Chaos Zone: High Variance Region\n(shaded = min/max range)', fontsize=12)
     ax.legend(fontsize=10)
     ax.grid(True, alpha=0.3)
@@ -244,7 +258,10 @@ def plot_starlink_profiles(df_baseline, df_handover, df_degraded, output_path):
             cc_data = df[df['congestion_algo'] == cc]
             grouped = cc_data.groupby('net_loss_pct')['actual_throughput_kbps'].agg(['mean', 'std'])
 
-            ax.errorbar(grouped.index, grouped['mean'], yerr=grouped['std'],
+            # Convert KB/s to Mbps
+            mean_mbps = grouped['mean'] * 8 / 1000
+            std_mbps = grouped['std'] * 8 / 1000
+            ax.errorbar(grouped.index, mean_mbps, yerr=std_mbps,
                        label=cc.upper(), color=COLORS[cc],
                        marker='o', capsize=3, linewidth=2, markersize=6)
 
@@ -254,7 +271,7 @@ def plot_starlink_profiles(df_baseline, df_handover, df_degraded, output_path):
         ax.legend(fontsize=10)
         ax.grid(True, alpha=0.3)
 
-    axes[0].set_ylabel('Throughput (KB/s)', fontsize=11)
+    axes[0].set_ylabel('Throughput (Mbps)', fontsize=11)
     fig.suptitle('Starlink Network Profiles: BBR vs CUBIC\n(Based on cited Starlink characteristics)', fontsize=14)
 
     plt.tight_layout()
