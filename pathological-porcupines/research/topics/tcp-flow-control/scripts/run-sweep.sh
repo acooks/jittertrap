@@ -2009,6 +2009,130 @@ PRESETS = {
         # 1 * 1 * 1 * 1 * 3 * 1 * 1 * 1 * 2 * 1 = 6 experiments
         # With 3 iterations: 18 runs (~10 min)
     },
+
+    # =========================================================================
+    # VERIFICATION EXPERIMENTS (Added 2025-12-28)
+    # Goal: Establish definitive baseline values and verify blog claims
+    # These presets replace ad-hoc experiments with consistent parameters
+    # =========================================================================
+
+    'baseline-verification': {
+        # Establish definitive baseline throughput at each RTT level
+        # No jitter, no loss - just measure TCP throughput vs RTT
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [5, 12, 25, 50],              # 10/24/50/100ms RTT (4)
+        'net_jitters': [0],                         # no jitter (1)
+        'net_losses': [0],                          # no loss (1)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 10.0,
+        # 1 * 1 * 1 * 2 * 4 * 1 * 1 * 2 = 16 experiments
+        # With 5 iterations: 80 runs (~30 min)
+    },
+
+    'loss-tolerance-clean': {
+        # Loss tolerance at 50ms RTT (as per RERUN-PLAN)
+        # Isolates loss effect - no jitter
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [25],                         # 50ms RTT fixed (1)
+        'net_jitters': [0],                         # no jitter (1)
+        'net_losses': [0, 0.1, 0.25, 0.5, 1, 2, 5], # loss sweep (7)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 10.0,
+        # 1 * 1 * 1 * 2 * 1 * 1 * 7 * 2 = 28 experiments
+        # With 5 iterations: 140 runs (~50 min)
+    },
+
+    'jitter-cliff-verification': {
+        # Verify jitter cliff location at multiple RTT values
+        # Zero loss to isolate jitter effect
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [12, 25, 50],                 # 24/50/100ms RTT (3)
+        'net_jitters': [0, 4, 8, 12, 16, 20, 24],   # jitter sweep (7)
+        'net_losses': [0],                          # no loss (1)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 10.0,
+        # 1 * 1 * 1 * 2 * 3 * 7 * 1 * 2 = 84 experiments
+        # With 5 iterations: 420 runs (~140 min)
+    },
+
+    'chaos-zone-statistical': {
+        # Deep analysis of chaos zone with high iteration count
+        # 50ms RTT, jitter 8-16ms (16-32% of RTT)
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [25],                         # 50ms RTT (1)
+        'net_jitters': [8, 10, 12, 14, 16],         # chaos zone (5)
+        'net_losses': [0],                          # no loss (1)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 10.0,
+        # 1 * 1 * 1 * 2 * 1 * 5 * 1 * 2 = 20 experiments
+        # With 20 iterations: 400 runs (~135 min)
+    },
+
+    'starlink-canonical-baseline': {
+        # Starlink baseline with exact cited values
+        # RTT: 27ms (median from Starlink official)
+        # Jitter: 7ms (APNIC average)
+        # Loss: sweep around cited 0.13% (WirelessMoves)
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [13],                         # ~27ms RTT (1)
+        'net_jitters': [7],                         # APNIC average (1)
+        'net_losses': [0.1, 0.125, 0.15, 0.175, 0.2],  # sweep around 0.13% (5)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 15.0,
+        # 1 * 1 * 1 * 2 * 1 * 1 * 5 * 2 = 20 experiments
+        # With 10 iterations: 200 runs (~75 min)
+    },
+
+    'starlink-canonical-handover': {
+        # Starlink handover conditions
+        # RTT: 60ms (30ms baseline + 30ms spike during handover)
+        # Jitter: 40ms (APNIC: latency shifts 30-50ms at handover)
+        # Loss: sweep around cited 1%
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [30],                         # 60ms RTT (1)
+        'net_jitters': [40],                        # handover spike (1)
+        'net_losses': [0.5, 0.75, 1.0, 1.25, 1.5],  # sweep around 1% (5)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 15.0,
+        # 1 * 1 * 1 * 2 * 1 * 1 * 5 * 2 = 20 experiments
+        # With 10 iterations: 200 runs (~75 min)
+    },
+
+    'starlink-canonical-degraded': {
+        # Starlink degraded conditions (obstruction, weather)
+        # RTT: 80ms (elevated but still realistic)
+        # Jitter: 15ms (higher from obstructions)
+        # Loss: sweep around cited 1.5%
+        'recv_bufs': [262144],                      # 256KB fixed (1)
+        'delays_ms': [1],                           # fast receiver (1)
+        'read_sizes': [16384],                      # 16KB (1)
+        'send_rates': [5.0, 10.0],                  # SD and HD video (2)
+        'net_delays': [40],                         # 80ms RTT (1)
+        'net_jitters': [15],                        # obstruction jitter (1)
+        'net_losses': [1.0, 1.25, 1.5, 1.75, 2.0],  # sweep around 1.5% (5)
+        'congestion_algos': ['cubic', 'bbr'],       # both CC (2)
+        'duration': 15.0,
+        # 1 * 1 * 1 * 2 * 1 * 1 * 5 * 2 = 20 experiments
+        # With 10 iterations: 200 runs (~75 min)
+    },
 }
 
 def main():
