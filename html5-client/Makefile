@@ -103,6 +103,12 @@ assemble-html: createdirs
 	perl -pe 's|##PCAP-BUTTON##|`cat $(PCAP_BUTTON_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PCAP-DISABLED-MODAL##|`cat $(PCAP_DISABLED_MODAL_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
+	JITTERTRAP_ASSET='$(JQUERY_JS)' perl -0pi -e 's|##JQUERY_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
+	JITTERTRAP_ASSET='$(MUSTACHE_JS)' perl -0pi -e 's|##MUSTACHE_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
+	JITTERTRAP_ASSET='$(CBUFFER_JS)' perl -0pi -e 's|##CBUFFER_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
+	JITTERTRAP_ASSET='$(BOOTSTRAP_JS)' perl -0pi -e 's|##BOOTSTRAP_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
+	JITTERTRAP_ASSET='$(D3_JS)' perl -0pi -e 's|##D3_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
+	JITTERTRAP_ASSET='$(PAKO_JS)' perl -0pi -e 's|##PAKO_JS##|$$ENV{JITTERTRAP_ASSET}|g' ${TPL}
 
 install:
 	install -d ${DESTDIR}/var/lib/jittertrap/
