@@ -103,6 +103,12 @@ assemble-html: createdirs
 	perl -pe 's|##PCAP-BUTTON##|`cat $(PCAP_BUTTON_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PCAP-DISABLED-MODAL##|`cat $(PCAP_DISABLED_MODAL_PART)`|ge' -i ${TPL}
 	perl -pe 's|##PRODUCT-BRANDING##|${PRODUCT_BRANDING}|ge' -i ${TPL}
+	perl -pe 's|##JQUERY-JS-URL##|$(JQUERY_JS_URL)|g' -i ${TPL}
+	perl -pe 's|##MUSTACHE-JS-URL##|$(MUSTACHE_JS_URL)|g' -i ${TPL}
+	perl -pe 's|##CBUFFER-JS-URL##|$(CBUFFER_JS_URL)|g' -i ${TPL}
+	perl -pe 's|##BOOTSTRAP-JS-URL##|$(BOOTSTRAP_JS_URL)|g' -i ${TPL}
+	perl -pe 's|##D3-JS-URL##|$(D3_JS_URL)|g' -i ${TPL}
+	perl -pe 's|##PAKO-JS-URL##|$(PAKO_JS_URL)|g' -i ${TPL}
 
 install:
 	install -d ${DESTDIR}/var/lib/jittertrap/
