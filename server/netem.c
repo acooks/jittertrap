@@ -210,7 +210,7 @@ static int parse_rate_cb(struct nl_msg *msg, void *arg)
 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
 	struct tcmsg *tcm = nlmsg_data(nlh);
 	struct nlattr *tb[TCA_MAX + 1] = { 0 };
-	struct nlattr *attr;
+	struct nlattr *pos, *nested_head;
 	void *opts;
 	int opts_len;
 	int rem;
@@ -235,13 +235,13 @@ static int parse_rate_cb(struct nl_msg *msg, void *arg)
 	/* TCA_OPTIONS = tc_netem_qopt header followed by nested TCA_NETEM_*
 	 * attributes. The kernel does not wrap the qopt in its own nla
 	 * header; it's raw bytes at the start. */
-	attr = (struct nlattr *)((char *)opts + qopt_aligned);
-	nla_for_each_attr(attr, attr, opts_len - qopt_aligned, rem) {
-		if (nla_type(attr) == TCA_NETEM_RATE &&
-		    nla_len(attr) >= (int)sizeof(struct tc_netem_rate)) {
+	nested_head = (struct nlattr *)((char *)opts + qopt_aligned);
+	nla_for_each_attr(pos, nested_head, opts_len - qopt_aligned, rem) {
+		if (nla_type(pos) == TCA_NETEM_RATE &&
+		    nla_len(pos) >= (int)sizeof(struct tc_netem_rate)) {
 			struct tc_netem_rate r;
 			uint64_t kbps;
-			memcpy(&r, nla_data(attr), sizeof(r));
+			memcpy(&r, nla_data(pos), sizeof(r));
 			kbps = (uint64_t)r.rate * 8ULL / 1000ULL;
 			ctx->rate_kbps = kbps > UINT32_MAX
 			                     ? UINT32_MAX
@@ -378,8 +378,11 @@ int netem_get_params(char *iface, struct netem_params *params)
 	 * happen outside nl_sock_mutex, and a failure (e.g. transient ENOBUFS
 	 * on the dump) shouldn't fail the whole get. */
 	params->rate = 0;
-	if (ifindex >= 0)
-		(void)fetch_netem_rate(ifindex, &params->rate);
+	if (ifindex >= 0 && fetch_netem_rate(ifindex, &params->rate) < 0) {
+		syslog(LOG_WARNING,
+		       "netem rate read failed for %s; reporting rate=0",
+		       iface);
+	}
 	return 0;
 
 cleanup_qdisc:
