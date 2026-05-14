@@ -1,14 +1,20 @@
 #define _POSIX_C_SOURCE 200809L
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #include <limits.h>
 #include <assert.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <syslog.h>
+#include <time.h>
+#include <linux/rtnetlink.h>
 #include <netlink/netlink.h>
+#include <netlink/msg.h>
 #include <netlink/socket.h>
 #include <netlink/cache.h>
 #include <netlink/route/link.h>
@@ -17,6 +23,7 @@
 
 #include "jittertrap.h"
 #include "netem.h"
+#include "timeywimey.h"
 
 static struct nl_sock *sock;
 static struct nl_cache *link_cache, *qdisc_cache;
@@ -324,4 +331,165 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	pthread_mutex_unlock(&nl_sock_mutex);
 	return 0;
+}
+
+/* ---- netlink link-change monitor ---------------------------------------- */
+
+static struct nl_sock *monitor_sock;
+static pthread_t monitor_thread_id;
+static atomic_int monitor_running;
+static void (*link_change_cb)(void);
+
+/* Trailing-edge debounce: after a link event, fire the callback once the
+ * kernel has gone quiet for MONITOR_DEBOUNCE_MS. Bringing up e.g. a bond
+ * produces a burst of attribute-change events; coalescing them means clients
+ * see the final settled state instead of every intermediate one. */
+#define MONITOR_DEBOUNCE_MS 250
+
+static atomic_int pending_change;
+static struct timespec last_event;  /* accessed only on monitor thread */
+
+static long ts_to_ms(struct timespec t)
+{
+	return t.tv_sec * 1000L + t.tv_nsec / 1000000L;
+}
+
+static int monitor_msg_cb(struct nl_msg *msg, void *arg)
+{
+	struct nlmsghdr *hdr = nlmsg_hdr(msg);
+
+	(void)arg;
+
+	if (hdr->nlmsg_type != RTM_NEWLINK && hdr->nlmsg_type != RTM_DELLINK)
+		return NL_OK;
+
+	clock_gettime(CLOCK_MONOTONIC, &last_event);
+	atomic_store(&pending_change, 1);
+	return NL_OK;
+}
+
+static void flush_pending_change(void)
+{
+	pthread_mutex_lock(&nl_sock_mutex);
+	if (nl_cache_refill(sock, link_cache) < 0) {
+		syslog(LOG_WARNING, "monitor: link cache refill failed");
+	}
+	pthread_mutex_unlock(&nl_sock_mutex);
+
+	atomic_store(&pending_change, 0);
+	if (link_change_cb)
+		link_change_cb();
+}
+
+static void *monitor_run(void *arg)
+{
+	(void)arg;
+	pthread_setname_np(pthread_self(), "nl-link-monitor");
+
+	int fd = nl_socket_get_fd(monitor_sock);
+
+	while (atomic_load(&monitor_running)) {
+		/* When idle, wake periodically so monitor_running can be
+		 * observed without needing a separate shutdown signal. */
+		int timeout = atomic_load(&pending_change)
+		                  ? MONITOR_DEBOUNCE_MS
+		                  : 5000;
+		struct pollfd pfd = { .fd = fd, .events = POLLIN };
+		int rc = poll(&pfd, 1, timeout);
+
+		if (rc < 0) {
+			if (errno == EINTR)
+				continue;
+			syslog(LOG_WARNING, "netlink monitor poll: %s",
+			       strerror(errno));
+			struct timespec backoff = { .tv_sec = 1 };
+			nanosleep(&backoff, NULL);
+			continue;
+		}
+
+		if (rc > 0 && (pfd.revents & POLLIN)) {
+			int err = nl_recvmsgs_default(monitor_sock);
+			if (err < 0 && err != -NLE_AGAIN) {
+				syslog(LOG_WARNING, "netlink monitor: %s",
+				       nl_geterror(err));
+			}
+		}
+
+		if (atomic_load(&pending_change)) {
+			struct timespec now;
+			clock_gettime(CLOCK_MONOTONIC, &now);
+			if (ts_to_ms(ts_absdiff(now, last_event))
+			    >= MONITOR_DEBOUNCE_MS) {
+				flush_pending_change();
+			}
+		}
+	}
+	return NULL;
+}
+
+int netem_monitor_start(void (*cb)(void))
+{
+	int rc;
+
+	if (atomic_load(&monitor_running)) {
+		syslog(LOG_WARNING, "netem monitor already running");
+		return -1;
+	}
+
+	link_change_cb = cb;
+
+	monitor_sock = nl_socket_alloc();
+	if (!monitor_sock) {
+		syslog(LOG_ERR, "netem monitor: nl_socket_alloc failed");
+		return -1;
+	}
+
+	/* Multicast events do not use sequence numbers. */
+	nl_socket_disable_seq_check(monitor_sock);
+	nl_socket_modify_cb(monitor_sock, NL_CB_VALID, NL_CB_CUSTOM,
+	                    monitor_msg_cb, NULL);
+
+	if (nl_connect(monitor_sock, NETLINK_ROUTE) < 0) {
+		syslog(LOG_ERR, "netem monitor: nl_connect failed");
+		goto fail;
+	}
+
+	if (nl_socket_add_memberships(monitor_sock, RTNLGRP_LINK, 0) < 0) {
+		syslog(LOG_ERR,
+		       "netem monitor: failed to join RTNLGRP_LINK group");
+		goto fail;
+	}
+
+	/* Non-blocking lets the poll(2) loop drive timing. */
+	if (nl_socket_set_nonblocking(monitor_sock) < 0) {
+		syslog(LOG_ERR, "netem monitor: set_nonblocking failed");
+		goto fail;
+	}
+
+	atomic_store(&monitor_running, 1);
+	rc = pthread_create(&monitor_thread_id, NULL, monitor_run, NULL);
+	if (rc != 0) {
+		syslog(LOG_ERR, "netem monitor: pthread_create failed");
+		atomic_store(&monitor_running, 0);
+		goto fail;
+	}
+
+	syslog(LOG_INFO, "netem monitor: watching RTNLGRP_LINK");
+	return 0;
+
+fail:
+	nl_socket_free(monitor_sock);
+	monitor_sock = NULL;
+	return -1;
+}
+
+void netem_monitor_stop(void)
+{
+	if (!atomic_load(&monitor_running))
+		return;
+
+	atomic_store(&monitor_running, 0);
+	pthread_join(monitor_thread_id, NULL);
+	nl_socket_free(monitor_sock);
+	monitor_sock = NULL;
 }

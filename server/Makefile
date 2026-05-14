@@ -246,6 +246,21 @@ test: test-mq test-mq-mt test-multi-mq test-slist test-pcap
 	./test-pcap
 	@echo -e "Test OK\n"
 
+# Integration test for dynamic interface list (issue #51).
+# Requires:
+#   - jt-server already built with caps set
+#   - passwordless sudo (for `ip link` ops creating/destroying dummy devices)
+#   - python3 with the websockets module
+# AddressSanitizer is enabled by the default debug CFLAGS; the test scans the
+# server log for ASan errors before reporting success.
+.PHONY: test-iface-recovery
+test-iface-recovery: jt-server
+	@if ! getcap ./jt-server | grep -q cap_net_raw; then \
+		echo "Grant caps first: sudo setcap 'cap_net_raw,cap_net_admin,cap_sys_nice+ep' ./jt-server"; \
+		exit 1; \
+	fi
+	python3 ./test-iface-recovery.py --binary ./jt-server
+
 # Performance benchmark target - builds with optimization and SPEED_TEST
 # Uses high stale threshold (1M) so consumers don't get marked stale during benchmark
 bench-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)

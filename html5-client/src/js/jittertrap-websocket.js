@@ -205,11 +205,28 @@
 
   const handleMsgIfaces = function(params) {
     const ifaces = params.ifaces;
+    const prev = $('#dev_select').val();
+
     $('#dev_select').empty();
     ifaces.forEach((val) => {
       const option = $('<option>').text(val).val(val);
       $('#dev_select').append(option);
     });
+
+    if (prev && ifaces.includes(prev)) {
+      $('#dev_select').val(prev);
+      return;
+    }
+
+    if (prev) {
+      console.warn('Interface "' + prev + '" is no longer available');
+      const $status = $('#dev_status');
+      $status.stop(true, true)
+             .text('"' + prev + '" was removed — switched automatically')
+             .show()
+             .delay(5000)
+             .fadeOut(400);
+    }
   };
 
   const handleMsgNetemParams = function(params) {

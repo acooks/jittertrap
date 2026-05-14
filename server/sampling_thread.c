@@ -124,6 +124,9 @@ static int init_nl(void)
 
 static int read_counters(const char *iface, struct sample *stats)
 {
+	/* Tracks the last interface name we failed on, so each
+	 * unavailable/restored transition logs exactly once at 1ms sample rate. */
+	static char last_bad_iface[MAX_IFACE_LEN];
 	struct rtnl_link *link;
 	assert(nl_sock);
 
@@ -131,9 +134,22 @@ static int read_counters(const char *iface, struct sample *stats)
 
 	/* iface index zero means use the iface name */
 	if (rtnl_link_get_kernel(nl_sock, 0, iface, &link) < 0) {
-		syslog(LOG_ERR, "unknown interface/link name: %s\n", iface);
+		if (strncmp(last_bad_iface, iface, MAX_IFACE_LEN) != 0) {
+			syslog(LOG_WARNING,
+			       "interface unavailable: %s "
+			       "(stats frozen until restored or reselected)",
+			       iface);
+			snprintf(last_bad_iface, sizeof last_bad_iface, "%s",
+			         iface);
+		}
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
+	}
+
+	if (last_bad_iface[0] != '\0'
+	    && strncmp(last_bad_iface, iface, MAX_IFACE_LEN) == 0) {
+		syslog(LOG_INFO, "interface restored: %s", iface);
+		last_bad_iface[0] = '\0';
 	}
 
 	/* read and return counter */
