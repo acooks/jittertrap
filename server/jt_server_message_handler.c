@@ -53,6 +53,13 @@ char g_selected_iface[MAX_IFACE_LEN];
 unsigned long stats_consumer_id;
 unsigned long tt_consumer_id;
 
+/* Serializes interface switches between the websocket request thread
+ * (client-initiated dev_select) and the netlink monitor thread
+ * (auto-promote when the active interface vanishes). Held across the
+ * tt_thread_restart call, which is otherwise unsafe to invoke
+ * concurrently. */
+static pthread_mutex_t iface_switch_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static int set_netem(void *data)
 {
 #ifdef DISABLE_IMPAIRMENTS
@@ -72,26 +79,36 @@ static int set_netem(void *data)
 #endif
 }
 
-static int select_iface(void *data)
+/* Caller must hold iface_switch_mutex. */
+static int do_select_iface(const char *iface)
 {
-	char(*iface)[MAX_IFACE_LEN] = data;
-
-	if (!is_iface_allowed(*iface)) {
+	if (!is_iface_allowed(iface)) {
 		syslog(LOG_WARNING,
 		       "ignoring request to switch to iface: [%s] - "
 		       "iface not in allowed list: [%s]\n",
-		       *iface, get_allowed_ifaces());
+		       iface, get_allowed_ifaces());
 		return -1;
 	}
-	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", *iface);
-	syslog(LOG_INFO, "switching to iface: [%s]\n", *iface);
-	sample_iface(*iface);
-	tt_thread_restart(*iface);
+	snprintf(g_selected_iface, MAX_IFACE_LEN, "%s", iface);
+	syslog(LOG_INFO, "switching to iface: [%s]\n", iface);
+	sample_iface(iface);
+	tt_thread_restart((char *)iface);
 
 	jt_srv_send_select_iface();
 	jt_srv_send_netem_params();
 	jt_srv_send_sample_period();
 	return 0;
+}
+
+static int select_iface(void *data)
+{
+	char(*iface)[MAX_IFACE_LEN] = data;
+	int ret;
+
+	pthread_mutex_lock(&iface_switch_mutex);
+	ret = do_select_iface(*iface);
+	pthread_mutex_unlock(&iface_switch_mutex);
+	return ret;
 }
 
 static void get_first_iface(char *iface)
@@ -691,13 +708,41 @@ int jt_srv_send_tt(void)
 	return 0;
 }
 
-/* netem_monitor callback: kernel announced a link add/remove.
- * Push a fresh iface list to all subscribed clients.
- * Runs on the netlink monitor thread; jt_srv_send_* is safe here because it
- * only enqueues onto the ws message queue.
+/* netem_monitor callback: kernel announced a link add/remove. Runs on the
+ * netlink monitor thread. If the currently selected interface has vanished,
+ * promote to the first available so capture/sampling don't sit on a phantom
+ * iface. Then push a refreshed iface_list (and possibly dev_select) to clients.
  */
 static void on_link_change(void)
 {
+	char **ifaces;
+	char first[MAX_IFACE_LEN] = "";
+	int found = 0;
+
+	pthread_mutex_lock(&iface_switch_mutex);
+
+	ifaces = netem_list_ifaces();
+	for (char **p = ifaces; *p; p++) {
+		if (first[0] == '\0')
+			snprintf(first, sizeof first, "%s", *p);
+		if (strncmp(*p, g_selected_iface, MAX_IFACE_LEN) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	for (char **p = ifaces; *p; p++)
+		free(*p);
+	free(ifaces);
+
+	if (!found && first[0] != '\0') {
+		syslog(LOG_WARNING,
+		       "selected iface [%s] is gone; auto-promoting to [%s]",
+		       g_selected_iface, first);
+		do_select_iface(first);
+	}
+
+	pthread_mutex_unlock(&iface_switch_mutex);
+
 	jt_srv_send_iface_list();
 }
 

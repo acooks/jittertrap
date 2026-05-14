@@ -214,15 +214,18 @@
     });
 
     if (prev && ifaces.includes(prev)) {
-      /* Existing selection still available - preserve it without re-firing. */
       $('#dev_select').val(prev);
       return;
     }
 
     if (prev) {
-      /* Previously-selected interface is gone. Switch to whatever the
-       * server promotes us to via the dev_select message it will send. */
       console.warn('Interface "' + prev + '" is no longer available');
+      const $status = $('#dev_status');
+      $status.stop(true, true)
+             .text('"' + prev + '" was removed — switched automatically')
+             .show()
+             .delay(5000)
+             .fadeOut(400);
     }
   };
 
