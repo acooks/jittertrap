@@ -157,11 +157,14 @@
       $("#delay").val("0");
       $("#jitter").val("0");
       $("#loss").val("0");
+      $("#rate").val("0");
     } else {
       $("#delay").val(params.delay);
       $("#jitter").val(params.jitter);
       /* params.loss is a 10th of a percent (integer). convert it to float */
       $("#loss").val(0.1 * params.loss);
+      /* rate is kbit/s; -1 = no rate limit */
+      $("#rate").val(params.rate > 0 ? params.rate : 0);
     }
     if (runningProgram) {
       $("#netem_status").html("Program Running");

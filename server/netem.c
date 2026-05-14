@@ -13,9 +13,12 @@
 #include <syslog.h>
 #include <time.h>
 #include <linux/rtnetlink.h>
+#include <linux/pkt_sched.h>
 #include <netlink/netlink.h>
 #include <netlink/msg.h>
+#include <netlink/attr.h>
 #include <netlink/socket.h>
+#include <netlink/utils.h>
 #include <netlink/cache.h>
 #include <netlink/route/link.h>
 #include <netlink/route/qdisc.h>
@@ -27,6 +30,11 @@
 
 static struct nl_sock *sock;
 static struct nl_cache *link_cache, *qdisc_cache;
+
+static const char NETEM_KIND[] = "netem";
+/* Matches the tc(8) default; the previous libnl-based set path inherited
+ * this same default. */
+#define NETEM_QUEUE_LIMIT 1000
 
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
@@ -187,6 +195,115 @@ nl_cache_find(struct nl_cache *cache, struct nl_object *filter)
 
 #endif
 
+/* Parsing callback for fetch_netem_rate. The kernel sends one RTM_NEWQDISC
+ * per (ifindex, qdisc) pair when we issue a dump. We pick the one matching
+ * the requested ifindex with kind=netem and pull TCA_NETEM_RATE out of the
+ * raw TCA_OPTIONS payload. */
+struct rate_query_ctx {
+	int ifindex;
+	uint32_t rate_kbps;
+};
+
+static int parse_rate_cb(struct nl_msg *msg, void *arg)
+{
+	struct rate_query_ctx *ctx = arg;
+	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+	struct tcmsg *tcm = nlmsg_data(nlh);
+	struct nlattr *tb[TCA_MAX + 1] = { 0 };
+	struct nlattr *attr;
+	void *opts;
+	int opts_len;
+	int rem;
+	size_t qopt_aligned;
+
+	if (nlmsg_parse(nlh, sizeof(*tcm), tb, TCA_MAX, NULL) < 0)
+		return NL_OK;
+	if (tcm->tcm_ifindex != ctx->ifindex)
+		return NL_OK;
+	if (!tb[TCA_KIND] ||
+	    strcmp(nla_data(tb[TCA_KIND]), NETEM_KIND) != 0)
+		return NL_OK;
+	if (!tb[TCA_OPTIONS])
+		return NL_OK;
+
+	opts = nla_data(tb[TCA_OPTIONS]);
+	opts_len = nla_len(tb[TCA_OPTIONS]);
+	qopt_aligned = NLA_ALIGN(sizeof(struct tc_netem_qopt));
+	if ((size_t)opts_len < qopt_aligned)
+		return NL_OK;
+
+	/* TCA_OPTIONS = tc_netem_qopt header followed by nested TCA_NETEM_*
+	 * attributes. The kernel does not wrap the qopt in its own nla
+	 * header; it's raw bytes at the start. */
+	attr = (struct nlattr *)((char *)opts + qopt_aligned);
+	nla_for_each_attr(attr, attr, opts_len - qopt_aligned, rem) {
+		if (nla_type(attr) == TCA_NETEM_RATE &&
+		    nla_len(attr) >= (int)sizeof(struct tc_netem_rate)) {
+			struct tc_netem_rate r;
+			uint64_t kbps;
+			memcpy(&r, nla_data(attr), sizeof(r));
+			kbps = (uint64_t)r.rate * 8ULL / 1000ULL;
+			ctx->rate_kbps = kbps > UINT32_MAX
+			                     ? UINT32_MAX
+			                     : (uint32_t)kbps;
+		}
+	}
+	return NL_OK;
+}
+
+/* Dump qdiscs over a fresh socket and parse out TCA_NETEM_RATE for ifindex.
+ * Uses its own socket to avoid contending with the long-lived `sock` and
+ * its cache callbacks. On error returns -1 and leaves *rate_kbps unchanged.
+ */
+static int fetch_netem_rate(int ifindex, uint32_t *rate_kbps)
+{
+	struct nl_sock *s;
+	struct nl_msg *msg;
+	struct tcmsg tch;
+	struct rate_query_ctx ctx = { .ifindex = ifindex, .rate_kbps = 0 };
+	int err;
+
+	s = nl_socket_alloc();
+	if (!s)
+		return -1;
+	if (nl_connect(s, NETLINK_ROUTE) < 0)
+		goto fail_sock;
+
+	nl_socket_modify_cb(s, NL_CB_VALID, NL_CB_CUSTOM, parse_rate_cb, &ctx);
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto fail_sock;
+	memset(&tch, 0, sizeof(tch));
+	tch.tcm_family = AF_UNSPEC;
+	tch.tcm_ifindex = ifindex;
+	if (!nlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, RTM_GETQDISC, 0,
+	               NLM_F_REQUEST | NLM_F_DUMP)) {
+		nlmsg_free(msg);
+		goto fail_sock;
+	}
+	if (nlmsg_append(msg, &tch, sizeof(tch), NLMSG_ALIGNTO) < 0) {
+		nlmsg_free(msg);
+		goto fail_sock;
+	}
+
+	err = nl_send_auto(s, msg);
+	nlmsg_free(msg);
+	if (err < 0)
+		goto fail_sock;
+
+	/* Drain the dump until NLMSG_DONE (libnl returns 0). */
+	while ((err = nl_recvmsgs_default(s)) > 0) { }
+
+	nl_socket_free(s);
+	*rate_kbps = ctx.rate_kbps;
+	return 0;
+
+fail_sock:
+	nl_socket_free(s);
+	return -1;
+}
+
 int netem_get_params(char *iface, struct netem_params *params)
 {
 	struct rtnl_link *link;
@@ -194,6 +311,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 	struct rtnl_qdisc *found_qdisc = NULL;
 	int err;
 	int delay, jitter, loss;
+	int ifindex = -1;
 
 	pthread_mutex_lock(&nl_sock_mutex);
 	if ((err = nl_cache_refill(sock, link_cache)) < 0) {
@@ -213,6 +331,7 @@ int netem_get_params(char *iface, struct netem_params *params)
 		syslog(LOG_ERR, "unknown interface/link name: %s\n", iface);
 		goto cleanup;
 	}
+	ifindex = rtnl_link_get_ifindex(link);
 
 	if (!(filter_qdisc = rtnl_qdisc_alloc())) {
 		/* OOM error */
@@ -254,6 +373,13 @@ int netem_get_params(char *iface, struct netem_params *params)
 	rtnl_qdisc_put(filter_qdisc);
 	rtnl_link_put(link);
 	pthread_mutex_unlock(&nl_sock_mutex);
+
+	/* Rate read is best-effort: it uses an auxiliary socket so it must
+	 * happen outside nl_sock_mutex, and a failure (e.g. transient ENOBUFS
+	 * on the dump) shouldn't fail the whole get. */
+	params->rate = 0;
+	if (ifindex >= 0)
+		(void)fetch_netem_rate(ifindex, &params->rate);
 	return 0;
 
 cleanup_qdisc:
@@ -267,50 +393,96 @@ cleanup:
 	return -1;
 }
 
+/* libnl-route 3.x does not expose rtnl_netem_set_rate, so the qdisc message is
+ * built manually here. The wire format inside TCA_OPTIONS is:
+ *   - struct tc_netem_qopt (raw bytes, no nla header)
+ *   - followed by optional nested attributes (TCA_NETEM_RATE, ...)
+ * This is the layout that the kernel netem_change() expects and matches what
+ * the tc(8) utility produces. */
 int netem_set_params(const char *iface, struct netem_params *params)
 {
 	struct rtnl_link *link;
-	struct rtnl_qdisc *qdisc;
+	struct nl_msg *msg = NULL;
+	struct nlattr *opts;
+	struct tcmsg tch;
+	struct tc_netem_qopt qopt;
+	int ifindex;
 	int err;
 
 	pthread_mutex_lock(&nl_sock_mutex);
 
-	/* filter link by name */
 	if ((link = rtnl_link_get_by_name(link_cache, iface)) == NULL) {
 		syslog(LOG_ERR, "unknown interface/link name.\n");
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}
+	ifindex = rtnl_link_get_ifindex(link);
+	rtnl_link_put(link);
 
-	if (!(qdisc = rtnl_qdisc_alloc())) {
-		/* OOM error */
-		syslog(LOG_ERR, "couldn't alloc qdisc\n");
+	msg = nlmsg_alloc();
+	if (!msg) {
+		syslog(LOG_ERR, "couldn't alloc nl_msg\n");
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}
 
-	rtnl_tc_set_link(TC_CAST(qdisc), link);
-	rtnl_tc_set_parent(TC_CAST(qdisc), TC_H_ROOT);
-	rtnl_tc_set_kind(TC_CAST(qdisc), "netem");
+	memset(&tch, 0, sizeof(tch));
+	tch.tcm_family = AF_UNSPEC;
+	tch.tcm_ifindex = ifindex;
+	tch.tcm_parent = TC_H_ROOT;
 
-	rtnl_netem_set_delay(qdisc,
-	                     params->delay * 1000); /* expects microseconds */
-	rtnl_netem_set_jitter(qdisc, params->jitter * 1000);
-	/* params->loss is given in 10ths of a percent */
-	rtnl_netem_set_loss(qdisc, (params->loss * (UINT_MAX / 1000)));
+	/* Pass 0 for payload size so nlmsg_put doesn't reserve any bytes
+	 * before the appended family header — the kernel reads tcmsg at
+	 * NLMSG_DATA, so the appended bytes must be flush against the
+	 * nlmsghdr. */
+	if (!nlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, RTM_NEWQDISC, 0,
+	               NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE |
+	                   NLM_F_REPLACE)) {
+		goto fail_msg;
+	}
+	if (nlmsg_append(msg, &tch, sizeof(tch), NLMSG_ALIGNTO) < 0)
+		goto fail_msg;
 
-	/* Submit request to kernel and wait for response */
-	err = rtnl_qdisc_add(sock, qdisc, NLM_F_CREATE | NLM_F_REPLACE);
+	if (nla_put_string(msg, TCA_KIND, NETEM_KIND) < 0)
+		goto fail_msg;
 
-	/* Return the qdisc object to free memory resources */
-	rtnl_qdisc_put(qdisc);
+	opts = nla_nest_start(msg, TCA_OPTIONS);
+	if (!opts)
+		goto fail_msg;
+
+	memset(&qopt, 0, sizeof(qopt));
+	/* latency and jitter are in PSCHED ticks, not microseconds. */
+	qopt.latency = nl_us2ticks(params->delay * 1000);
+	qopt.jitter = nl_us2ticks(params->jitter * 1000);
+	qopt.loss = params->loss * (UINT_MAX / 1000);
+	qopt.limit = NETEM_QUEUE_LIMIT;
+	if (nlmsg_append(msg, &qopt, sizeof(qopt), NLMSG_ALIGNTO) < 0)
+		goto fail_msg;
+
+	{
+		/* TCA_NETEM_RATE is always emitted, even when rate==0, so that
+		 * a previously-set rate is explicitly cleared. The kernel only
+		 * updates q->rate from attributes that are present. */
+		struct tc_netem_rate r;
+		uint64_t bytes_per_sec = (uint64_t)params->rate * 1000ULL / 8ULL;
+
+		memset(&r, 0, sizeof(r));
+		/* TCA_NETEM_RATE.rate is u32 byte/s; cap at UINT32_MAX. The
+		 * RATE64 attribute exists for >4Gbit/s use cases but is not
+		 * exposed in the UI. */
+		r.rate = bytes_per_sec > UINT32_MAX ? UINT32_MAX
+		                                    : (uint32_t)bytes_per_sec;
+		if (nla_put(msg, TCA_NETEM_RATE, sizeof(r), &r) < 0)
+			goto fail_msg;
+	}
+
+	nla_nest_end(msg, opts);
+
+	err = nl_send_sync(sock, msg);
+	msg = NULL; /* nl_send_sync frees on both success and failure */
 
 	if (err < 0) {
-		/*
-		 * NLE_PERM (-10) or -EPERM (-1) indicates permission denied.
-		 * This happens when running without CAP_NET_ADMIN.
-		 */
-		if (err == -EPERM || err == -10) {
+		if (err == -NLE_PERM) {
 			syslog(LOG_WARNING,
 			       "Unable to add qdisc: permission denied. "
 			       "Network impairment features require CAP_NET_ADMIN.");
@@ -331,6 +503,11 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	pthread_mutex_unlock(&nl_sock_mutex);
 	return 0;
+
+fail_msg:
+	nlmsg_free(msg);
+	pthread_mutex_unlock(&nl_sock_mutex);
+	return -1;
 }
 
 /* ---- netlink link-change monitor ---------------------------------------- */

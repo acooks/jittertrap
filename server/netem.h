@@ -5,6 +5,7 @@ struct netem_params {
 	uint32_t delay;  /* milliseconds */
 	uint32_t jitter; /* milliseconds */
 	uint32_t loss;   /* percentage, [0-100] */
+	uint32_t rate;   /* kilobits per second; 0 = no rate limit */
 	char iface[MAX_IFACE_LEN];
 };
 

@@ -31,6 +31,15 @@
             </div>
           </div>
           <div class="form-group col-sm-6 col-md-3">
+            <label for="rate">Rate (0 = unlimited)</label>
+            <div class="input-group">
+              <input id="rate" class="form-control" type="number" min="0" max="1000000" step="1" />
+              <div class="input-group-append">
+                <span class="input-group-text">kbit/s</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group col-sm-6 col-md-3">
             <div class="btn-group">
               <button id="set_netem_button" class="btn btn-primary">
                 <i class="fas fa-sync-alt" aria-hidden="true"></i>

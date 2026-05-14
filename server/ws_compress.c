@@ -34,6 +34,7 @@ static const char ws_dictionary[] =
 	/* Less frequent message types */
 	"pcap_readypcap_statuspcap_configpcap_triggersample_period"
 	"netem_paramsdev_selectiface_list"
+	"\"rate\":"
 	/* Video telemetry fields (less common - only video flows) */
 	"\"video_codec_source\":"
 	"\"video_bitrate_kbps\":"
