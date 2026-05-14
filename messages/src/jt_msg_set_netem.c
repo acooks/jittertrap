@@ -92,6 +92,13 @@ int jt_set_netem_unpacker(json_t *root, void **data)
 	}
 	params->loss = json_integer_value(token);
 
+	/* 'rate' is optional; older clients omit it and the server treats
+	 * the missing field as "no rate limit" (0). */
+	token = json_object_get(params_token, "rate");
+	params->rate = (token && json_is_integer(token))
+	                   ? json_integer_value(token)
+	                   : 0;
+
 	*data = params;
 	json_object_clear(params_token);
 	return 0;

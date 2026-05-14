@@ -70,7 +70,10 @@ static int set_netem(void *data)
 #else
 	struct jt_msg_netem_params *p1 = data;
 	struct netem_params p2 = {
-		.delay = p1->delay, .jitter = p1->jitter, .loss = p1->loss,
+		.delay = p1->delay,
+		.jitter = p1->jitter,
+		.loss = p1->loss,
+		.rate = p1->rate < 0 ? 0 : (uint32_t)p1->rate,
 	};
 
 	netem_set_params(p1->iface, &p2);
@@ -261,14 +264,16 @@ int jt_srv_send_netem_params(void)
 
 	if (0 != netem_get_params(p.iface, &p)) {
 		/* There need not be a netem qdisc on the interface */
-		p.delay = -1;
-		p.jitter = -1;
-		p.loss = -1;
+		m->delay = -1;
+		m->jitter = -1;
+		m->loss = -1;
+		m->rate = -1;
+	} else {
+		m->delay = p.delay;
+		m->jitter = p.jitter;
+		m->loss = p.loss;
+		m->rate = (int)p.rate;
 	}
-
-	m->delay = p.delay;
-	m->jitter = p.jitter;
-	m->loss = p.loss;
 	snprintf(m->iface, MAX_IFACE_LEN, "%s", p.iface);
 
 	int err = jt_srv_send(JT_MSG_NETEM_PARAMS_V1, m);

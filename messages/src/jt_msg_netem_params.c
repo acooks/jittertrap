@@ -9,7 +9,7 @@
 
 static const char *jt_netem_params_test_msg =
     "{\"msg\":\"netem_params\", \"p\":{\"iface\":\"em1\", \"delay\":-1, "
-    "\"jitter\":-1, \"loss\":-1}}";
+    "\"jitter\":-1, \"loss\":-1, \"rate\":-1}}";
 
 const char *jt_netem_params_test_msg_get(void)
 {
@@ -31,8 +31,9 @@ int jt_netem_params_printer(void *data, char *out, int len)
 	       "\tInterface:  %s\n"
 	       "\tDelay:      %dms\n"
 	       "\tJitter:  +/-%dms\n"
-	       "\tLoss:       %d",
-	       p->iface, p->delay, p->jitter, p->loss);
+	       "\tLoss:       %d\n"
+	       "\tRate:       %dkbit/s",
+	       p->iface, p->delay, p->jitter, p->loss, p->rate);
 	return 0;
 }
 
@@ -76,6 +77,15 @@ int jt_netem_params_unpacker(json_t *root, void **data)
 	}
 	params->loss = json_integer_value(token);
 
+	/* 'rate' is optional in incoming set_netem messages from older
+	 * clients; default to 0 (no rate limit) when absent. */
+	token = json_object_get(params_token, "rate");
+	if (token && json_is_integer(token)) {
+		params->rate = json_integer_value(token);
+	} else {
+		params->rate = 0;
+	}
+
 	*data = params;
 	return 0;
 
@@ -94,6 +104,7 @@ int jt_netem_params_packer(void *data, char **out)
 	json_object_set_new(p, "delay", json_integer(params->delay));
 	json_object_set_new(p, "jitter", json_integer(params->jitter));
 	json_object_set_new(p, "loss", json_integer(params->loss));
+	json_object_set_new(p, "rate", json_integer(params->rate));
 
 	json_object_set_new(
 	    t, "msg", json_string(jt_messages[JT_MSG_NETEM_PARAMS_V1].key));

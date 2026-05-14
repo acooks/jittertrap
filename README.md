@@ -25,7 +25,7 @@ JitterTrap is a real-time network performance analysis tool for engineers workin
 - In-browser video playback via WebRTC (click the play button on any detected stream)
 
 **Network Impairment Emulation**
-- Inject delay, jitter, and packet loss on egress traffic
+- Inject delay, jitter, packet loss, and rate limit on egress traffic
 - Scriptable impairment programs for automated testing
 
 **Packet Capture**
@@ -35,7 +35,7 @@ JitterTrap is a real-time network performance analysis tool for engineers workin
 ### Use Cases
 
 - **Characterise source behaviour** — measure throughput, packet rates, and jitter from devices under test
-- **Characterise destination behaviour** — inject impairments to verify application resilience to delay/loss
+- **Characterise destination behaviour** — inject impairments to verify application resilience to delay, jitter, loss, and rate limiting
 - **Debug TCP performance** — identify RTT spikes, window limitations, and retransmission patterns
 - **Network congestion analysis** — real-time visibility into traffic patterns
 

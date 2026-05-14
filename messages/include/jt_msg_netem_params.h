@@ -13,6 +13,7 @@ struct jt_msg_netem_params
 	int delay;
 	int jitter;
 	int loss;
+	int rate;
 };
 
 #endif

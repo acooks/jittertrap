@@ -261,6 +261,17 @@ test-iface-recovery: jt-server
 	fi
 	python3 ./test-iface-recovery.py --binary ./jt-server
 
+# Integration test for netem rate-limit (issue #24). Verifies that set_netem
+# applies the kernel rate via TCA_NETEM_RATE and round-trips through the
+# websocket protocol. Same runtime requirements as test-iface-recovery.
+.PHONY: test-rate-limit
+test-rate-limit: jt-server
+	@if ! getcap ./jt-server | grep -q cap_net_admin; then \
+		echo "Grant caps first: sudo setcap 'cap_net_raw,cap_net_admin,cap_sys_nice+ep' ./jt-server"; \
+		exit 1; \
+	fi
+	python3 ./test-rate-limit.py --binary ./jt-server
+
 # Performance benchmark target - builds with optimization and SPEED_TEST
 # Uses high stale threshold (1M) so consumers don't get marked stale during benchmark
 bench-mq-mt: $(MQ_MT_TEST_SOURCES) $(MQ_TEST_HEADERS) $(MQ_HEADERS) $(MQ_DEPENDS)

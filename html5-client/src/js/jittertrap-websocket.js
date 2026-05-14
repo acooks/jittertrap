@@ -34,6 +34,7 @@
     /* Less frequent message types */
     'pcap_readypcap_statuspcap_configpcap_triggersample_period' +
     'netem_paramsdev_selectiface_list' +
+    '"rate":' +
     /* Video telemetry fields (less common - only video flows) */
     '"video_codec_source":' +
     '"video_bitrate_kbps":' +
@@ -361,7 +362,9 @@
          'delay': parseInt($("#delay").val(), 10),
          'jitter': parseInt($("#jitter").val(), 10),
          /* convert the float to an integer representing 10ths of percent. */
-         'loss': parseInt(Math.round(10 * $("#loss").val()), 10)
+         'loss': parseInt(Math.round(10 * $("#loss").val()), 10),
+         /* rate in kbit/s; 0 = no rate limit */
+         'rate': parseInt($("#rate").val(), 10) || 0
        }
       });
     sock.send(msg);
@@ -372,6 +375,7 @@
     $("#delay").val(0);
     $("#jitter").val(0);
     $("#loss").val(0);
+    $("#rate").val(0);
     set_netem();
     return false;
   };
