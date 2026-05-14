@@ -31,6 +31,7 @@
       $("#delay").prop('readonly', true);
       $("#jitter").prop('readonly', true);
       $("#loss").prop('readonly', true);
+      $("#rate").prop('readonly', true);
       $("#set_netem_button").prop('disabled', true);
       $("#clear_netem_button").prop('disabled', true);
       $("#netem_status").html("Program Running");
@@ -42,24 +43,26 @@
               $("#delay").val(0);
               $("#jitter").val(0);
               $("#loss").val(0);
+              $("#rate").val(0);
               JT.ws.set_netem();
               runningProgram.stop();
             },
             i * 1000
           );
         } else {
-          this.timeoutHandles[i] = setTimeout((t, d, j, l) => {
-              console.log(Date.now() + " t = " + t + ", d: " + d + ", j: " + j + ", l:" + l);
-              $("#delay").val(d);
-              $("#jitter").val(j);
-              $("#loss").val(l);
+          /* rate is optional for back-compat with programs authored
+           * before rate-limit support; treat missing as 0 (no limit). */
+          const step = runningProgram.impairments[i];
+          const r = step.rate || 0;
+          this.timeoutHandles[i] = setTimeout(() => {
+              console.log(Date.now() + " t = " + i + ", d: " + step.delay + ", j: " + step.jitter + ", l:" + step.loss + ", r:" + r);
+              $("#delay").val(step.delay);
+              $("#jitter").val(step.jitter);
+              $("#loss").val(step.loss);
+              $("#rate").val(r);
               JT.ws.set_netem();
             },
-            i*1000,
-            i,
-            runningProgram.impairments[i].delay,
-            runningProgram.impairments[i].jitter,
-            runningProgram.impairments[i].loss
+            i * 1000
           );
         }
       }
@@ -78,6 +81,7 @@
       $("#delay").prop('readonly', false);
       $("#jitter").prop('readonly', false);
       $("#loss").prop('readonly', false);
+      $("#rate").prop('readonly', false);
       $("#set_netem_button").prop('disabled', false);
       $("#clear_netem_button").prop('disabled', false);
       $("#netem_status").html("Ready");
@@ -90,10 +94,10 @@
       name: "templateProgram",
       traps: [],
       impairments: {
-        0: { delay: 0,  jitter: 0, loss: 0,   trapid: 0},
-        5: { delay: 10, jitter: 2, loss: 0,   trapid: 0},
-        10: { delay: 15, jitter: 2, loss: 0.1, trapid: 0},
-        15: { delay: 0,  jitter: 0, loss: 0,   trapid: 1},
+        0:  { delay: 0,  jitter: 0, loss: 0,   rate: 0,    trapid: 0},
+        5:  { delay: 10, jitter: 2, loss: 0,   rate: 0,    trapid: 0},
+        10: { delay: 15, jitter: 2, loss: 0.1, rate: 1000, trapid: 0},
+        15: { delay: 0,  jitter: 0, loss: 0,   rate: 0,    trapid: 1},
         20: { stop: true },
       }
     },
