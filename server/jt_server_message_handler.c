@@ -738,12 +738,16 @@ static void on_link_change(void)
 		syslog(LOG_WARNING,
 		       "selected iface [%s] is gone; auto-promoting to [%s]",
 		       g_selected_iface, first);
+		/* Send iface_list before the auto-promote's dev_select so the
+		 * client can observe that the prior selection has disappeared
+		 * (and surface a notice) before being switched to the new one. */
+		jt_srv_send_iface_list();
 		do_select_iface(first);
+	} else {
+		jt_srv_send_iface_list();
 	}
 
 	pthread_mutex_unlock(&iface_switch_mutex);
-
-	jt_srv_send_iface_list();
 }
 
 static int jt_init(void)
