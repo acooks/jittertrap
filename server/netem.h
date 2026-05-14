@@ -17,12 +17,12 @@ int netem_set_params(const char *iface, struct netem_params *params);
 int netem_get_params(char *iface, struct netem_params *params);
 
 /* Start a background thread that monitors NETLINK_ROUTE for link
- * additions/removals. When a change is detected, the cached interface list
- * is refreshed and the supplied callback is invoked from the monitor thread.
- * The callback is rate-limited; bursts of link events coalesce into a single
- * call.
+ * additions/removals. Events are debounced: after the kernel goes quiet
+ * for a short window, the link cache is refilled and the callback is
+ * invoked from the monitor thread. A burst of link events therefore
+ * collapses to a single callback invocation seeing the final state.
  */
-int netem_monitor_start(void (*on_link_change)(void));
+int netem_monitor_start(void (*cb)(void));
 void netem_monitor_stop(void);
 
 #endif
