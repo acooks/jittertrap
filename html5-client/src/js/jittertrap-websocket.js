@@ -205,11 +205,25 @@
 
   const handleMsgIfaces = function(params) {
     const ifaces = params.ifaces;
+    const prev = $('#dev_select').val();
+
     $('#dev_select').empty();
     ifaces.forEach((val) => {
       const option = $('<option>').text(val).val(val);
       $('#dev_select').append(option);
     });
+
+    if (prev && ifaces.includes(prev)) {
+      /* Existing selection still available - preserve it without re-firing. */
+      $('#dev_select').val(prev);
+      return;
+    }
+
+    if (prev) {
+      /* Previously-selected interface is gone. Switch to whatever the
+       * server promotes us to via the dev_select message it will send. */
+      console.warn('Interface "' + prev + '" is no longer available');
+    }
   };
 
   const handleMsgNetemParams = function(params) {

@@ -1,6 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #include <limits.h>
 #include <assert.h>
@@ -8,7 +10,10 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <syslog.h>
+#include <time.h>
+#include <linux/rtnetlink.h>
 #include <netlink/netlink.h>
+#include <netlink/msg.h>
 #include <netlink/socket.h>
 #include <netlink/cache.h>
 #include <netlink/route/link.h>
@@ -324,4 +329,132 @@ int netem_set_params(const char *iface, struct netem_params *params)
 
 	pthread_mutex_unlock(&nl_sock_mutex);
 	return 0;
+}
+
+/* ---- netlink link-change monitor ---------------------------------------- */
+
+static struct nl_sock *monitor_sock;
+static pthread_t monitor_thread_id;
+static atomic_int monitor_running;
+static void (*link_change_cb)(void);
+
+/* Coalesce bursts of link events. After a change, ignore further events for
+ * MONITOR_DEBOUNCE_MS to avoid spamming clients while e.g. a bond comes up. */
+#define MONITOR_DEBOUNCE_MS 250
+
+static long ts_diff_ms(const struct timespec *a, const struct timespec *b)
+{
+	return (long)((a->tv_sec - b->tv_sec) * 1000L
+	              + (a->tv_nsec - b->tv_nsec) / 1000000L);
+}
+
+static int monitor_msg_cb(struct nl_msg *msg, void *arg)
+{
+	static struct timespec last_fired;
+	struct nlmsghdr *hdr = nlmsg_hdr(msg);
+	struct timespec now;
+
+	(void)arg;
+
+	if (hdr->nlmsg_type != RTM_NEWLINK && hdr->nlmsg_type != RTM_DELLINK)
+		return NL_OK;
+
+	pthread_mutex_lock(&nl_sock_mutex);
+	if (nl_cache_refill(sock, link_cache) < 0) {
+		syslog(LOG_WARNING, "monitor: link cache refill failed");
+	}
+	pthread_mutex_unlock(&nl_sock_mutex);
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (last_fired.tv_sec != 0
+	    && ts_diff_ms(&now, &last_fired) < MONITOR_DEBOUNCE_MS) {
+		return NL_OK;
+	}
+	last_fired = now;
+
+	if (link_change_cb)
+		link_change_cb();
+
+	return NL_OK;
+}
+
+static void *monitor_run(void *arg)
+{
+	(void)arg;
+	pthread_setname_np(pthread_self(), "nl-link-monitor");
+
+	while (atomic_load(&monitor_running)) {
+		int err = nl_recvmsgs_default(monitor_sock);
+		if (err < 0 && err != -NLE_INTR && err != -NLE_AGAIN) {
+			syslog(LOG_WARNING,
+			       "netlink monitor: %s (recv loop continues)",
+			       nl_geterror(err));
+			/* Avoid a tight error loop. */
+			struct timespec backoff = { .tv_sec = 1 };
+			nanosleep(&backoff, NULL);
+		}
+	}
+	return NULL;
+}
+
+int netem_monitor_start(void (*on_link_change)(void))
+{
+	if (atomic_load(&monitor_running)) {
+		syslog(LOG_WARNING, "netem monitor already running");
+		return -1;
+	}
+
+	link_change_cb = on_link_change;
+
+	monitor_sock = nl_socket_alloc();
+	if (!monitor_sock) {
+		syslog(LOG_ERR, "netem monitor: nl_socket_alloc failed");
+		return -1;
+	}
+
+	/* Multicast events do not use sequence numbers. */
+	nl_socket_disable_seq_check(monitor_sock);
+	nl_socket_modify_cb(monitor_sock, NL_CB_VALID, NL_CB_CUSTOM,
+	                    monitor_msg_cb, NULL);
+
+	if (nl_connect(monitor_sock, NETLINK_ROUTE) < 0) {
+		syslog(LOG_ERR, "netem monitor: nl_connect failed");
+		nl_socket_free(monitor_sock);
+		monitor_sock = NULL;
+		return -1;
+	}
+
+	if (nl_socket_add_memberships(monitor_sock, RTNLGRP_LINK, 0) < 0) {
+		syslog(LOG_ERR,
+		       "netem monitor: failed to join RTNLGRP_LINK group");
+		nl_socket_free(monitor_sock);
+		monitor_sock = NULL;
+		return -1;
+	}
+
+	atomic_store(&monitor_running, 1);
+	if (pthread_create(&monitor_thread_id, NULL, monitor_run, NULL) != 0) {
+		syslog(LOG_ERR, "netem monitor: pthread_create failed");
+		atomic_store(&monitor_running, 0);
+		nl_socket_free(monitor_sock);
+		monitor_sock = NULL;
+		return -1;
+	}
+
+	syslog(LOG_INFO, "netem monitor: watching RTNLGRP_LINK");
+	return 0;
+}
+
+void netem_monitor_stop(void)
+{
+	if (!atomic_load(&monitor_running))
+		return;
+
+	atomic_store(&monitor_running, 0);
+	/* Closing the socket forces the blocking recv to return. */
+	if (monitor_sock) {
+		nl_socket_free(monitor_sock);
+		monitor_sock = NULL;
+	}
+	pthread_join(monitor_thread_id, NULL);
 }

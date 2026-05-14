@@ -131,7 +131,19 @@ static int read_counters(const char *iface, struct sample *stats)
 
 	/* iface index zero means use the iface name */
 	if (rtnl_link_get_kernel(nl_sock, 0, iface, &link) < 0) {
-		syslog(LOG_ERR, "unknown interface/link name: %s\n", iface);
+		/* The selected iface can vanish at runtime (tap removed,
+		 * link down). At a 1ms sample period this would flood syslog,
+		 * so warn only on transitions: when the failure first happens
+		 * for a given iface name, and again if it recovers. */
+		static char last_bad_iface[MAX_IFACE_LEN];
+		if (strncmp(last_bad_iface, iface, MAX_IFACE_LEN) != 0) {
+			syslog(LOG_WARNING,
+			       "interface unavailable: %s "
+			       "(stats frozen until restored or reselected)",
+			       iface);
+			strncpy(last_bad_iface, iface, MAX_IFACE_LEN - 1);
+			last_bad_iface[MAX_IFACE_LEN - 1] = '\0';
+		}
 		pthread_mutex_unlock(&nl_sock_mutex);
 		return -1;
 	}

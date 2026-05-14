@@ -691,6 +691,16 @@ int jt_srv_send_tt(void)
 	return 0;
 }
 
+/* netem_monitor callback: kernel announced a link add/remove.
+ * Push a fresh iface list to all subscribed clients.
+ * Runs on the netlink monitor thread; jt_srv_send_* is safe here because it
+ * only enqueues onto the ws message queue.
+ */
+static void on_link_change(void)
+{
+	jt_srv_send_iface_list();
+}
+
 static int jt_init(void)
 {
 	int err;
@@ -701,6 +711,10 @@ static int jt_init(void)
 		        "Couldn't initialise netlink for netem module.\n");
 		return -1;
 	}
+
+	/* Watch the kernel for interface add/remove and push refreshed
+	 * iface lists to clients. Best-effort: failure is non-fatal. */
+	netem_monitor_start(on_link_change);
 
 	/* mq_ws is initialized in main() before WebSocket loop starts */
 
