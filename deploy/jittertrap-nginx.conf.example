@@ -1,0 +1,45 @@
+# Example nginx reverse-proxy for serving JitterTrap over HTTPS.
+#
+# jt-server serves the HTML5 client AND the websocket on a single HTTP
+# port (8080 below). nginx terminates TLS and proxies both the HTTP
+# requests and the websocket Upgrade to jt-server.
+#
+# Usage:
+#   sudo cp deploy/jittertrap-nginx.conf.example /etc/nginx/conf.d/jittertrap.conf
+#   # set server_name below, then obtain a cert (also adds the 80->443 redirect):
+#   sudo certbot --nginx -d jittertrap.example.com
+#   sudo nginx -t && sudo systemctl reload nginx
+
+# Translate the websocket Upgrade header so connections are proxied
+# correctly. Must live in the http context (i.e. a conf.d/ file).
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen      80;
+    listen      [::]:80;
+    server_name jittertrap.example.com;          # <-- change me
+
+    # `certbot --nginx` adds the TLS listener + a 301 to https here.
+    # Without certbot, redirect manually instead:
+    #   return 301 https://$host$request_uri;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+
+        # Websocket upgrade
+        proxy_set_header   Upgrade    $http_upgrade;
+        proxy_set_header   Connection $connection_upgrade;
+
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+
+        # Keep long-lived websocket connections open.
+        proxy_read_timeout 86400;
+    }
+}
