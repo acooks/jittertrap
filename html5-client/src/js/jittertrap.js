@@ -14,7 +14,7 @@ $(document).ready(function() {
   $("#chopts_chartPeriod").val(JT.charts.getChartPeriod());
 
   // Initialize WebSockets
-  const wsUri = "ws://" + document.domain + ":" + location.port;
+  const wsUri = (location.protocol === "https:" ? "wss://" : "ws://") + document.domain + (location.port ? ":" + location.port : "");
   JT.ws.init(wsUri);
 
   // Initialise charts and start render loop
