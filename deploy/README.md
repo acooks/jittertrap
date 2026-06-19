@@ -157,3 +157,36 @@ To use port 80:
 2. Change `-p 8080` to `-p 80` in `ExecStart`
 
 Or use a reverse proxy (nginx, Apache) to forward from port 80.
+
+## Running behind an HTTPS reverse proxy
+
+`jt-server` serves the HTML5 client **and** the websocket on a single HTTP
+port. To expose it over HTTPS, terminate TLS in a reverse proxy and forward
+both the HTTP requests and the websocket upgrade to `jt-server`.
+
+A ready-to-edit nginx example is provided in
+[`jittertrap-nginx.conf.example`](jittertrap-nginx.conf.example):
+
+```bash
+sudo cp deploy/jittertrap-nginx.conf.example /etc/nginx/conf.d/jittertrap.conf
+sudo $EDITOR /etc/nginx/conf.d/jittertrap.conf      # set your server_name
+sudo certbot --nginx -d jittertrap.example.com      # obtain a cert + 80->443 redirect
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+The essential detail is proxying the websocket `Upgrade`:
+
+```nginx
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+# ...
+location / {
+    proxy_pass         http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade    $http_upgrade;
+    proxy_set_header   Connection $connection_upgrade;
+    # ...
+}
+```
+
+The client selects `wss://` automatically when the page is served over HTTPS,
+so no client configuration is needed.
